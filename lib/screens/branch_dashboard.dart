@@ -2243,7 +2243,7 @@ class _AttendanceDialogState
                 ),
               ),
               child: const Text(
-                'STATUS',
+                'REMARK',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 11,
