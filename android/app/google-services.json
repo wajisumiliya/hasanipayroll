@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "206112169695",
+    "project_id": "hasani-payroll",
+    "storage_bucket": "hasani-payroll.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:206112169695:android:cf4473f08c515a8278136a",
+        "android_client_info": {
+          "package_name": "com.example.hasani_payroll_portal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA67LK_uVKssT1jDS3pOCAoHuus45w_pv8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

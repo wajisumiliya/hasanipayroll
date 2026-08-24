@@ -1,0 +1,57 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+#.vscode/
+
+# Flutter/Dart/Pub
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+coverage/
+
+# Ignore generated build files
+/build/*
+
+# KEEP Flutter Web build
+!/build/web/
+!/build/web/**
+
+# Symbolication
+app.*.symbols
+
+# Obfuscation
+app.*.map.json
+
+# Android generated builds
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Environment/secrets
+.env
+.env.*
+!.env.examplehasani_payroll.dump
+.env
+.env.*
+!.env.example
+node_modules/

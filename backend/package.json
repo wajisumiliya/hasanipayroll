@@ -1,0 +1,35 @@
+{
+  "name": "hasani-payroll-backend",
+  "version": "1.0.0",
+  "description": "Hasani Payroll Portal backend API",
+  "private": true,
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.0.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "csv-parse": "^6.2.1",
+    "dotenv": "^17.0.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.0",
+    "nodemailer": "^9.0.5",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.0.0"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true
+  }
+}

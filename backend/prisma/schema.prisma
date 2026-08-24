@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model app_user {
+  id                 String    @id @default(cuid())
+  employeeId         String?   @unique
+  username           String?
+  email              String?   @unique
+  passwordHash       String
+  role               UserRole  @default(EMPLOYEE)
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  passwordChangedAt  DateTime?
+  otpHash            String?
+  otpExpiresAt       DateTime?
+  otpAttempts        Int       @default(0)
+  otpLastSentAt      DateTime?
+  otpVerifiedAt      DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([employeeId])
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Employee {
+  id                     String                  @id @default(cuid())
+  employeeId             String                  @unique
+  name                   String
+  designation            String?
+  department             String?
+  email                  String?
+  newIcNo                String?
+  bankCode               String?
+  bankAccount            String?
+  phone                  String?
+  address                String?
+  joiningDate            DateTime?
+  isActive               Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  bankName               String?
+  basicSalary            Decimal?                @db.Decimal(12, 2)
+  branch                 String?
+  confirmationDate       DateTime?
+  employmentStatus       String?
+  gender                 String?
+  maritalStatus          String?
+  nationality            String?
+  oldIcNo                String?
+  passportNo             String?
+  terminationDate        DateTime?
+  notificationRecipients NotificationRecipient[]
+  payrolls               PayrollRecord[]
+  salaryIncrements       SalaryIncrement[]
+
+  @@index([employeeId])
+  @@index([email])
+  @@index([department])
+  @@index([branch])
+  @@index([isActive])
+}
+
+model PayrollRecord {
+  id               String    @id @default(cuid())
+  employeeId       String
+  period           DateTime
+  basicSalary      Decimal   @default(0) @db.Decimal(12, 2)
+  foodAllowance    Decimal   @default(0) @db.Decimal(12, 2)
+  otherAllowance   Decimal   @default(0) @db.Decimal(12, 2)
+  overtime         Decimal   @default(0) @db.Decimal(12, 2)
+  bonus            Decimal   @default(0) @db.Decimal(12, 2)
+  commission       Decimal   @default(0) @db.Decimal(12, 2)
+  otherEarnings    Decimal   @default(0) @db.Decimal(12, 2)
+  epfEmployee      Decimal   @default(0) @db.Decimal(12, 2)
+  socsoEmployee    Decimal   @default(0) @db.Decimal(12, 2)
+  eisEmployee      Decimal   @default(0) @db.Decimal(12, 2)
+  pcb              Decimal   @default(0) @db.Decimal(12, 2)
+  otherDeduction   Decimal   @default(0) @db.Decimal(12, 2)
+  epfEmployer      Decimal   @default(0) @db.Decimal(12, 2)
+  socsoEmployer    Decimal   @default(0) @db.Decimal(12, 2)
+  eisEmployer      Decimal   @default(0) @db.Decimal(12, 2)
+  bankCode         String?
+  bankAccount      String?
+  remarks          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  advanceDeduction Decimal   @default(0) @db.Decimal(12, 2)
+  bankName         String?
+  grossSalary      Decimal   @default(0) @db.Decimal(12, 2)
+  housingAllowance Decimal   @default(0) @db.Decimal(12, 2)
+  isPaid           Boolean   @default(false)
+  loanDeduction    Decimal   @default(0) @db.Decimal(12, 2)
+  month            Int?
+  netSalary        Decimal   @default(0) @db.Decimal(12, 2)
+  paidAt           DateTime?
+  paymentReference String?
+  totalDeductions  Decimal   @default(0) @db.Decimal(12, 2)
+  travelAllowance  Decimal   @default(0) @db.Decimal(12, 2)
+  unpaidLeave      Decimal   @default(0) @db.Decimal(12, 2)
+  year             Int?
+  employee         Employee  @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+
+  @@unique([employeeId, period])
+  @@index([employeeId])
+  @@index([period])
+  @@index([isPaid])
+  @@index([paidAt])
+}
+
+model SalaryIncrement {
+  id                  String    @id @default(cuid())
+  employeeId          String
+  previousSalary      Decimal   @db.Decimal(12, 2)
+  newSalary           Decimal   @db.Decimal(12, 2)
+  incrementAmount     Decimal   @db.Decimal(12, 2)
+  incrementPercentage Decimal?  @db.Decimal(8, 2)
+  effectiveDate       DateTime
+  remarks             String?
+  notificationSent    Boolean   @default(false)
+  notificationSentAt  DateTime?
+  createdById         String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  employee            Employee  @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([effectiveDate])
+  @@index([createdById])
+}
+
+model DeviceToken {
+  id         String         @id @default(cuid())
+  userId     String
+  token      String         @unique
+  platform   DevicePlatform @default(ANDROID)
+  deviceName String?
+  isActive   Boolean        @default(true)
+  lastSeenAt DateTime       @default(now())
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Notification {
+  id         String                  @id @default(cuid())
+  userId     String?
+  type       NotificationType
+  title      String
+  body       String
+  data       Json?
+  isRead     Boolean                 @default(false)
+  readAt     DateTime?
+  pushSent   Boolean                 @default(false)
+  pushSentAt DateTime?
+  createdAt  DateTime                @default(now())
+  recipients NotificationRecipient[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model NotificationRecipient {
+  id             String       @id @default(cuid())
+  notificationId String
+  employeeId     String
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  pushSent       Boolean      @default(false)
+  pushSentAt     DateTime?
+  createdAt      DateTime     @default(now())
+  employee       Employee     @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, employeeId])
+  @@index([employeeId])
+  @@index([isRead])
+}
+
+model Announcement {
+  id                  String                 @id @default(cuid())
+  title               String
+  message             String
+  targetType          AnnouncementTargetType @default(ALL_EMPLOYEES)
+  branch              String?
+  department          String?
+  selectedEmployeeIds Json?
+  isActive            Boolean                @default(true)
+  publishAt           DateTime               @default(now())
+  expiresAt           DateTime?
+  createdById         String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([targetType])
+  @@index([branch])
+  @@index([department])
+  @@index([isActive])
+  @@index([publishAt])
+}
+
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+  BRANCH
+}
+
+enum NotificationType {
+  SALARY_CREDITED
+  SALARY_INCREMENT
+  ANNOUNCEMENT
+  COMMON_UPDATE
+  PAYROLL
+  SYSTEM
+}
+
+enum AnnouncementTargetType {
+  ALL_EMPLOYEES
+  SPECIFIC_BRANCH
+  SPECIFIC_DEPARTMENT
+  SELECTED_EMPLOYEES
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WEB
+}

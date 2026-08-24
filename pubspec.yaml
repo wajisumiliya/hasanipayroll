@@ -1,0 +1,58 @@
+name: hasani_payroll_portal
+
+description: Hasani Books payroll portal for Android, iOS and Web.
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  intl: ^0.19.0
+  pdf: ^3.11.1
+  printing: ^5.13.4
+
+  shared_preferences: ^2.5.5
+  csv: ^6.0.0
+  file_picker: ^10.3.10
+
+  supabase_flutter: 2.15.4
+  http: ^1.6.0
+
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.2.10
+  flutter_local_notifications: ^18.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/hasani_books_logo.jpg
+
+# ============================================================================
+# APP ICON
+# ============================================================================
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+
+  image_path: "assets/hasani_books_logo.jpg"
+
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/hasani_books_logo.jpg"
