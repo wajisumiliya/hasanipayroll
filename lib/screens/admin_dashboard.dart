@@ -3333,6 +3333,215 @@ void _openAdminAttendance(
   });
 }
 
+<<<<<<< HEAD
+=======
+
+
+// ===========================================================================
+// EMPLOYEE CSV IMPORT
+// ===========================================================================
+
+Future<void> _importEmployeesCsv() async {
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.single;
+    final bytes = file.bytes;
+
+    if (bytes == null || bytes.isEmpty) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to read the selected CSV file.'),
+        ),
+      );
+      return;
+    }
+
+    final csvText = utf8.decode(bytes, allowMalformed: true);
+
+    final rows = const CsvToListConverter(
+      shouldParseNumbers: false,
+    ).convert(csvText);
+
+    if (rows.isEmpty) {
+      throw Exception('The CSV file is empty.');
+    }
+
+    // Remove BOM if the CSV was exported from Excel/Windows.
+    final headers = rows.first
+        .map((value) => value.toString().replaceFirst('\uFEFF', '').trim())
+        .toList();
+
+    if (headers.isEmpty) {
+      throw Exception('The CSV file has no headers.');
+    }
+
+    final requiredHeaders = [
+      'employeeId',
+      'name',
+      'designation',
+      'department',
+      'email',
+      'newIcNo',
+      'bankCode',
+      'bankAccount',
+      'phone',
+      'address',
+      'joiningDate',
+      'isActive',
+      'branchId',
+    ];
+
+    final missingHeaders = requiredHeaders
+        .where((header) => !headers.contains(header))
+        .toList();
+
+    if (missingHeaders.isNotEmpty) {
+      throw Exception(
+        'Missing required CSV columns:\n${missingHeaders.join(', ')}',
+      );
+    }
+
+    final employeeRows = <Map<String, dynamic>>[];
+
+    String valueAt(List<dynamic> row, String header) {
+      final index = headers.indexOf(header);
+
+      if (index < 0 || index >= row.length) {
+        return '';
+      }
+
+      return row[index].toString().trim();
+    }
+
+    bool parseBool(String value) {
+      final normalized = value.toLowerCase().trim();
+
+      return normalized == 'true' ||
+          normalized == '1' ||
+          normalized == 'yes' ||
+          normalized == 'active' ||
+          normalized == 'y';
+    }
+
+    for (var i = 1; i < rows.length; i++) {
+      final row = rows[i];
+
+      if (row.isEmpty) {
+        continue;
+      }
+
+      final employeeId = valueAt(row, 'employeeId');
+
+      // Ignore completely blank rows.
+      if (employeeId.isEmpty) {
+        continue;
+      }
+
+      employeeRows.add({
+        'employee_id': employeeId,
+        'name': valueAt(row, 'name'),
+        'designation': valueAt(row, 'designation'),
+        'department': valueAt(row, 'department'),
+        'email': valueAt(row, 'email'),
+        'new_ic_no': valueAt(row, 'newIcNo'),
+        'bank_code': valueAt(row, 'bankCode'),
+        'bank_account': valueAt(row, 'bankAccount'),
+        'phone': valueAt(row, 'phone'),
+        'address': valueAt(row, 'address'),
+        'joining_date': valueAt(row, 'joiningDate').isEmpty
+            ? null
+            : valueAt(row, 'joiningDate'),
+        'is_active': parseBool(valueAt(row, 'isActive')),
+        'branch_id': valueAt(row, 'branchId').isEmpty
+            ? null
+            : valueAt(row, 'branchId'),
+      });
+    }
+
+    if (employeeRows.isEmpty) {
+      throw Exception(
+        'No valid employee records were found in the CSV file.',
+      );
+    }
+
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(),
+            ),
+            SizedBox(width: 20),
+            Expanded(
+              child: Text('Importing employees...'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await SupabaseService.client
+          .from('employees')
+          .upsert(
+            employeeRows,
+            onConflict: 'employee_id',
+          );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${employeeRows.length} employee record(s) imported successfully.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      rethrow;
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Employee CSV import failed: $e',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+
+>>>>>>> 93993cf (updated dashboard)
 // ===========================================================================
 // EMPLOYEE CSV IMPORT PAGE
 // ===========================================================================
@@ -4180,6 +4389,278 @@ void _openAdminAttendance(
 
     setState(() {});
   }
+
+
+// ===========================================================================
+// PAYROLL CSV IMPORT
+// ===========================================================================
+
+Future<void> _importPayrollCsv() async {
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.single;
+    final bytes = file.bytes;
+
+    if (bytes == null || bytes.isEmpty) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to read the selected CSV file.'),
+        ),
+      );
+      return;
+    }
+
+    final csvText = utf8.decode(
+      bytes,
+      allowMalformed: true,
+    );
+
+    final rows = const CsvToListConverter(
+      shouldParseNumbers: false,
+    ).convert(csvText);
+
+    if (rows.isEmpty) {
+      throw Exception('The CSV file is empty.');
+    }
+
+    final headers = rows.first
+        .map(
+          (value) => value
+              .toString()
+              .replaceFirst('\uFEFF', '')
+              .trim(),
+        )
+        .toList();
+
+    if (headers.isEmpty) {
+      throw Exception('The CSV file has no headers.');
+    }
+
+    // Convert CSV column names to database column names.
+    String databaseColumnName(String header) {
+      final value = header.trim();
+
+      const mappings = {
+        'employeeId': 'employee_id',
+        'employeeID': 'employee_id',
+        'employee_id': 'employee_id',
+        'basicSalary': 'basic_salary',
+        'basic_salary': 'basic_salary',
+        'elaunKedatangan': 'elaun_kedatangan',
+        'elaun_kedatangan': 'elaun_kedatangan',
+        'elaunPerkhidmatan': 'elaun_perkhidmatan',
+        'elaun_perkhidmatan': 'elaun_perkhidmatan',
+        'elaunKerajinan': 'elaun_kerajinan',
+        'elaun_kerajinan': 'elaun_kerajinan',
+        'overtime': 'overtime',
+        'bonus': 'bonus',
+        'commission': 'commission',
+        'otherEarnings': 'other_earnings',
+        'other_earnings': 'other_earnings',
+        'cutiUmum': 'cuti_umum',
+        'cuti_umum': 'cuti_umum',
+        'period': 'period',
+        'month': 'period',
+      };
+
+      if (mappings.containsKey(value)) {
+        return mappings[value]!;
+      }
+
+      // Convert camelCase to snake_case.
+      return value
+          .replaceAllMapped(
+            RegExp(r'([a-z0-9])([A-Z])'),
+            (match) => '${match.group(1)}_${match.group(2)}',
+          )
+          .toLowerCase();
+    }
+
+    double? parseNumber(String value) {
+      if (value.trim().isEmpty) {
+        return null;
+      }
+
+      final cleaned = value
+          .replaceAll(',', '')
+          .replaceAll('RM', '')
+          .replaceAll('rm', '')
+          .trim();
+
+      return double.tryParse(cleaned);
+    }
+
+    final numericColumns = {
+      'basic_salary',
+      'elaun_kedatangan',
+      'elaun_perkhidmatan',
+      'elaun_kerajinan',
+      'overtime',
+      'bonus',
+      'commission',
+      'other_earnings',
+      'cuti_umum',
+    };
+
+    final payrollRows = <Map<String, dynamic>>[];
+
+    for (var i = 1; i < rows.length; i++) {
+      final row = rows[i];
+
+      if (row.isEmpty) {
+        continue;
+      }
+
+      final record = <String, dynamic>{};
+
+      for (var columnIndex = 0;
+          columnIndex < headers.length;
+          columnIndex++) {
+        if (columnIndex >= row.length) {
+          continue;
+        }
+
+        final originalHeader = headers[columnIndex];
+
+        if (originalHeader.isEmpty) {
+          continue;
+        }
+
+        final column = databaseColumnName(originalHeader);
+
+        if (column.isEmpty) {
+          continue;
+        }
+
+        final rawValue = row[columnIndex].toString().trim();
+
+        if (numericColumns.contains(column)) {
+          record[column] = parseNumber(rawValue);
+        } else if (rawValue.isEmpty) {
+          record[column] = null;
+        } else {
+          record[column] = rawValue;
+        }
+      }
+
+      final employeeId =
+          (record['employee_id'] ?? '').toString().trim();
+
+      if (employeeId.isEmpty) {
+        continue;
+      }
+
+      payrollRows.add(record);
+    }
+
+    if (payrollRows.isEmpty) {
+      throw Exception(
+        'No valid payroll records were found in the CSV file. '
+        'Make sure employee_id is present.',
+      );
+    }
+
+    // Verify that the referenced employees exist.
+    final employeeIds = payrollRows
+        .map((row) => row['employee_id'].toString())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final existingEmployees = await SupabaseService.client
+        .from('employees')
+        .select('employee_id')
+        .inFilter('employee_id', employeeIds);
+
+    final existingIds = existingEmployees
+        .map<String>(
+          (row) => row['employee_id'].toString(),
+        )
+        .toSet();
+
+    final missingEmployees = employeeIds
+        .where((id) => !existingIds.contains(id))
+        .toList();
+
+    if (missingEmployees.isNotEmpty) {
+      throw Exception(
+        'These employee IDs do not exist:\n'
+        '${missingEmployees.join(', ')}',
+      );
+    }
+
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(),
+            ),
+            SizedBox(width: 20),
+            Expanded(
+              child: Text('Importing payroll records...'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await SupabaseService.client
+          .from('payroll')
+          .insert(payrollRows);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${payrollRows.length} payroll record(s) imported successfully.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      rethrow;
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Payroll CSV import failed: $e',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
 
 // ============================================================================
 // PAYROLL CSV IMPORT PAGE
