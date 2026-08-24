@@ -440,7 +440,7 @@ Widget _statusChip(String status) {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Â© Hasani Books Edar Sdn Bhd - 2026',
+            '© Hasani Books Edar Sdn Bhd - 2026',
             style: TextStyle(
               fontSize: 11,
               color: Colors.black45,
@@ -999,7 +999,7 @@ Widget _statusChip(String status) {
             child: Column(children: [
               ListTile(
                 title: Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                subtitle: const Text('Select Year â†’ Month â†’ Branch â†’ Employees'),
+                subtitle: const Text('Select Year → Month → Branch → Employees'),
                 trailing: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
               ),
               const Divider(height: 1),
@@ -1027,7 +1027,7 @@ Widget _statusChip(String status) {
                     )).toList()),
                   ],
                   if (selectedBranch != null) ...[
-                    const SizedBox(height: 24), Text('4. Employees â€” $selectedBranch', style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 10),
+                    const SizedBox(height: 24), Text('4. Employees — $selectedBranch', style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 10),
                     if (branchEmployees.isEmpty) const Text('No employees found for this branch.') else
                     ...branchEmployees.map((employee) {
                       final name = (employee['name'] ?? 'Employee').toString();
@@ -2287,7 +2287,7 @@ Widget _statusChip(String status) {
 
                     if (id.isEmpty ||
                         employeeName.isEmpty) {
-                      _message(
+                      _message(context,
                         'Employee ID and name are required.',
                       );
                       return;
@@ -2295,7 +2295,7 @@ Widget _statusChip(String status) {
 
                     if (service.findEmployee(id) !=
                         null) {
-                      _message(
+                      _message(context,
                         'Employee ID already exists.',
                       );
                       return;
@@ -2325,7 +2325,7 @@ Widget _statusChip(String status) {
 
                     Navigator.pop(dialogContext);
 
-                    _message(
+                    _message(context,
                       'Employee added successfully.',
                     );
                   },
@@ -2553,7 +2553,7 @@ Widget _statusChip(String status) {
 
                     Navigator.pop(dialogContext);
 
-                    _message(
+                    _message(context,
                       'Employee updated successfully.',
                     );
                   },
@@ -2606,7 +2606,7 @@ Widget _statusChip(String status) {
 
                 Navigator.pop(dialogContext);
 
-                _message(
+                _message(context,
                   'Employee deleted successfully.',
                 );
               },
@@ -3245,58 +3245,128 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
                     final submitted = records.any((r) => _attendanceBool(r['is_submitted']));
 
                     return InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () => _openAdminAttendance(employee, branchId, submitted),
-                      child: Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          side: BorderSide(color: Colors.blueGrey.withOpacity(.20)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 24,
-                                    child: Text(name.isEmpty ? '?' : name[0].toUpperCase()),
-                                  ),
-                                  const Spacer(),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: submitted ? Colors.green.shade50 : Colors.orange.shade50,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      submitted ? 'Submitted' : 'Pending',
-                                      style: TextStyle(
-                                        color: submitted ? Colors.green.shade700 : Colors.orange.shade700,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Spacer(),
-                              Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                              const SizedBox(height: 4),
-                              Text('Employee ID: $employeeId', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                              const SizedBox(height: 3),
-                              Text(
-                                submitted ? 'Submitted attendance • Admin can edit' : 'Waiting for Branch submission',
-                                style: const TextStyle(fontSize: 12, color: Colors.black54),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
+  borderRadius: BorderRadius.circular(18),
+  onTap: () => _openAdminAttendance(
+    employee,
+    branchId,
+  ),
+  child: Card(
+    elevation: 0,
+    margin: EdgeInsets.zero,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+      side: BorderSide(
+        color: Colors.blueGrey.withOpacity(.20),
+      ),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 25,
+                backgroundColor: const Color(0xFFE7F7EF),
+                child: Text(
+                  name.isEmpty
+                      ? '?'
+                      : name[0].toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFF15965D),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+
+              const Spacer(),
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: submitted
+                      ? Colors.green.shade50
+                      : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  submitted
+                      ? 'SUBMITTED'
+                      : 'PENDING',
+                  style: TextStyle(
+                    color: submitted
+                        ? Colors.green.shade700
+                        : Colors.orange.shade700,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const Spacer(),
+
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          Text(
+            'Employee ID: $employeeId',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          Row(
+            children: [
+              Icon(
+                submitted
+                    ? Icons.edit_outlined
+                    : Icons.lock_outline,
+                size: 14,
+                color: submitted
+                    ? Colors.green.shade700
+                    : Colors.orange.shade700,
+              ),
+
+              const SizedBox(width: 5),
+
+              Expanded(
+                child: Text(
+                  submitted
+                      ? 'Branch submitted • Admin can edit'
+                      : 'Waiting for Branch submission',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ),
+);
                   },
                 ),
             ],
@@ -3316,7 +3386,6 @@ bool _attendanceBool(dynamic value) {
 void _openAdminAttendance(
   Map<String, dynamic> employee,
   String branchId,
-  bool submitted,
 ) {
   showDialog(
     context: context,
@@ -3325,21 +3394,29 @@ void _openAdminAttendance(
       employee: employee,
       month: selectedAttendanceMonth,
       branchId: branchId,
+      
+      // Same attendance sheet as Branch Portal.
       editable: true,
+
+      // Admin does NOT submit attendance.
+      showSubmitButton: false,
+
+      // Admin can edit only after Branch has submitted.
       adminOnlyAfterSubmit: true,
     ),
   ).then((_) {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
   });
 }
 
-<<<<<<< HEAD
-=======
 
 
-// ===========================================================================
+
+
+// ============================================================================
 // EMPLOYEE CSV IMPORT
-// ===========================================================================
+// ============================================================================
 
 Future<void> _importEmployeesCsv() async {
   try {
@@ -3362,1060 +3439,7 @@ Future<void> _importEmployeesCsv() async {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Unable to read the selected CSV file.'),
-        ),
-      );
-      return;
-    }
-
-    final csvText = utf8.decode(bytes, allowMalformed: true);
-
-    final rows = const CsvToListConverter(
-      shouldParseNumbers: false,
-    ).convert(csvText);
-
-    if (rows.isEmpty) {
-      throw Exception('The CSV file is empty.');
-    }
-
-    // Remove BOM if the CSV was exported from Excel/Windows.
-    final headers = rows.first
-        .map((value) => value.toString().replaceFirst('\uFEFF', '').trim())
-        .toList();
-
-    if (headers.isEmpty) {
-      throw Exception('The CSV file has no headers.');
-    }
-
-    final requiredHeaders = [
-      'employeeId',
-      'name',
-      'designation',
-      'department',
-      'email',
-      'newIcNo',
-      'bankCode',
-      'bankAccount',
-      'phone',
-      'address',
-      'joiningDate',
-      'isActive',
-      'branchId',
-    ];
-
-    final missingHeaders = requiredHeaders
-        .where((header) => !headers.contains(header))
-        .toList();
-
-    if (missingHeaders.isNotEmpty) {
-      throw Exception(
-        'Missing required CSV columns:\n${missingHeaders.join(', ')}',
-      );
-    }
-
-    final employeeRows = <Map<String, dynamic>>[];
-
-    String valueAt(List<dynamic> row, String header) {
-      final index = headers.indexOf(header);
-
-      if (index < 0 || index >= row.length) {
-        return '';
-      }
-
-      return row[index].toString().trim();
-    }
-
-    bool parseBool(String value) {
-      final normalized = value.toLowerCase().trim();
-
-      return normalized == 'true' ||
-          normalized == '1' ||
-          normalized == 'yes' ||
-          normalized == 'active' ||
-          normalized == 'y';
-    }
-
-    for (var i = 1; i < rows.length; i++) {
-      final row = rows[i];
-
-      if (row.isEmpty) {
-        continue;
-      }
-
-      final employeeId = valueAt(row, 'employeeId');
-
-      // Ignore completely blank rows.
-      if (employeeId.isEmpty) {
-        continue;
-      }
-
-      employeeRows.add({
-        'employee_id': employeeId,
-        'name': valueAt(row, 'name'),
-        'designation': valueAt(row, 'designation'),
-        'department': valueAt(row, 'department'),
-        'email': valueAt(row, 'email'),
-        'new_ic_no': valueAt(row, 'newIcNo'),
-        'bank_code': valueAt(row, 'bankCode'),
-        'bank_account': valueAt(row, 'bankAccount'),
-        'phone': valueAt(row, 'phone'),
-        'address': valueAt(row, 'address'),
-        'joining_date': valueAt(row, 'joiningDate').isEmpty
-            ? null
-            : valueAt(row, 'joiningDate'),
-        'is_active': parseBool(valueAt(row, 'isActive')),
-        'branch_id': valueAt(row, 'branchId').isEmpty
-            ? null
-            : valueAt(row, 'branchId'),
-      });
-    }
-
-    if (employeeRows.isEmpty) {
-      throw Exception(
-        'No valid employee records were found in the CSV file.',
-      );
-    }
-
-    if (!mounted) return;
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(),
-            ),
-            SizedBox(width: 20),
-            Expanded(
-              child: Text('Importing employees...'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      await SupabaseService.client
-          .from('employees')
-          .upsert(
-            employeeRows,
-            onConflict: 'employee_id',
-          );
-
-      if (mounted) {
-        Navigator.of(context).pop();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${employeeRows.length} employee record(s) imported successfully.',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        setState(() {});
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-
-      rethrow;
-    }
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Employee CSV import failed: $e',
-        ),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
-
-
->>>>>>> 93993cf (updated dashboard)
-// ===========================================================================
-// EMPLOYEE CSV IMPORT PAGE
-// ===========================================================================
-
-  Widget _importPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Import Employees',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          const Text(
-            'Import employee details directly from a CSV file.',
-            style: TextStyle(
-              color: Colors.black54,
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          _panel(
-            'Employee CSV Import',
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Center(
-                  child: Icon(
-                    Icons.cloud_upload_outlined,
-                    size: 70,
-                    color: Color(0xFF2D55D8),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                const Text(
-                  'Import employee records',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                const Text(
-                  'Select your employee CSV file. '
-                      'The application will read the employee details '
-                      'from the CSV and add/update the records.',
-                ),
-
-                const SizedBox(height: 20),
-
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FB),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Colors.black12,
-                    ),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Required CSV columns',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      SizedBox(height: 10),
-
-                      SelectableText(
-                        'employeeId,name,designation,department,email,'
-                            'newIcNo,bankCode,bankAccount,phone,address,'
-                            'joiningDate,isActive,branchId',
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _importEmployeesCsv,
-                    icon: const Icon(
-                      Icons.upload_file,
-                    ),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        'SELECT CSV FILE & IMPORT',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-// ===========================================================================
-// PAYROLL PAGE
-// ===========================================================================
-
-  // ============================================================================
-// PAYROLL PAGE
-// ============================================================================
-
-
-  Future<void> _showGenerateAttendancePayrollDialog() async {
-    DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
-    bool overwriteExisting = true;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Generate Payroll From Attendance'),
-          content: SizedBox(
-            width: 520,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title: const Text('Payroll Month'),
-                  subtitle: Text(DateFormat('MMMM yyyy').format(selectedMonth)),
-                  trailing: OutlinedButton(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: selectedMonth,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                        helpText: 'Select Payroll Month',
-                      );
-                      if (picked != null) {
-                        setDialogState(() {
-                          selectedMonth = DateTime(picked.year, picked.month);
-                        });
-                      }
-                    },
-                    child: const Text('Change'),
-                  ),
-                ),
-                const Divider(),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: overwriteExisting,
-                  title: const Text('Replace Existing Payroll'),
-                  subtitle: const Text('Update an existing payroll record for the selected month.'),
-                  onChanged: (value) => setDialogState(() => overwriteExisting = value),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Rules: approved OT is included; unauthorized OT is omitted. '
-                  'Attendance deductions are calculated from the monthly attendance records.',
-                  style: TextStyle(color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton.icon(
-              icon: const Icon(Icons.calculate_outlined),
-              label: const Text('Generate'),
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                await _generateAttendancePayroll(
-                  month: selectedMonth,
-                  overwriteExisting: overwriteExisting,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _generateAttendancePayroll({
-    required DateTime month,
-    required bool overwriteExisting,
-  }) async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(width: 28, height: 28, child: CircularProgressIndicator()),
-            SizedBox(width: 20),
-            Expanded(child: Text('Generating payroll from attendance...')),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final result = await AttendancePayrollService.generateMonthlyPayroll(
-        month: month,
-        overwriteExisting: overwriteExisting,
-      );
-      if (mounted) Navigator.of(context).pop();
-      if (!mounted) return;
-      setState(() {});
-      await _showPayrollGenerationResult(result);
-    } catch (e) {
-      if (mounted) Navigator.of(context).pop();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payroll generation failed: $e')),
-      );
-    }
-  }
-
-  Future<void> _showPayrollGenerationResult(
-    PayrollGenerationResult result,
-  ) async {
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Payroll Generation Complete'),
-        content: SizedBox(
-          width: 650,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormat('MMMM yyyy').format(result.month),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Text('Generated: ${result.generatedCount}'),
-                Text('Skipped: ${result.skippedCount}'),
-                Text('Approved OT: RM ${result.totalOvertime.toStringAsFixed(2)}'),
-                Text('Attendance deductions: RM ${result.totalAttendanceDeduction.toStringAsFixed(2)}'),
-                const SizedBox(height: 16),
-                ...result.generated.map((item) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.check_circle, color: Colors.green),
-                  title: Text(item.employeeName.isEmpty ? item.employeeId : item.employeeName),
-                  subtitle: Text(
-                    'Present: ${item.presentDays} | Absent: ${item.absentDays} | '
-                    'Approved OT: ${item.approvedOtHours.toStringAsFixed(2)} hrs | '
-                    'Unauthorized OT omitted: ${item.unauthorizedOtHours.toStringAsFixed(2)} hrs',
-                  ),
-                )),
-                ...result.skipped.map((item) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.error_outline, color: Colors.orange),
-                  title: Text(item.employeeName.isEmpty ? item.employeeId : item.employeeName),
-                  subtitle: Text(item.message),
-                )),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _payrollPage() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: SupabaseService.client
-          .from('payroll')
-          .select()
-          .order('period', ascending: false),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(60),
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Payroll',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF172033),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.red.shade200,
-                    ),
-                  ),
-                  child: Text(
-                    'Unable to load payroll records.\n\n'
-                        '${snapshot.error}',
-                    style: TextStyle(
-                      color: Colors.red.shade800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final payrollRecords =
-            snapshot.data ?? <Map<String, dynamic>>[];
-
-        double totalPayroll = 0;
-
-        for (final payroll in payrollRecords) {
-          totalPayroll +=
-              _payrollNumber(payroll['basic_salary']) +
-                  _payrollNumber(payroll['elaun_kedatangan']) +
-                  _payrollNumber(payroll['elaun_perkhidmatan']) +
-                  _payrollNumber(payroll['elaun_kerajinan']) +
-                  _payrollNumber(payroll['overtime']) +
-                  _payrollNumber(payroll['bonus']) +
-                  _payrollNumber(payroll['commission']) +
-                  _payrollNumber(payroll['other_earnings']) +
-                  _payrollNumber(payroll['cuti_umum']);
-        }
-
-        return FutureBuilder<List<Map<String, dynamic>>>(
-          future: SupabaseService.client
-              .from('employees')
-              .select('employee_id, name')
-              .eq('is_active', true),
-          builder: (context, employeeSnapshot) {
-            final employeeCount =
-                employeeSnapshot.data?.length ?? 0;
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Payroll',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF172033),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  const Text(
-                    'Manage employee payroll and salary information.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.black54,
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      onPressed: _showGenerateAttendancePayrollDialog,
-                      icon: const Icon(Icons.calculate_outlined),
-                      label: const Text('Generate Payroll From Attendance'),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _payrollSummaryCard(
-                          'Total Payroll',
-                          'RM ${totalPayroll.toStringAsFixed(2)}',
-                          Icons.account_balance_wallet_outlined,
-                          const Color(0xFF2D55D8),
-                        ),
-                      ),
-
-                      const SizedBox(width: 16),
-
-                      Expanded(
-                        child: _payrollSummaryCard(
-                          'Employees',
-                          employeeCount.toString(),
-                          Icons.people_outline,
-                          const Color(0xFF16A34A),
-                        ),
-                      ),
-
-                      const SizedBox(width: 16),
-
-                      Expanded(
-                        child: _payrollSummaryCard(
-                          'Payroll Records',
-                          payrollRecords.length.toString(),
-                          Icons.pending_actions_outlined,
-                          const Color(0xFFF59E0B),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.grey.shade200,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Payroll Management',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        const Text(
-                          'Manage payroll records stored in Supabase.',
-                          style: TextStyle(
-                            color: Colors.black54,
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              selectedPage = 5;
-                            });
-                          },
-                          icon: const Icon(
-                            Icons.upload_file_outlined,
-                          ),
-                          label: const Text(
-                            'Import Payroll',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                            const Color(0xFF2D55D8),
-                            foregroundColor: Colors.white,
-                            padding:
-                            const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 14,
-                            ),
-                            shape:
-                            RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        if (payrollRecords.isEmpty)
-                          Container(
-                            width: double.infinity,
-                            padding:
-                            const EdgeInsets.symmetric(
-                              vertical: 40,
-                              horizontal: 20,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                              const Color(0xFFF8FAFC),
-                              borderRadius:
-                              BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.grey.shade200,
-                              ),
-                            ),
-                            child: const Column(
-                              children: [
-                                Icon(
-                                  Icons.payments_outlined,
-                                  size: 48,
-                                  color: Colors.black38,
-                                ),
-                                SizedBox(height: 12),
-                                Text(
-                                  'No payroll records yet',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight:
-                                    FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: 6),
-                                Text(
-                                  'Import payroll data or add payroll records.',
-                                  style: TextStyle(
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          _supabasePayrollTable(
-                            payrollRecords,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-// ============================================================================
-// PAYROLL SUMMARY
-// ============================================================================
-
-  Widget _payrollSummaryCard(
-      String title,
-      String value,
-      IconData icon,
-      Color color,
-      ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.grey.shade200,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 13,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-// ============================================================================
-// TOTAL PAYROLL
-// ============================================================================
-
-  String _totalPayrollText() {
-    double total = 0;
-
-    for (final record in service.payroll) {
-      total += record.basicSalary;
-      total += record.elaunKedatangan;
-      total += record.elaunPerkhidmatan;
-      total += record.elaunKerajinan;
-      total += record.overtime;
-      total += record.bonus;
-      total += record.commission;
-      total += record.otherEarnings;
-      total += record.cutiUmum;
-    }
-
-    return 'RM ${total.toStringAsFixed(2)}';
-  }
-
-// ============================================================================
-// PAYROLL TABLE
-// ============================================================================
-
-  Widget _payrollRecordsTable() {
-    final records = List<PayrollRecord>.from(
-      service.payroll,
-    );
-
-    records.sort(
-          (a, b) => b.period.compareTo(a.period),
-    );
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.grey.shade200,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: const [
-            DataColumn(
-              label: Text('Employee'),
-            ),
-            DataColumn(
-              label: Text('Period'),
-            ),
-            DataColumn(
-              label: Text('Basic Salary'),
-            ),
-            DataColumn(
-              label: Text('Gross'),
-            ),
-            DataColumn(
-              label: Text('EPF'),
-            ),
-            DataColumn(
-              label: Text('SOCSO'),
-            ),
-            DataColumn(
-              label: Text('Actions'),
-            ),
-          ],
-          rows: records.map((record) {
-            final employee = service.findEmployee(
-              record.employeeId,
-            );
-
-            final gross =
-                record.basicSalary +
-                    record.elaunKedatangan +
-                    record.elaunPerkhidmatan +
-                    record.elaunKerajinan +
-                    record.overtime +
-                    record.bonus +
-                    record.commission +
-                    record.otherEarnings +
-                    record.cutiUmum;
-
-            return DataRow(
-              cells: [
-                DataCell(
-                  Text(
-                    employee?.name ??
-                        record.employeeId,
-                  ),
-                ),
-
-                DataCell(
-                  Text(
-                    '${record.period.year}-'
-                        '${record.period.month.toString().padLeft(2, '0')}',
-                  ),
-                ),
-
-                DataCell(
-                  Text(
-                    'RM ${record.basicSalary.toStringAsFixed(2)}',
-                  ),
-                ),
-
-                DataCell(
-                  Text(
-                    'RM ${gross.toStringAsFixed(2)}',
-                  ),
-                ),
-
-                DataCell(
-                  Text(
-                    'RM ${record.epfEmployee.toStringAsFixed(2)}',
-                  ),
-                ),
-
-                DataCell(
-                  Text(
-                    'RM ${record.socsoEmployee.toStringAsFixed(2)}',
-                  ),
-                ),
-
-                DataCell(
-                  IconButton(
-                    tooltip: 'Delete payroll',
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
-                    ),
-                    onPressed: () {
-                      _deletePayroll(record);
-                    },
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-// ============================================================================
-// DELETE PAYROLL
-// ============================================================================
-
-  Future<void> _deletePayroll(
-      PayrollRecord record,
-      ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            'Delete Payroll',
-          ),
-          content: Text(
-            'Delete payroll record ${record.id}?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
-    final message = await service.deletePayroll(
-      record.id,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
-
-    setState(() {});
-  }
-
-
-// ===========================================================================
-// PAYROLL CSV IMPORT
-// ===========================================================================
-
-Future<void> _importPayrollCsv() async {
-  try {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['csv'],
-      withData: true,
-    );
-
-    if (result == null || result.files.isEmpty) {
-      return;
-    }
-
-    final file = result.files.single;
-    final bytes = file.bytes;
-
-    if (bytes == null || bytes.isEmpty) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to read the selected CSV file.'),
+          backgroundColor: Colors.red,
         ),
       );
       return;
@@ -4447,49 +3471,1219 @@ Future<void> _importPayrollCsv() async {
       throw Exception('The CSV file has no headers.');
     }
 
-    // Convert CSV column names to database column names.
-    String databaseColumnName(String header) {
+    const requiredHeaders = [
+      'employeeId',
+      'name',
+      'designation',
+      'department',
+      'email',
+      'newIcNo',
+      'bankCode',
+      'bankAccount',
+      'phone',
+      'address',
+      'joiningDate',
+      'isActive',
+      'branchId',
+    ];
+
+    final missingHeaders = requiredHeaders
+        .where((header) => !headers.contains(header))
+        .toList();
+
+    if (missingHeaders.isNotEmpty) {
+      throw Exception(
+        'Missing required CSV columns:\n'
+        '${missingHeaders.join(', ')}',
+      );
+    }
+
+    String valueAt(
+      List<dynamic> row,
+      String header,
+    ) {
+      final index = headers.indexOf(header);
+
+      if (index < 0 || index >= row.length) {
+        return '';
+      }
+
+      return row[index].toString().trim();
+    }
+
+    bool parseBool(String value) {
+      final normalized = value.toLowerCase().trim();
+
+      return normalized == 'true' ||
+          normalized == '1' ||
+          normalized == 'yes' ||
+          normalized == 'active' ||
+          normalized == 'y';
+    }
+
+    final employeeRows = <Map<String, dynamic>>[];
+
+    for (var i = 1; i < rows.length; i++) {
+      final row = rows[i];
+
+      if (row.isEmpty) {
+        continue;
+      }
+
+      final employeeId = valueAt(
+        row,
+        'employeeId',
+      );
+
+      if (employeeId.isEmpty) {
+        continue;
+      }
+
+      employeeRows.add({
+        'employee_id': employeeId,
+        'name': valueAt(row, 'name'),
+        'designation': valueAt(row, 'designation'),
+        'department': valueAt(row, 'department'),
+        'email': valueAt(row, 'email'),
+        'new_ic_no': valueAt(row, 'newIcNo'),
+        'bank_code': valueAt(row, 'bankCode'),
+        'bank_account': valueAt(row, 'bankAccount'),
+        'phone': valueAt(row, 'phone'),
+        'address': valueAt(row, 'address'),
+        'joining_date': valueAt(
+          row,
+          'joiningDate',
+        ).isEmpty
+            ? null
+            : valueAt(
+                row,
+                'joiningDate',
+              ),
+        'is_active': parseBool(
+          valueAt(row, 'isActive'),
+        ),
+        'branch_id': valueAt(
+          row,
+          'branchId',
+        ).isEmpty
+            ? null
+            : valueAt(
+                row,
+                'branchId',
+              ),
+      });
+    }
+
+    if (employeeRows.isEmpty) {
+      throw Exception(
+        'No valid employee records were found in the CSV file.',
+      );
+    }
+
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(),
+            ),
+            SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                'Importing employees...',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await SupabaseService.client
+          .from('employees')
+          .upsert(
+            employeeRows,
+            onConflict: 'employee_id',
+          );
+
+      if (!mounted) return;
+
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${employeeRows.length} employee record(s) imported successfully.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      setState(() {});
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      rethrow;
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Employee CSV import failed: $e',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// EMPLOYEE CSV IMPORT PAGE
+// ============================================================================
+
+Widget _importPage() {
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Import Employees',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          'Import employee details directly from a CSV file.',
+          style: TextStyle(
+            color: Colors.black54,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        _panel(
+          'Employee CSV Import',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: Icon(
+                  Icons.cloud_upload_outlined,
+                  size: 70,
+                  color: Color(0xFF2D55D8),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                'Import employee records',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              const Text(
+                'Select your employee CSV file. '
+                'Existing employees are updated using employee_id.',
+              ),
+
+              const SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7FB),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.black12,
+                  ),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Required CSV columns',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    SizedBox(height: 10),
+
+                    SelectableText(
+                      'employeeId,name,designation,department,email,'
+                      'newIcNo,bankCode,bankAccount,phone,address,'
+                      'joiningDate,isActive,branchId',
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _importEmployeesCsv,
+                  icon: const Icon(
+                    Icons.upload_file,
+                  ),
+                  label: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 14,
+                    ),
+                    child: Text(
+                      'SELECT CSV FILE & IMPORT',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ============================================================================
+// PAYROLL GENERATION DIALOG
+// ============================================================================
+
+Future<void> _showGenerateAttendancePayrollDialog() async {
+  DateTime selectedMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  );
+
+  bool overwriteExisting = true;
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (
+          context,
+          setDialogState,
+        ) {
+          return AlertDialog(
+            title: const Text(
+              'Generate Payroll From Attendance',
+            ),
+
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.calendar_month_outlined,
+                    ),
+                    title: const Text(
+                      'Payroll Month',
+                    ),
+                    subtitle: Text(
+                      DateFormat(
+                        'MMMM yyyy',
+                      ).format(selectedMonth),
+                    ),
+                    trailing: OutlinedButton(
+                      onPressed: () async {
+                        final picked =
+                            await showDatePicker(
+                          context: context,
+                          initialDate: selectedMonth,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                          helpText:
+                              'Select Payroll Month',
+                        );
+
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedMonth = DateTime(
+                              picked.year,
+                              picked.month,
+                            );
+                          });
+                        }
+                      },
+                      child: const Text(
+                        'Change',
+                      ),
+                    ),
+                  ),
+
+                  const Divider(),
+
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: overwriteExisting,
+                    title: const Text(
+                      'Replace Existing Payroll',
+                    ),
+                    subtitle: const Text(
+                      'Update an existing payroll record '
+                      'for the selected month.',
+                    ),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        overwriteExisting = value;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Rules: approved OT is included; '
+                    'unauthorized OT is omitted. '
+                    'Attendance deductions are calculated '
+                    'from the monthly attendance records.',
+                    style: TextStyle(
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text(
+                  'Cancel',
+                ),
+              ),
+
+              FilledButton.icon(
+                icon: const Icon(
+                  Icons.calculate_outlined,
+                ),
+                label: const Text(
+                  'Generate',
+                ),
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+
+                  await _generateAttendancePayroll(
+                    month: selectedMonth,
+                    overwriteExisting:
+                        overwriteExisting,
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+// ============================================================================
+// GENERATE PAYROLL
+// ============================================================================
+
+Future<void> _generateAttendancePayroll({
+  required DateTime month,
+  required bool overwriteExisting,
+}) async {
+  if (!mounted) return;
+
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const AlertDialog(
+      content: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            child: Text(
+              'Generating payroll from attendance...',
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  try {
+    final result =
+        await AttendancePayrollService.generateMonthlyPayroll(
+      month: month,
+      overwriteExisting: overwriteExisting,
+    );
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+
+    if (!mounted) return;
+
+    setState(() {});
+
+    await _showPayrollGenerationResult(
+      result,
+    );
+  } catch (e) {
+    if (mounted) {
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Payroll generation failed: $e',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+// ============================================================================
+// PAYROLL GENERATION RESULT
+// ============================================================================
+
+Future<void> _showPayrollGenerationResult(
+  PayrollGenerationResult result,
+) async {
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Payroll Generation Complete',
+        ),
+
+        content: SizedBox(
+          width: 700,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat(
+                    'MMMM yyyy',
+                  ).format(result.month),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  'Generated: ${result.generatedCount}',
+                ),
+
+                Text(
+                  'Skipped: ${result.skippedCount}',
+                ),
+
+                Text(
+                  'Approved OT: RM '
+                  '${result.totalOvertime.toStringAsFixed(2)}',
+                ),
+
+                Text(
+                  'Attendance deductions: RM '
+                  '${result.totalAttendanceDeduction.toStringAsFixed(2)}',
+                ),
+
+                const SizedBox(height: 16),
+
+                ...result.generated.map(
+                  (item) => ListTile(
+                    dense: true,
+                    leading: const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                    ),
+                    title: Text(
+                      item.employeeName.isEmpty
+                          ? item.employeeId
+                          : item.employeeName,
+                    ),
+                    subtitle: Text(
+                      'Present: ${item.presentDays} | '
+                      'Absent: ${item.absentDays} | '
+                      'Approved OT: '
+                      '${item.approvedOtHours.toStringAsFixed(2)} hrs | '
+                      'Unauthorized OT omitted: '
+                      '${item.unauthorizedOtHours.toStringAsFixed(2)} hrs',
+                    ),
+                  ),
+                ),
+
+                ...result.skipped.map(
+                  (item) => ListTile(
+                    dense: true,
+                    leading: const Icon(
+                      Icons.error_outline,
+                      color: Colors.orange,
+                    ),
+                    title: Text(
+                      item.employeeName.isEmpty
+                          ? item.employeeId
+                          : item.employeeName,
+                    ),
+                    subtitle: Text(
+                      item.message,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text(
+              'Done',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// ============================================================================
+// PAYROLL PAGE
+// ============================================================================
+
+Widget _payrollPage() {
+  return FutureBuilder<List<Map<String, dynamic>>>(
+    future: SupabaseService.client
+        .from('payroll')
+        .select()
+        .order(
+          'period',
+          ascending: false,
+        ),
+    builder: (
+      context,
+      snapshot,
+    ) {
+      if (snapshot.connectionState ==
+          ConnectionState.waiting) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(60),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      if (snapshot.hasError) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Payroll',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF172033),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius:
+                      BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.red.shade200,
+                  ),
+                ),
+                child: Text(
+                  'Unable to load payroll records.\n\n'
+                  '${snapshot.error}',
+                  style: TextStyle(
+                    color: Colors.red.shade800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final payrollRecords =
+          snapshot.data ??
+              <Map<String, dynamic>>[];
+
+      double totalPayroll = 0;
+
+      for (final payroll in payrollRecords) {
+        totalPayroll += _payrollTotalEarnings(
+          payroll,
+        );
+      }
+
+      return FutureBuilder<
+          List<Map<String, dynamic>>>(
+        future: SupabaseService.client
+            .from('employees')
+            .select(
+              'employee_id, name',
+            )
+            .eq(
+              'is_active',
+              true,
+            ),
+        builder: (
+          context,
+          employeeSnapshot,
+        ) {
+          final employeeCount =
+              employeeSnapshot.data?.length ?? 0;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Payroll',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF172033),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                const Text(
+                  'Manage employee payroll and salary information.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black54,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    FilledButton.icon(
+                      onPressed:
+                          _showGenerateAttendancePayrollDialog,
+                      icon: const Icon(
+                        Icons.calculate_outlined,
+                      ),
+                      label: const Text(
+                        'Generate Payroll From Attendance',
+                      ),
+                    ),
+
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          selectedPage = 5;
+                        });
+                      },
+                      icon: const Icon(
+                        Icons.upload_file_outlined,
+                      ),
+                      label: const Text(
+                        'Import Payroll CSV',
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                LayoutBuilder(
+                  builder: (
+                    context,
+                    constraints,
+                  ) {
+                    final cardWidth =
+                        (constraints.maxWidth - 32) /
+                            3;
+
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        SizedBox(
+                          width: cardWidth,
+                          child:
+                              _payrollSummaryCard(
+                            'Total Payroll',
+                            'RM ${totalPayroll.toStringAsFixed(2)}',
+                            Icons
+                                .account_balance_wallet_outlined,
+                            const Color(0xFF2D55D8),
+                          ),
+                        ),
+
+                        SizedBox(
+                          width: cardWidth,
+                          child:
+                              _payrollSummaryCard(
+                            'Employees',
+                            employeeCount
+                                .toString(),
+                            Icons.people_outline,
+                            const Color(0xFF16A34A),
+                          ),
+                        ),
+
+                        SizedBox(
+                          width: cardWidth,
+                          child:
+                              _payrollSummaryCard(
+                            'Payroll Records',
+                            payrollRecords
+                                .length
+                                .toString(),
+                            Icons
+                                .pending_actions_outlined,
+                            const Color(0xFFF59E0B),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 30),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Payroll Management',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        'Payroll records stored in Supabase.',
+                        style: TextStyle(
+                          color: Colors.black54,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      if (payrollRecords.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding:
+                              const EdgeInsets.symmetric(
+                            vertical: 40,
+                            horizontal: 20,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFF8FAFC),
+                            borderRadius:
+                                BorderRadius.circular(
+                              12,
+                            ),
+                            border: Border.all(
+                              color:
+                                  Colors.grey.shade200,
+                            ),
+                          ),
+                          child: const Column(
+                            children: [
+                              Icon(
+                                Icons
+                                    .payments_outlined,
+                                size: 48,
+                                color: Colors.black38,
+                              ),
+
+                              SizedBox(height: 12),
+
+                              Text(
+                                'No payroll records yet',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight:
+                                      FontWeight.w600,
+                                ),
+                              ),
+
+                              SizedBox(height: 6),
+
+                              Text(
+                                'Import payroll data or generate payroll from attendance.',
+                                textAlign:
+                                    TextAlign.center,
+                                style: TextStyle(
+                                  color:
+                                      Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        _supabasePayrollTable(
+                          payrollRecords,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+// ============================================================================
+// PAYROLL SUMMARY CARD
+// ============================================================================
+
+Widget _payrollSummaryCard(
+  String title,
+  String value,
+  IconData icon,
+  Color color,
+) {
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(
+        color: Colors.grey.shade200,
+      ),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.10),
+            borderRadius:
+                BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+          ),
+        ),
+
+        const SizedBox(width: 14),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontSize: 13,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                value,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ============================================================================
+// PAYROLL TOTAL
+// ============================================================================
+
+double _payrollTotalEarnings(
+  Map<String, dynamic> payroll,
+) {
+  return _payrollNumber(
+        payroll['basic_salary'],
+      ) +
+      _payrollNumber(
+        payroll['elaun_kedatangan'],
+      ) +
+      _payrollNumber(
+        payroll['elaun_perkhidmatan'],
+      ) +
+      _payrollNumber(
+        payroll['elaun_kerajinan'],
+      ) +
+      _payrollNumber(
+        payroll['overtime'],
+      ) +
+      _payrollNumber(
+        payroll['bonus'],
+      ) +
+      _payrollNumber(
+        payroll['commission'],
+      ) +
+      _payrollNumber(
+        payroll['other_earnings'],
+      ) +
+      _payrollNumber(
+        payroll['cuti_umum'],
+      );
+}
+
+// ============================================================================
+// PAYROLL CSV IMPORT
+// ============================================================================
+
+Future<void> _importPayrollCsv() async {
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      withData: true,
+    );
+
+    if (result == null ||
+        result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.single;
+    final bytes = file.bytes;
+
+    if (bytes == null || bytes.isEmpty) {
+      throw Exception(
+        'Unable to read the selected CSV file.',
+      );
+    }
+
+    final csvText = utf8.decode(
+      bytes,
+      allowMalformed: true,
+    );
+
+    final rows = const CsvToListConverter(
+      shouldParseNumbers: false,
+    ).convert(csvText);
+
+    if (rows.isEmpty) {
+      throw Exception(
+        'The CSV file is empty.',
+      );
+    }
+
+    final headers = rows.first
+        .map(
+          (value) => value
+              .toString()
+              .replaceFirst('\uFEFF', '')
+              .trim(),
+        )
+        .toList();
+
+    if (headers.isEmpty) {
+      throw Exception(
+        'The CSV file has no headers.',
+      );
+    }
+
+    String databaseColumnName(
+      String header,
+    ) {
       final value = header.trim();
 
       const mappings = {
+        'id': 'id',
+
         'employeeId': 'employee_id',
         'employeeID': 'employee_id',
         'employee_id': 'employee_id',
+
+        'period': 'period',
+        'month': 'period',
+
         'basicSalary': 'basic_salary',
         'basic_salary': 'basic_salary',
-        'elaunKedatangan': 'elaun_kedatangan',
-        'elaun_kedatangan': 'elaun_kedatangan',
-        'elaunPerkhidmatan': 'elaun_perkhidmatan',
-        'elaun_perkhidmatan': 'elaun_perkhidmatan',
-        'elaunKerajinan': 'elaun_kerajinan',
-        'elaun_kerajinan': 'elaun_kerajinan',
+
+        'elaunKedatangan':
+            'elaun_kedatangan',
+        'elaun_kedatangan':
+            'elaun_kedatangan',
+
+        'elaunPerkhidmatan':
+            'elaun_perkhidmatan',
+        'elaun_perkhidmatan':
+            'elaun_perkhidmatan',
+
+        'elaunKerajinan':
+            'elaun_kerajinan',
+        'elaun_kerajinan':
+            'elaun_kerajinan',
+
         'overtime': 'overtime',
         'bonus': 'bonus',
         'commission': 'commission',
-        'otherEarnings': 'other_earnings',
-        'other_earnings': 'other_earnings',
+
+        'otherEarnings':
+            'other_earnings',
+        'other_earnings':
+            'other_earnings',
+
         'cutiUmum': 'cuti_umum',
         'cuti_umum': 'cuti_umum',
-        'period': 'period',
-        'month': 'period',
+
+        'epfEmployee':
+            'epf_employee',
+        'epf_employee':
+            'epf_employee',
+
+        'socsoEmployee':
+            'socso_employee',
+        'socso_employee':
+            'socso_employee',
+
+        'eisEmployee':
+            'eis_employee',
+        'eis_employee':
+            'eis_employee',
+
+        'pcb': 'pcb',
+        'zakat': 'zakat',
+
+        'epfEmployer':
+            'epf_employer',
+        'epf_employer':
+            'epf_employer',
+
+        'socsoEmployer':
+            'socso_employer',
+        'socso_employer':
+            'socso_employer',
+
+        'eisEmployer':
+            'eis_employer',
+        'eis_employer':
+            'eis_employer',
+
+        'newIcNo': 'new_ic_no',
+        'new_ic_no': 'new_ic_no',
+
+        'bankCode': 'bank_code',
+        'bank_code': 'bank_code',
+
+        'bankAccount':
+            'bank_account',
+        'bank_account':
+            'bank_account',
+
+        'remarks': 'remarks',
       };
 
       if (mappings.containsKey(value)) {
         return mappings[value]!;
       }
 
-      // Convert camelCase to snake_case.
       return value
           .replaceAllMapped(
-            RegExp(r'([a-z0-9])([A-Z])'),
-            (match) => '${match.group(1)}_${match.group(2)}',
+            RegExp(
+              r'([a-z0-9])([A-Z])',
+            ),
+            (match) =>
+                '${match.group(1)}_'
+                '${match.group(2)}',
           )
           .toLowerCase();
     }
 
-    double? parseNumber(String value) {
+    double parseNumber(
+      String value,
+    ) {
       if (value.trim().isEmpty) {
-        return null;
+        return 0;
       }
 
       final cleaned = value
@@ -4498,10 +4692,13 @@ Future<void> _importPayrollCsv() async {
           .replaceAll('rm', '')
           .trim();
 
-      return double.tryParse(cleaned);
+      return double.tryParse(
+            cleaned,
+          ) ??
+          0;
     }
 
-    final numericColumns = {
+    const numericColumns = {
       'basic_salary',
       'elaun_kedatangan',
       'elaun_perkhidmatan',
@@ -4511,9 +4708,20 @@ Future<void> _importPayrollCsv() async {
       'commission',
       'other_earnings',
       'cuti_umum',
+      'epf_employee',
+      'socso_employee',
+      'eis_employee',
+      'pcb',
+      'zakat',
+      'epf_employer',
+      'socso_employer',
+      'eis_employer',
     };
 
-    final payrollRows = <Map<String, dynamic>>[];
+    final payrollRows =
+        <Map<String, dynamic>>[];
+
+    final usedIds = <String>{};
 
     for (var i = 1; i < rows.length; i++) {
       final row = rows[i];
@@ -4522,76 +4730,153 @@ Future<void> _importPayrollCsv() async {
         continue;
       }
 
-      final record = <String, dynamic>{};
+      final record =
+          <String, dynamic>{};
 
-      for (var columnIndex = 0;
-          columnIndex < headers.length;
-          columnIndex++) {
+      for (
+        var columnIndex = 0;
+        columnIndex < headers.length;
+        columnIndex++
+      ) {
         if (columnIndex >= row.length) {
           continue;
         }
 
-        final originalHeader = headers[columnIndex];
+        final originalHeader =
+            headers[columnIndex];
 
         if (originalHeader.isEmpty) {
           continue;
         }
 
-        final column = databaseColumnName(originalHeader);
+        final column =
+            databaseColumnName(
+          originalHeader,
+        );
 
         if (column.isEmpty) {
           continue;
         }
 
-        final rawValue = row[columnIndex].toString().trim();
+        final rawValue =
+            row[columnIndex]
+                .toString()
+                .trim();
 
-        if (numericColumns.contains(column)) {
-          record[column] = parseNumber(rawValue);
-        } else if (rawValue.isEmpty) {
-          record[column] = null;
-        } else {
+        if (numericColumns.contains(
+          column,
+        )) {
+          record[column] =
+              parseNumber(rawValue);
+        } else if (rawValue.isNotEmpty) {
           record[column] = rawValue;
         }
       }
 
       final employeeId =
-          (record['employee_id'] ?? '').toString().trim();
+          (record['employee_id'] ??
+                  '')
+              .toString()
+              .trim();
 
       if (employeeId.isEmpty) {
         continue;
       }
+
+      final period =
+          (record['period'] ??
+                  '')
+              .toString()
+              .trim();
+
+      if (period.isEmpty) {
+        throw Exception(
+          'Missing period for employee $employeeId '
+          'on CSV row ${i + 1}.',
+        );
+      }
+
+      // payroll.id is required by your schema.
+      //
+      // If the CSV does not provide an ID, generate one.
+      String payrollId =
+          (record['id'] ?? '')
+              .toString()
+              .trim();
+
+      if (payrollId.isEmpty) {
+        payrollId =
+            '${employeeId}_$period';
+      }
+
+      // Prevent duplicate IDs inside the same CSV.
+      if (usedIds.contains(payrollId)) {
+        throw Exception(
+          'Duplicate payroll ID "$payrollId" '
+          'found in CSV row ${i + 1}.',
+        );
+      }
+
+      usedIds.add(payrollId);
+
+      record['id'] = payrollId;
+      record['employee_id'] = employeeId;
+      record['period'] = period;
 
       payrollRows.add(record);
     }
 
     if (payrollRows.isEmpty) {
       throw Exception(
-        'No valid payroll records were found in the CSV file. '
-        'Make sure employee_id is present.',
+        'No valid payroll records were found in the CSV file.\n'
+        'employeeId/employee_id and period are required.',
       );
     }
 
-    // Verify that the referenced employees exist.
+    // ------------------------------------------------------------------------
+    // Verify employee IDs.
+    // ------------------------------------------------------------------------
+
     final employeeIds = payrollRows
-        .map((row) => row['employee_id'].toString())
-        .where((id) => id.isNotEmpty)
+        .map(
+          (row) =>
+              row['employee_id']
+                  .toString(),
+        )
+        .where(
+          (id) => id.isNotEmpty,
+        )
         .toSet()
         .toList();
 
-    final existingEmployees = await SupabaseService.client
-        .from('employees')
-        .select('employee_id')
-        .inFilter('employee_id', employeeIds);
+    final existingEmployees =
+        await SupabaseService.client
+            .from('employees')
+            .select(
+              'employee_id',
+            )
+            .inFilter(
+              'employee_id',
+              employeeIds,
+            );
 
-    final existingIds = existingEmployees
-        .map<String>(
-          (row) => row['employee_id'].toString(),
-        )
-        .toSet();
+    final existingIds =
+        existingEmployees
+            .map<String>(
+              (row) => row['employee_id']
+                  .toString(),
+            )
+            .toSet();
 
-    final missingEmployees = employeeIds
-        .where((id) => !existingIds.contains(id))
-        .toList();
+    final missingEmployees =
+        employeeIds
+            .where(
+              (id) =>
+                  !existingIds.contains(
+                id,
+              ),
+            )
+            .toList();
 
     if (missingEmployees.isNotEmpty) {
       throw Exception(
@@ -4615,7 +4900,9 @@ Future<void> _importPayrollCsv() async {
             ),
             SizedBox(width: 20),
             Expanded(
-              child: Text('Importing payroll records...'),
+              child: Text(
+                'Importing payroll records...',
+              ),
             ),
           ],
         ),
@@ -4623,24 +4910,39 @@ Future<void> _importPayrollCsv() async {
     );
 
     try {
+      // IMPORTANT:
+      //
+      // Your table has:
+      // UNIQUE(employee_id, period)
+      //
+      // Therefore UPSERT is safer than INSERT.
+      //
+      // It allows an imported CSV to update the payroll
+      // for an employee/month instead of failing with
+      // duplicate employee + period.
       await SupabaseService.client
           .from('payroll')
-          .insert(payrollRows);
+          .upsert(
+            payrollRows,
+            onConflict:
+                'employee_id,period',
+          );
 
-      if (mounted) {
-        Navigator.of(context).pop();
+      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${payrollRows.length} payroll record(s) imported successfully.',
-            ),
-            backgroundColor: Colors.green,
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${payrollRows.length} payroll record(s) imported successfully.',
           ),
-        );
+          backgroundColor:
+              Colors.green,
+        ),
+      );
 
-        setState(() {});
-      }
+      setState(() {});
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop();
@@ -4666,141 +4968,601 @@ Future<void> _importPayrollCsv() async {
 // PAYROLL CSV IMPORT PAGE
 // ============================================================================
 
-  Widget _importPayrollPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+Widget _importPayrollPage() {
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Import Payroll',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF172033),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          'Upload a CSV file to import or update payroll records.',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.black54,
+          ),
+        ),
+
+        const SizedBox(height: 28),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.grey.shade200,
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color:
+                      const Color(0xFFEAF0FF),
+                  borderRadius:
+                      BorderRadius.circular(
+                    40,
+                  ),
+                ),
+                child: const Icon(
+                  Icons
+                      .upload_file_outlined,
+                  size: 40,
+                  color:
+                      Color(0xFF2D55D8),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                'Import Payroll CSV',
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight:
+                      FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              const Text(
+                'Select a CSV file containing payroll data.',
+                textAlign:
+                    TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 14,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              ElevatedButton.icon(
+                onPressed:
+                    _importPayrollCsv,
+                icon: const Icon(
+                  Icons
+                      .folder_open_outlined,
+                ),
+                label: const Text(
+                  'Choose CSV File',
+                ),
+                style:
+                    ElevatedButton.styleFrom(
+                  backgroundColor:
+                      const Color(
+                    0xFF2D55D8,
+                  ),
+                  foregroundColor:
+                      Colors.white,
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal: 24,
+                    vertical: 15,
+                  ),
+                  shape:
+                      RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(
+                      10,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.all(
+                  16,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      const Color(0xFFF8FAFC),
+                  borderRadius:
+                      BorderRadius.circular(
+                    10,
+                  ),
+                ),
+                child: const Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Supported CSV columns',
+                      style: TextStyle(
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+
+                    SizedBox(height: 10),
+
+                    SelectableText(
+                      'id,employeeId,period,basicSalary,'
+                      'elaunKedatangan,elaunPerkhidmatan,'
+                      'elaunKerajinan,overtime,bonus,commission,'
+                      'otherEarnings,cutiUmum,epfEmployee,'
+                      'socsoEmployee,eisEmployee,pcb,zakat,'
+                      'epfEmployer,socsoEmployer,eisEmployer,'
+                      'newIcNo,bankCode,bankAccount,remarks',
+                      style: TextStyle(
+                        fontSize: 13,
+                      ),
+                    ),
+
+                    SizedBox(height: 14),
+
+                    Text(
+                      'Required:',
+                      style: TextStyle(
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+
+                    SizedBox(height: 4),
+
+                    Text(
+                      'employeeId and period',
+                      style: TextStyle(
+                        color:
+                            Colors.black54,
+                      ),
+                    ),
+
+                    SizedBox(height: 10),
+
+                    Text(
+                      'If id is not supplied, the application generates '
+                      'one using employeeId_period.',
+                      style: TextStyle(
+                        color:
+                            Colors.black54,
+                        height: 1.4,
+                      ),
+                    ),
+
+                    SizedBox(height: 10),
+
+                    Text(
+                      'Existing employee + period records are updated '
+                      'automatically.',
+                      style: TextStyle(
+                        color:
+                            Colors.black54,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ============================================================================
+// REPORTS
+// ============================================================================
+
+Widget _reportsPage() {
+  final double gross =
+      service.payroll.fold<double>(
+    0,
+    (
+      sum,
+      p,
+    ) =>
+        sum + p.totalEarnings,
+  );
+
+  final double net =
+      service.payroll.fold<double>(
+    0,
+    (
+      sum,
+      p,
+    ) =>
+        sum + p.netPay,
+  );
+
+  final double deductions =
+      service.payroll.fold<double>(
+    0,
+    (
+      sum,
+      p,
+    ) =>
+        sum + p.totalDeductions,
+  );
+
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Reports',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          'Summary of employees, attendance and payroll data.',
+          style: TextStyle(
+            color: Colors.black54,
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        _panel(
+          'Payroll Report',
+          Column(
+            children: [
+              _reportRow(
+                'Employees',
+                service.employeesDemo
+                    .length
+                    .toString(),
+              ),
+
+              _reportRow(
+                'Active Employees',
+                service.employeesDemo
+                    .where(
+                      (e) => e.isActive,
+                    )
+                    .length
+                    .toString(),
+              ),
+
+              _reportRow(
+                'Payroll Records',
+                service.payroll.length
+                    .toString(),
+              ),
+
+              _reportRow(
+                'Attendance Records',
+                service.attendance.length
+                    .toString(),
+              ),
+
+              _reportRow(
+                'Departments',
+                _departmentCount()
+                    .toString(),
+              ),
+
+              _reportRow(
+                'Branches',
+                service.branches.length
+                    .toString(),
+              ),
+
+              _reportRow(
+                'Vacation Employees',
+                _vacationEmployeeIds()
+                    .length
+                    .toString(),
+              ),
+
+              _reportRow(
+                'New Joiners',
+                _newJoiners()
+                    .length
+                    .toString(),
+              ),
+
+              _reportRow(
+                'Gross Payroll',
+                _money(gross),
+              ),
+
+              _reportRow(
+                'Total Deductions',
+                _money(deductions),
+              ),
+
+              _reportRow(
+                'Net Payroll',
+                _money(net),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ============================================================================
+// SETTINGS
+// ============================================================================
+
+Widget _settingsPage() {
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: _panel(
+      'Settings',
+      Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           const Text(
-            'Import Payroll',
+            'Hasani Books Payroll Portal',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF172033),
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
           const Text(
-            'Upload a CSV file to import payroll records.',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.black54,
-            ),
+            'Administrator has full access to employee, attendance '
+            'and payroll data.',
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
 
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.grey.shade200,
+          const Divider(),
+
+          const SizedBox(height: 10),
+
+          ListTile(
+            contentPadding:
+                EdgeInsets.zero,
+            leading:
+                const CircleAvatar(
+              backgroundColor:
+                  Color(0xFFEAF0FF),
+              child: Icon(
+                Icons
+                    .admin_panel_settings,
+                color:
+                    Color(0xFF2D55D8),
               ),
             ),
+            title: const Text(
+              'Administrator Access',
+              style: TextStyle(
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+            subtitle:
+                const Text(
+              'Full system access',
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ============================================================================
+// PAYROLL DETAIL
+// ============================================================================
+
+void _showPayroll(
+  PayrollRecord payroll,
+) {
+  final employee =
+      service.findEmployee(
+    payroll.employeeId,
+  );
+
+  showDialog<void>(
+    context: context,
+    builder: (
+      dialogContext,
+    ) {
+      return AlertDialog(
+        title: Text(
+          '${employee?.name ?? payroll.employeeId} Payroll',
+        ),
+
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
             child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Employee ID: '
+                  '${payroll.employeeId}',
+                  style:
+                      const TextStyle(
+                    fontWeight:
+                        FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Text(
+                  'Period: '
+                  '${DateFormat('MMMM yyyy').format(payroll.period)}',
+                ),
+
+                const Divider(
+                  height: 25,
+                ),
+
+                _detail(
+                  'Basic Salary',
+                  _money(
+                    payroll.basicSalary,
+                  ),
+                ),
+
+                _detail(
+                  'Food Allowance',
+                  _money(
+                    payroll.foodAllowance,
+                  ),
+                ),
+
+                _detail(
+                  'Other Allowance',
+                  _money(
+                    payroll.otherAllowance,
+                  ),
+                ),
+
+                _detail(
+                  'Overtime',
+                  _money(
+                    payroll.overtime,
+                  ),
+                ),
+
+                _detail(
+                  'Bonus',
+                  _money(
+                    payroll.bonus,
+                  ),
+                ),
+
+                const Divider(),
+
+                _detail(
+                  'EPF Employee',
+                  _money(
+                    payroll.epfEmployee,
+                  ),
+                ),
+
+                _detail(
+                  'SOCSO Employee',
+                  _money(
+                    payroll.socsoEmployee,
+                  ),
+                ),
+
+                _detail(
+                  'EIS Employee',
+                  _money(
+                    payroll.eisEmployee,
+                  ),
+                ),
+
+                const Divider(),
+
+                _detail(
+                  'Gross',
+                  _money(
+                    payroll.totalEarnings,
+                  ),
+                ),
+
+                _detail(
+                  'Deductions',
+                  _money(
+                    payroll.totalDeductions,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
                 Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF0FF),
-                    borderRadius: BorderRadius.circular(40),
+                  width:
+                      double.infinity,
+                  padding:
+                      const EdgeInsets.all(
+                    14,
                   ),
-                  child: const Icon(
-                    Icons.upload_file_outlined,
-                    size: 40,
-                    color: Color(0xFF2D55D8),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                const Text(
-                  'Import Payroll CSV',
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                const Text(
-                  'Select a CSV file containing your payroll data.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 14,
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                ElevatedButton.icon(
-                  onPressed: _importPayrollCsv,
-                  icon: const Icon(
-                    Icons.folder_open_outlined,
-                  ),
-                  label: const Text(
-                    'Choose CSV File',
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2D55D8),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 15,
+                  decoration:
+                      BoxDecoration(
+                    color: const Color(
+                      0xFFEAF8F1,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    borderRadius:
+                        BorderRadius.circular(
+                      10,
                     ),
                   ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        'CSV format',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                      const Expanded(
+                        child: Text(
+                          'NET PAY',
+                          style:
+                              TextStyle(
+                            fontWeight:
+                                FontWeight.w800,
+                            color: Color(
+                              0xFF15965D,
+                            ),
+                          ),
                         ),
                       ),
 
-                      SizedBox(height: 8),
-
                       Text(
-                        'Your CSV should contain the employee and payroll '
-                            'information required by your payroll system.',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          height: 1.4,
+                        _money(
+                          payroll.netPay,
                         ),
-                      ),
-
-                      SizedBox(height: 12),
-
-                      Text(
-                        'Important: Employee IDs in the payroll CSV must '
-                            'already exist in the Employee database.',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          height: 1.4,
+                        style:
+                            const TextStyle(
+                          fontSize: 18,
+                          fontWeight:
+                              FontWeight.w900,
+                          color: Color(
+                            0xFF15965D,
+                          ),
                         ),
                       ),
                     ],
@@ -4809,683 +5571,330 @@ Future<void> _importPayrollCsv() async {
               ],
             ),
           ),
+        ),
+
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                dialogContext,
+              );
+            },
+            child:
+                const Text('Close'),
+          ),
         ],
+      );
+    },
+  );
+}
+
+// ============================================================================
+// PAYROLL TABLE FROM SUPABASE
+// ============================================================================
+
+Widget _supabasePayrollTable(
+  List<Map<String, dynamic>> records,
+) {
+  return SingleChildScrollView(
+    scrollDirection:
+        Axis.horizontal,
+    child: DataTable(
+      headingRowColor:
+          WidgetStateProperty.all(
+        const Color(0xFFF8FAFC),
       ),
-    );
-  }
+      columns: const [
+        DataColumn(
+          label: Text(
+            'Employee ID',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Period',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Basic Salary',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Allowances',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Overtime',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Bonus',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Commission',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Gross',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'EPF',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'SOCSO',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'EIS',
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Net',
+          ),
+        ),
+      ],
+      rows: records.map(
+        (
+          payroll,
+        ) {
+          final basic =
+              _payrollNumber(
+            payroll['basic_salary'],
+          );
 
-// ============================================================================
-// ACTUAL PAYROLL IMPORT HANDLER
-// ============================================================================
+          final allowances =
+              _payrollNumber(
+                payroll[
+                    'elaun_kedatangan'],
+              ) +
+              _payrollNumber(
+                payroll[
+                    'elaun_perkhidmatan'],
+              ) +
+              _payrollNumber(
+                payroll[
+                    'elaun_kerajinan'],
+              );
 
-  /*Future<void> _importPayrollCsv() async {
-    // Prevent multiple file-picker calls.
-    if (!mounted) {
-      return;
-    }
+          final overtime =
+              _payrollNumber(
+            payroll['overtime'],
+          );
 
-    // Show progress dialog.
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return const AlertDialog(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(),
+          final bonus =
+              _payrollNumber(
+            payroll['bonus'],
+          );
+
+          final commission =
+              _payrollNumber(
+            payroll['commission'],
+          );
+
+          final other =
+              _payrollNumber(
+            payroll['other_earnings'],
+          );
+
+          final cutiUmum =
+              _payrollNumber(
+            payroll['cuti_umum'],
+          );
+
+          final gross =
+              basic +
+              allowances +
+              overtime +
+              bonus +
+              commission +
+              other +
+              cutiUmum;
+
+          final epf =
+              _payrollNumber(
+            payroll['epf_employee'],
+          );
+
+          final socso =
+              _payrollNumber(
+            payroll['socso_employee'],
+          );
+
+          final eis =
+              _payrollNumber(
+            payroll['eis_employee'],
+          );
+
+          final pcb =
+              _payrollNumber(
+            payroll['pcb'],
+          );
+
+          final zakat =
+              _payrollNumber(
+            payroll['zakat'],
+          );
+
+          final deductions =
+              epf +
+              socso +
+              eis +
+              pcb +
+              zakat;
+
+          final net =
+              gross - deductions;
+
+          return DataRow(
+            cells: [
+              DataCell(
+                Text(
+                  payroll['employee_id']
+                          ?.toString() ??
+                      '',
+                ),
               ),
 
-              SizedBox(width: 20),
+              DataCell(
+                Text(
+                  _formatPayrollPeriod(
+                    payroll['period'],
+                  ),
+                ),
+              ),
 
-              Expanded(
-                child: Text(
-                  'Opening payroll CSV importer...',
+              DataCell(
+                Text(
+                  _money(basic),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(
+                    allowances,
+                  ),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(overtime),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(bonus),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(
+                    commission,
+                  ),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(gross),
+                  style:
+                      const TextStyle(
+                    fontWeight:
+                        FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(epf),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(socso),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(eis),
+                ),
+              ),
+
+              DataCell(
+                Text(
+                  _money(net),
+                  style:
+                      const TextStyle(
+                    fontWeight:
+                        FontWeight.bold,
+                    color:
+                        Color(0xFF15965D),
+                  ),
                 ),
               ),
             ],
-          ),
-        );
-      },
-    );
-
-    String result;
-
-    try {
-      result = await service.importPayrollCsv();
-    } catch (e) {
-      result = 'Payroll CSV import failed: $e';
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    // Close progress dialog.
-    Navigator.of(context).pop();
-
-    // Show import result.
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        final success =
-            result.contains('Imported:') &&
-                !result.toLowerCase().contains(
-                  'failed',
-                ) &&
-                !result.toLowerCase().contains(
-                  'invalid payroll csv',
-                );
-
-        return AlertDialog(
-          title: Text(
-            success
-                ? 'Payroll Import Result'
-                : 'Payroll Import',
-          ),
-          content: SingleChildScrollView(
-            child: SelectableText(
-              result,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    // Refresh dashboard so imported payroll appears immediately.
-    setState(() {});
-  }*/
-
-// ===========================================================================
-// REPORTS
-// ===========================================================================
-
-  Widget _reportsPage() {
-    final double gross =
-    service.payroll.fold<double>(
-      0,
-          (sum, p) => sum + p.totalEarnings,
-    );
-
-    final double net =
-    service.payroll.fold<double>(
-      0,
-          (sum, p) => sum + p.netPay,
-    );
-
-    final double deductions =
-    service.payroll.fold<double>(
-      0,
-          (sum, p) => sum + p.totalDeductions,
-    );
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Reports',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          const Text(
-            'Summary of employees, attendance and payroll data.',
-            style: TextStyle(
-              color: Colors.black54,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          _panel(
-            'Payroll Report',
-            Column(
-              children: [
-                _reportRow(
-                  'Employees',
-                  service.employeesDemo.length.toString(),
-                ),
-
-                _reportRow(
-                  'Active Employees',
-                  service.employeesDemo
-                      .where((e) => e.isActive)
-                      .length
-                      .toString(),
-                ),
-
-                _reportRow(
-                  'Payroll Records',
-                  service.payroll.length.toString(),
-                ),
-
-                _reportRow(
-                  'Attendance Records',
-                  service.attendance.length.toString(),
-                ),
-
-                _reportRow(
-                  'Departments',
-                  _departmentCount().toString(),
-                ),
-
-                _reportRow(
-                  'Branches',
-                  service.branches.length.toString(),
-                ),
-
-                _reportRow(
-                  'Vacation Employees',
-                  _vacationEmployeeIds().length.toString(),
-                ),
-
-                _reportRow(
-                  'New Joiners',
-                  _newJoiners().length.toString(),
-                ),
-
-                _reportRow(
-                  'Gross Payroll',
-                  _money(gross),
-                ),
-
-                _reportRow(
-                  'Total Deductions',
-                  _money(deductions),
-                ),
-
-                _reportRow(
-                  'Net Payroll',
-                  _money(net),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-// ===========================================================================
-// SETTINGS
-// ===========================================================================
-
-  Widget _settingsPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: _panel(
-        'Settings',
-        Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Hasani Books Payroll Portal',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            const Text(
-              'Administrator has full access to employee, attendance '
-                  'and payroll data.',
-            ),
-
-            const SizedBox(height: 20),
-
-            const Divider(),
-
-            const SizedBox(height: 10),
-
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFEAF0FF),
-                child: Icon(
-                  Icons.admin_panel_settings,
-                  color: Color(0xFF2D55D8),
-                ),
-              ),
-              title: const Text(
-                'Administrator Access',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              subtitle: const Text(
-                'Full system access',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-// ===========================================================================
-// PAYROLL DETAIL
-// ===========================================================================
-
-  void _showPayroll(PayrollRecord payroll,) {
-    final employee =
-    service.findEmployee(payroll.employeeId);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            '${employee?.name ?? payroll.employeeId} Payroll',
-          ),
-
-          content: SizedBox(
-            width: 500,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Employee ID: ${payroll.employeeId}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 5),
-
-                  Text(
-                    'Period: '
-                        '${DateFormat('MMMM yyyy').format(payroll.period)}',
-                  ),
-
-                  const Divider(height: 25),
-
-                  _detail(
-                    'Basic Salary',
-                    _money(payroll.basicSalary),
-                  ),
-
-                  _detail(
-                    'Food Allowance',
-                    _money(payroll.foodAllowance),
-                  ),
-
-                  _detail(
-                    'Other Allowance',
-                    _money(payroll.otherAllowance),
-                  ),
-
-                  _detail(
-                    'Overtime',
-                    _money(payroll.overtime),
-                  ),
-
-                  _detail(
-                    'Bonus',
-                    _money(payroll.bonus),
-                  ),
-
-                  const Divider(),
-
-                  _detail(
-                    'EPF Employee',
-                    _money(payroll.epfEmployee),
-                  ),
-
-                  _detail(
-                    'SOCSO Employee',
-                    _money(payroll.socsoEmployee),
-                  ),
-
-                  _detail(
-                    'EIS Employee',
-                    _money(payroll.eisEmployee),
-                  ),
-
-                  const Divider(),
-
-                  _detail(
-                    'Gross',
-                    _money(payroll.totalEarnings),
-                  ),
-
-                  _detail(
-                    'Deductions',
-                    _money(payroll.totalDeductions),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEAF8F1),
-                      borderRadius:
-                      BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'NET PAY',
-                            style: TextStyle(
-                              fontWeight:
-                              FontWeight.w800,
-                              color:
-                              Color(0xFF15965D),
-                            ),
-                          ),
-                        ),
-
-                        Text(
-                          _money(payroll.netPay),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight:
-                            FontWeight.w900,
-                            color:
-                            Color(0xFF15965D),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-
-// ===========================================================================
-// HELPERS
-// ===========================================================================
-
-  Widget _dialogField(TextEditingController controller,
-      String label,) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 10,
-      ),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-
-
-  Widget _detail(String title,
-      String value,) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 5,
-      ),
-      child: Row(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.black54,
-              ),
-            ),
-          ),
-
-          Expanded(
-            child: Text(
-              value.isEmpty ? '-' : value,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _panel(String title,
-      Widget child,) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          child,
-        ],
-      ),
-    );
-  }
-
-
-
-
-  Widget _statCard(String title,
-      String value,
-      IconData icon,
-      Color color, [VoidCallback? onTap]) {
-    return SizedBox(
-      width: 220,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x08000000),
-              blurRadius: 10,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius:
-                BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 26,
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-
-
-  Widget _actionButton(String title,
-      IconData icon,
-      VoidCallback onTap,) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 150,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F7FB),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.black12,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: const Color(0xFF2D55D8),
-            ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  Widget _reportRow(String title,
-      String value,) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 10,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.black54,
-              ),
-            ),
-          ),
-
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  String _money(double value) {
-    return 'RM ${NumberFormat('#,##0.00').format(value)}';
-  }
-
-
-  void _message(String message) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+          );
+        },
+      ).toList(),
+    ),
+  );
 }
 
-double _payrollNumber(dynamic value) {
+// ============================================================================
+// PAYROLL PERIOD FORMATTER
+// ============================================================================
+
+String _formatPayrollPeriod(
+  dynamic value,
+) {
+  if (value == null) {
+    return '-';
+  }
+
+  final text = value.toString();
+
+  if (text.isEmpty) {
+    return '-';
+  }
+
+  final parsed =
+      DateTime.tryParse(text);
+
+  if (parsed == null) {
+    return text;
+  }
+
+  return DateFormat(
+    'MMM yyyy',
+  ).format(parsed);
+}
+
+// ============================================================================
+// PAYROLL NUMBER
+// ============================================================================
+
+double _payrollNumber(
+  dynamic value,
+) {
   if (value == null) {
     return 0;
   }
@@ -5494,137 +5903,323 @@ double _payrollNumber(dynamic value) {
     return value.toDouble();
   }
 
-  return double.tryParse(value.toString()) ?? 0;
+  final text = value
+      .toString()
+      .replaceAll(',', '')
+      .replaceAll('RM', '')
+      .replaceAll('rm', '')
+      .trim();
+
+  return double.tryParse(text) ?? 0;
 }
 
-Widget _supabasePayrollTable(
-    List<Map<String, dynamic>> records,
-    ) {
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: DataTable(
-      headingRowColor: WidgetStateProperty.all(
-        const Color(0xFFF8FAFC),
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+Widget _dialogField(
+  TextEditingController controller,
+  String label,
+) {
+  return Padding(
+    padding:
+        const EdgeInsets.only(
+      bottom: 10,
+    ),
+    child: TextField(
+      controller: controller,
+      decoration:
+          InputDecoration(
+        labelText: label,
+        border:
+            const OutlineInputBorder(),
       ),
-      columns: const [
-        DataColumn(
-          label: Text('Employee ID'),
+    ),
+  );
+}
+
+Widget _detail(
+  String title,
+  String value,
+) {
+  return Padding(
+    padding:
+        const EdgeInsets.symmetric(
+      vertical: 5,
+    ),
+    child: Row(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 130,
+          child: Text(
+            title,
+            style:
+                const TextStyle(
+              color: Colors.black54,
+            ),
+          ),
         ),
-        DataColumn(
-          label: Text('Period'),
-        ),
-        DataColumn(
-          label: Text('Basic Salary'),
-        ),
-        DataColumn(
-          label: Text('Allowances'),
-        ),
-        DataColumn(
-          label: Text('Overtime'),
-        ),
-        DataColumn(
-          label: Text('Bonus'),
-        ),
-        DataColumn(
-          label: Text('Commission'),
-        ),
-        DataColumn(
-          label: Text('Total Earnings'),
+
+        Expanded(
+          child: Text(
+            value.isEmpty
+                ? '-'
+                : value,
+            style:
+                const TextStyle(
+              fontWeight:
+                  FontWeight.bold,
+            ),
+          ),
         ),
       ],
-      rows: records.map((payroll) {
-        final basic =
-        _payrollNumber(payroll['basic_salary']);
+    ),
+  );
+}
 
-        final allowances =
-            _payrollNumber(
-              payroll['elaun_kedatangan'],
-            ) +
-                _payrollNumber(
-                  payroll['elaun_perkhidmatan'],
-                ) +
-                _payrollNumber(
-                  payroll['elaun_kerajinan'],
-                );
+Widget _panel(
+  String title,
+  Widget child,
+) {
+  return Container(
+    width: double.infinity,
+    padding:
+        const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius:
+          BorderRadius.circular(14),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x08000000),
+          blurRadius: 10,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight:
+                FontWeight.w800,
+          ),
+        ),
 
-        final overtime =
-        _payrollNumber(payroll['overtime']);
+        const SizedBox(height: 18),
 
-        final bonus =
-        _payrollNumber(payroll['bonus']);
+        child,
+      ],
+    ),
+  );
+}
 
-        final commission =
-        _payrollNumber(payroll['commission']);
-
-        final other =
-        _payrollNumber(
-          payroll['other_earnings'],
-        );
-
-        final cutiUmum =
-        _payrollNumber(
-          payroll['cuti_umum'],
-        );
-
-        final total =
-            basic +
-                allowances +
-                overtime +
-                bonus +
-                commission +
-                other +
-                cutiUmum;
-
-        return DataRow(
-          cells: [
-            DataCell(
-              Text(
-                payroll['employee_id']?.toString() ?? '',
-              ),
+Widget _statCard(
+  String title,
+  String value,
+  IconData icon,
+  Color color, [
+  VoidCallback? onTap,
+]) {
+  return SizedBox(
+    width: 220,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius:
+          BorderRadius.circular(
+        14,
+      ),
+      child: Container(
+        padding:
+            const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius:
+              BorderRadius.circular(
+            14,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color:
+                  Color(0x08000000),
+              blurRadius: 10,
+              offset:
+                  Offset(0, 3),
             ),
-            DataCell(
-              Text(
-                payroll['period']?.toString() ?? '',
-              ),
-            ),
-            DataCell(
-              Text(
-                'RM ${basic.toStringAsFixed(2)}',
-              ),
-            ),
-            DataCell(
-              Text(
-                'RM ${allowances.toStringAsFixed(2)}',
-              ),
-            ),
-            DataCell(
-              Text(
-                'RM ${overtime.toStringAsFixed(2)}',
-              ),
-            ),
-            DataCell(
-              Text(
-                'RM ${bonus.toStringAsFixed(2)}',
-              ),
-            ),
-            DataCell(
-              Text(
-                'RM ${commission.toStringAsFixed(2)}',
-              ),
-            ),
-            DataCell(
-              Text(
-                'RM ${total.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration:
+                  BoxDecoration(
+                color: color
+                    .withOpacity(
+                  0.1,
                 ),
+                borderRadius:
+                    BorderRadius.circular(
+                  12,
+                ),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 26,
+              ),
+            ),
+
+            const SizedBox(
+              height: 18,
+            ),
+
+            Text(
+              title,
+              style:
+                  const TextStyle(
+                fontSize: 12,
+                color:
+                    Colors.black54,
+              ),
+            ),
+
+            const SizedBox(
+              height: 6,
+            ),
+
+            Text(
+              value,
+              maxLines: 1,
+              overflow:
+                  TextOverflow.ellipsis,
+              style:
+                  const TextStyle(
+                fontSize: 22,
+                fontWeight:
+                    FontWeight.w800,
               ),
             ),
           ],
-        );
-      }).toList(),
+        ),
+      ),
     ),
   );
+}
 
-  
+Widget _actionButton(
+  String title,
+  IconData icon,
+  VoidCallback onTap,
+) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius:
+        BorderRadius.circular(
+      12,
+    ),
+    child: Container(
+      width: 150,
+      padding:
+          const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color:
+            const Color(0xFFF5F7FB),
+        borderRadius:
+            BorderRadius.circular(
+          12,
+        ),
+        border: Border.all(
+          color: Colors.black12,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color:
+                const Color(0xFF2D55D8),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            title,
+            style:
+                const TextStyle(
+              fontWeight:
+                  FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _reportRow(
+  String title,
+  String value,
+) {
+  return Padding(
+    padding:
+        const EdgeInsets.symmetric(
+      vertical: 10,
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style:
+                const TextStyle(
+              color:
+                  Colors.black54,
+            ),
+          ),
+        ),
+
+        Text(
+          value,
+          style:
+              const TextStyle(
+            fontWeight:
+                FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String _money(
+  double value,
+) {
+  return 'RM ${NumberFormat('#,##0.00').format(value)}';
+}
+
+void _message(
+  BuildContext context,
+  String message,
+) {
+
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      behavior:
+          SnackBarBehavior.floating,
+    ),
+  );
+}
 }
