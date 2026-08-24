@@ -8,6 +8,7 @@ import 'login_screen.dart';
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import '../screens/supabase_service.dart';
+import '../screens/attendance_dialog.dart';
 
 
 
@@ -3062,7 +3063,6 @@ Widget _attendancePage() {
       if (snapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());
       }
-
       if (snapshot.hasError) {
         return Center(
           child: Text(
@@ -3073,126 +3073,86 @@ Widget _attendancePage() {
       }
 
       final branches = snapshot.data ?? [];
-
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Attendance',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
+      return RefreshIndicator(
+        onRefresh: () async => setState(() {}),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Attendance',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Select a branch to view employee attendance.',
-              style: TextStyle(color: Colors.black54),
-            ),
-            const SizedBox(height: 24),
-
-            if (branches.isEmpty)
-              const Center(
-                child: Padding(
+              const SizedBox(height: 8),
+              const Text(
+                'Select a branch to view submitted employee attendance. Admin can edit submitted attendance.',
+                style: TextStyle(color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+              if (branches.isEmpty)
+                const Padding(
                   padding: EdgeInsets.all(40),
-                  child: Text('No branches found.'),
-                ),
-              )
-            else
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                    const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 280,
-                  mainAxisExtent: 175,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: branches.length,
-                itemBuilder: (context, index) {
-                  final branch = branches[index];
-
-                  final id =
-                      (branch['id'] ??
-                              branch['branch_id'] ??
-                              '')
-                          .toString();
-
-                  final name =
-                      (branch['name'] ??
-                              branch['branch_name'] ??
-                              id)
-                          .toString();
-
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: id.isEmpty
-                        ? null
-                        : () {
-                            setState(() {
-                              selectedAttendanceBranchId = id;
-                            });
-                          },
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        side: BorderSide(
-                          color:
-                              Colors.blueGrey.withOpacity(.20),
+                  child: Center(child: Text('No branches found.')),
+                )
+              else
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 280,
+                    mainAxisExtent: 175,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: branches.length,
+                  itemBuilder: (context, index) {
+                    final branch = branches[index];
+                    final id = (branch['id'] ?? branch['branch_id'] ?? '').toString();
+                    final name = (branch['name'] ?? branch['branch_name'] ?? id).toString();
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: id.isEmpty ? null : () => setState(() => selectedAttendanceBranchId = id),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: BorderSide(color: Colors.blueGrey.withOpacity(.20)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const CircleAvatar(
+                                radius: 26,
+                                child: Icon(Icons.store_outlined, size: 28),
+                              ),
+                              const Spacer(),
+                              Text(
+                                name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 6),
+                              const Row(
+                                children: [
+                                  Text('View Attendance', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                                  Spacer(),
+                                  Icon(Icons.arrow_forward, size: 17),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            const CircleAvatar(
-                              radius: 26,
-                              child: Icon(
-                                Icons.store_outlined,
-                                size: 28,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Row(
-                              children: [
-                                Text(
-                                  'View Attendance',
-                                  style: TextStyle(
-                                    color: Colors.black54,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Spacer(),
-                                Icon(
-                                  Icons.arrow_forward,
-                                  size: 17,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-          ],
+                    );
+                  },
+                ),
+            ],
+          ),
         ),
       );
     },
@@ -3208,1589 +3168,170 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
     ]),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
+        return const Center(child: CircularProgressIndicator());
       }
-
       if (snapshot.hasError) {
         return Center(
-          child: Text(
-            'Unable to load attendance:\n${snapshot.error}',
-            textAlign: TextAlign.center,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('Unable to load attendance:\n${snapshot.error}', textAlign: TextAlign.center),
           ),
         );
       }
 
-      final data = snapshot.data!;
-
-      final branches =
-          List<Map<String, dynamic>>.from(data[0] as List);
-
-      final employees =
-          List<Map<String, dynamic>>.from(data[1] as List);
-
-      final attendance =
-          List<Map<String, dynamic>>.from(data[2] as List);
+      final data = snapshot.data ?? const [[], [], []];
+      final branches = List<Map<String, dynamic>>.from(data[0] as List);
+      final employees = List<Map<String, dynamic>>.from(data[1] as List);
+      final attendance = List<Map<String, dynamic>>.from(data[2] as List);
 
       final branch = branches.firstWhere(
-        (item) =>
-            (item['id'] ?? item['branch_id'] ?? '')
-                .toString() ==
-            branchId,
+        (item) => (item['id'] ?? item['branch_id'] ?? '').toString() == branchId,
         orElse: () => <String, dynamic>{},
       );
+      final branchName = (branch['name'] ?? branch['branch_name'] ?? branchId).toString();
 
-      final branchName =
-          (branch['name'] ??
-                  branch['branch_name'] ??
-                  branchId)
-              .toString();
-
-      final employeeMap =
-          <String, Map<String, dynamic>>{};
-
+      final employeeMap = <String, Map<String, dynamic>>{};
       for (final employee in employees) {
-        final id =
-            (employee['employee_id'] ?? employee['id'] ?? '')
-                .toString();
-
-        if (id.isNotEmpty) {
-          employeeMap[id] = employee;
-        }
+        final id = (employee['employee_id'] ?? employee['id'] ?? '').toString();
+        if (id.isNotEmpty) employeeMap[id] = employee;
       }
 
-      final byEmployee =
-          <String, List<Map<String, dynamic>>>{};
-
+      final byEmployee = <String, List<Map<String, dynamic>>>{};
       for (final record in attendance) {
-        final employeeId =
-            (record['employee_id'] ?? '').toString();
-
-        if (employeeId.isEmpty) continue;
-
-        byEmployee
-            .putIfAbsent(employeeId, () => [])
-            .add(record);
+        final id = (record['employee_id'] ?? '').toString();
+        if (id.isEmpty) continue;
+        byEmployee.putIfAbsent(id, () => []).add(record);
       }
 
-      final employeeIds = byEmployee.keys.toList();
-
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  selectedAttendanceBranchId = null;
-                });
-              },
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('All Branches'),
-            ),
-            const SizedBox(height: 8),
-
-            Text(
-              branchName,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
+      return RefreshIndicator(
+        onRefresh: () async => setState(() {}),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextButton.icon(
+                onPressed: () => setState(() => selectedAttendanceBranchId = null),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('All Branches'),
               ),
-            ),
-
-            const SizedBox(height: 6),
-
-            Text(
-              '${employeeIds.length} employee(s) with attendance',
-              style: const TextStyle(
-                color: Colors.black54,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            if (employeeIds.isEmpty)
-              const Center(
-                child: Padding(
+              const SizedBox(height: 8),
+              Text(branchName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text('${employees.length} employee(s)', style: const TextStyle(color: Colors.black54)),
+              const SizedBox(height: 24),
+              if (employees.isEmpty)
+                const Padding(
                   padding: EdgeInsets.all(40),
-                  child: Text(
-                    'No attendance entered for this branch yet.',
+                  child: Center(child: Text('No employees assigned to this branch.')),
+                )
+              else
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 340,
+                    mainAxisExtent: 180,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                   ),
-                ),
-              )
-            else
-              GridView.builder(
-                shrinkWrap: true,
-                physics:
-                    const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                    const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 340,
-                  mainAxisExtent: 175,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: employeeIds.length,
-                itemBuilder: (context, index) {
-                  final employeeId =
-                      employeeIds[index];
+                  itemCount: employees.length,
+                  itemBuilder: (context, index) {
+                    final employee = employees[index];
+                    final employeeId = (employee['employee_id'] ?? employee['id'] ?? '').toString();
+                    final name = (employee['name'] ?? employee['full_name'] ?? employeeId).toString();
+                    final records = byEmployee[employeeId] ?? const <Map<String, dynamic>>[];
+                    final submitted = records.any((r) => _attendanceBool(r['is_submitted']));
 
-                  final employee =
-                      employeeMap[employeeId] ??
-                          <String, dynamic>{
-                            'employee_id': employeeId,
-                          };
-
-                  final employeeName =
-                      (employee['name'] ??
-                              employee['full_name'] ??
-                              employeeId)
-                          .toString();
-
-                  final records =
-                      byEmployee[employeeId] ?? [];
-
-                  return InkWell(
-                    borderRadius:
-                        BorderRadius.circular(18),
-                    onTap: () {
-                      _showEmployeeAttendanceSheet(
-                        employeeName,
-                        employeeId,
-                        records,
-                        employee,
-                      );
-                    },
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(18),
-                        side: BorderSide(
-                          color: Colors.blueGrey
-                              .withOpacity(.20),
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () => _openAdminAttendance(employee, branchId, submitted),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: BorderSide(color: Colors.blueGrey.withOpacity(.20)),
                         ),
-                      ),
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 24,
-                                  child: Text(
-                                    employeeName.isEmpty
-                                        ? '?'
-                                        : employeeName[0]
-                                            .toUpperCase(),
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 24,
+                                    child: Text(name.isEmpty ? '?' : name[0].toUpperCase()),
                                   ),
-                                ),
-                                const Spacer(),
-                                const Icon(
-                                  Icons.calendar_month_outlined,
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            Text(
-                              employeeName,
-                              maxLines: 1,
-                              overflow:
-                                  TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight:
-                                    FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Employee ID: $employeeId',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${records.length} attendance record(s)',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-// ===========================================================================
-// ATTENDANCE SHEET
-// ===========================================================================
-
-void _showEmployeeAttendanceSheet(
-  String employeeName,
-  String employeeId,
-  List<Map<String, dynamic>> records,
-  Map<String, dynamic> employee,
-) {
-  final now = DateTime.now();
-
-  final values =
-      List.generate(
-    31,
-    (_) => List<String>.filled(6, '-'),
-  );
-
-  final otAuthorized =
-      List<bool>.filled(31, false);
-
-  final selectedMonth =
-      ValueNotifier<int>(now.month);
-
-  final selectedYear =
-      ValueNotifier<int>(now.year);
-
-  void loadRecords() {
-    for (int i = 0; i < 31; i++) {
-      values[i] =
-          List<String>.filled(6, '-');
-
-      otAuthorized[i] = false;
-    }
-
-    for (final record in records) {
-      final rawDate =
-          (record['attendance_date'] ?? '')
-              .toString();
-
-      final date =
-          DateTime.tryParse(rawDate);
-
-      if (date == null) continue;
-
-      if (date.month != selectedMonth.value ||
-          date.year != selectedYear.value) {
-        continue;
-      }
-
-      if (date.day < 1 || date.day > 31) {
-        continue;
-      }
-
-      final index = date.day - 1;
-
-      values[index][0] =
-          _attendanceValue(record['check_in']);
-
-      values[index][3] =
-          _attendanceValue(record['check_out']);
-
-      values[index][4] =
-          _attendanceValue(
-        record['ot_in'] ??
-            record['overtime_in'],
-      );
-
-      values[index][5] =
-          _attendanceValue(
-        record['ot_out'] ??
-            record['overtime_out'],
-      );
-
-      final authorized =
-          record['ot_authorized'] ??
-              record['overtime_authorized'] ??
-              false;
-
-      if (authorized is bool) {
-        otAuthorized[index] = authorized;
-      } else {
-        otAuthorized[index] =
-            authorized.toString().toLowerCase() ==
-                'true';
-      }
-    }
-  }
-
-  loadRecords();
-
-  showDialog(
-    context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          return Dialog(
-            insetPadding: const EdgeInsets.all(12),
-            child: SizedBox(
-              width: 850,
-              height:
-                  MediaQuery.of(context).size.height *
-                      .92,
-              child: Column(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Color(0xFFE0E0E0),
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            employeeName,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight:
-                                  FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            Navigator.pop(
-                              dialogContext,
-                            );
-                          },
-                          icon:
-                              const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(
-                      16,
-                      12,
-                      16,
-                      8,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child:
-                              DropdownButtonFormField<
-                                  int>(
-                            value:
-                                selectedMonth.value,
-                            decoration:
-                                const InputDecoration(
-                              labelText: 'Month',
-                              border:
-                                  OutlineInputBorder(),
-                            ),
-                            items: List.generate(
-                              12,
-                              (index) {
-                                final month =
-                                    index + 1;
-
-                                return DropdownMenuItem<
-                                    int>(
-                                  value: month,
-                                  child: Text(
-                                    DateFormat('MMMM')
-                                        .format(
-                                      DateTime(
-                                        2026,
-                                        month,
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: submitted ? Colors.green.shade50 : Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      submitted ? 'Submitted' : 'Pending',
+                                      style: TextStyle(
+                                        color: submitted ? Colors.green.shade700 : Colors.orange.shade700,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
-                                );
-                              },
-                            ),
-                            onChanged: (value) {
-                              if (value == null) {
-                                return;
-                              }
-
-                              setDialogState(() {
-                                selectedMonth.value =
-                                    value;
-
-                                loadRecords();
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child:
-                              DropdownButtonFormField<
-                                  int>(
-                            value: selectedYear.value,
-                            decoration:
-                                const InputDecoration(
-                              labelText: 'Year',
-                              border:
-                                  OutlineInputBorder(),
-                            ),
-                            items: List.generate(
-                              10,
-                              (index) {
-                                final year =
-                                    DateTime.now().year -
-                                        index;
-
-                                return DropdownMenuItem<
-                                    int>(
-                                  value: year,
-                                  child:
-                                      Text('$year'),
-                                );
-                              },
-                            ),
-                            onChanged: (value) {
-                              if (value == null) {
-                                return;
-                              }
-
-                              setDialogState(() {
-                                selectedYear.value =
-                                    value;
-
-                                loadRecords();
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding:
-                          const EdgeInsets.all(16),
-                      child: LayoutBuilder(
-                        builder:
-                            (context, constraints) {
-                          return Column(
-                            children: [
-                              _adminAttendanceSheetPage(
-                                pageNumber: 1,
-                                startDay: 1,
-                                endDay: 15,
-                                employee: employee,
-                                employeeName:
-                                    employeeName,
-                                employeeId:
-                                    employeeId,
-                                values: values,
-                                otAuthorized:
-                                    otAuthorized,
-                                month:
-                                    selectedMonth.value,
-                                year:
-                                    selectedYear.value,
-                                onAuthorizationChanged:
-                                    (day, value) async {
-                                  final previous =
-                                      otAuthorized[day - 1];
-
-                                  setDialogState(() {
-                                    otAuthorized[
-                                        day - 1] = value;
-                                  });
-
-                                  try {
-                                    await SupabaseService
-                                        .updateAttendanceOtAuthorization(
-                                      employeeId: employeeId,
-                                      date: DateTime(
-                                        selectedYear.value,
-                                        selectedMonth.value,
-                                        day,
-                                      ),
-                                      otAuthorized: value,
-                                    );
-                                  } catch (e) {
-                                    setDialogState(() {
-                                      otAuthorized[
-                                          day - 1] = previous;
-                                    });
-
-                                    if (!mounted) return;
-
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Failed to save OT authorization: $e',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
+                                ],
                               ),
-                              const SizedBox(height: 24),
-                              _adminAttendanceSheetPage(
-                                pageNumber: 2,
-                                startDay: 16,
-                                endDay:
-                                    DateUtils.getDaysInMonth(
-                                  selectedYear.value,
-                                  selectedMonth.value,
-                                ),
-                                employee: employee,
-                                employeeName:
-                                    employeeName,
-                                employeeId:
-                                    employeeId,
-                                values: values,
-                                otAuthorized:
-                                    otAuthorized,
-                                month:
-                                    selectedMonth.value,
-                                year:
-                                    selectedYear.value,
-                                onAuthorizationChanged:
-                                    (day, value) async {
-                                  final previous =
-                                      otAuthorized[day - 1];
-
-                                  setDialogState(() {
-                                    otAuthorized[
-                                        day - 1] = value;
-                                  });
-
-                                  try {
-                                    await SupabaseService
-                                        .updateAttendanceOtAuthorization(
-                                      employeeId: employeeId,
-                                      date: DateTime(
-                                        selectedYear.value,
-                                        selectedMonth.value,
-                                        day,
-                                      ),
-                                      otAuthorized: value,
-                                    );
-                                  } catch (e) {
-                                    setDialogState(() {
-                                      otAuthorized[
-                                          day - 1] = previous;
-                                    });
-
-                                    if (!mounted) return;
-
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Failed to save OT authorization: $e',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
+                              const Spacer(),
+                              Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 4),
+                              Text('Employee ID: $employeeId', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                              const SizedBox(height: 3),
+                              Text(
+                                submitted ? 'Submitted attendance • Admin can edit' : 'Waiting for Branch submission',
+                                style: const TextStyle(fontSize: 12, color: Colors.black54),
                               ),
                             ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  Container(
-                    padding:
-                        const EdgeInsets.all(16),
-                    decoration:
-                        const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: Color(0xFFE0E0E0),
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Admin View • Working hours, working days and OT authorization',
-                            style: TextStyle(
-                              color:
-                                  Colors.grey.shade600,
-                              fontWeight:
-                                  FontWeight.w600,
-                            ),
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.pop(
-                              dialogContext,
-                            );
-                          },
-                          icon:
-                              const Icon(Icons.close),
-                          label:
-                              const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
       );
     },
   );
 }
 
-String _attendanceValue(dynamic value) {
-  final text =
-      value?.toString().trim() ?? '';
-
-  return text.isEmpty || text == '-'
-      ? '-'
-      : text;
+bool _attendanceBool(dynamic value) {
+  if (value is bool) return value;
+  final text = value?.toString().toLowerCase().trim() ?? '';
+  return text == 'true' || text == '1' || text == 'yes';
 }
 
-// ===========================================================================
-// TIME CALCULATIONS
-// ===========================================================================
-
-int _timeToMinutes(String value) {
-  final text = value.trim();
-
-  if (text.isEmpty || text == '-') {
-    return -1;
-  }
-
-  final formats = [
-    'HH:mm',
-    'H:mm',
-    'hh:mm a',
-    'h:mm a',
-    'hh:mm:ss a',
-    'HH:mm:ss',
-  ];
-
-  for (final format in formats) {
-    try {
-      final date =
-          DateFormat(format).parseLoose(text);
-
-      return (date.hour * 60) + date.minute;
-    } catch (_) {}
-  }
-
-  final regex =
-      RegExp(r'(\d{1,2}):(\d{2})');
-
-  final match = regex.firstMatch(text);
-
-  if (match != null) {
-    final hour =
-        int.tryParse(match.group(1) ?? '');
-
-    final minute =
-        int.tryParse(match.group(2) ?? '');
-
-    if (hour != null &&
-        minute != null &&
-        hour >= 0 &&
-        hour <= 23 &&
-        minute >= 0 &&
-        minute <= 59) {
-      return hour * 60 + minute;
-    }
-  }
-
-  return -1;
-}
-
-int _durationBetween(
-  String start,
-  String end,
+void _openAdminAttendance(
+  Map<String, dynamic> employee,
+  String branchId,
+  bool submitted,
 ) {
-  final startMinutes =
-      _timeToMinutes(start);
-
-  final endMinutes =
-      _timeToMinutes(end);
-
-  if (startMinutes < 0 ||
-      endMinutes < 0) {
-    return 0;
-  }
-
-  var difference =
-      endMinutes - startMinutes;
-
-  if (difference < 0) {
-    difference += 24 * 60;
-  }
-
-  return difference;
-}
-
-String _formatAttendanceMinutes(
-  int minutes,
-) {
-  if (minutes <= 0) {
-    return '-';
-  }
-
-  final hours = minutes ~/ 60;
-  final remainingMinutes =
-      minutes % 60;
-
-  return '${hours}h ${remainingMinutes}m';
-}
-
-int _normalWorkingMinutes(
-  List<String> row,
-) {
-  // Morning IN -> Afternoon OUT.
-  final checkIn = row[0];
-  final checkOut = row[3];
-
-  return _durationBetween(
-    checkIn,
-    checkOut,
-  );
-}
-
-int _authorizedOtMinutes(
-  List<String> row,
-  bool authorized,
-) {
-  // OT is not calculated unless admin authorizes it.
-  if (!authorized) {
-    return 0;
-  }
-
-  // Working time must be more than 7 hours 30 minutes.
-  final normalMinutes =
-      _normalWorkingMinutes(row);
-
-  if (normalMinutes <= 450) {
-    return 0;
-  }
-
-  // If OT IN and OUT are available, calculate OT.
-  final overtimeMinutes =
-      _durationBetween(
-    row[4],
-    row[5],
-  );
-
-  // Otherwise use the excess above 7h 30m.
-  if (overtimeMinutes > 0) {
-    return overtimeMinutes;
-  }
-
-  return normalMinutes - 450;
-}
-
-bool _canAuthorizeOt(
-  List<String> row,
-) {
-  return _normalWorkingMinutes(row) > 450;
-}
-
-int _workingDays(
-  List<List<String>> values,
-) {
-  int days = 0;
-
-  for (final row in values) {
-    if (_normalWorkingMinutes(row) > 0) {
-      days++;
-    }
-  }
-
-  return days;
-}
-
-int _totalWorkingMinutes(
-  List<List<String>> values,
-) {
-  int total = 0;
-
-  for (final row in values) {
-    total += _normalWorkingMinutes(row);
-  }
-
-  return total;
-}
-
-int _totalAuthorizedOtMinutes(
-  List<List<String>> values,
-  List<bool> authorized,
-) {
-  int total = 0;
-
-  for (int i = 0;
-      i < values.length;
-      i++) {
-    total += _authorizedOtMinutes(
-      values[i],
-      authorized[i],
-    );
-  }
-
-  return total;
-}
-
-// ===========================================================================
-// ADMIN ATTENDANCE SHEET
-// ===========================================================================
-
-Widget _adminAttendanceSheetPage({
-  required int pageNumber,
-  required int startDay,
-  required int endDay,
-  required Map<String, dynamic> employee,
-  required String employeeName,
-  required String employeeId,
-  required List<List<String>> values,
-  required List<bool> otAuthorized,
-  required int month,
-  required int year,
-  required Function(int day, bool value)
-      onAuthorizationChanged,
-}) {
-  const border =
-      Color(0xFF39A9D0);
-
-  final monthName =
-      DateFormat('MMMM').format(
-    DateTime(year, month),
-  );
-
-  final department =
-      (employee['department'] ?? '')
-          .toString();
-
-  final section =
-      (employee['section'] ?? '')
-          .toString();
-
-  Widget box(
-    String text,
-    double width, {
-    bool bold = false,
-    double fontSize = 11,
-    double height = 32,
-    Color? backgroundColor,
-  }) {
-    return Container(
-      width: width,
-      height: height,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: const Border(
-          right: BorderSide(
-            color: border,
-          ),
-          bottom: BorderSide(
-            color: border,
-          ),
-        ),
-      ),
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(
-          horizontal: 3,
-        ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow:
-              TextOverflow.ellipsis,
-          style: TextStyle(
-            fontWeight: bold
-                ? FontWeight.w800
-                : FontWeight.normal,
-            fontSize: fontSize,
-          ),
-        ),
-      ),
-    );
-  }
-
-  final pageRows =
-      List.generate(
-    endDay - startDay + 1,
-    (index) => startDay + index,
-  );
-
-  int pageWorkingMinutes = 0;
-  int pageWorkingDays = 0;
-  int pageOtMinutes = 0;
-
-  for (final day in pageRows) {
-    final index = day - 1;
-
-    final working =
-        _normalWorkingMinutes(
-      values[index],
-    );
-
-    if (working > 0) {
-      pageWorkingDays++;
-      pageWorkingMinutes += working;
-    }
-
-    pageOtMinutes +=
-        _authorizedOtMinutes(
-      values[index],
-      otAuthorized[index],
-    );
-  }
-
-  // Exact total width = 48 + (85 × 6) + 70 = 628.
-  // This prevents the previous right overflow.
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: SizedBox(
-      // 628px table + 1px border on each side.
-      // This prevents the previous 2px right-side RenderFlex overflow.
-      width: 630,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: border,
-          ),
-          borderRadius:
-              BorderRadius.circular(16),
-        ),
-        child: ClipRRect(
-          borderRadius:
-              BorderRadius.circular(15),
-          child: Column(
-            mainAxisSize:
-                MainAxisSize.min,
-            children: [
-              Container(
-                height: 38,
-                alignment:
-                    Alignment.centerLeft,
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 16,
-                ),
-                color:
-                    const Color(0xFF168BB5),
-                child: const Text(
-                  'EMPLOYEE ATTENDANCE',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight:
-                        FontWeight.w800,
-                  ),
-                ),
-              ),
-
-              Row(
-                children: [
-                  box(
-                    'NO: $employeeId',
-                    150,
-                    bold: true,
-                  ),
-                  box(
-                    'NAME: $employeeName',
-                    428,
-                    bold: true,
-                  ),
-                  box(
-                    '$pageNumber',
-                    50,
-                    bold: true,
-                    fontSize: 20,
-                  ),
-                ],
-              ),
-
-              Row(
-                children: [
-                  box(
-                    'DEPT: $department',
-                    314,
-                    bold: true,
-                  ),
-                  box(
-                    'SECT: $section',
-                    314,
-                    bold: true,
-                  ),
-                ],
-              ),
-
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(
-                  vertical: 10,
-                ),
-                child: Text(
-                  'FOR THE MONTH OF $monthName $year',
-                  style: const TextStyle(
-                    fontWeight:
-                        FontWeight.w800,
-                  ),
-                ),
-              ),
-
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 10,
-                ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _attendanceSummaryChip(
-                      'Working Days',
-                      pageWorkingDays.toString(),
-                      Icons.calendar_today,
-                    ),
-                    _attendanceSummaryChip(
-                      'Working Hours',
-                      _formatAttendanceMinutes(
-                        pageWorkingMinutes,
-                      ),
-                      Icons.access_time,
-                    ),
-                    _attendanceSummaryChip(
-                      'Authorized OT',
-                      _formatAttendanceMinutes(
-                        pageOtMinutes,
-                      ),
-                      Icons.timer_outlined,
-                    ),
-                  ],
-                ),
-              ),
-
-              Row(
-                children: [
-                  box(
-                    'Date',
-                    48,
-                    bold: true,
-                  ),
-                  box(
-                    'MORNING',
-                    170,
-                    bold: true,
-                  ),
-                  box(
-                    'AFTERNOON',
-                    170,
-                    bold: true,
-                  ),
-                  box(
-                    'OVERTIME',
-                    170,
-                    bold: true,
-                  ),
-                  box(
-                    'Daily\nTotal',
-                    70,
-                    bold: true,
-                  ),
-                ],
-              ),
-
-              Row(
-                children: [
-                  box('', 48),
-                  box(
-                    'IN',
-                    85,
-                    bold: true,
-                  ),
-                  box(
-                    'OUT',
-                    85,
-                    bold: true,
-                  ),
-                  box(
-                    'IN',
-                    85,
-                    bold: true,
-                  ),
-                  box(
-                    'OUT',
-                    85,
-                    bold: true,
-                  ),
-                  box(
-                    'IN',
-                    85,
-                    bold: true,
-                  ),
-                  box(
-                    'OUT',
-                    85,
-                    bold: true,
-                  ),
-                  box('', 70),
-                ],
-              ),
-
-              for (final day in pageRows)
-                _adminAttendanceRow(
-                  day: day,
-                  values: values,
-                  otAuthorized:
-                      otAuthorized,
-                  box: box,
-                  onAuthorizationChanged:
-                      onAuthorizationChanged,
-                ),
-            ],
-          ),
-        ),
-      ),
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => AttendanceDialog(
+      employee: employee,
+      month: selectedAttendanceMonth,
+      branchId: branchId,
+      editable: true,
+      adminOnlyAfterSubmit: true,
     ),
-  );
+  ).then((_) {
+    if (mounted) setState(() {});
+  });
 }
-
-Widget _attendanceSummaryChip(
-  String title,
-  String value,
-  IconData icon,
-) {
-  return Container(
-    padding:
-        const EdgeInsets.symmetric(
-      horizontal: 10,
-      vertical: 8,
-    ),
-    decoration: BoxDecoration(
-      color:
-          const Color(0xFFF1F8FB),
-      borderRadius:
-          BorderRadius.circular(10),
-      border: Border.all(
-        color: const Color(
-          0xFFB9DCE7,
-        ),
-      ),
-    ),
-    child: Row(
-      mainAxisSize:
-          MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color:
-              const Color(0xFF168BB5),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          '$title: ',
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight:
-                FontWeight.w600,
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight:
-                FontWeight.w800,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _adminAttendanceRow({
-  required int day,
-  required List<List<String>> values,
-  required List<bool> otAuthorized,
-  required Widget Function(
-    String,
-    double, {
-    bool bold,
-    double fontSize,
-    double height,
-    Color? backgroundColor,
-  }) box,
-  required Function(int day, bool value)
-      onAuthorizationChanged,
-}) {
-  final index = day - 1;
-
-  final row = values[index];
-
-  final workingMinutes =
-      _normalWorkingMinutes(row);
-
-  final canAuthorize =
-      _canAuthorizeOt(row);
-
-  final authorized =
-      otAuthorized[index];
-
-  final otMinutes =
-      _authorizedOtMinutes(
-    row,
-    authorized,
-  );
-
-  final totalMinutes =
-      workingMinutes + otMinutes;
-
-  return Column(
-    children: [
-      Row(
-        children: [
-          box(
-            '$day',
-            48,
-            bold: true,
-          ),
-
-          box(row[0], 85),
-          box(row[1], 85),
-
-          box(row[2], 85),
-          box(row[3], 85),
-
-          box(
-            canAuthorize
-                ? row[4]
-                : '-',
-            85,
-          ),
-
-          box(
-            canAuthorize
-                ? row[5]
-                : '-',
-            85,
-          ),
-
-          box(
-            totalMinutes > 0
-                ? _formatAttendanceMinutes(
-                    totalMinutes,
-                  )
-                : '-',
-            70,
-            bold: true,
-          ),
-        ],
-      ),
-
-      if (canAuthorize)
-        Container(
-          width: 628,
-          padding:
-              const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 4,
-          ),
-          decoration: const BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: Color(
-                  0xFF39A9D0,
-                ),
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.timer_outlined,
-                size: 16,
-                color: Color(
-                  0xFF168BB5,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Working time ${_formatAttendanceMinutes(workingMinutes)} is more than 7h 30m. Authorize OT calculation.',
-                  style: const TextStyle(
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-              Switch(
-                value: authorized,
-                onChanged: (value) {
-                  onAuthorizationChanged(
-                    day,
-                    value,
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-    ],
-  );
-}
-// ===========================================================================
-// CSV IMPORT
-// ===========================================================================
-
-  Future<void> _importEmployeesCsv() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-        withData: true,
-      );
-
-      if (result == null || result.files.isEmpty) {
-        return;
-      }
-
-      final file = result.files.first;
-
-      if (file.bytes == null) {
-        throw Exception('Unable to read the selected CSV file.');
-      }
-
-      final csvText = utf8.decode(file.bytes!);
-
-      final rows = const CsvToListConverter(
-        shouldParseNumbers: false,
-      ).convert(csvText);
-
-      if (rows.isEmpty) {
-        throw Exception('The CSV file is empty.');
-      }
-
-      final headers = rows.first
-          .map(
-            (value) => value.toString().trim(),
-      )
-          .toList();
-
-      final requiredColumns = [
-        'employeeId',
-        'name',
-        'designation',
-        'department',
-        'email',
-        'newIcNo',
-        'bankCode',
-        'bankAccount',
-        'phone',
-        'address',
-        'joiningDate',
-        'isActive',
-        'branchId',
-      ];
-
-      for (final column in requiredColumns) {
-        if (!headers.contains(column)) {
-          throw Exception(
-            'Missing CSV column: $column',
-          );
-        }
-      }
-
-      final List<Map<String, dynamic>> employees = [];
-
-      for (int i = 1; i < rows.length; i++) {
-        final row = rows[i];
-
-        if (row.isEmpty) {
-          continue;
-        }
-
-        String value(String column) {
-          final index = headers.indexOf(column);
-
-          if (index < 0 || index >= row.length) {
-            return '';
-          }
-
-          return row[index].toString().trim();
-        }
-
-        final employeeId = value('employeeId');
-
-        if (employeeId.isEmpty) {
-          continue;
-        }
-
-        final joiningDateText =
-        value('joiningDate');
-
-        DateTime? joiningDate;
-
-        if (joiningDateText.isNotEmpty) {
-          joiningDate =
-              DateTime.tryParse(joiningDateText);
-
-          if (joiningDate == null) {
-            throw Exception(
-              'Invalid joiningDate at CSV row ${i + 1}: '
-                  '$joiningDateText',
-            );
-          }
-        }
-
-        final isActiveText =
-        value('isActive').toLowerCase();
-
-        final isActive =
-            isActiveText == 'true' ||
-                isActiveText == '1' ||
-                isActiveText == 'yes';
-
-        employees.add({
-          'employee_id': employeeId,
-          'name': value('name'),
-          'designation': value('designation'),
-          'department': value('department'),
-          'email': value('email'),
-          'new_ic_no': value('newIcNo'),
-          'bank_code': value('bankCode'),
-          'bank_account': value('bankAccount'),
-          'phone': value('phone'),
-          'address': value('address'),
-          'joining_date':
-          joiningDate == null
-              ? null
-              : joiningDate
-              .toIso8601String()
-              .split('T')
-              .first,
-          'is_active': isActive,
-          'branch_id': value('branchId'),
-        });
-      }
-
-      if (employees.isEmpty) {
-        throw Exception(
-          'No valid employee records were found in the CSV.',
-        );
-      }
-
-      await SupabaseService.client
-          .from('employees')
-          .upsert(
-        employees,
-        onConflict: 'employee_id',
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${employees.length} employee record(s) imported successfully.',
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 6),
-        ),
-      );
-
-      setState(() {});
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'CSV import failed: $e',
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 6),
-        ),
-      );
-    }
-  }
-
-
-// ---------------------------------------------------------------------------
-// PAYROLL CSV FILE PICKER
-// ---------------------------------------------------------------------------
-
-  Future<void> _importPayrollCsv() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-        withData: true,
-      );
-
-      if (result == null) {
-        return;
-      }
-
-      final file = result.files.single;
-
-      if (file.bytes == null) {
-        throw Exception(
-          'Unable to read the selected CSV file.',
-        );
-      }
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Selected payroll file: ${file.name}',
-          ),
-          duration: const Duration(seconds: 5),
-        ),
-      );
-
-// IMPORTANT:
-// At this point the file has been selected.
-// We can add your Supabase payroll CSV parsing/import here.
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Payroll CSV import failed: $e',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
 
 // ===========================================================================
 // EMPLOYEE CSV IMPORT PAGE

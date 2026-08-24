@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import '../models/payroll.dart';
 import '../services/app_service.dart';
 import '../screens/supabase_service.dart';
+import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
 import 'login_screen.dart';
 
@@ -22,6 +23,8 @@ class _EmployeePortalState
       AppService.instance;
 
   int tab = 0;
+
+  DateTime _attendanceMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   /// =============================================================
   /// CURRENT EMPLOYEE
@@ -1031,9 +1034,135 @@ class _EmployeePortalState
   // =============================================================
 
   Widget _attendance() {
-    return _EmployeeAttendancePage(
-      employeeId: employeeId,
-      employeeName: employee?.name ?? '',
+    final currentEmployee = employee!;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Attendance',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Attendance submitted by your branch. This page is read-only.',
+            style: TextStyle(color: Colors.black54),
+          ),
+          const SizedBox(height: 24),
+          Card(
+            elevation: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: const Color(0xFFEAF0FF),
+                        child: Text(
+                          currentEmployee.name.isEmpty ? '?' : currentEmployee.name[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Color(0xFF2D55D8),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(currentEmployee.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 3),
+                            Text(currentEmployee.employeeId, style: const TextStyle(color: Colors.black54)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Read Only',
+                          style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w700, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 30),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_month_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          DateFormat('MMMM yyyy').format(_attendanceMonth),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _attendanceMonth,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                            helpText: 'Select Attendance Month',
+                          );
+                          if (picked != null && mounted) {
+                            setState(() {
+                              _attendanceMonth = DateTime(picked.year, picked.month);
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.edit_calendar_outlined),
+                        label: const Text('Change'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => AttendanceDialog(
+                            employee: {
+                              'employee_id': currentEmployee.employeeId,
+                              'name': currentEmployee.name,
+                              'department': currentEmployee.department,
+                              'branch_id': currentEmployee.branchId,
+                            },
+                            month: _attendanceMonth,
+                            branchId: currentEmployee.branchId,
+                            editable: false,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: const Text('View Attendance'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Attendance appears here after the Branch Portal submits it. The record cannot be edited from the Employee Portal.',
+                    style: TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
