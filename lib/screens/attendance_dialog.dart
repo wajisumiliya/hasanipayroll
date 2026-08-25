@@ -260,118 +260,57 @@ class _AttendanceDialogState
     }
 
     if (loadError != null) {
-      return Dialog(
-        child: SizedBox(
-          width: 450,
-          child: Padding(
-            padding: const EdgeInsets.all(30),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 55,
-                ),
-                const SizedBox(height: 15),
-                const Text(
-                  'Unable to load attendance',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  loadError!,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 25),
-                Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment.center,
-                  children: [
-                    OutlinedButton(
-                      onPressed: saving
-                          ? null
-                          : () {
-                        Navigator.of(
-                          context,
-                        ).pop();
-                      },
-                      child: const Text('Close'),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: saving
-                          ? null
-                          : () {
-                        setState(() {
-                          loading = true;
-                          loadError = null;
-                        });
+      final screen = MediaQuery.of(context).size;
+    final mobile = screen.width < 600;
 
-                        _loadAttendance();
-                      },
-                      icon: const Icon(
-                        Icons.refresh,
-                      ),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final content = mobile
+        ? Column(
+            children: [
+              SizedBox(
+                height: 250,
+                child: _workingAttendanceCard(),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 300,
+                child: _breakAttendanceCard(),
+              ),
+            ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _workingAttendanceCard()),
+              const SizedBox(width: 12),
+              Expanded(child: _breakAttendanceCard()),
+            ],
+          );
 
     return Dialog(
-      insetPadding: const EdgeInsets.all(10),
+      insetPadding: EdgeInsets.all(mobile ? 4 : 10),
       child: SizedBox(
-        width: 1250,
-        height:
-        MediaQuery.of(context).size.height *
-            .94,
+        width: mobile ? screen.width - 8 : 1250,
+        height: mobile ? screen.height - 8 : screen.height * .94,
         child: Column(
           children: [
             _attendanceDialogHeader(),
-
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child:
-                      _workingAttendanceCard(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child:
-                      _breakAttendanceCard(),
-                    ),
-                  ],
-                ),
+                padding: EdgeInsets.all(mobile ? 6 : 12),
+                child: mobile
+                    ? SingleChildScrollView(
+                        child: content,
+                      )
+                    : content,
               ),
             ),
-
-            // FIXED:
-            // No positional arguments are passed.
             _attendanceSummary(),
-
             Container(
-              padding:
-              const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+              padding: EdgeInsets.symmetric(
+                horizontal: mobile ? 8 : 16,
+                vertical: mobile ? 8 : 12,
               ),
-              decoration:
-              const BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
@@ -381,65 +320,90 @@ class _AttendanceDialogState
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  TextButton(
-                    onPressed: saving
-                        ? null
-                        : () {
-                      Navigator.of(
-                        context,
-                      ).pop();
-                    },
-                    child: const Text('Close'),
-                  ),
-                  const Spacer(),
-                  if (_canEdit) ...[
-                    OutlinedButton.icon(
-                      onPressed: saving ? null : () => _saveAttendance(submit: false),
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Save Draft'),
-                    ),
-                    const SizedBox(width: 10),
-                    if (widget.showSubmitButton)
-                      FilledButton.icon(
-                        onPressed: saving ? null : () => _saveAttendance(submit: true),
-                        icon: saving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.send),
-                        label: Text(saving ? 'Submitting...' : 'Submit Attendance'),
-                      )
-                    else
-                      FilledButton.icon(
-                        onPressed: saving ? null : () => _saveAttendance(submit: false),
-                        icon: const Icon(Icons.save),
-                        label: const Text('Save Changes'),
-                      ),
-                  ] else
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: submitted ? Colors.green.shade50 : Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        submitted ? 'Submitted by Branch' : 'Not Submitted',
-                        style: TextStyle(
-                          color: submitted ? Colors.green.shade700 : Colors.orange.shade700,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+              child: mobile
+                  ? Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        TextButton(
+                          onPressed: saving ? null : () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
                         ),
-                      ),
+                        if (_canEdit)
+                          OutlinedButton.icon(
+                            onPressed: saving ? null : () => _saveAttendance(submit: false),
+                            icon: const Icon(Icons.save_outlined, size: 18),
+                            label: const Text('Save'),
+                          ),
+                        if (_canEdit && widget.showSubmitButton)
+                          FilledButton.icon(
+                            onPressed: saving ? null : () => _saveAttendance(submit: true),
+                            icon: saving
+                                ? const SizedBox(
+                                    width: 16, height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.send, size: 18),
+                            label: Text(saving ? 'Submitting...' : 'Submit'),
+                          ),
+                        if (_canEdit && !widget.showSubmitButton)
+                          FilledButton.icon(
+                            onPressed: saving ? null : () => _saveAttendance(submit: false),
+                            icon: const Icon(Icons.save, size: 18),
+                            label: const Text('Save Changes'),
+                          ),
+                        if (!_canEdit)
+                          Text(
+                            submitted ? 'Submitted by Branch' : 'Not Submitted',
+                            style: TextStyle(
+                              color: submitted ? Colors.green.shade700 : Colors.orange.shade700,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                            ),
+                          ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        TextButton(
+                          onPressed: saving ? null : () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                        const Spacer(),
+                        if (_canEdit) ...[
+                          OutlinedButton.icon(
+                            onPressed: saving ? null : () => _saveAttendance(submit: false),
+                            icon: const Icon(Icons.save_outlined),
+                            label: const Text('Save Draft'),
+                          ),
+                          const SizedBox(width: 10),
+                          if (widget.showSubmitButton)
+                            FilledButton.icon(
+                              onPressed: saving ? null : () => _saveAttendance(submit: true),
+                              icon: saving
+                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.send),
+                              label: Text(saving ? 'Submitting...' : 'Submit Attendance'),
+                            )
+                          else
+                            FilledButton.icon(
+                              onPressed: saving ? null : () => _saveAttendance(submit: false),
+                              icon: const Icon(Icons.save),
+                              label: const Text('Save Changes'),
+                            ),
+                        ] else
+                          Text(
+                            submitted ? 'Submitted by Branch' : 'Not Submitted',
+                            style: TextStyle(
+                              color: submitted ? Colors.green.shade700 : Colors.orange.shade700,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
                     ),
-                ],
-              ),
             ),
           ],
         ),
@@ -689,74 +653,74 @@ class _AttendanceDialogState
     final id = _employeeId();
     final department = _department();
     final section = _section();
+    final width = MediaQuery.of(context).size.width;
+    final mobile = width < 600;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 14,
+      padding: EdgeInsets.symmetric(
+        horizontal: mobile ? 14 : 20,
+        vertical: mobile ? 10 : 14,
       ),
       color: const Color(0xFF15965D),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 23,
+          CircleAvatar(
+            radius: mobile ? 19 : 23,
             backgroundColor: Colors.white,
             child: Icon(
               Icons.person,
-              color: Color(0xFF15965D),
-              size: 27,
+              color: const Color(0xFF15965D),
+              size: mobile ? 22 : 27,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 19,
+                    fontSize: mobile ? 16 : 19,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  [
-                    id,
-                    department,
-                    section,
-                  ]
-                      .where(
-                        (v) => v.isNotEmpty,
-                  )
+                  [id, department, section]
+                      .where((v) => v.isNotEmpty)
                       .join(' • '),
-                  style: const TextStyle(
+                  maxLines: mobile ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 12,
+                    fontSize: mobile ? 10 : 12,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                DateFormat('MMMM yyyy').format(widget.month),
-                style: const TextStyle(
+                DateFormat(mobile ? 'MMM yy' : 'MMMM yyyy').format(widget.month),
+                style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                  fontSize: mobile ? 12 : 15,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
                 submitted ? 'SUBMITTED' : 'DRAFT',
                 style: TextStyle(
                   color: submitted ? Colors.white : Colors.white70,
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -926,38 +890,37 @@ class _AttendanceDialogState
 
   Widget _breakAttendanceCard() {
     const red = Color(0xFF315AD9);
+    final mobile = MediaQuery.of(context).size.width < 600;
+
+    Widget table = Column(
+      children: [
+        _breakHeader(red),
+        Expanded(
+          child: Scrollbar(
+            thumbVisibility: true,
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              itemCount: daysInMonth,
+              itemBuilder: (context, index) {
+                return _breakRow(index + 1, controllers[index]);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (mobile) {
+      table = SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(width: 680, child: table),
+      );
+    }
 
     return _attendanceTableCard(
       title: 'BREAK ATTENDANCE',
       color: red,
-      child: Column(
-        children: [
-          _breakHeader(red),
-          Expanded(
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: daysInMonth,
-                itemBuilder: (
-                    context,
-                    index,
-                    ) {
-                  final day = index + 1;
-                  final c = controllers[index];
-
-                  // FIXED:
-                  // _breakRow takes exactly 2 arguments.
-                  return _breakRow(
-                    day,
-                    c,
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: table,
     );
   }
 
@@ -1677,6 +1640,8 @@ class _AttendanceDialogState
     return '${hours.toString().padLeft(2, '0')}:'
         '${mins.toString().padLeft(2, '0')}';
   }
+}
+
 }
 
 // ============================================================================
