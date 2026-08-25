@@ -3770,7 +3770,7 @@ Widget _importPage() {
 }
 
 // ============================================================================
-// PAYROLL GENERATION DIALOG
+// GENERATE PAYROLL FROM SALARY DEFAULTS
 // ============================================================================
 
 Future<void> _showGenerateAttendancePayrollDialog() async {
@@ -3791,7 +3791,7 @@ Future<void> _showGenerateAttendancePayrollDialog() async {
         ) {
           return AlertDialog(
             title: const Text(
-              'Generate Payroll From Attendance',
+              'Generate Payroll',
             ),
 
             content: SizedBox(
@@ -3803,17 +3803,21 @@ Future<void> _showGenerateAttendancePayrollDialog() async {
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
+
                     leading: const Icon(
                       Icons.calendar_month_outlined,
                     ),
+
                     title: const Text(
                       'Payroll Month',
                     ),
+
                     subtitle: Text(
                       DateFormat(
                         'MMMM yyyy',
                       ).format(selectedMonth),
                     ),
+
                     trailing: OutlinedButton(
                       onPressed: () async {
                         final picked =
@@ -3845,14 +3849,18 @@ Future<void> _showGenerateAttendancePayrollDialog() async {
 
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
+
                     value: overwriteExisting,
+
                     title: const Text(
                       'Replace Existing Payroll',
                     ),
+
                     subtitle: const Text(
-                      'Update an existing payroll record '
-                      'for the selected month.',
+                      'Update payroll if the employee already '
+                      'has a payroll record for this month.',
                     ),
+
                     onChanged: (value) {
                       setDialogState(() {
                         overwriteExisting = value;
@@ -3862,13 +3870,30 @@ Future<void> _showGenerateAttendancePayrollDialog() async {
 
                   const SizedBox(height: 8),
 
-                  const Text(
-                    'Rules: approved OT is included; '
-                    'unauthorized OT is omitted. '
-                    'Attendance deductions are calculated '
-                    'from the monthly attendance records.',
-                    style: TextStyle(
-                      color: Colors.black54,
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color:
+                          const Color(0xFFF5F7FB),
+                      borderRadius:
+                          BorderRadius.circular(10),
+                    ),
+
+                    child: const Text(
+                      'Payroll will currently be generated '
+                      'from employee_salary_defaults using:\n\n'
+                      '• Basic Salary\n'
+                      '• FW Salary\n'
+                      '• Elaun Kedatangan\n'
+                      '• Elaun Perkhidmatan\n'
+                      '• Elaun Kerajinan\n\n'
+                      'Attendance and payroll calculations will '
+                      'be added later.',
+                      style: TextStyle(
+                        color: Colors.black54,
+                      ),
                     ),
                   ),
                 ],
@@ -3878,7 +3903,9 @@ Future<void> _showGenerateAttendancePayrollDialog() async {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(dialogContext).pop();
+                  Navigator.of(
+                    dialogContext,
+                  ).pop();
                 },
                 child: const Text(
                   'Cancel',
@@ -3889,11 +3916,15 @@ Future<void> _showGenerateAttendancePayrollDialog() async {
                 icon: const Icon(
                   Icons.calculate_outlined,
                 ),
+
                 label: const Text(
-                  'Generate',
+                  'Generate Payroll',
                 ),
+
                 onPressed: () async {
-                  Navigator.of(dialogContext).pop();
+                  Navigator.of(
+                    dialogContext,
+                  ).pop();
 
                   await _generateAttendancePayroll(
                     month: selectedMonth,
@@ -3923,30 +3954,37 @@ Future<void> _generateAttendancePayroll({
   showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const AlertDialog(
-      content: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(),
-          ),
-          SizedBox(width: 20),
-          Expanded(
-            child: Text(
-              'Generating payroll from attendance...',
+    builder: (_) {
+      return const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child:
+                  CircularProgressIndicator(),
             ),
-          ),
-        ],
-      ),
-    ),
+
+            SizedBox(width: 20),
+
+            Expanded(
+              child: Text(
+                'Generating payroll from salary defaults...',
+              ),
+            ),
+          ],
+        ),
+      );
+    },
   );
 
   try {
     final result =
-        await AttendancePayrollService.generateMonthlyPayroll(
+        await AttendancePayrollService
+            .generateMonthlyPayroll(
       month: month,
-      overwriteExisting: overwriteExisting,
+      overwriteExisting:
+          overwriteExisting,
     );
 
     if (mounted) {
@@ -3964,7 +4002,8 @@ Future<void> _generateAttendancePayroll({
     if (mounted) {
       Navigator.of(context).pop();
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             'Payroll generation failed: $e',
@@ -3993,83 +4032,94 @@ Future<void> _showPayrollGenerationResult(
 
         content: SizedBox(
           width: 700,
+
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+
               crossAxisAlignment:
                   CrossAxisAlignment.start,
+
               children: [
                 Text(
                   DateFormat(
                     'MMMM yyyy',
                   ).format(result.month),
+
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
 
                 const SizedBox(height: 12),
 
                 Text(
-                  'Generated: ${result.generatedCount}',
+                  'Generated: '
+                  '${result.generatedCount}',
                 ),
 
                 Text(
-                  'Skipped: ${result.skippedCount}',
-                ),
-
-                Text(
-                  'Approved OT: RM '
-                  '${result.totalOvertime.toStringAsFixed(2)}',
-                ),
-
-                Text(
-                  'Attendance deductions: RM '
-                  '${result.totalAttendanceDeduction.toStringAsFixed(2)}',
+                  'Skipped: '
+                  '${result.skippedCount}',
                 ),
 
                 const SizedBox(height: 16),
 
                 ...result.generated.map(
-                  (item) => ListTile(
-                    dense: true,
-                    leading: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
-                    title: Text(
-                      item.employeeName.isEmpty
-                          ? item.employeeId
-                          : item.employeeName,
-                    ),
-                    subtitle: Text(
-                      'Present: ${item.presentDays} | '
-                      'Absent: ${item.absentDays} | '
-                      'Approved OT: '
-                      '${item.approvedOtHours.toStringAsFixed(2)} hrs | '
-                      'Unauthorized OT omitted: '
-                      '${item.unauthorizedOtHours.toStringAsFixed(2)} hrs',
-                    ),
-                  ),
+                  (item) {
+                    return ListTile(
+                      dense: true,
+
+                      leading: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                      ),
+
+                      title: Text(
+                        item.employeeName.isEmpty
+                            ? item.employeeId
+                            : item.employeeName,
+                      ),
+
+                      subtitle: Text(
+                        'Basic: RM '
+                        '${item.basicSalary.toStringAsFixed(2)}'
+                        ' | FW: RM '
+                        '${item.fwSalary.toStringAsFixed(2)}'
+                        ' | Kedatangan: RM '
+                        '${item.elaunKedatangan.toStringAsFixed(2)}'
+                        ' | Perkhidmatan: RM '
+                        '${item.elaunPerkhidmatan.toStringAsFixed(2)}'
+                        ' | Kerajinan: RM '
+                        '${item.elaunKerajinan.toStringAsFixed(2)}',
+                      ),
+                    );
+                  },
                 ),
 
                 ...result.skipped.map(
-                  (item) => ListTile(
-                    dense: true,
-                    leading: const Icon(
-                      Icons.error_outline,
-                      color: Colors.orange,
-                    ),
-                    title: Text(
-                      item.employeeName.isEmpty
-                          ? item.employeeId
-                          : item.employeeName,
-                    ),
-                    subtitle: Text(
-                      item.message,
-                    ),
-                  ),
+                  (item) {
+                    return ListTile(
+                      dense: true,
+
+                      leading: const Icon(
+                        Icons.error_outline,
+                        color: Colors.orange,
+                      ),
+
+                      title: Text(
+                        item.employeeName.isEmpty
+                            ? item.employeeId
+                            : item.employeeName,
+                      ),
+
+                      subtitle: Text(
+                        item.message,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -4079,8 +4129,11 @@ Future<void> _showPayrollGenerationResult(
         actions: [
           FilledButton(
             onPressed: () {
-              Navigator.of(dialogContext).pop();
+              Navigator.of(
+                dialogContext,
+              ).pop();
             },
+
             child: const Text(
               'Done',
             ),

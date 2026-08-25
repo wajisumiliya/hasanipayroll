@@ -15,6 +15,9 @@ class PayrollRecord {
 
   final double basicSalary;
 
+  /// FW SALARY
+  final double fwSalary;
+
   /// ELAUN KEDATANGAN
   final double elaunKedatangan;
 
@@ -69,6 +72,7 @@ class PayrollRecord {
 
     // Earnings
     required this.basicSalary,
+    this.fwSalary = 0,
     required this.elaunKedatangan,
     required this.elaunPerkhidmatan,
     required this.elaunKerajinan,
@@ -119,13 +123,15 @@ class PayrollRecord {
   // ==========================================================================
 
   double get totalAllowance {
-    return elaunKedatangan +
+    return fwSalary +
+        elaunKedatangan +
         elaunPerkhidmatan +
         elaunKerajinan;
   }
 
   double get additionalEarnings {
-    return elaunKedatangan +
+    return fwSalary +
+        elaunKedatangan +
         elaunPerkhidmatan +
         elaunKerajinan +
         overtime +
@@ -174,6 +180,7 @@ class PayrollRecord {
     DateTime? period,
 
     double? basicSalary,
+    double? fwSalary,
     double? elaunKedatangan,
     double? elaunPerkhidmatan,
     double? elaunKerajinan,
@@ -207,6 +214,7 @@ class PayrollRecord {
       period: period ?? this.period,
 
       basicSalary: basicSalary ?? this.basicSalary,
+      fwSalary: fwSalary ?? this.fwSalary,
       elaunKedatangan:
       elaunKedatangan ?? this.elaunKedatangan,
       elaunPerkhidmatan:
@@ -259,6 +267,7 @@ class PayrollRecord {
       'period': period.toIso8601String(),
 
       'basicSalary': basicSalary,
+      'fwSalary': fwSalary,
       'elaunKedatangan': elaunKedatangan,
       'elaunPerkhidmatan': elaunPerkhidmatan,
       'elaunKerajinan': elaunKerajinan,
@@ -301,6 +310,13 @@ class PayrollRecord {
       period: _parseDate(json['period']),
 
       basicSalary: _doubleValue(json['basicSalary']),
+
+      fwSalary: _doubleValue(
+        json['fwSalary'] ??
+            json['fw_salary'] ??
+            json['FW_salary'] ??
+            json['FW SALARY'],
+      ),
 
       elaunKedatangan: _doubleValue(
         json['elaunKedatangan'] ??

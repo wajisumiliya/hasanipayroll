@@ -3,7 +3,27 @@ import '../screens/supabase_service.dart';
 class AttendancePayrollService {
   AttendancePayrollService._();
 
-  static const double overtimeMultiplier = 1.5;
+  /// ============================================================
+  /// GENERATE MONTHLY PAYROLL
+  ///
+  /// CURRENT STAGE:
+  /// Payroll is generated ONLY from employee_salary_defaults.
+  ///
+  /// No attendance calculation is performed yet.
+  ///
+  /// Source table:
+  ///   employee_salary_defaults
+  ///
+  /// Required columns:
+  ///   employee_id
+  ///   basic_salary
+  ///   fw_salary
+  ///   elaun_kedatangan
+  ///   elaun_perkhidmatan
+  ///   elaun_kerajinan
+  ///
+  /// Later we can add your attendance/payroll calculation rules.
+  /// ============================================================
 
   static Future<PayrollGenerationResult> generateMonthlyPayroll({
     required DateTime month,
@@ -11,7 +31,9 @@ class AttendancePayrollService {
     bool overwriteExisting = true,
   }) async {
     final period = DateTime(month.year, month.month, 1);
+
     final employees = await _getEmployees(branchId);
+
     final generated = <PayrollGenerationItem>[];
     final skipped = <PayrollGenerationItem>[];
 
@@ -22,22 +44,34 @@ class AttendancePayrollService {
           month: period,
           overwriteExisting: overwriteExisting,
         );
-        (item.generated ? generated : skipped).add(item);
+
+        if (item.generated) {
+          generated.add(item);
+        } else {
+          skipped.add(item);
+        }
       } catch (e) {
-        skipped.add(PayrollGenerationItem(
-          employeeId: _text(employee['employee_id']),
-          employeeName: _text(employee['name']),
-          generated: false,
-          message: e.toString(),
-        ));
+        skipped.add(
+          PayrollGenerationItem(
+            employeeId: _text(employee['employee_id']),
+            employeeName: _text(employee['name']),
+            generated: false,
+            message: 'Failed: $e',
+          ),
+        );
       }
     }
+
     return PayrollGenerationResult(
       month: period,
       generated: generated,
       skipped: skipped,
     );
   }
+
+  /// ============================================================
+  /// GENERATE ONE EMPLOYEE PAYROLL
+  /// ============================================================
 
   static Future<PayrollGenerationItem> generateEmployeePayroll({
     required Map<String, dynamic> employee,
@@ -46,6 +80,7 @@ class AttendancePayrollService {
   }) async {
     final employeeId = _text(employee['employee_id']);
     final employeeName = _text(employee['name']);
+
     if (employeeId.isEmpty) {
       return PayrollGenerationItem(
         employeeId: '',
@@ -55,170 +90,328 @@ class AttendancePayrollService {
       );
     }
 
-    final attendance = await SupabaseService.getAttendanceByEmployeeMonth(
-      employeeId, month.year, month.month,
-    );
-    final payrollHistory = await SupabaseService.getPayrollByEmployee(employeeId);
-    final latest = payrollHistory.isNotEmpty ? payrollHistory.first : <String, dynamic>{};
+    // ------------------------------------------------------------
+    // GET SALARY DEFAULT FOR THIS EMPLOYEE
+    // ------------------------------------------------------------
 
-    final basicSalary = _firstNumber([
-      employee['basic_salary'], employee['basicSalary'],
-      latest['basic_salary'], latest['basicSalary'],
-    ]);
+    final salaryDefault = await _getSalaryDefault(employeeId);
+
+    if (salaryDefault == null) {
+      return PayrollGenerationItem(
+        employeeId: employeeId,
+        employeeName: employeeName,
+        generated: false,
+        message:
+            'No salary default found in employee_salary_defaults.',
+      );
+    }
+
+    // ------------------------------------------------------------
+    // READ SALARY DEFAULT VALUES
+    // ------------------------------------------------------------
+
+    final basicSalary = _number(
+      salaryDefault['basic_salary'],
+    );
+
+    final fwSalary = _number(
+      salaryDefault['fw_salary'],
+    );
+
+    final elaunKedatangan = _number(
+      salaryDefault['elaun_kedatangan'],
+    );
+
+    final elaunPerkhidmatan = _number(
+      salaryDefault['elaun_perkhidmatan'],
+    );
+
+    final elaunKerajinan = _number(
+      salaryDefault['elaun_kerajinan'],
+    );
+
+    // ------------------------------------------------------------
+    // BASIC SALARY CHECK
+    // ------------------------------------------------------------
+
     if (basicSalary <= 0) {
       return PayrollGenerationItem(
         employeeId: employeeId,
         employeeName: employeeName,
         generated: false,
-        message: 'Basic salary is missing. Import or create a salary record first.',
+        message:
+            'Basic salary is missing in employee_salary_defaults.',
       );
     }
 
-    int presentDays = 0, absentDays = 0, approvedOtMinutes = 0, unauthorizedOtMinutes = 0;
-    for (final row in attendance) {
-      final status = _text(row['status']).toLowerCase().trim();
-      final work = _number(row['work_minutes']).toInt();
-      final ot = _number(row['overtime_minutes']).toInt();
-      final absent = status == 'absent' || status == 'leave without pay';
-      if (absent) {
-        absentDays++;
-      } else if (work > 0 || status == 'present' || status == 'late') {
-        presentDays++;
-      }
-      // OT enters payroll only after admin authorization.
-      if (ot > 0) {
-        if (_bool(row['ot_authorized'])) {
-          approvedOtMinutes += ot;
-        } else {
-          unauthorizedOtMinutes += ot;
-        }
-      }
-    }
+    // ------------------------------------------------------------
+    // PAYROLL PERIOD
+    // ------------------------------------------------------------
 
-    final expectedDays = _expectedWorkingDays(month);
-    final missingDays = attendance.isEmpty
-        ? 0
-        : (expectedDays - presentDays - absentDays).clamp(0, expectedDays);
-    final totalUnpaidDays = absentDays + missingDays;
-    final dailyRate = expectedDays > 0 ? basicSalary / expectedDays : 0.0;
-    final attendanceDeduction = dailyRate * totalUnpaidDays;
+    final periodText =
+        '${month.year.toString().padLeft(4, '0')}-'
+        '${month.month.toString().padLeft(2, '0')}-01';
 
-    final approvedOtHours = approvedOtMinutes / 60.0;
-    final unauthorizedOtHours = unauthorizedOtMinutes / 60.0;
-    final overtimeAmount = approvedOtHours * (basicSalary / 26.0 / 8.0) * overtimeMultiplier;
+    // ------------------------------------------------------------
+    // EMPLOYEE INFORMATION
+    // ------------------------------------------------------------
 
-    final periodText = '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}-01';
+    final newIcNo = _text(
+      employee['new_ic_no'],
+    );
 
-    double n(String snake, String camel) => _firstNumber([latest[snake], latest[camel]]);
-    String t(String key) => _text(employee[key]).isNotEmpty ? _text(employee[key]) : _text(latest[key]);
+    final bankCode = _text(
+      employee['bank_code'],
+    );
+
+    final bankAccount = _text(
+      employee['bank_account'],
+    );
+
+    // ------------------------------------------------------------
+    // PAYROLL DATA
+    //
+    // IMPORTANT:
+    // No attendance calculation here.
+    // No overtime calculation here.
+    // No deduction calculation here.
+    //
+    // Those rules can be added later.
+    // ------------------------------------------------------------
 
     final data = <String, dynamic>{
       'employee_id': employeeId,
+
       'period': periodText,
+
+      // Salary defaults
       'basic_salary': basicSalary,
-      'elaun_kedatangan': n('elaun_kedatangan', 'elaunKedatangan'),
-      'elaun_perkhidmatan': n('elaun_perkhidmatan', 'elaunPerkhidmatan'),
-      'elaun_kerajinan': n('elaun_kerajinan', 'elaunKerajinan'),
-      'overtime': overtimeAmount,
-      'bonus': n('bonus', 'bonus'),
-      'commission': n('commission', 'commission'),
-      'other_earnings': n('other_earnings', 'otherEarnings'),
-      // Existing cuti_umum plus attendance-based deduction.
-      'cuti_umum': n('cuti_umum', 'cutiUmum') + attendanceDeduction,
-      'epf_employee': n('epf_employee', 'epfEmployee'),
-      'socso_employee': n('socso_employee', 'socsoEmployee'),
-      'eis_employee': n('eis_employee', 'eisEmployee'),
-      'pcb': n('pcb', 'pcb'),
-      'zakat': n('zakat', 'zakat'),
-      'epf_employer': n('epf_employer', 'epfEmployer'),
-      'socso_employer': n('socso_employer', 'socsoEmployer'),
-      'eis_employer': n('eis_employer', 'eisEmployer'),
-      'new_ic_no': t('new_ic_no'),
-      'bank_code': t('bank_code'),
-      'bank_account': t('bank_account'),
-      'remarks': 'Attendance payroll | Present: $presentDays | Absent: $absentDays | Missing: $missingDays | Approved OT: ${approvedOtHours.toStringAsFixed(2)} hrs | Unauthorized OT omitted: ${unauthorizedOtHours.toStringAsFixed(2)} hrs',
+      'fw_salary': fwSalary,
+      'elaun_kedatangan': elaunKedatangan,
+      'elaun_perkhidmatan': elaunPerkhidmatan,
+      'elaun_kerajinan': elaunKerajinan,
+
+      // Future payroll calculation fields
+      'overtime': 0,
+      'bonus': 0,
+      'commission': 0,
+      'other_earnings': 0,
+
+      // Future deduction calculation fields
+      'cuti_umum': 0,
+      'epf_employee': 0,
+      'socso_employee': 0,
+      'eis_employee': 0,
+      'pcb': 0,
+      'zakat': 0,
+
+      // Future employer contribution calculation
+      'epf_employer': 0,
+      'socso_employer': 0,
+      'eis_employer': 0,
+
+      // Employee information
+      'new_ic_no': newIcNo,
+      'bank_code': bankCode,
+      'bank_account': bankAccount,
+
+      'remarks':
+          'Generated from employee_salary_defaults',
     };
 
-    final existing = payrollHistory.where((p) => _text(p['period']).startsWith(periodText.substring(0, 7))).toList();
-    if (existing.isNotEmpty) {
+    // ------------------------------------------------------------
+    // CHECK EXISTING PAYROLL FOR SAME EMPLOYEE + MONTH
+    // ------------------------------------------------------------
+
+    final existing = await _getPayrollForPeriod(
+      employeeId,
+      periodText,
+    );
+
+    if (existing != null) {
       if (!overwriteExisting) {
         return PayrollGenerationItem(
-          employeeId: employeeId, employeeName: employeeName,
-          generated: false, message: 'Payroll already exists for this month.',
+          employeeId: employeeId,
+          employeeName: employeeName,
+          generated: false,
+          message:
+              'Payroll already exists for this month.',
         );
       }
-      await SupabaseService.updatePayroll(existing.first['id'], data);
+
+      // Update existing payroll
+      await SupabaseService.client
+          .from('payroll')
+          .update(data)
+          .eq('id', existing['id']);
     } else {
-      await SupabaseService.addPayroll(data);
+      // Insert new payroll
+      await SupabaseService.client
+          .from('payroll')
+          .insert(data);
     }
 
     return PayrollGenerationItem(
-      employeeId: employeeId, employeeName: employeeName,
-      generated: true, message: 'Payroll generated successfully.',
-      presentDays: presentDays, absentDays: absentDays, missingDays: missingDays,
-      approvedOtHours: approvedOtHours, unauthorizedOtHours: unauthorizedOtHours,
-      overtimeAmount: overtimeAmount, attendanceDeduction: attendanceDeduction,
+      employeeId: employeeId,
+      employeeName: employeeName,
+      generated: true,
+      message:
+          'Payroll generated from salary defaults.',
+      basicSalary: basicSalary,
+      fwSalary: fwSalary,
+      elaunKedatangan: elaunKedatangan,
+      elaunPerkhidmatan: elaunPerkhidmatan,
+      elaunKerajinan: elaunKerajinan,
     );
   }
 
-  static Future<List<Map<String, dynamic>>> _getEmployees(String? branchId) async {
-    var query = SupabaseService.client.from('employees').select();
-    if (branchId != null && branchId.trim().isNotEmpty) {
-      query = query.eq('branch_id', branchId.trim());
+  // ============================================================
+  // GET ACTIVE EMPLOYEES
+  // ============================================================
+
+  static Future<List<Map<String, dynamic>>> _getEmployees(
+    String? branchId,
+  ) async {
+    var query = SupabaseService.client
+        .from('employees')
+        .select();
+
+    if (branchId != null &&
+        branchId.trim().isNotEmpty) {
+      query = query.eq(
+        'branch_id',
+        branchId.trim(),
+      );
     }
-    final response = await query.eq('is_active', true).order('employee_id');
-    return List<Map<String, dynamic>>.from(response);
+
+    final response = await query
+        .eq('is_active', true)
+        .order('employee_id');
+
+    return List<Map<String, dynamic>>.from(
+      response,
+    );
   }
 
-  static int _expectedWorkingDays(DateTime month) {
-    int count = 0;
-    final last = DateTime(month.year, month.month + 1, 0);
-    for (var d = DateTime(month.year, month.month, 1); !d.isAfter(last); d = d.add(const Duration(days: 1))) {
-      if (d.weekday != DateTime.saturday && d.weekday != DateTime.sunday) count++;
+  // ============================================================
+  // GET SALARY DEFAULT
+  // ============================================================
+
+  static Future<Map<String, dynamic>?> _getSalaryDefault(
+    String employeeId,
+  ) async {
+    final response = await SupabaseService.client
+        .from('employee_salary_defaults')
+        .select()
+        .eq('employee_id', employeeId)
+        .maybeSingle();
+
+    if (response == null) {
+      return null;
     }
-    return count;
+
+    return Map<String, dynamic>.from(response);
   }
 
-  static String _text(dynamic value) => value?.toString() ?? '';
+  // ============================================================
+  // GET EXISTING PAYROLL FOR EMPLOYEE + PERIOD
+  // ============================================================
+
+  static Future<Map<String, dynamic>?> _getPayrollForPeriod(
+    String employeeId,
+    String period,
+  ) async {
+    final response = await SupabaseService.client
+        .from('payroll')
+        .select()
+        .eq('employee_id', employeeId)
+        .eq('period', period)
+        .maybeSingle();
+
+    if (response == null) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(response);
+  }
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
+  static String _text(dynamic value) {
+    return value?.toString() ?? '';
+  }
+
   static double _number(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse(_text(value).replaceAll(',', '').trim()) ?? 0;
-  }
-  static double _firstNumber(List<dynamic> values) {
-    for (final value in values) {
-      final number = _number(value);
-      if (number != 0) return number;
+    if (value is num) {
+      return value.toDouble();
     }
-    return 0;
-  }
-  static bool _bool(dynamic value) {
-    if (value is bool) return value;
-    final text = _text(value).toLowerCase().trim();
-    return text == 'true' || text == '1' || text == 'yes';
+
+    return double.tryParse(
+          _text(value)
+              .replaceAll(',', '')
+              .trim(),
+        ) ??
+        0;
   }
 }
+
+// ============================================================================
+// PAYROLL GENERATION RESULT
+// ============================================================================
 
 class PayrollGenerationResult {
   final DateTime month;
+
   final List<PayrollGenerationItem> generated;
+
   final List<PayrollGenerationItem> skipped;
-  const PayrollGenerationResult({required this.month, required this.generated, required this.skipped});
+
+  const PayrollGenerationResult({
+    required this.month,
+    required this.generated,
+    required this.skipped,
+  });
+
   int get generatedCount => generated.length;
+
   int get skippedCount => skipped.length;
-  double get totalOvertime => generated.fold(0, (v, e) => v + e.overtimeAmount);
-  double get totalAttendanceDeduction => generated.fold(0, (v, e) => v + e.attendanceDeduction);
 }
 
+// ============================================================================
+// PAYROLL GENERATION ITEM
+// ============================================================================
+
 class PayrollGenerationItem {
-  final String employeeId, employeeName, message;
+  final String employeeId;
+
+  final String employeeName;
+
   final bool generated;
-  final int presentDays, absentDays, missingDays;
-  final double approvedOtHours, unauthorizedOtHours, overtimeAmount, attendanceDeduction;
+
+  final String message;
+
+  final double basicSalary;
+
+  final double fwSalary;
+
+  final double elaunKedatangan;
+
+  final double elaunPerkhidmatan;
+
+  final double elaunKerajinan;
+
   const PayrollGenerationItem({
-    required this.employeeId, required this.employeeName,
-    required this.generated, required this.message,
-    this.presentDays = 0, this.absentDays = 0, this.missingDays = 0,
-    this.approvedOtHours = 0, this.unauthorizedOtHours = 0,
-    this.overtimeAmount = 0, this.attendanceDeduction = 0,
+    required this.employeeId,
+    required this.employeeName,
+    required this.generated,
+    required this.message,
+
+    this.basicSalary = 0,
+    this.fwSalary = 0,
+    this.elaunKedatangan = 0,
+    this.elaunPerkhidmatan = 0,
+    this.elaunKerajinan = 0,
   });
 }
