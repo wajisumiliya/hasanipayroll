@@ -220,8 +220,8 @@ class PdfService {
                   ),
 
                   _row(
-                    '',
-                    
+                    'NET PAY',
+                    money(p.netPay),
                     'EMPLOYER CONTRIBUTIONS',
                     '',
                     bold: true,
@@ -242,8 +242,8 @@ class PdfService {
                   ),
 
                   _row(
-                                        'NET PAY',
-                    money(p.netPay),
+                    '',
+                    '',
                     'EIS (EMPLOYER)',
                     money(p.eisEmployer),
                   ),
