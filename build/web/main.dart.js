@@ -31734,7 +31734,7 @@ A.hO("epf_category = ["+j+"]")
 A.hO("eis_applicable = ["+i+"]")
 A.hO("========================================")
 if(o<0)throw A.e(A.cD("Statutory wage cannot be negative. Basic salary: "+A.h(o)+", Cuti Umum: 0"))
-if(j==="normal"){h=B.n.uX(o*0.02*100)/100
+if(j==="reduced"){h=B.n.uX(o*0.02*100)/100
 g=new A.rZ(o,o,h,h)}else g=A.aXf($.bac(),"EPF",o)
 f=A.aXf($.bad(),"SOCSO First Category",o)
 e=i?A.aXf($.bab(),"EIS",o):B.bag
