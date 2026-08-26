@@ -1,9 +1,74 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 import 'supabase_service.dart';
+
+// ============================================================================
+// ATTENDANCE DIALOG
+// ============================================================================
+
+/// Late / Unpaid / Public Holiday calculation rules:
+/// - Late: automatically based on daily required net working hours.
+/// - Unpaid: automatically based on attendance rows marked unpaid by Admin.
+/// - Public holiday: only counted when Admin marks the day as public holiday
+///   and the employee actually worked.
+/// - OT: only counted when the employee exceeds required hours AND Admin
+///   authorizes OT.
+/// The payroll service should consume these attendance totals.
+///
+
+/// Header background: blue on the left and red on the right with a smooth
+/// curved split. The existing header content remains unchanged.
+class _BlueRedCurvedHeaderPainter extends CustomPainter {
+  const _BlueRedCurvedHeaderPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const blue = Color(0xFF315AD9);
+    const red = Color(0xFFD32F2F);
+
+    canvas.drawRect(Offset.zero & size, Paint()..color = blue);
+
+    final split = Path()
+      ..moveTo(size.width * 0.55, 0)
+      ..cubicTo(
+        size.width * 0.52,
+        size.height * 0.20,
+        size.width * 0.50,
+        size.height * 0.78,
+        size.width * 0.43,
+        size.height,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+
+    canvas.drawPath(split, Paint()..color = red);
+
+    final curve = Path()
+      ..moveTo(size.width * 0.55, 0)
+      ..cubicTo(
+        size.width * 0.52,
+        size.height * 0.20,
+        size.width * 0.50,
+        size.height * 0.78,
+        size.width * 0.43,
+        size.height,
+      );
+
+    canvas.drawPath(
+      curve,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BlueRedCurvedHeaderPainter oldDelegate) => false;
+}
 
 class AttendanceDialog extends StatefulWidget {
   const AttendanceDialog({
@@ -19,16 +84,22 @@ class AttendanceDialog extends StatefulWidget {
   final Map<String, dynamic> employee;
   final DateTime month;
   final String branchId;
+
+  /// Branch: true. Admin: true + adminOnlyAfterSubmit. Employee: false.
   final bool editable;
   final bool showSubmitButton;
   final bool adminOnlyAfterSubmit;
 
   @override
-  State<AttendanceDialog> createState() => _AttendanceDialogState();
+  State<AttendanceDialog> createState() =>
+      _AttendanceDialogState();
 }
 
-class _AttendanceDialogState extends State<AttendanceDialog> {
-  late final List<AttendanceDayControllers> controllers;
+class _AttendanceDialogState
+    extends State<AttendanceDialog> {
+  late final List<AttendanceDayControllers>
+  controllers;
+
   late final int daysInMonth;
 
   bool loading = true;
@@ -37,8 +108,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   String? loadError;
   Timer? _liveRefreshTimer;
 
-  static const Color workColor = Color(0xFF15965D);
-  static const Color breakColor = Color(0xFF315AD9);
+  double _requiredWorkHours = 7.5;
+  bool _salaryRuleLoaded = false;
+
+  // ==========================================================================
+  // INIT / DISPOSE
+  // ==========================================================================
 
   @override
   void initState() {
@@ -51,11 +126,13 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
     controllers = List.generate(
       daysInMonth,
-      (_) => AttendanceDayControllers(),
+          (_) => AttendanceDayControllers(),
     );
 
     _loadAttendance();
 
+    // Employee view is read-only, so it is safe to refresh automatically.
+    // This makes a branch submission appear without the employee pressing Refresh.
     if (!widget.editable) {
       _liveRefreshTimer = Timer.periodic(
         const Duration(seconds: 2),
@@ -70,114 +147,217 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     for (final controller in controllers) {
       controller.dispose();
     }
+
     super.dispose();
   }
 
+  // ==========================================================================
+  // EMPLOYEE HELPERS
+  // ==========================================================================
+
   String _employeeId() {
-    return (widget.employee['employee_id'] ??
+    return (
+        widget.employee['employee_id'] ??
             widget.employee['id'] ??
-            '')
-        .toString();
+            ''
+    ).toString();
   }
 
   String _employeeName() {
-    return widget.employee['name']?.toString() ?? 'Employee';
+    return widget.employee['name']?.toString() ??
+        'Employee';
   }
 
   String _department() {
-    return widget.employee['department']?.toString() ?? '';
+    return widget.employee['department']
+        ?.toString() ??
+        '';
   }
 
   String _section() {
-    return widget.employee['section']?.toString() ?? '';
+    return widget.employee['section']?.toString() ??
+        '';
   }
 
   bool _toBool(dynamic value) {
-    if (value is bool) return value;
-    return value?.toString().toLowerCase() == 'true';
+    if (value is bool) {
+      return value;
+    }
+
+    return value?.toString().toLowerCase() ==
+        'true';
   }
 
-  bool get _canEdit {
-    if (!widget.editable) return false;
-    if (widget.adminOnlyAfterSubmit) return submitted;
-    return true;
+  int _intValue(dynamic value) {
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
+
+  Future<void> _loadSalaryWorkingRule(String employeeId) async {
+    try {
+      Map<String, dynamic>? salary;
+
+      // Your project has used both spellings in earlier schema versions.
+      // Prefer epf_catagory, then fall back to epf_category.
+      try {
+        final rows = await SupabaseService.client
+            .from('employee_salary_defaults')
+            .select('eis_applicable,epf_catagory')
+            .eq('employee_id', employeeId)
+            .limit(1);
+        if (rows is List && rows.isNotEmpty) {
+          salary = Map<String, dynamic>.from(rows.first);
+        }
+      } catch (_) {
+        final rows = await SupabaseService.client
+            .from('employee_salary_defaults')
+            .select('eis_applicable,epf_category')
+            .eq('employee_id', employeeId)
+            .limit(1);
+        if (rows is List && rows.isNotEmpty) {
+          salary = Map<String, dynamic>.from(rows.first);
+        }
+      }
+
+      if (salary != null) {
+        final epfCategory = (salary['epf_catagory'] ??
+                salary['epf_category'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        final eisApplicable = _toBool(salary['eis_applicable']);
+
+        // normal1 has 7:30 target and can receive approved OT.
+        // EIS-applicable employees also have 7:30 target and can receive OT.
+        // EIS-not-applicable employees have 10:30 target and no OT.
+        if (epfCategory == 'normal1' || eisApplicable) {
+          _requiredWorkHours = 7.5;
+        } else {
+          _requiredWorkHours = 10.5;
+        }
+      }
+    } finally {
+      _salaryRuleLoaded = true;
+    }
+  }
+
+  // ==========================================================================
+  // LOAD ATTENDANCE
+  // ==========================================================================
 
   Future<void> _loadAttendance({bool silent = false}) async {
     try {
-      final employeeId = _employeeId().trim();
+      final employeeId = _employeeId();
 
-      if (employeeId.isEmpty) {
-        throw Exception('Employee ID is missing.');
+      if (employeeId.trim().isEmpty) {
+        throw Exception(
+          'Employee ID is missing.',
+        );
+      }
+
+      // Admin needs the employee's salary rule to decide whether OT can be
+      // authorized for a particular day.
+      if (widget.adminOnlyAfterSubmit && !_salaryRuleLoaded) {
+        await _loadSalaryWorkingRule(employeeId);
       }
 
       final start = DateTime(widget.month.year, widget.month.month, 1);
       final end = DateTime(widget.month.year, widget.month.month + 1, 1);
 
-      final List<Map<String, dynamic>> rows;
+      // Employee queries are filtered at the database query itself so the
+      // Employee Portal never asks Supabase for unsubmitted attendance.
+      final List<Map<String, dynamic>> allRows = widget.editable
+          ? await SupabaseService.getAttendanceByEmployeeMonth(
+              employeeId,
+              widget.month.year,
+              widget.month.month,
+            )
+          : List<Map<String, dynamic>>.from(
+              await SupabaseService.client
+                  .from('attendance')
+                  .select()
+                  .eq('employee_id', employeeId)
+                  .eq('is_submitted', true)
+                  .gte('attendance_date', start.toIso8601String().substring(0, 10))
+                  .lt('attendance_date', end.toIso8601String().substring(0, 10))
+                  .order('attendance_date'),
+            );
 
-      if (widget.editable) {
-        rows = List<Map<String, dynamic>>.from(
-          await SupabaseService.getAttendanceByEmployeeMonth(
-            employeeId,
-            widget.month.year,
-            widget.month.month,
-          ),
-        );
-      } else {
-        rows = List<Map<String, dynamic>>.from(
-          await SupabaseService.client
-              .from('attendance')
-              .select()
-              .eq('employee_id', employeeId)
-              .eq('is_submitted', true)
-              .gte(
-                'attendance_date',
-                start.toIso8601String().substring(0, 10),
-              )
-              .lt(
-                'attendance_date',
-                end.toIso8601String().substring(0, 10),
-              )
-              .order('attendance_date'),
-        );
-      }
+      // Only submitted rows are visible outside the Branch Portal.
+      final rows = widget.editable
+          ? allRows
+          : allRows;
 
-      submitted = rows.any((row) => _toBool(row['is_submitted']));
+      submitted = allRows.any((row) => _toBool(row['is_submitted']));
+
+      // For admin view, the employee can only be edited after Branch submission.
+      // For employee view, rows are always read-only.
 
       for (final row in rows) {
         final date = DateTime.tryParse(
-          (row['attendance_date'] ?? '').toString(),
+          (row['attendance_date'] ?? '')
+              .toString(),
         );
 
-        if (date == null ||
-            date.year != widget.month.year ||
-            date.month != widget.month.month ||
-            date.day < 1 ||
+        if (date == null) continue;
+
+        if (date.year != widget.month.year ||
+            date.month != widget.month.month) {
+          continue;
+        }
+
+        if (date.day < 1 ||
             date.day > daysInMonth) {
           continue;
         }
 
         final c = controllers[date.day - 1];
 
-        c.workingIn.text =
-            (row['check_in'] ?? row['working_in'] ?? '').toString();
-        c.workingOut.text =
-            (row['check_out'] ?? row['working_out'] ?? '').toString();
+        c.workingIn.text = (
+            row['check_in'] ??
+                row['working_in'] ??
+                ''
+        ).toString();
 
-        c.morningIn.text = (row['morning_in'] ?? '').toString();
-        c.morningOut.text = (row['morning_out'] ?? '').toString();
-        c.afternoonIn.text = (row['afternoon_in'] ?? '').toString();
-        c.afternoonOut.text = (row['afternoon_out'] ?? '').toString();
+        c.workingOut.text = (
+            row['check_out'] ??
+                row['working_out'] ??
+                ''
+        ).toString();
 
-        // Existing DB columns are retained for compatibility.
-        // The UI treats these as EVENING BREAK, not overtime.
-        c.overtimeIn.text = (row['overtime_in'] ?? '').toString();
-        c.overtimeOut.text = (row['overtime_out'] ?? '').toString();
-        c.otAuthorized = _toBool(row['ot_authorized']);
+        c.morningIn.text =
+            (row['morning_in'] ?? '').toString();
+
+        c.morningOut.text =
+            (row['morning_out'] ?? '').toString();
+
+        c.afternoonIn.text =
+            (row['afternoon_in'] ?? '').toString();
+
+        c.afternoonOut.text =
+            (row['afternoon_out'] ?? '').toString();
+
+        // IMPORTANT:
+        // These database columns are kept for compatibility,
+        // but the UI treats them as EVENING BREAK.
+        c.overtimeIn.text =
+            (row['overtime_in'] ?? '').toString();
+
+        c.overtimeOut.text =
+            (row['overtime_out'] ?? '').toString();
+
+        c.otAuthorized =
+            _toBool(row['ot_authorized']);
+        c.isUnpaid =
+            _toBool(row['is_unpaid']);
+        c.isPublicHoliday =
+            _toBool(row['is_public_holiday']);
+
+        c.savedNetWorkingMinutes =
+            _intValue(row['net_working_minutes']);
+        c.savedOvertimeMinutes =
+            _intValue(row['overtime_minutes']);
       }
-
-      loadError = null;
     } catch (e) {
       loadError = e.toString();
     }
@@ -189,72 +369,353 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     });
   }
 
+  bool get _canEdit {
+    if (!widget.editable) return false;
+    if (widget.adminOnlyAfterSubmit) return submitted;
+    return true;
+  }
+
+  // ==========================================================================
+  // BUILD
+  // ==========================================================================
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Dialog(
+        child: SizedBox(
+          width: 400,
+          height: 250,
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    if (loadError != null) {
+      return Dialog(
+        child: SizedBox(
+          width: 450,
+          child: Padding(
+            padding: const EdgeInsets.all(30),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.red,
+                  size: 55,
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  'Unable to load attendance',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  loadError!,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 25),
+                Row(
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton(
+                      onPressed: saving
+                          ? null
+                          : () {
+                        Navigator.of(
+                          context,
+                        ).pop();
+                      },
+                      child: const Text('Close'),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () {
+                        setState(() {
+                          loading = true;
+                          loadError = null;
+                        });
+
+                        _loadAttendance();
+                      },
+                      icon: const Icon(
+                        Icons.refresh,
+                      ),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(10),
+      child: SizedBox(
+        width: 1250,
+        height:
+        MediaQuery.of(context).size.height *
+            .94,
+        child: Column(
+          children: [
+            _attendanceDialogHeader(),
+
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child:
+                      _workingAttendanceCard(),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child:
+                      _breakAttendanceCard(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // FIXED:
+            // No positional arguments are passed.
+            _attendanceSummary(),
+
+            Container(
+              padding:
+              const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              decoration:
+              const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 8,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: saving
+                        ? null
+                        : () {
+                      Navigator.of(
+                        context,
+                      ).pop();
+                    },
+                    child: const Text('Close'),
+                  ),
+                  const Spacer(),
+                  if (_canEdit) ...[
+                    OutlinedButton.icon(
+                      onPressed: saving ? null : () => _saveAttendance(submit: false),
+                      icon: const Icon(Icons.save_outlined),
+                      label: const Text('Save Draft'),
+                    ),
+                    const SizedBox(width: 10),
+                    if (widget.showSubmitButton)
+                      FilledButton.icon(
+                        onPressed: saving ? null : () => _saveAttendance(submit: true),
+                        icon: saving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.send),
+                        label: Text(saving ? 'Submitting...' : 'Submit Attendance'),
+                      )
+                    else
+                      FilledButton.icon(
+                        onPressed: saving ? null : () => _saveAttendance(submit: false),
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save Changes'),
+                      ),
+                  ] else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: submitted ? Colors.green.shade50 : Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        submitted ? 'Submitted by Branch' : 'Not Submitted',
+                        style: TextStyle(
+                          color: submitted ? Colors.green.shade700 : Colors.orange.shade700,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================================
+  // SAVE ATTENDANCE
+  // ==========================================================================
+
   Future<void> _saveAttendance({required bool submit}) async {
     if (saving) return;
 
-    final employeeId = _employeeId().trim();
+    final employeeId = _employeeId();
 
-    if (employeeId.isEmpty) {
-      _showError('Cannot save attendance: employee ID is missing.');
+    if (employeeId.trim().isEmpty) {
+      _showError(
+        'Cannot save attendance: employee ID is missing.',
+      );
       return;
     }
 
-    final employeeBranchId =
-        (widget.employee['branch_id'] ??
-                widget.employee['branchId'] ??
-                widget.branchId)
-            .toString();
+    final employeeBranchId = (
+        widget.employee['branch_id'] ??
+            widget.employee['branchId'] ??
+            widget.branchId
+    ).toString();
 
-    setState(() => saving = true);
+    setState(() {
+      saving = true;
+    });
 
     var savedRows = 0;
 
     try {
-      for (var day = 1; day <= daysInMonth; day++) {
+      for (var day = 1;
+      day <= daysInMonth;
+      day++) {
         final row = controllers[day - 1];
 
-        if (!row.hasData) continue;
+        if (!row.hasData &&
+            !(widget.adminOnlyAfterSubmit &&
+                (row.otAuthorized || row.isUnpaid || row.isPublicHoliday))) {
+          continue;
+        }
 
-        final fields = <String, String>{
+        // ================================================================
+        // VALIDATE TIME INPUTS
+        // ================================================================
+
+        final timeFields = <String, String>{
           'Working In': row.workingIn.text,
           'Working Out': row.workingOut.text,
           'Morning In': row.morningIn.text,
           'Morning Out': row.morningOut.text,
-          'Afternoon In': row.afternoonIn.text,
-          'Afternoon Out': row.afternoonOut.text,
+          'Afternoon In':
+          row.afternoonIn.text,
+          'Afternoon Out':
+          row.afternoonOut.text,
+
+          // Kept as overtime_in/out in database,
+          // but used as EVENING BREAK.
           'Evening In': row.overtimeIn.text,
           'Evening Out': row.overtimeOut.text,
         };
 
-        for (final entry in fields.entries) {
-          if (entry.value.trim().isNotEmpty &&
-              parseTimeToMinutes(entry.value) == null) {
-            final date = DateTime(
-              widget.month.year,
-              widget.month.month,
-              day,
-            );
+        for (final entry
+        in timeFields.entries) {
+          final value = entry.value.trim();
+
+          if (value.isNotEmpty &&
+              parseTimeToMinutes(value) ==
+                  null) {
             throw Exception(
               'Invalid ${entry.key} time on '
-              '${DateFormat('dd MMM yyyy').format(date)}. '
-              'Use HH:MM, e.g. 08:30.',
+                  '${DateFormat('dd MMM yyyy').format(
+                DateTime(
+                  widget.month.year,
+                  widget.month.month,
+                  day,
+                ),
+              )}. '
+                  'Use HH:MM, e.g. 08:30.',
             );
           }
         }
 
-        final workMinutes = calculateWorkMinutes(row);
-        final breakMinutes =
-            calculateMinutes(row.morningIn.text, row.morningOut.text) +
-            calculateMinutes(
-              row.afternoonIn.text,
-              row.afternoonOut.text,
-            ) +
-            calculateMinutes(
-              row.overtimeIn.text,
-              row.overtimeOut.text,
-            );
+        // ================================================================
+        // CALCULATE WORK
+        // ================================================================
 
-        await SupabaseService.saveMonthlyAttendanceRow(
+        final workMinutes =
+        calculateWorkMinutes(row);
+
+        // ================================================================
+        // CALCULATE BREAKS
+        // ================================================================
+
+        final morningMinutes =
+        calculateMinutes(
+          row.morningIn.text,
+          row.morningOut.text,
+        );
+
+        final afternoonMinutes =
+        calculateMinutes(
+          row.afternoonIn.text,
+          row.afternoonOut.text,
+        );
+
+        // IMPORTANT:
+        // EVENING / OT COLUMN IS A BREAK.
+        // It is NOT overtime.
+        final eveningBreakMinutes =
+        calculateMinutes(
+          row.overtimeIn.text,
+          row.overtimeOut.text,
+        );
+
+        final breakMinutes =
+            morningMinutes +
+                afternoonMinutes +
+                eveningBreakMinutes;
+
+        // NET WORKING = WORKING PERIOD - ALL BREAKS.
+        final netWorkingMinutes =
+            (workMinutes - breakMinutes).clamp(0, 24 * 60).toInt();
+
+        // OT is available only when the employee exceeds the required
+        // working hours AND Admin has explicitly authorized OT.
+        final dailyOtMinutes = _calculateDailyOtMinutes(
+          c: row,
+          netWorkingMinutes: netWorkingMinutes,
+        );
+
+        // ================================================================
+        // SAVE
+        // ================================================================
+
+        await SupabaseService
+            .saveMonthlyAttendanceRow(
           employeeId: employeeId,
           branchId: employeeBranchId,
           date: DateTime(
@@ -262,19 +723,71 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             widget.month.month,
             day,
           ),
-          workingIn: row.workingIn.text.trim(),
-          workingOut: row.workingOut.text.trim(),
-          morningIn: row.morningIn.text.trim(),
-          morningOut: row.morningOut.text.trim(),
-          afternoonIn: row.afternoonIn.text.trim(),
-          afternoonOut: row.afternoonOut.text.trim(),
-          overtimeIn: row.overtimeIn.text.trim(),
-          overtimeOut: row.overtimeOut.text.trim(),
-          otAuthorized: false,
-          workMinutes: workMinutes,
-          breakMinutes: breakMinutes,
+
+          // WORK
+          workingIn:
+          row.workingIn.text.trim(),
+          workingOut:
+          row.workingOut.text.trim(),
+
+          // MORNING BREAK
+          morningIn:
+          row.morningIn.text.trim(),
+          morningOut:
+          row.morningOut.text.trim(),
+
+          // AFTERNOON BREAK
+          afternoonIn:
+          row.afternoonIn.text.trim(),
+          afternoonOut:
+          row.afternoonOut.text.trim(),
+
+          // EVENING BREAK
+          //
+          // Database column names remain overtime_in/out
+          // for compatibility with the existing schema.
+          overtimeIn:
+          row.overtimeIn.text.trim(),
+          overtimeOut:
+          row.overtimeOut.text.trim(),
+
+          // Admin authorization is retained for the attendance row.
+          otAuthorized:
+          row.otAuthorized,
+
+          // CALCULATED
+          workMinutes:
+          workMinutes,
+          breakMinutes:
+          breakMinutes,
         );
 
+        // Keep the attendance table synchronized with the exact values shown
+        // on this screen. These columns already exist in attendance.
+        await SupabaseService.client
+            .from('attendance')
+            .update({
+              'work_minutes': workMinutes,
+              'break_minutes': breakMinutes,
+              'net_working_minutes': netWorkingMinutes,
+              'net_working_duration': formatMinutes(netWorkingMinutes),
+              'overtime_minutes': dailyOtMinutes,
+              'overtime_duration': formatMinutes(dailyOtMinutes),
+              'ot_authorized': row.otAuthorized ? 'true' : 'false',
+              'is_unpaid': row.isUnpaid,
+              'is_public_holiday': row.isPublicHoliday,
+            })
+            .eq('employee_id', employeeId)
+            .eq('branch_id', employeeBranchId)
+            .eq(
+              'attendance_date',
+              '${widget.month.year.toString().padLeft(4, '0')}-'
+              '${widget.month.month.toString().padLeft(2, '0')}-'
+              '${day.toString().padLeft(2, '0')}',
+            );
+
+        // Admin-only payroll flags are saved directly because the existing
+        // SupabaseService method does not expose these columns.
         savedRows++;
       }
 
@@ -297,29 +810,35 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             })
             .eq('employee_id', employeeId)
             .eq('branch_id', employeeBranchId)
-            .gte(
-              'attendance_date',
-              start.toIso8601String().substring(0, 10),
-            )
-            .lt(
-              'attendance_date',
-              end.toIso8601String().substring(0, 10),
-            );
+            .gte('attendance_date', start.toIso8601String().substring(0, 10))
+            .lt('attendance_date', end.toIso8601String().substring(0, 10));
 
         submitted = true;
       }
 
       if (!mounted) return;
 
-      setState(() => saving = false);
+      setState(() {
+        saving = false;
+      });
+
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
 
-      setState(() => saving = false);
-      _showError('Attendance was NOT saved:\n$e');
+      setState(() {
+        saving = false;
+      });
+
+      _showError(
+        'Attendance was NOT saved:\n$e',
+      );
     }
   }
+
+  // ==========================================================================
+  // ERROR MESSAGE
+  // ==========================================================================
 
   void _showError(String message) {
     if (!mounted) return;
@@ -333,294 +852,261 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final isMobile = media.size.width < 700;
+  // ==========================================================================
+  // HEADER
+  // ==========================================================================
 
-    if (loading) {
-      return const Dialog(
-        child: SizedBox(
-          height: 220,
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
-
-    if (loadError != null) {
-      return Dialog(
-        insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 52,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Unable to load attendance',
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  loadError!,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
-                    ),
-                    FilledButton.icon(
-                      onPressed: saving
-                          ? null
-                          : () {
-                              setState(() {
-                                loading = true;
-                                loadError = null;
-                              });
-                              _loadAttendance();
-                            },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Dialog(
-      insetPadding: EdgeInsets.all(isMobile ? 6 : 16),
-      clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        width: isMobile
-            ? media.size.width - 12
-            : minDouble(media.size.width - 32, 1250),
-        height: isMobile
-            ? media.size.height - 12
-            : media.size.height * .94,
-        child: Column(
-          children: [
-            _attendanceDialogHeader(isMobile),
-            Expanded(
-              child: isMobile
-                  ? SingleChildScrollView(
-                      padding: const EdgeInsets.all(8),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 430,
-                            child: _workingAttendanceCard(),
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            height: 430,
-                            child: _breakAttendanceCard(),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: _workingAttendanceCard(),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _breakAttendanceCard(),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-            _attendanceSummary(isMobile),
-            _bottomActions(isMobile),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _attendanceDialogHeader(bool isMobile) {
-    final details = [
-      _employeeId(),
-      _department(),
-      _section(),
-    ].where((v) => v.isNotEmpty).join(' • ');
+  Widget _attendanceDialogHeader() {
+    final name = _employeeName();
+    final id = _employeeId();
+    final department = _department();
+    final section = _section();
 
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 20,
-        vertical: isMobile ? 10 : 14,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 14,
       ),
-      color: workColor,
-      child: Row(
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: Color(0xFF315AD9),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          CircleAvatar(
-            radius: isMobile ? 19 : 23,
+          const Positioned.fill(
+            child: CustomPaint(
+              painter: _BlueRedCurvedHeaderPainter(),
+            ),
+          ),
+          Row(
+        children: [
+          const CircleAvatar(
+            radius: 23,
             backgroundColor: Colors.white,
             child: Icon(
               Icons.person,
-              color: workColor,
-              size: isMobile ? 22 : 27,
+              color: Color(0xFF15965D),
+              size: 27,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
               children: [
                 Text(
-                  _employeeName(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  name,
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontSize: isMobile ? 15 : 19,
+                    fontSize: 19,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (details.isNotEmpty)
-                  Text(
-                    details,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    id,
+                    department,
+                    section,
+                  ]
+                      .where(
+                        (v) => v.isNotEmpty,
+                  )
+                      .join(' • '),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
                   ),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                DateFormat('MMM yyyy').format(widget.month),
-                style: TextStyle(
+                DateFormat('MMMM yyyy').format(widget.month),
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: isMobile ? 12 : 15,
+                  fontSize: 15,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 submitted ? 'SUBMITTED' : 'DRAFT',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 9,
+                style: TextStyle(
+                  color: submitted ? Colors.white : Colors.white70,
+                  fontSize: 10,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
-        ],
-      ),
-    );
+          ],
+        ),
+      ],
+    ),
+  );
   }
 
+  // ==========================================================================
+  // WORK ATTENDANCE
+  // ==========================================================================
+
   Widget _workingAttendanceCard() {
+    const blue = Color(0xFF315AD9);
+
     return _attendanceTableCard(
       title: 'WORK ATTENDANCE',
-      color: workColor,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: 560,
-          child: Column(
-            children: [
-              _workHeader(workColor),
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: daysInMonth,
-                  itemBuilder: (context, index) {
-                    return _workRow(index + 1, controllers[index]);
-                  },
-                ),
+      color: blue,
+      child: Column(
+        children: [
+          _workHeader(blue),
+          Expanded(
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: daysInMonth,
+                itemBuilder: (
+                    context,
+                    index,
+                    ) {
+                  final day = index + 1;
+                  final c = controllers[index];
+
+                  return _workRow(
+                    day,
+                    c,
+                  );
+                },
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _workHeader(Color color) {
-    return SizedBox(
+    return Container(
       height: 42,
+      color: const Color(0xFFE8EEFF),
       child: Row(
         children: [
-          _headerCell('DATE', 55, color),
-          _headerCell('CHECK IN', 115, color),
-          _headerCell('CHECK OUT', 115, color),
-          _headerCell('TOTAL', 100, color),
+          _headerCell(
+            'DATE',
+            55,
+            color,
+          ),
+          _headerCell(
+            'CHECK IN',
+            95,
+            color,
+          ),
+          _headerCell(
+            'CHECK OUT',
+            95,
+            color,
+          ),
+          _headerCell(
+            'TOTAL',
+            75,
+            color,
+          ),
+          _headerCell(
+            'NET WORKING HOURS',
+            105,
+            color,
+          ),
+          _headerCell(
+            'OVERTIME',
+            75,
+            color,
+          ),
           Expanded(
-            child: _headerCellExpanded('STATUS', color),
+            child: Container(
+              height: double.infinity,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: color,
+                  ),
+                ),
+              ),
+              child: const Text(
+                'STATUS',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _workRow(int day, AttendanceDayControllers c) {
+  Widget _workRow(
+      int day,
+      AttendanceDayControllers c,
+      ) {
     final total = calculateWorkMinutes(c);
+    final breakMinutes = _calculateBreakMinutes(c);
+    final netWorkingMinutes =
+        (total - breakMinutes).clamp(0, 24 * 60).toInt();
+    final overtimeMinutes = _calculateDailyOtMinutes(
+      c: c,
+      netWorkingMinutes: netWorkingMinutes,
+    );
 
     return SizedBox(
       height: 42,
       child: Row(
         children: [
           _tableCell(day.toString(), 55, bold: true),
-          _timeInput(c.workingIn, 115),
-          _timeInput(c.workingOut, 115),
+          _timeInput(c.workingIn, 95),
+          _timeInput(c.workingOut, 95),
           _tableCell(
             formatMinutes(total),
-            100,
+            75,
             bold: true,
-            color: total > 0 ? workColor : Colors.black54,
+            color: total > 0
+                ? const Color(0xFF315AD9)
+                : Colors.black54,
+          ),
+          _tableCell(
+            formatMinutes(netWorkingMinutes),
+            105,
+            bold: true,
+            color: netWorkingMinutes > 0
+                ? const Color(0xFF315AD9)
+                : Colors.black54,
+          ),
+          _tableCell(
+            formatMinutes(overtimeMinutes),
+            75,
+            bold: true,
+            color: overtimeMinutes > 0
+                ? Colors.orange.shade800
+                : Colors.black38,
           ),
           Expanded(
             child: Container(
+              height: double.infinity,
               alignment: Alignment.center,
               decoration: const BoxDecoration(
                 border: Border(
-                  right: BorderSide(color: workColor),
-                  bottom: BorderSide(color: workColor),
+                  right: BorderSide(color: Color(0xFF15965D)),
+                  bottom: BorderSide(color: Color(0xFF15965D)),
                 ),
               ),
-              child: Text(
-                total > 0 ? 'RECORDED' : '-',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: total > 0 ? workColor : Colors.black38,
-                ),
-              ),
+              child: _statusCell(day, c, netWorkingMinutes),
             ),
           ),
         ],
@@ -628,29 +1114,199 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _breakAttendanceCard() {
-    return _attendanceTableCard(
-      title: 'BREAK ATTENDANCE',
-      color: breakColor,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: 570,
-          child: Column(
+  // ==========================================================================
+  // ADMIN PAYROLL OPTIONS
+  // ==========================================================================
+
+  bool _isAdminView() => widget.adminOnlyAfterSubmit;
+
+  int _calculateBreakMinutes(AttendanceDayControllers c) {
+    return calculateMinutes(c.morningIn.text, c.morningOut.text) +
+        calculateMinutes(c.afternoonIn.text, c.afternoonOut.text) +
+        calculateMinutes(c.overtimeIn.text, c.overtimeOut.text);
+  }
+
+  bool _otAllowedForEmployee() {
+    // 10:30-hour employees (EIS not applicable) have no OT under your rule.
+    return _requiredWorkHours <= 7.5;
+  }
+
+  int _calculateDailyOtMinutes({
+    required AttendanceDayControllers c,
+    required int netWorkingMinutes,
+  }) {
+    if (!c.otAuthorized || !_otAllowedForEmployee()) {
+      return 0;
+    }
+
+    final requiredMinutes = (_requiredWorkHours * 60).round();
+    final extra = netWorkingMinutes - requiredMinutes;
+    return extra > 0 ? extra : 0;
+  }
+
+  bool _otEligible(AttendanceDayControllers c) {
+    if (!_otAllowedForEmployee()) return false;
+    final net = (calculateWorkMinutes(c) - _calculateBreakMinutes(c))
+        .clamp(0, 24 * 60).toInt();
+    final requiredMinutes = (_requiredWorkHours * 60).round();
+    return net > requiredMinutes;
+  }
+
+  Widget _statusCell(
+    int day,
+    AttendanceDayControllers c,
+    int netWorkingMinutes,
+  ) {
+    if (!_isAdminView()) {
+      return Text(
+        netWorkingMinutes > 0 ? 'RECORDED' : '-',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: netWorkingMinutes > 0
+              ? const Color(0xFF315AD9)
+              : Colors.black38,
+        ),
+      );
+    }
+
+    final otEligible = _otEligible(c);
+    final labels = <String>[];
+    if (c.otAuthorized) labels.add('OT');
+    if (c.isPublicHoliday) labels.add('PH');
+    if (c.isUnpaid) labels.add('UNPAID');
+
+    return PopupMenuButton<String>(
+      tooltip: 'Payroll options for day $day',
+      enabled: _canEdit,
+      padding: EdgeInsets.zero,
+      onSelected: (value) {
+        setState(() {
+          if (value == 'ot' && otEligible) {
+            c.otAuthorized = !c.otAuthorized;
+          } else if (value == 'unpaid') {
+            c.isUnpaid = !c.isUnpaid;
+          } else if (value == 'ph') {
+            c.isPublicHoliday = !c.isPublicHoliday;
+          }
+        });
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'ot',
+          enabled: otEligible || c.otAuthorized,
+          child: Row(
             children: [
-              _breakHeader(breakColor),
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: daysInMonth,
-                  itemBuilder: (context, index) {
-                    return _breakRow(index + 1, controllers[index]);
-                  },
-                ),
+              Icon(
+                c.otAuthorized
+                    ? Icons.check_box
+                    : Icons.check_box_outline_blank,
+                size: 19,
+                color: otEligible || c.otAuthorized
+                    ? Colors.orange
+                    : Colors.grey,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                otEligible || c.otAuthorized
+                    ? 'OT Authorized'
+                    : 'OT Authorized (net hours not exceeded)',
               ),
             ],
           ),
         ),
+        PopupMenuItem<String>(
+          value: 'unpaid',
+          child: Row(
+            children: [
+              Icon(
+                c.isUnpaid
+                    ? Icons.check_box
+                    : Icons.check_box_outline_blank,
+                size: 19,
+              ),
+              const SizedBox(width: 8),
+              const Text('Unpaid'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'ph',
+          child: Row(
+            children: [
+              Icon(
+                c.isPublicHoliday
+                    ? Icons.check_box
+                    : Icons.check_box_outline_blank,
+                size: 19,
+                color: Colors.redAccent,
+              ),
+              const SizedBox(width: 8),
+              const Text('Public Holiday'),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: labels.isNotEmpty
+              ? const Color(0xFFE8F5E9)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Text(
+          labels.isNotEmpty ? labels.join(' • ') : 'OPTIONS',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            color: labels.isNotEmpty
+                ? const Color(0xFF315AD9)
+                : Colors.black54,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================================
+  // BREAK ATTENDANCE
+  // ==========================================================================
+
+  Widget _breakAttendanceCard() {
+    const red = Color(0xFFD32F2F);
+
+    return _attendanceTableCard(
+      title: 'BREAK ATTENDANCE',
+      color: red,
+      child: Column(
+        children: [
+          _breakHeader(red),
+          Expanded(
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: daysInMonth,
+                itemBuilder: (
+                    context,
+                    index,
+                    ) {
+                  final day = index + 1;
+                  final c = controllers[index];
+
+                  // FIXED:
+                  // _breakRow takes exactly 2 arguments.
+                  return _breakRow(
+                    day,
+                    c,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -662,11 +1318,34 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           height: 32,
           child: Row(
             children: [
-              _headerCell('DATE', 45, color),
-              Expanded(child: _groupHeader('MORNING', color)),
-              Expanded(child: _groupHeader('AFTERNOON', color)),
-              Expanded(child: _groupHeader('EVENING BREAK', color)),
-              _headerCell('TOTAL', 80, color),
+              _headerCell(
+                'DATE',
+                45,
+                color,
+              ),
+              Expanded(
+                child: _groupHeader(
+                  'MORNING',
+                  color,
+                ),
+              ),
+              Expanded(
+                child: _groupHeader(
+                  'AFTERNOON',
+                  color,
+                ),
+              ),
+              Expanded(
+                child: _groupHeader(
+                  'EVENING BREAK',
+                  color,
+                ),
+              ),
+              _headerCell(
+                'TOTAL',
+                80,
+                color,
+              ),
             ],
           ),
         ),
@@ -674,14 +1353,52 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           height: 34,
           child: Row(
             children: [
-              _headerCell('', 45, color),
-              Expanded(child: _subHeader('IN', color)),
-              Expanded(child: _subHeader('OUT', color)),
-              Expanded(child: _subHeader('IN', color)),
-              Expanded(child: _subHeader('OUT', color)),
-              Expanded(child: _subHeader('IN', color)),
-              Expanded(child: _subHeader('OUT', color)),
-              _headerCell('', 80, color),
+              _headerCell(
+                '',
+                45,
+                color,
+              ),
+              Expanded(
+                child: _subHeader(
+                  'IN',
+                  color,
+                ),
+              ),
+              Expanded(
+                child: _subHeader(
+                  'OUT',
+                  color,
+                ),
+              ),
+              Expanded(
+                child: _subHeader(
+                  'IN',
+                  color,
+                ),
+              ),
+              Expanded(
+                child: _subHeader(
+                  'OUT',
+                  color,
+                ),
+              ),
+              Expanded(
+                child: _subHeader(
+                  'IN',
+                  color,
+                ),
+              ),
+              Expanded(
+                child: _subHeader(
+                  'OUT',
+                  color,
+                ),
+              ),
+              _headerCell(
+                '',
+                80,
+                color,
+              ),
             ],
           ),
         ),
@@ -689,11 +1406,36 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _breakRow(int day, AttendanceDayControllers c) {
+  // ==========================================================================
+  // BREAK ROW
+  // ==========================================================================
+
+  Widget _breakRow(
+      int day,
+      AttendanceDayControllers c,
+      ) {
+    final morning = calculateMinutes(
+      c.morningIn.text,
+      c.morningOut.text,
+    );
+
+    final afternoon = calculateMinutes(
+      c.afternoonIn.text,
+      c.afternoonOut.text,
+    );
+
+    // IMPORTANT:
+    // overtimeIn/out are used for EVENING BREAK.
+    // They are NEVER added to overtime.
+    final evening = calculateMinutes(
+      c.overtimeIn.text,
+      c.overtimeOut.text,
+    );
+
     final breakTotal =
-        calculateMinutes(c.morningIn.text, c.morningOut.text) +
-        calculateMinutes(c.afternoonIn.text, c.afternoonOut.text) +
-        calculateMinutes(c.overtimeIn.text, c.overtimeOut.text);
+        morning +
+            afternoon +
+            evening;
 
     return SizedBox(
       height: 42,
@@ -703,30 +1445,85 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             day.toString(),
             45,
             bold: true,
-            color: breakColor,
           ),
-          Expanded(child: _smallTimeInput(c.morningIn)),
-          Expanded(child: _smallTimeInput(c.morningOut)),
-          Expanded(child: _smallTimeInput(c.afternoonIn)),
-          Expanded(child: _smallTimeInput(c.afternoonOut)),
-          Expanded(child: _smallTimeInput(c.overtimeIn)),
-          Expanded(child: _smallTimeInput(c.overtimeOut)),
+
+          // ==============================================================
+          // MORNING BREAK
+          // ==============================================================
+
+          Expanded(
+            child: _smallTimeInput(
+              c.morningIn,
+            ),
+          ),
+
+          Expanded(
+            child: _smallTimeInput(
+              c.morningOut,
+            ),
+          ),
+
+          // ==============================================================
+          // AFTERNOON BREAK
+          // ==============================================================
+
+          Expanded(
+            child: _smallTimeInput(
+              c.afternoonIn,
+            ),
+          ),
+
+          Expanded(
+            child: _smallTimeInput(
+              c.afternoonOut,
+            ),
+          ),
+
+          // ==============================================================
+          // EVENING BREAK
+          //
+          // IMPORTANT:
+          // These use overtimeIn/overtimeOut because the database already
+          // has those columns. They are DISPLAYED as Evening Break and
+          // CALCULATED as break time.
+          // ==============================================================
+
+          Expanded(
+            child: _smallTimeInput(
+              c.overtimeIn,
+            ),
+          ),
+
+          Expanded(
+            child: _smallTimeInput(
+              c.overtimeOut,
+            ),
+          ),
+
+          // ==============================================================
+          // TOTAL BREAK
+          // ==============================================================
+
           Container(
             width: 80,
             height: double.infinity,
-            alignment: Alignment.center,
             decoration: const BoxDecoration(
               border: Border(
-                right: BorderSide(color: breakColor),
-                bottom: BorderSide(color: breakColor),
+                right: BorderSide(
+                  color: Color(0xFF315AD9),
+                ),
+                bottom: BorderSide(
+                  color: Color(0xFF315AD9),
+                ),
               ),
             ),
+            alignment: Alignment.center,
             child: Text(
               formatMinutes(breakTotal),
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
-                color: breakColor,
+                color: Color(0xFF315AD9),
               ),
             ),
           ),
@@ -734,6 +1531,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       ),
     );
   }
+
+  // ==========================================================================
+  // TABLE CARD
+  // ==========================================================================
 
   Widget _attendanceTableCard({
     required String title,
@@ -743,7 +1544,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: color, width: 1.5),
+        border: Border.all(
+          color: color,
+          width: 1.5,
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       clipBehavior: Clip.antiAlias,
@@ -759,25 +1563,39 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
-                fontSize: 13,
+                fontSize: 14,
               ),
             ),
           ),
-          Expanded(child: child),
+          Expanded(
+            child: child,
+          ),
         ],
       ),
     );
   }
 
-  Widget _headerCell(String text, double width, Color color) {
+  // ==========================================================================
+  // TABLE HELPERS
+  // ==========================================================================
+
+  Widget _headerCell(
+      String text,
+      double width,
+      Color color,
+      ) {
     return Container(
       width: width,
       height: double.infinity,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(color: color),
-          bottom: BorderSide(color: color),
+          right: BorderSide(
+            color: color,
+          ),
+          bottom: BorderSide(
+            color: color,
+          ),
         ),
       ),
       child: Text(
@@ -791,14 +1609,22 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _headerCellExpanded(String text, Color color) {
+  Widget _groupHeader(
+      String text,
+      Color color,
+      ) {
     return Container(
       height: double.infinity,
       alignment: Alignment.center,
       decoration: BoxDecoration(
+        color: color.withOpacity(.08),
         border: Border(
-          right: BorderSide(color: color),
-          bottom: BorderSide(color: color),
+          right: BorderSide(
+            color: color,
+          ),
+          bottom: BorderSide(
+            color: color,
+          ),
         ),
       ),
       child: Text(
@@ -811,35 +1637,21 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _groupHeader(String text, Color color) {
-    return Container(
-      height: double.infinity,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: color.withOpacity(.08),
-        border: Border(
-          right: BorderSide(color: color),
-          bottom: BorderSide(color: color),
-        ),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-
-  Widget _subHeader(String text, Color color) {
+  Widget _subHeader(
+      String text,
+      Color color,
+      ) {
     return Container(
       height: double.infinity,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(color: color),
-          bottom: BorderSide(color: color),
+          right: BorderSide(
+            color: color,
+          ),
+          bottom: BorderSide(
+            color: color,
+          ),
         ),
       ),
       child: Text(
@@ -853,19 +1665,24 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   }
 
   Widget _tableCell(
-    String text,
-    double width, {
-    bool bold = false,
-    Color? color,
-  }) {
+      String text,
+      double width, {
+        bool bold = false,
+        Color? color,
+      }) {
     return Container(
       width: width,
       height: double.infinity,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
+      decoration:
+      const BoxDecoration(
         border: Border(
-          right: BorderSide(color: workColor),
-          bottom: BorderSide(color: workColor),
+          right: BorderSide(
+            color: Color(0xFF15965D),
+          ),
+          bottom: BorderSide(
+            color: Color(0xFF15965D),
+          ),
         ),
       ),
       child: Text(
@@ -873,7 +1690,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: bold ? FontWeight.w800 : FontWeight.normal,
+          fontWeight: bold
+              ? FontWeight.w800
+              : FontWeight.normal,
           color: color,
         ),
       ),
@@ -881,16 +1700,21 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   }
 
   Widget _timeInput(
-    TextEditingController controller,
-    double width,
-  ) {
+      TextEditingController controller,
+      double width,
+      ) {
     return Container(
       width: width,
       height: double.infinity,
-      decoration: const BoxDecoration(
+      decoration:
+      const BoxDecoration(
         border: Border(
-          right: BorderSide(color: workColor),
-          bottom: BorderSide(color: workColor),
+          right: BorderSide(
+            color: Color(0xFF15965D),
+          ),
+          bottom: BorderSide(
+            color: Color(0xFF15965D),
+          ),
         ),
       ),
       child: TextField(
@@ -898,7 +1722,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         readOnly: !_canEdit,
         enabled: _canEdit,
         onChanged: (_) {
-          if (mounted) setState(() {});
+          if (mounted) {
+            setState(() {});
+          }
         },
         textAlign: TextAlign.center,
         keyboardType: TextInputType.datetime,
@@ -906,10 +1732,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
-        decoration: const InputDecoration(
+        decoration:
+        const InputDecoration(
           border: InputBorder.none,
           isDense: true,
-          contentPadding: EdgeInsets.symmetric(
+          contentPadding:
+          EdgeInsets.symmetric(
             horizontal: 2,
             vertical: 10,
           ),
@@ -923,13 +1751,28 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _smallTimeInput(TextEditingController controller) {
+  // ==========================================================================
+  // SMALL BREAK TIME INPUT
+  //
+  // FIXED:
+  // This accepts ONLY the controller.
+  // It rebuilds the dialog on every change so the break total and
+  // monthly summary update immediately.
+  // ==========================================================================
+
+  Widget _smallTimeInput(
+      TextEditingController controller,
+      ) {
     return Container(
       height: double.infinity,
       decoration: const BoxDecoration(
         border: Border(
-          right: BorderSide(color: breakColor),
-          bottom: BorderSide(color: breakColor),
+          right: BorderSide(
+            color: Color(0xFF315AD9),
+          ),
+          bottom: BorderSide(
+            color: Color(0xFF315AD9),
+          ),
         ),
       ),
       child: TextField(
@@ -937,7 +1780,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         readOnly: !_canEdit,
         enabled: _canEdit,
         onChanged: (_) {
-          if (mounted) setState(() {});
+          if (mounted) {
+            setState(() {});
+          }
         },
         textAlign: TextAlign.center,
         keyboardType: TextInputType.datetime,
@@ -948,7 +1793,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         decoration: const InputDecoration(
           border: InputBorder.none,
           isDense: true,
-          contentPadding: EdgeInsets.symmetric(
+          contentPadding:
+          EdgeInsets.symmetric(
             horizontal: 1,
             vertical: 11,
           ),
@@ -962,32 +1808,35 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _attendanceSummary(bool isMobile) {
+  // ==========================================================================
+  // ATTENDANCE SUMMARY
+  // ==========================================================================
+
+  Widget _attendanceSummary() {
     var workTotal = 0;
     var breakTotal = 0;
+    var netTotal = 0;
+    var overtimeTotal = 0;
 
-    for (final c in controllers) {
-      workTotal += calculateWorkMinutes(c);
-      breakTotal += calculateMinutes(
-        c.morningIn.text,
-        c.morningOut.text,
+    for (var i = 0; i < daysInMonth; i++) {
+      final c = controllers[i];
+      final work = calculateWorkMinutes(c);
+      final breaks = _calculateBreakMinutes(c);
+      final net = (work - breaks).clamp(0, 24 * 60).toInt();
+      final ot = _calculateDailyOtMinutes(
+        c: c,
+        netWorkingMinutes: net,
       );
-      breakTotal += calculateMinutes(
-        c.afternoonIn.text,
-        c.afternoonOut.text,
-      );
-      breakTotal += calculateMinutes(
-        c.overtimeIn.text,
-        c.overtimeOut.text,
-      );
+
+      workTotal += work;
+      breakTotal += breaks;
+      netTotal += net;
+      overtimeTotal += ot;
     }
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       decoration: BoxDecoration(
         color: const Color(0xFFF5F7FB),
         border: Border.all(color: Colors.black12),
@@ -997,41 +1846,28 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            const Text(
-              'MONTHLY TOTAL',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 10,
-              ),
-            ),
-            const SizedBox(width: 12),
-            _summaryChip(
-              'WORK',
-              formatMinutes(workTotal),
-              workColor,
-            ),
-            const SizedBox(width: 8),
-            _summaryChip(
-              'BREAK',
-              formatMinutes(breakTotal),
-              breakColor,
-            ),
-            const SizedBox(width: 8),
-            _summaryChip(
-              'OVERTIME',
-              '00:00',
-              Colors.orange,
-            ),
+            const SizedBox(width: 20),
+            _summaryChip('WORK', formatMinutes(workTotal), const Color(0xFF315AD9)),
+            const SizedBox(width: 10),
+            _summaryChip('BREAK', formatMinutes(breakTotal), const Color(0xFFD32F2F)),
+            const SizedBox(width: 10),
+            _summaryChip('NET WORK', formatMinutes(netTotal), const Color(0xFF315AD9)),
+            const SizedBox(width: 10),
+            _summaryChip('OT', formatMinutes(overtimeTotal), Colors.orange),
           ],
         ),
       ),
     );
   }
 
-  Widget _summaryChip(String title, String value, Color color) {
+  Widget _summaryChip(
+      String title,
+      String value,
+      Color color,
+      ) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: 10,
+        horizontal: 12,
         vertical: 5,
       ),
       decoration: BoxDecoration(
@@ -1045,7 +1881,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             '$title: ',
             style: TextStyle(
               color: color,
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1053,7 +1889,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             value,
             style: TextStyle(
               color: color,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1062,111 +1898,38 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _bottomActions(bool isMobile) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        isMobile ? 8 : 16,
-        8,
-        isMobile ? 8 : 16,
-        MediaQuery.of(context).padding.bottom + 8,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.end,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8,
-        runSpacing: 6,
-        children: [
-          TextButton(
-            onPressed: saving ? null : () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-          if (_canEdit) ...[
-            OutlinedButton.icon(
-              onPressed:
-                  saving ? null : () => _saveAttendance(submit: false),
-              icon: const Icon(Icons.save_outlined, size: 18),
-              label: const Text('Save Draft'),
-            ),
-            if (widget.showSubmitButton)
-              FilledButton.icon(
-                onPressed:
-                    saving ? null : () => _saveAttendance(submit: true),
-                icon: saving
-                    ? const SizedBox(
-                        width: 17,
-                        height: 17,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.send, size: 18),
-                label: Text(
-                  saving ? 'Submitting...' : 'Submit Attendance',
-                ),
-              )
-            else
-              FilledButton.icon(
-                onPressed:
-                    saving ? null : () => _saveAttendance(submit: false),
-                icon: const Icon(Icons.save, size: 18),
-                label: const Text('Save Changes'),
-              ),
-          ] else
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 7,
-              ),
-              decoration: BoxDecoration(
-                color: submitted
-                    ? Colors.green.shade50
-                    : Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                submitted ? 'Submitted by Branch' : 'Not Submitted',
-                style: TextStyle(
-                  color: submitted
-                      ? Colors.green.shade700
-                      : Colors.orange.shade700,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  // ==========================================================================
+  // TIME CALCULATIONS
+  // ==========================================================================
 
-  int calculateWorkMinutes(AttendanceDayControllers c) {
+  int calculateWorkMinutes(
+      AttendanceDayControllers c,
+      ) {
     return calculateMinutes(
       c.workingIn.text,
       c.workingOut.text,
     );
   }
 
-  int calculateMinutes(String start, String end) {
-    final startMinutes = parseTimeToMinutes(start);
-    final endMinutes = parseTimeToMinutes(end);
+  int calculateMinutes(
+      String start,
+      String end,
+      ) {
+    final startMinutes =
+    parseTimeToMinutes(start);
 
-    if (startMinutes == null || endMinutes == null) {
+    final endMinutes =
+    parseTimeToMinutes(end);
+
+    if (startMinutes == null ||
+        endMinutes == null) {
       return 0;
     }
 
-    var difference = endMinutes - startMinutes;
+    var difference =
+        endMinutes - startMinutes;
 
+    // Overnight shift.
     if (difference < 0) {
       difference += 24 * 60;
     }
@@ -1174,30 +1937,52 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return difference;
   }
 
-  int? parseTimeToMinutes(String value) {
+  int? parseTimeToMinutes(
+      String value,
+      ) {
     final text = value.trim();
 
-    if (text.isEmpty) return null;
+    if (text.isEmpty) {
+      return null;
+    }
 
     final match = RegExp(
       r'^(\d{1,2})\s*[:.]\s*(\d{1,2})$',
     ).firstMatch(text);
 
-    if (match == null) return null;
+    if (match == null) {
+      return null;
+    }
 
-    final hour = int.tryParse(match.group(1)!);
-    final minute = int.tryParse(match.group(2)!);
+    final hour = int.tryParse(
+      match.group(1)!,
+    );
 
-    if (hour == null || minute == null) return null;
-    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    final minute = int.tryParse(
+      match.group(2)!,
+    );
+
+    if (hour == null ||
+        minute == null) {
+      return null;
+    }
+
+    if (hour < 0 ||
+        hour > 23 ||
+        minute < 0 ||
+        minute > 59) {
       return null;
     }
 
     return hour * 60 + minute;
   }
 
-  String formatMinutes(int minutes) {
-    if (minutes <= 0) return '00:00';
+  String formatMinutes(
+      int minutes,
+      ) {
+    if (minutes <= 0) {
+      return '00:00';
+    }
 
     final hours = minutes ~/ 60;
     final mins = minutes % 60;
@@ -1207,24 +1992,54 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   }
 }
 
-double minDouble(double a, double b) => a < b ? a : b;
+// ============================================================================
+// ATTENDANCE DAY CONTROLLERS
+// ============================================================================
 
 class AttendanceDayControllers {
-  final TextEditingController workingIn = TextEditingController();
-  final TextEditingController workingOut = TextEditingController();
+  final TextEditingController workingIn =
+  TextEditingController();
 
-  final TextEditingController morningIn = TextEditingController();
-  final TextEditingController morningOut = TextEditingController();
+  final TextEditingController workingOut =
+  TextEditingController();
 
-  final TextEditingController afternoonIn = TextEditingController();
-  final TextEditingController afternoonOut = TextEditingController();
+  final TextEditingController morningIn =
+  TextEditingController();
 
-  // Existing database fields retained for compatibility.
-  // The UI displays these as EVENING BREAK.
-  final TextEditingController overtimeIn = TextEditingController();
-  final TextEditingController overtimeOut = TextEditingController();
+  final TextEditingController morningOut =
+  TextEditingController();
+
+  final TextEditingController afternoonIn =
+  TextEditingController();
+
+  final TextEditingController afternoonOut =
+  TextEditingController();
+
+  // ==========================================================================
+  // IMPORTANT:
+  // These names remain "overtime" ONLY because your existing database uses
+  // overtime_in / overtime_out.
+  //
+  // In the Branch Portal they are now treated as:
+  //
+  //     EVENING BREAK IN
+  //     EVENING BREAK OUT
+  //
+  // They are NOT calculated as overtime.
+  // ==========================================================================
+
+  final TextEditingController overtimeIn =
+  TextEditingController();
+
+  final TextEditingController overtimeOut =
+  TextEditingController();
 
   bool otAuthorized = false;
+  bool isUnpaid = false;
+  bool isPublicHoliday = false;
+
+  int savedNetWorkingMinutes = 0;
+  int savedOvertimeMinutes = 0;
 
   bool get hasData {
     return workingIn.text.trim().isNotEmpty ||
@@ -1240,10 +2055,13 @@ class AttendanceDayControllers {
   void dispose() {
     workingIn.dispose();
     workingOut.dispose();
+
     morningIn.dispose();
     morningOut.dispose();
+
     afternoonIn.dispose();
     afternoonOut.dispose();
+
     overtimeIn.dispose();
     overtimeOut.dispose();
   }
