@@ -184,21 +184,21 @@ class PdfService {
                   ),
 
                   _row(
-                    'FOOD ALLOWANCE',
+                    'ELAUN KEDATANGAN',
                     money(p.foodAllowance),
                     'SOCSO (EMPLOYEE)',
                     money(p.socsoEmployee),
                   ),
 
                   _row(
-                    'OTHER ALLOWANCE',
+                    'ELAUN PERKHIDMATAN',
                     money(p.otherAllowance),
                     'EIS (EMPLOYEE)',
                     money(p.eisEmployee),
                   ),
 
                   _row(
-                    '',
+                    'ELAUN MAKANAN',
                     '',
                     'PCB',
                     money(p.pcb),
@@ -220,8 +220,8 @@ class PdfService {
                   ),
 
                   _row(
-                    'NET PAY',
-                    money(p.netPay),
+                    '',
+                    
                     'EMPLOYER CONTRIBUTIONS',
                     '',
                     bold: true,
@@ -242,8 +242,8 @@ class PdfService {
                   ),
 
                   _row(
-                    '',
-                    '',
+                                        'NET PAY',
+                    money(p.netPay),
                     'EIS (EMPLOYER)',
                     money(p.eisEmployer),
                   ),
