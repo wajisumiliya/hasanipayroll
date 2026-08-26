@@ -1,81 +1,91 @@
 import '../screens/supabase_service.dart';
 
+/// ============================================================================
+/// ATTENDANCE PAYROLL SERVICE
+/// ============================================================================
+///
+/// CURRENT PAYROLL RULES
+///
+/// Salary:
+///   basic_salary        -> employee_salary_defaults.basic_salary
+///   fw_salary           -> employee_salary_defaults.fw_salary
+///   elaun_kedatangan    -> employee_salary_defaults.elaun_kedatangan
+///   elaun_perkhidmatan  -> employee_salary_defaults.elaun_perkhidmatan
+///   elaun_kerajinan     -> employee_salary_defaults.elaun_kerajinan
+///
+/// Overtime:
+///   attendance.overtime_duration
+///   ONLY when attendance.ot_authorized = 'true'
+///   ONLY submitted attendance is used
+///
+/// Not calculated yet:
+///   bonus
+///   commission
+///   other_earnings
+///   cuti_umum
+///   epf
+///   socso
+///   eis
+///   pcb
+///   zakat
+///
+/// IMPORTANT DATABASE DETAILS
+/// --------------------------
+/// payroll.id                = TEXT with Supabase UUID default
+/// payroll.period            = DATE
+/// attendance.ot_authorized  = TEXT
+/// attendance.overtime_duration = TEXT
+/// ============================================================================
+
 class AttendancePayrollService {
   AttendancePayrollService._();
 
-  // ============================================================================
-  // GENERATE MONTHLY PAYROLL
-  //
-  // SOURCE:
-  // employee_salary_defaults
-  //
-  // Every record in employee_salary_defaults is used.
-  //
-  // Salary fields:
-  //   basic_salary
-  //   fw_salary
-  //   elaun_kedatangan
-  //   elaun_perkhidmatan
-  //   elaun_kerajinan
-  //
-  // NO ATTENDANCE CALCULATION YET.
-  // ============================================================================
+  // ==========================================================================
+  // GENERATE PAYROLL FOR SELECTED EMPLOYEES
+  // ==========================================================================
 
   static Future<PayrollGenerationResult>
       generateMonthlyPayroll({
     required DateTime month,
-    String? branchId,
+    required List<String> employeeIds,
     bool overwriteExisting = true,
   }) async {
-    final period = DateTime(
+    final payrollMonth = DateTime(
       month.year,
       month.month,
       1,
     );
 
-    // --------------------------------------------------------------------------
-    // LOAD ALL EMPLOYEES
-    // --------------------------------------------------------------------------
+    final selectedIds = employeeIds
+        .map(_normalizeId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (selectedIds.isEmpty) {
+      throw Exception(
+        'Please select at least one employee.',
+      );
+    }
+
+    // ------------------------------------------------------------------------
+    // GET SELECTED EMPLOYEES
+    // ------------------------------------------------------------------------
 
     final employees =
-        await _getAllEmployees();
-
-    // --------------------------------------------------------------------------
-    // CREATE EMPLOYEE LOOKUP
-    //
-    // Normalized:
-    // BAJ010
-    // baj010
-    // " BAJ010 "
-    //
-    // will all become:
-    //
-    // BAJ010
-    // --------------------------------------------------------------------------
+        await _getEmployeesByIds(selectedIds);
 
     final employeeMap =
         <String, Map<String, dynamic>>{};
 
     for (final employee in employees) {
-      final employeeId =
-          _normalise(
-        employee['employee_id'],
-      );
+      final id =
+          _normalizeId(employee['employee_id']);
 
-      if (employeeId.isNotEmpty) {
-        employeeMap[employeeId] =
-            employee;
+      if (id.isNotEmpty) {
+        employeeMap[id] = employee;
       }
     }
-
-    // --------------------------------------------------------------------------
-    // LOAD ALL SALARY DEFAULTS
-    //
-    // THIS IS NOW THE MAIN SOURCE.
-    // --------------------------------------------------------------------------
-
-    final salaryDefaults =
-        await _getAllSalaryDefaults();
 
     final generated =
         <PayrollGenerationItem>[];
@@ -83,113 +93,111 @@ class AttendancePayrollService {
     final skipped =
         <PayrollGenerationItem>[];
 
-    // --------------------------------------------------------------------------
-    // GENERATE PAYROLL FOR EVERY SALARY DEFAULT
-    // --------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // GENERATE ONE BY ONE
+    // ------------------------------------------------------------------------
 
-    for (final salaryDefault
-        in salaryDefaults) {
-      try {
-        final employeeId =
-            _normalise(
-          salaryDefault['employee_id'],
+    for (final employeeId in selectedIds) {
+      final employee =
+          employeeMap[employeeId];
+
+      if (employee == null) {
+        skipped.add(
+          PayrollGenerationItem(
+            employeeId: employeeId,
+            employeeName: '',
+            generated: false,
+            message:
+                'Employee not found in employees table.',
+          ),
         );
 
-        if (employeeId.isEmpty) {
-          skipped.add(
-            PayrollGenerationItem(
-              employeeId: '',
-              employeeName: '',
-              generated: false,
-              message:
-                  'Salary default has empty employee_id.',
-            ),
-          );
+        continue;
+      }
 
-          continue;
-        }
-
-        // --------------------------------------------------------------
-        // FIND EMPLOYEE
-        // --------------------------------------------------------------
-
-        final employee =
-            employeeMap[employeeId];
-
-        final employeeName =
-            employee == null
-                ? ''
-                : _text(
-                    employee['name'],
-                  );
-
-        // --------------------------------------------------------------
-        // GENERATE
-        // --------------------------------------------------------------
-
-        final item =
+      try {
+        final result =
             await generateEmployeePayroll(
-          employeeId: employeeId,
           employee: employee,
-          salaryDefault:
-              salaryDefault,
-          month: period,
+          month: payrollMonth,
           overwriteExisting:
               overwriteExisting,
         );
 
-        if (item.generated) {
-          generated.add(item);
+        if (result.generated) {
+          generated.add(result);
         } else {
-          skipped.add(item);
+          skipped.add(result);
         }
       } catch (e) {
         skipped.add(
           PayrollGenerationItem(
-            employeeId:
-                _text(
-              salaryDefault['employee_id'],
-            ),
-            employeeName: '',
+            employeeId: employeeId,
+            employeeName:
+                _text(employee['name']),
             generated: false,
             message:
-                'Failed: $e',
+                'Payroll generation failed: $e',
           ),
         );
       }
     }
 
     return PayrollGenerationResult(
-      month: period,
+      month: payrollMonth,
       generated: generated,
       skipped: skipped,
     );
   }
 
-  // ============================================================================
+  // ==========================================================================
   // GENERATE ONE EMPLOYEE PAYROLL
-  // ============================================================================
+  // ==========================================================================
 
   static Future<PayrollGenerationItem>
       generateEmployeePayroll({
-    required String employeeId,
-    required Map<String, dynamic>?
-        employee,
-    required Map<String, dynamic>
-        salaryDefault,
+    required Map<String, dynamic> employee,
     required DateTime month,
     bool overwriteExisting = true,
   }) async {
-    final employeeName =
-        employee == null
-            ? ''
-            : _text(
-                employee['name'],
-              );
+    final employeeId =
+        _normalizeId(
+      employee['employee_id'],
+    );
 
-    // --------------------------------------------------------------------------
-    // SALARY VALUES
-    // --------------------------------------------------------------------------
+    final employeeName =
+        _text(
+      employee['name'],
+    );
+
+    if (employeeId.isEmpty) {
+      return PayrollGenerationItem(
+        employeeId: '',
+        employeeName: employeeName,
+        generated: false,
+        message:
+            'Employee ID is missing.',
+      );
+    }
+
+    // =========================================================================
+    // 1. GET SALARY DEFAULTS
+    // =========================================================================
+
+    final salaryDefault =
+        await _getSalaryDefault(
+      employeeId,
+    );
+
+    if (salaryDefault == null) {
+      return PayrollGenerationItem(
+        employeeId: employeeId,
+        employeeName: employeeName,
+        generated: false,
+        message:
+            'No salary default found for $employeeId.',
+      );
+    }
 
     final basicSalary =
         _number(
@@ -203,81 +211,85 @@ class AttendancePayrollService {
 
     final elaunKedatangan =
         _number(
-      salaryDefault[
-          'elaun_kedatangan'],
+      salaryDefault['elaun_kedatangan'],
     );
 
     final elaunPerkhidmatan =
         _number(
-      salaryDefault[
-          'elaun_perkhidmatan'],
+      salaryDefault['elaun_perkhidmatan'],
     );
 
     final elaunKerajinan =
         _number(
-      salaryDefault[
-          'elaun_kerajinan'],
+      salaryDefault['elaun_kerajinan'],
     );
 
-    // --------------------------------------------------------------------------
-    // BASIC SALARY IS ALLOWED TO BE ZERO?
+    // =========================================================================
+    // 2. GET SUBMITTED ATTENDANCE
+    // =========================================================================
+
+    final attendance =
+        await _getSubmittedAttendanceForMonth(
+      employeeId,
+      month,
+    );
+
+    // =========================================================================
+    // 3. APPROVED OT
+    // =========================================================================
     //
-    // For now we only check whether the salary-default row exists.
+    // Your actual database:
     //
-    // If basic_salary = 0, we still generate it because the record exists.
-    // --------------------------------------------------------------------------
-
-    // --------------------------------------------------------------------------
-    // PAYROLL PERIOD
-    // --------------------------------------------------------------------------
-
-    final periodText =
-        '${month.year.toString().padLeft(4, '0')}-'
-        '${month.month.toString().padLeft(2, '0')}-01';
-
-    // --------------------------------------------------------------------------
-    // EMPLOYEE INFORMATION
-    // --------------------------------------------------------------------------
-
-    final newIcNo =
-        employee == null
-            ? ''
-            : _text(
-                employee['new_ic_no'],
-              );
-
-    final bankCode =
-        employee == null
-            ? ''
-            : _text(
-                employee['bank_code'],
-              );
-
-    final bankAccount =
-        employee == null
-            ? ''
-            : _text(
-                employee['bank_account'],
-              );
-
-    // --------------------------------------------------------------------------
-    // PAYROLL DATA
+    // ot_authorized = TEXT
     //
-    // NO ATTENDANCE CALCULATION YET.
-    // --------------------------------------------------------------------------
+    // So we accept:
+    //
+    // "true"
+    // "TRUE"
+    // "True"
+    // "1"
+    // "yes"
+    //
+    // overtime_duration is TEXT, so it is converted to double.
+    // =========================================================================
+
+    double overtimeDuration = 0;
+
+    for (final row in attendance) {
+      if (!_isOtAuthorized(
+        row['ot_authorized'],
+      )) {
+        continue;
+      }
+
+      overtimeDuration +=
+          _number(
+        row['overtime_duration'],
+      );
+    }
+
+    // =========================================================================
+    // 4. PERIOD
+    // ==========================================================================
+
+    final period =
+        _periodText(month);
+
+    // =========================================================================
+    // 5. PAYROLL DATA
+    // ==========================================================================
 
     final data =
         <String, dynamic>{
+      // Employee
       'employee_id':
           employeeId,
 
+      // Date column
       'period':
-          periodText,
+          period,
 
-      // ------------------------------------------------------------
-      // SALARY DEFAULTS
-      // ------------------------------------------------------------
-
+      // Salary defaults
       'basic_salary':
           basicSalary,
 
@@ -293,66 +305,75 @@ class AttendancePayrollService {
       'elaun_kerajinan':
           elaunKerajinan,
 
-      // ------------------------------------------------------------
-      // OTHER EARNINGS
-      // ------------------------------------------------------------
+      // Approved OT duration
+      'overtime':
+          overtimeDuration,
 
-      'overtime': 0,
+      // Not calculated yet
       'bonus': 0,
+
       'commission': 0,
+
       'other_earnings': 0,
 
-      // ------------------------------------------------------------
-      // DEDUCTIONS
-      //
-      // WILL BE CALCULATED LATER.
-      // ------------------------------------------------------------
-
       'cuti_umum': 0,
-      'epf_employee': 0,
-      'socso_employee': 0,
-      'eis_employee': 0,
-      'pcb': 0,
-      'zakat': 0,
 
-      // ------------------------------------------------------------
-      // EMPLOYER CONTRIBUTIONS
-      // ------------------------------------------------------------
+      // EPF
+      'epf_employee': 0,
 
       'epf_employer': 0,
+
+      // SOCSO
+      'socso_employee': 0,
+
       'socso_employer': 0,
+
+      // EIS
+      'eis_employee': 0,
+
       'eis_employer': 0,
 
-      // ------------------------------------------------------------
-      // EMPLOYEE INFORMATION
-      // ------------------------------------------------------------
+      // PCB
+      'pcb': 0,
 
+      // Zakat
+      'zakat': 0,
+
+      // Employee information
       'new_ic_no':
-          newIcNo,
+          _text(
+        employee['new_ic_no'],
+      ),
 
       'bank_code':
-          bankCode,
+          _text(
+        employee['bank_code'],
+      ),
 
       'bank_account':
-          bankAccount,
+          _text(
+        employee['bank_account'],
+      ),
 
       'remarks':
-          'Generated from employee_salary_defaults',
+          'Generated payroll. '
+          'Approved OT duration: '
+          '${overtimeDuration.toStringAsFixed(2)}',
     };
 
-    // ==========================================================================
-    // FIND EXISTING PAYROLL
-    // ==========================================================================
+    // =========================================================================
+    // 6. CHECK EXISTING PAYROLL
+    // =========================================================================
 
     final existing =
         await _getPayrollForPeriod(
       employeeId,
-      periodText,
+      period,
     );
 
-    // ==========================================================================
-    // EXISTING PAYROLL
-    // ==========================================================================
+    // =========================================================================
+    // 7. UPDATE EXISTING PAYROLL
+    // =========================================================================
 
     if (existing != null) {
       if (!overwriteExisting) {
@@ -363,7 +384,8 @@ class AttendancePayrollService {
               employeeName,
           generated: false,
           message:
-              'Payroll already exists for this month.',
+              'Payroll already exists for '
+              '$employeeId for $period.',
           basicSalary:
               basicSalary,
           fwSalary:
@@ -374,6 +396,18 @@ class AttendancePayrollService {
               elaunPerkhidmatan,
           elaunKerajinan:
               elaunKerajinan,
+          overtimeDuration:
+              overtimeDuration,
+        );
+      }
+
+      final existingId =
+          existing['id'];
+
+      if (existingId == null ||
+          _text(existingId).isEmpty) {
+        throw Exception(
+          'Existing payroll has no ID.',
         );
       }
 
@@ -382,19 +416,30 @@ class AttendancePayrollService {
           .update(data)
           .eq(
             'id',
-            existing['id'],
+            existingId,
           );
     }
 
-    // ==========================================================================
-    // NEW PAYROLL
-    // ==========================================================================
+    // =========================================================================
+    // 8. INSERT NEW PAYROLL
+    // =========================================================================
+    //
+    // DO NOT provide "id".
+    //
+    // Supabase will generate it automatically because we added:
+    //
+    // DEFAULT (gen_random_uuid())::text
+    // =========================================================================
 
     else {
       await SupabaseService.client
           .from('payroll')
           .insert(data);
     }
+
+    // =========================================================================
+    // 9. SUCCESS
+    // =========================================================================
 
     return PayrollGenerationItem(
       employeeId:
@@ -403,10 +448,7 @@ class AttendancePayrollService {
           employeeName,
       generated: true,
       message:
-          employee == null
-              ? 'Generated from salary default. '
-                  'Employee record was not found.'
-              : 'Payroll generated successfully.',
+          'Payroll generated successfully.',
       basicSalary:
           basicSalary,
       fwSalary:
@@ -417,16 +459,20 @@ class AttendancePayrollService {
           elaunPerkhidmatan,
       elaunKerajinan:
           elaunKerajinan,
+      overtimeDuration:
+          overtimeDuration,
     );
   }
 
-  // ============================================================================
-  // LOAD ALL EMPLOYEES
-  // ============================================================================
+  // ==========================================================================
+  // GET EMPLOYEES
+  // ==========================================================================
 
   static Future<
       List<Map<String, dynamic>>>
-      _getAllEmployees() async {
+      _getEmployeesByIds(
+    List<String> employeeIds,
+  ) async {
     final response =
         await SupabaseService.client
             .from('employees')
@@ -438,6 +484,10 @@ class AttendancePayrollService {
               'bank_account,'
               'branch_id,'
               'is_active',
+            )
+            .inFilter(
+              'employee_id',
+              employeeIds,
             );
 
     return List<
@@ -446,19 +496,15 @@ class AttendancePayrollService {
     );
   }
 
-  // ============================================================================
-  // LOAD ALL SALARY DEFAULTS
-  //
-  // IMPORTANT:
-  // NO EMPLOYEE FILTER HERE.
-  //
-  // Every row in employee_salary_defaults
-  // is loaded.
-  // ============================================================================
+  // ==========================================================================
+  // GET SALARY DEFAULT
+  // ==========================================================================
 
   static Future<
-      List<Map<String, dynamic>>>
-      _getAllSalaryDefaults() async {
+      Map<String, dynamic>?>
+      _getSalaryDefault(
+    String employeeId,
+  ) async {
     final response =
         await SupabaseService.client
             .from(
@@ -472,8 +518,76 @@ class AttendancePayrollService {
               'elaun_perkhidmatan,'
               'elaun_kerajinan',
             )
-            .order(
+            .eq(
               'employee_id',
+              employeeId,
+            )
+            .maybeSingle();
+
+    if (response == null) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(
+      response,
+    );
+  }
+
+  // ==========================================================================
+  // GET SUBMITTED ATTENDANCE FOR MONTH
+  // ==========================================================================
+
+  static Future<
+      List<Map<String, dynamic>>>
+      _getSubmittedAttendanceForMonth(
+    String employeeId,
+    DateTime month,
+  ) async {
+    final start =
+        DateTime(
+      month.year,
+      month.month,
+      1,
+    );
+
+    final end =
+        DateTime(
+      month.year,
+      month.month + 1,
+      1,
+    );
+
+    final startDate =
+        _dateText(start);
+
+    final endDate =
+        _dateText(end);
+
+    final response =
+        await SupabaseService.client
+            .from('attendance')
+            .select(
+              'employee_id,'
+              'attendance_date,'
+              'overtime_duration,'
+              'ot_authorized,'
+              'is_submitted',
+            )
+            .eq(
+              'employee_id',
+              employeeId,
+            )
+            .eq(
+              'is_submitted',
+              true,
+            )
+            .gte(
+              'attendance_date',
+              startDate,
+            )
+            .lt(
+              'attendance_date',
+              endDate,
             );
 
     return List<
@@ -482,9 +596,9 @@ class AttendancePayrollService {
     );
   }
 
-  // ============================================================================
+  // ==========================================================================
   // GET EXISTING PAYROLL
-  // ============================================================================
+  // ==========================================================================
 
   static Future<
       Map<String, dynamic>?>
@@ -495,7 +609,9 @@ class AttendancePayrollService {
     final response =
         await SupabaseService.client
             .from('payroll')
-            .select()
+            .select(
+              'id,employee_id,period',
+            )
             .eq(
               'employee_id',
               employeeId,
@@ -515,49 +631,68 @@ class AttendancePayrollService {
     );
   }
 
-  // ============================================================================
-  // NORMALISE EMPLOYEE ID
-  // ============================================================================
+  // ==========================================================================
+  // OT AUTHORIZATION
+  // ==========================================================================
 
-  static String _normalise(
+  static bool _isOtAuthorized(
     dynamic value,
   ) {
-    return value
-        ?.toString()
-        .trim()
-        .toUpperCase() ??
-        '';
+    final text =
+        _text(value).toLowerCase();
+
+    return text == 'true' ||
+        text == '1' ||
+        text == 'yes';
   }
 
-  // ============================================================================
+  // ==========================================================================
+  // NORMALIZE EMPLOYEE ID
+  // ==========================================================================
+
+  static String _normalizeId(
+    dynamic value,
+  ) {
+    return _text(value)
+        .trim()
+        .toUpperCase();
+  }
+
+  // ==========================================================================
   // TEXT
-  // ============================================================================
+  // ==========================================================================
 
   static String _text(
     dynamic value,
   ) {
+    if (value == null) {
+      return '';
+    }
+
     return value
-            ?.toString()
-            .trim() ??
-        '';
+        .toString()
+        .trim();
   }
 
-  // ============================================================================
+  // ==========================================================================
   // NUMBER
-  // ============================================================================
+  // ==========================================================================
 
   static double _number(
     dynamic value,
   ) {
+    if (value == null) {
+      return 0;
+    }
+
     if (value is num) {
       return value.toDouble();
     }
 
     final text =
-        _text(value)
+        value
+            .toString()
             .replaceAll(',', '')
-            .replaceAll('RM', '')
-            .replaceAll('rm', '')
             .trim();
 
     if (text.isEmpty) {
@@ -569,6 +704,29 @@ class AttendancePayrollService {
         ) ??
         0;
   }
+
+  // ==========================================================================
+  // DATE
+  // ==========================================================================
+
+  static String _dateText(
+    DateTime date,
+  ) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  // ==========================================================================
+  // PAYROLL PERIOD
+  // ==========================================================================
+
+  static String _periodText(
+    DateTime month,
+  ) {
+    return '${month.year.toString().padLeft(4, '0')}-'
+        '${month.month.toString().padLeft(2, '0')}-01';
+  }
 }
 
 // ============================================================================
@@ -578,12 +736,10 @@ class AttendancePayrollService {
 class PayrollGenerationResult {
   final DateTime month;
 
-  final List<
-      PayrollGenerationItem>
+  final List<PayrollGenerationItem>
       generated;
 
-  final List<
-      PayrollGenerationItem>
+  final List<PayrollGenerationItem>
       skipped;
 
   const PayrollGenerationResult({
@@ -597,6 +753,19 @@ class PayrollGenerationResult {
 
   int get skippedCount =>
       skipped.length;
+
+  double get totalOvertimeDuration {
+    return generated.fold(
+      0.0,
+      (
+        total,
+        item,
+      ) {
+        return total +
+            item.overtimeDuration;
+      },
+    );
+  }
 }
 
 // ============================================================================
@@ -622,15 +791,18 @@ class PayrollGenerationItem {
 
   final double elaunKerajinan;
 
+  final double overtimeDuration;
+
   const PayrollGenerationItem({
     required this.employeeId,
     required this.employeeName,
     required this.generated,
     required this.message,
-    this.basicSalary = 0,
-    this.fwSalary = 0,
-    this.elaunKedatangan = 0,
-    this.elaunPerkhidmatan = 0,
-    this.elaunKerajinan = 0,
+    this.basicSalary = 0.0,
+    this.fwSalary = 0.0,
+    this.elaunKedatangan = 0.0,
+    this.elaunPerkhidmatan = 0.0,
+    this.elaunKerajinan = 0.0,
+    this.overtimeDuration = 0.0,
   });
 }

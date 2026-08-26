@@ -440,7 +440,7 @@ Widget _statusChip(String status) {
           ),
           const SizedBox(height: 8),
           const Text(
-            '© Hasani Books Edar Sdn Bhd - 2026',
+            'Â© Hasani Books Edar Sdn Bhd - 2026',
             style: TextStyle(
               fontSize: 11,
               color: Colors.black45,
@@ -999,7 +999,7 @@ Widget _statusChip(String status) {
             child: Column(children: [
               ListTile(
                 title: Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                subtitle: const Text('Select Year → Month → Branch → Employees'),
+                subtitle: const Text('Select Year â†’ Month â†’ Branch â†’ Employees'),
                 trailing: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
               ),
               const Divider(height: 1),
@@ -1027,7 +1027,7 @@ Widget _statusChip(String status) {
                     )).toList()),
                   ],
                   if (selectedBranch != null) ...[
-                    const SizedBox(height: 24), Text('4. Employees — $selectedBranch', style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 10),
+                    const SizedBox(height: 24), Text('4. Employees â€” $selectedBranch', style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 10),
                     if (branchEmployees.isEmpty) const Text('No employees found for this branch.') else
                     ...branchEmployees.map((employee) {
                       final name = (employee['name'] ?? 'Employee').toString();
@@ -2287,7 +2287,7 @@ Widget _statusChip(String status) {
 
                     if (id.isEmpty ||
                         employeeName.isEmpty) {
-                      _message(context,
+                      _message(
                         'Employee ID and name are required.',
                       );
                       return;
@@ -2295,7 +2295,7 @@ Widget _statusChip(String status) {
 
                     if (service.findEmployee(id) !=
                         null) {
-                      _message(context,
+                      _message(
                         'Employee ID already exists.',
                       );
                       return;
@@ -2325,7 +2325,7 @@ Widget _statusChip(String status) {
 
                     Navigator.pop(dialogContext);
 
-                    _message(context,
+                    _message(
                       'Employee added successfully.',
                     );
                   },
@@ -2553,7 +2553,7 @@ Widget _statusChip(String status) {
 
                     Navigator.pop(dialogContext);
 
-                    _message(context,
+                    _message(
                       'Employee updated successfully.',
                     );
                   },
@@ -2606,7 +2606,7 @@ Widget _statusChip(String status) {
 
                 Navigator.pop(dialogContext);
 
-                _message(context,
+                _message(
                   'Employee deleted successfully.',
                 );
               },
@@ -3170,11 +3170,15 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
       if (snapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());
       }
+
       if (snapshot.hasError) {
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text('Unable to load attendance:\n${snapshot.error}', textAlign: TextAlign.center),
+            child: Text(
+              'Unable to load attendance:\n${snapshot.error}',
+              textAlign: TextAlign.center,
+            ),
           ),
         );
       }
@@ -3185,16 +3189,13 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
       final attendance = List<Map<String, dynamic>>.from(data[2] as List);
 
       final branch = branches.firstWhere(
-        (item) => (item['id'] ?? item['branch_id'] ?? '').toString() == branchId,
+        (item) =>
+            (item['id'] ?? item['branch_id'] ?? '').toString() == branchId,
         orElse: () => <String, dynamic>{},
       );
-      final branchName = (branch['name'] ?? branch['branch_name'] ?? branchId).toString();
 
-      final employeeMap = <String, Map<String, dynamic>>{};
-      for (final employee in employees) {
-        final id = (employee['employee_id'] ?? employee['id'] ?? '').toString();
-        if (id.isNotEmpty) employeeMap[id] = employee;
-      }
+      final branchName =
+          (branch['name'] ?? branch['branch_name'] ?? branchId).toString();
 
       final byEmployee = <String, List<Map<String, dynamic>>>{};
       for (final record in attendance) {
@@ -3212,25 +3213,38 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextButton.icon(
-                onPressed: () => setState(() => selectedAttendanceBranchId = null),
+                onPressed: () =>
+                    setState(() => selectedAttendanceBranchId = null),
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('All Branches'),
               ),
               const SizedBox(height: 8),
-              Text(branchName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+              Text(
+                branchName,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(height: 6),
-              Text('${employees.length} employee(s)', style: const TextStyle(color: Colors.black54)),
+              Text(
+                '${employees.length} employee(s)',
+                style: const TextStyle(color: Colors.black54),
+              ),
               const SizedBox(height: 24),
               if (employees.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(40),
-                  child: Center(child: Text('No employees assigned to this branch.')),
+                  child: Center(
+                    child: Text('No employees assigned to this branch.'),
+                  ),
                 )
               else
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  gridDelegate:
+                      const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 340,
                     mainAxisExtent: 180,
                     crossAxisSpacing: 16,
@@ -3239,134 +3253,132 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
                   itemCount: employees.length,
                   itemBuilder: (context, index) {
                     final employee = employees[index];
-                    final employeeId = (employee['employee_id'] ?? employee['id'] ?? '').toString();
-                    final name = (employee['name'] ?? employee['full_name'] ?? employeeId).toString();
-                    final records = byEmployee[employeeId] ?? const <Map<String, dynamic>>[];
-                    final submitted = records.any((r) => _attendanceBool(r['is_submitted']));
+                    final employeeId =
+                        (employee['employee_id'] ?? employee['id'] ?? '')
+                            .toString();
+                    final name =
+                        (employee['name'] ?? employee['full_name'] ??
+                                employeeId)
+                            .toString();
+                    final records =
+                        byEmployee[employeeId] ??
+                            const <Map<String, dynamic>>[];
+                    final submitted = records.any(
+                      (r) => _attendanceBool(r['is_submitted']),
+                    );
 
                     return InkWell(
-  borderRadius: BorderRadius.circular(18),
-  onTap: () => _openAdminAttendance(
-    employee,
-    branchId,
-  ),
-  child: Card(
-    elevation: 0,
-    margin: EdgeInsets.zero,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(18),
-      side: BorderSide(
-        color: Colors.blueGrey.withOpacity(.20),
-      ),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: const Color(0xFFE7F7EF),
-                child: Text(
-                  name.isEmpty
-                      ? '?'
-                      : name[0].toUpperCase(),
-                  style: const TextStyle(
-                    color: Color(0xFF15965D),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: submitted
-                      ? Colors.green.shade50
-                      : Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  submitted
-                      ? 'SUBMITTED'
-                      : 'PENDING',
-                  style: TextStyle(
-                    color: submitted
-                        ? Colors.green.shade700
-                        : Colors.orange.shade700,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const Spacer(),
-
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-
-          const SizedBox(height: 5),
-
-          Text(
-            'Employee ID: $employeeId',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-            ),
-          ),
-
-          const SizedBox(height: 5),
-
-          Row(
-            children: [
-              Icon(
-                submitted
-                    ? Icons.edit_outlined
-                    : Icons.lock_outline,
-                size: 14,
-                color: submitted
-                    ? Colors.green.shade700
-                    : Colors.orange.shade700,
-              ),
-
-              const SizedBox(width: 5),
-
-              Expanded(
-                child: Text(
-                  submitted
-                      ? 'Branch submitted • Admin can edit'
-                      : 'Waiting for Branch submission',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ),
-);
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () => _openAdminAttendance(
+                        employee,
+                        branchId,
+                      ),
+                      child: Card(
+                        elevation: 0,
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: BorderSide(
+                            color: Colors.blueGrey.withOpacity(.20),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 25,
+                                    backgroundColor:
+                                        const Color(0xFFE7F7EF),
+                                    child: Text(
+                                      name.isEmpty
+                                          ? '?'
+                                          : name[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Color(0xFF15965D),
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: submitted
+                                          ? Colors.green.shade50
+                                          : Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      submitted ? 'SUBMITTED' : 'PENDING',
+                                      style: TextStyle(
+                                        color: submitted
+                                            ? Colors.green.shade700
+                                            : Colors.orange.shade700,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                'Employee ID: $employeeId',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  Icon(
+                                    submitted
+                                        ? Icons.edit_outlined
+                                        : Icons.lock_outline,
+                                    size: 14,
+                                    color: submitted
+                                        ? Colors.green.shade700
+                                        : Colors.orange.shade700,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      submitted
+                                          ? 'Branch submitted • Admin can edit'
+                                          : 'Waiting for Branch submission',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
                   },
                 ),
             ],
@@ -3394,14 +3406,8 @@ void _openAdminAttendance(
       employee: employee,
       month: selectedAttendanceMonth,
       branchId: branchId,
-      
-      // Same attendance sheet as Branch Portal.
       editable: true,
-
-      // Admin does NOT submit attendance.
       showSubmitButton: false,
-
-      // Admin can edit only after Branch has submitted.
       adminOnlyAfterSubmit: true,
     ),
   ).then((_) {
@@ -3409,10 +3415,6 @@ void _openAdminAttendance(
     setState(() {});
   });
 }
-
-
-
-
 
 // ============================================================================
 // EMPLOYEE CSV IMPORT
@@ -3770,168 +3772,319 @@ Widget _importPage() {
 }
 
 // ============================================================================
-// GENERATE PAYROLL FROM SALARY DEFAULTS
+// PAYROLL GENERATION DIALOG
 // ============================================================================
 
 Future<void> _showGenerateAttendancePayrollDialog() async {
-  DateTime selectedMonth = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-  );
-
+  final now = DateTime.now();
+  int selectedYear = now.year;
+  int selectedMonth = now.month;
+  String? selectedBranchId;
   bool overwriteExisting = true;
+  bool loading = true;
+  List<Map<String, dynamic>> branches = [];
+  List<Map<String, dynamic>> employees = [];
+  final selectedEmployeeIds = <String>{};
 
   await showDialog<void>(
     context: context,
+    barrierDismissible: false,
     builder: (dialogContext) {
       return StatefulBuilder(
-        builder: (
-          context,
-          setDialogState,
-        ) {
+        builder: (context, setDialogState) {
+          Future<void> loadData() async {
+            if (!loading) return;
+            try {
+              final results = await Future.wait([
+                SupabaseService.getBranches(),
+                SupabaseService.getEmployees(),
+              ]);
+
+              if (!dialogContext.mounted) return;
+              setDialogState(() {
+                branches = List<Map<String, dynamic>>.from(results[0]);
+                employees = List<Map<String, dynamic>>.from(results[1]);
+                loading = false;
+              });
+            } catch (e) {
+              if (!dialogContext.mounted) return;
+              setDialogState(() => loading = false);
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                SnackBar(
+                  content: Text('Unable to load payroll employees: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+
+          loadData();
+
+          final branchEmployees = selectedBranchId == null
+              ? <Map<String, dynamic>>[]
+              : employees.where((employee) {
+                  return (employee['branch_id'] ?? '').toString() ==
+                      selectedBranchId;
+                }).toList();
+
+          String branchName(Map<String, dynamic> branch) {
+            return (branch['name'] ??
+                    branch['branch_name'] ??
+                    branch['id'] ??
+                    '')
+                .toString();
+          }
+
+          String employeeId(Map<String, dynamic> employee) {
+            return (employee['employee_id'] ?? employee['id'] ?? '')
+                .toString()
+                .trim();
+          }
+
           return AlertDialog(
             title: const Text(
               'Generate Payroll',
+              style: TextStyle(fontWeight: FontWeight.w800),
             ),
-
             content: SizedBox(
-              width: 520,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
+              width: 850,
+              height: 620,
+              child: loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                value: selectedYear,
+                                decoration: const InputDecoration(
+                                  labelText: 'Payroll Year',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: List.generate(
+                                  7,
+                                  (index) => now.year - 3 + index,
+                                )
+                                    .map(
+                                      (year) => DropdownMenuItem<int>(
+                                        value: year,
+                                        child: Text(year.toString()),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setDialogState(() => selectedYear = value);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                value: selectedMonth,
+                                decoration: const InputDecoration(
+                                  labelText: 'Payroll Month',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: List.generate(12, (index) => index + 1)
+                                    .map(
+                                      (month) => DropdownMenuItem<int>(
+                                        value: month,
+                                        child: Text(
+                                          DateFormat('MMMM').format(
+                                            DateTime(selectedYear, month),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setDialogState(() => selectedMonth = value);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        const Text(
+                          '1. Select Branch',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 8),
+                        if (branches.isEmpty)
+                          const Text('No branches found.')
+                        else
+                          SizedBox(
+                            height: 58,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: branches.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (_, index) {
+                                final branch = branches[index];
+                                final id = (branch['id'] ??
+                                        branch['branch_id'] ??
+                                        '')
+                                    .toString();
+                                final name = branchName(branch);
+                                return ChoiceChip(
+                                  label: Text(name.isEmpty ? id : name),
+                                  selected: selectedBranchId == id,
+                                  onSelected: (_) {
+                                    setDialogState(() {
+                                      selectedBranchId = id;
+                                      selectedEmployeeIds.clear();
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '2. Select Employees',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            if (branchEmployees.isNotEmpty)
+                              TextButton(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    if (selectedEmployeeIds.length ==
+                                        branchEmployees.length) {
+                                      selectedEmployeeIds.clear();
+                                    } else {
+                                      selectedEmployeeIds
+                                        ..clear()
+                                        ..addAll(
+                                          branchEmployees
+                                              .map(employeeId)
+                                              .where((id) => id.isNotEmpty),
+                                        );
+                                    }
+                                  });
+                                },
+                                child: Text(
+                                  selectedEmployeeIds.length ==
+                                          branchEmployees.length
+                                      ? 'Clear All'
+                                      : 'Select All',
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: selectedBranchId == null
+                              ? const Center(
+                                  child: Text('Select a branch first.'),
+                                )
+                              : branchEmployees.isEmpty
+                                  ? const Center(
+                                      child: Text(
+                                        'No employees assigned to this branch.',
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      itemCount: branchEmployees.length,
+                                      itemBuilder: (_, index) {
+                                        final employee = branchEmployees[index];
+                                        final id = employeeId(employee);
+                                        final name =
+                                            (employee['name'] ?? id).toString();
+                                        final selected =
+                                            selectedEmployeeIds.contains(id);
 
-                    leading: const Icon(
-                      Icons.calendar_month_outlined,
+                                        return Card(
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 3,
+                                          ),
+                                          child: CheckboxListTile(
+                                            value: selected,
+                                            onChanged: id.isEmpty
+                                                ? null
+                                                : (value) {
+                                                    setDialogState(() {
+                                                      if (value == true) {
+                                                        selectedEmployeeIds
+                                                            .add(id);
+                                                      } else {
+                                                        selectedEmployeeIds
+                                                            .remove(id);
+                                                      }
+                                                    });
+                                                  },
+                                            title: Text(
+                                              name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            subtitle: Text('Employee ID: $id'),
+                                            secondary: const CircleAvatar(
+                                              child: Icon(Icons.person),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                        ),
+                        const Divider(),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: overwriteExisting,
+                              onChanged: (value) {
+                                setDialogState(() {
+                                  overwriteExisting = value ?? true;
+                                });
+                              },
+                            ),
+                            const Expanded(
+                              child: Text(
+                                'Replace existing payroll for the selected employee and month',
+                              ),
+                            ),
+                            Text(
+                              '${selectedEmployeeIds.length} selected',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-
-                    title: const Text(
-                      'Payroll Month',
-                    ),
-
-                    subtitle: Text(
-                      DateFormat(
-                        'MMMM yyyy',
-                      ).format(selectedMonth),
-                    ),
-
-                    trailing: OutlinedButton(
-                      onPressed: () async {
-                        final picked =
-                            await showDatePicker(
-                          context: context,
-                          initialDate: selectedMonth,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                          helpText:
-                              'Select Payroll Month',
-                        );
-
-                        if (picked != null) {
-                          setDialogState(() {
-                            selectedMonth = DateTime(
-                              picked.year,
-                              picked.month,
-                            );
-                          });
-                        }
-                      },
-                      child: const Text(
-                        'Change',
-                      ),
-                    ),
-                  ),
-
-                  const Divider(),
-
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-
-                    value: overwriteExisting,
-
-                    title: const Text(
-                      'Replace Existing Payroll',
-                    ),
-
-                    subtitle: const Text(
-                      'Update payroll if the employee already '
-                      'has a payroll record for this month.',
-                    ),
-
-                    onChanged: (value) {
-                      setDialogState(() {
-                        overwriteExisting = value;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Container(
-                    width: double.infinity,
-                    padding:
-                        const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color:
-                          const Color(0xFFF5F7FB),
-                      borderRadius:
-                          BorderRadius.circular(10),
-                    ),
-
-                    child: const Text(
-                      'Payroll will currently be generated '
-                      'from employee_salary_defaults using:\n\n'
-                      '• Basic Salary\n'
-                      '• FW Salary\n'
-                      '• Elaun Kedatangan\n'
-                      '• Elaun Perkhidmatan\n'
-                      '• Elaun Kerajinan\n\n'
-                      'Attendance and payroll calculations will '
-                      'be added later.',
-                      style: TextStyle(
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
-
             actions: [
               TextButton(
-                onPressed: () {
-                  Navigator.of(
-                    dialogContext,
-                  ).pop();
-                },
-                child: const Text(
-                  'Cancel',
-                ),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
               ),
-
               FilledButton.icon(
-                icon: const Icon(
-                  Icons.calculate_outlined,
-                ),
+                icon: const Icon(Icons.calculate_outlined),
+                label: const Text('Generate Payroll'),
+                onPressed: loading || selectedEmployeeIds.isEmpty
+                    ? null
+                    : () async {
+                        final ids = selectedEmployeeIds.toList();
+                        final month = DateTime(selectedYear, selectedMonth, 1);
 
-                label: const Text(
-                  'Generate Payroll',
-                ),
+                        Navigator.of(dialogContext).pop();
 
-                onPressed: () async {
-                  Navigator.of(
-                    dialogContext,
-                  ).pop();
-
-                  await _generateAttendancePayroll(
-                    month: selectedMonth,
-                    overwriteExisting:
-                        overwriteExisting,
-                  );
-                },
+                        await _generateAttendancePayroll(
+                          month: month,
+                          employeeIds: ids,
+                          overwriteExisting: overwriteExisting,
+                        );
+                      },
               ),
             ],
           );
@@ -3947,67 +4100,57 @@ Future<void> _showGenerateAttendancePayrollDialog() async {
 
 Future<void> _generateAttendancePayroll({
   required DateTime month,
+  required List<String> employeeIds,
   required bool overwriteExisting,
 }) async {
   if (!mounted) return;
 
+  if (employeeIds.isEmpty) {
+    _message('Please select at least one employee.');
+    return;
+  }
+
   showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) {
-      return const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 28,
-              height: 28,
-              child:
-                  CircularProgressIndicator(),
-            ),
-
-            SizedBox(width: 20),
-
-            Expanded(
-              child: Text(
-                'Generating payroll from salary defaults...',
-              ),
-            ),
-          ],
-        ),
-      );
-    },
+    builder: (_) => const AlertDialog(
+      content: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            child: Text('Generating payroll...'),
+          ),
+        ],
+      ),
+    ),
   );
 
   try {
     final result =
-        await AttendancePayrollService
-            .generateMonthlyPayroll(
+        await AttendancePayrollService.generateMonthlyPayroll(
       month: month,
-      overwriteExisting:
-          overwriteExisting,
+      employeeIds: employeeIds,
+      overwriteExisting: overwriteExisting,
     );
 
     if (mounted) {
       Navigator.of(context).pop();
+      setState(() {});
     }
 
     if (!mounted) return;
-
-    setState(() {});
-
-    await _showPayrollGenerationResult(
-      result,
-    );
+    await _showPayrollGenerationResult(result);
   } catch (e) {
     if (mounted) {
       Navigator.of(context).pop();
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Payroll generation failed: $e',
-          ),
+          content: Text('Payroll generation failed: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -4026,117 +4169,87 @@ Future<void> _showPayrollGenerationResult(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
-        title: const Text(
-          'Payroll Generation Complete',
-        ),
-
+        title: const Text('Payroll Generation Complete'),
         content: SizedBox(
-          width: 700,
-
+          width: 720,
+          height: 500,
           child: SingleChildScrollView(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  DateFormat(
-                    'MMMM yyyy',
-                  ).format(result.month),
-
+                  DateFormat('MMMM yyyy').format(result.month),
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight:
-                        FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
+                Text('Generated: ${result.generatedCount}'),
+                Text('Skipped: ${result.skippedCount}'),
                 Text(
-                  'Generated: '
-                  '${result.generatedCount}',
+                  'Approved OT duration: '
+                  '${result.totalOvertimeDuration.toStringAsFixed(2)}',
                 ),
-
-                Text(
-                  'Skipped: '
-                  '${result.skippedCount}',
-                ),
-
                 const SizedBox(height: 16),
-
-                ...result.generated.map(
-                  (item) {
-                    return ListTile(
+                if (result.generated.isNotEmpty) ...[
+                  const Text(
+                    'Generated Payroll',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  ...result.generated.map(
+                    (item) => ListTile(
                       dense: true,
-
                       leading: const Icon(
                         Icons.check_circle,
                         color: Colors.green,
                       ),
-
                       title: Text(
                         item.employeeName.isEmpty
                             ? item.employeeId
                             : item.employeeName,
                       ),
-
                       subtitle: Text(
-                        'Basic: RM '
-                        '${item.basicSalary.toStringAsFixed(2)}'
-                        ' | FW: RM '
-                        '${item.fwSalary.toStringAsFixed(2)}'
-                        ' | Kedatangan: RM '
-                        '${item.elaunKedatangan.toStringAsFixed(2)}'
-                        ' | Perkhidmatan: RM '
-                        '${item.elaunPerkhidmatan.toStringAsFixed(2)}'
-                        ' | Kerajinan: RM '
-                        '${item.elaunKerajinan.toStringAsFixed(2)}',
+                        '${item.employeeId} • '
+                        'Basic RM ${item.basicSalary.toStringAsFixed(2)} • '
+                        'FW RM ${item.fwSalary.toStringAsFixed(2)} • '
+                        'OT ${item.overtimeDuration.toStringAsFixed(2)}',
                       ),
-                    );
-                  },
-                ),
-
-                ...result.skipped.map(
-                  (item) {
-                    return ListTile(
+                    ),
+                  ),
+                ],
+                if (result.skipped.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Skipped / Failed',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  ...result.skipped.map(
+                    (item) => ListTile(
                       dense: true,
-
                       leading: const Icon(
                         Icons.error_outline,
                         color: Colors.orange,
                       ),
-
                       title: Text(
                         item.employeeName.isEmpty
                             ? item.employeeId
                             : item.employeeName,
                       ),
-
-                      subtitle: Text(
-                        item.message,
-                      ),
-                    );
-                  },
-                ),
+                      subtitle: Text(item.message),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
-
         actions: [
           FilledButton(
-            onPressed: () {
-              Navigator.of(
-                dialogContext,
-              ).pop();
-            },
-
-            child: const Text(
-              'Done',
-            ),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Done'),
           ),
         ],
       );
@@ -4541,6 +4654,9 @@ double _payrollTotalEarnings(
 ) {
   return _payrollNumber(
         payroll['basic_salary'],
+      ) +
+      _payrollNumber(
+        payroll['fw_salary'],
       ) +
       _payrollNumber(
         payroll['elaun_kedatangan'],
@@ -6261,9 +6377,9 @@ String _money(
 }
 
 void _message(
-  BuildContext context,
   String message,
 ) {
+  if (!mounted) return;
 
   ScaffoldMessenger.of(
     context,
@@ -6274,5 +6390,4 @@ void _message(
           SnackBarBehavior.floating,
     ),
   );
-}
-}
+}}
