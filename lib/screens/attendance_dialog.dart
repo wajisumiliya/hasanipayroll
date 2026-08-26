@@ -862,94 +862,100 @@ class _AttendanceDialogState
     final department = _department();
     final section = _section();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 14,
-      ),
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: Color(0xFF315AD9),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const Positioned.fill(
-            child: CustomPaint(
-              painter: _BlueRedCurvedHeaderPainter(),
+    // Give the header a fixed height. This is important because the curved
+    // CustomPaint and Stack must receive real constraints; otherwise Flutter
+    // can produce "Cannot hit test a render box with no size" errors.
+    return SizedBox(
+      height: 72,
+      width: double.infinity,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 10,
+        ),
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          color: Color(0xFF315AD9),
+        ),
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: CustomPaint(
+                painter: _BlueRedCurvedHeaderPainter(),
+              ),
             ),
-          ),
-          Row(
-        children: [
-          const CircleAvatar(
-            radius: 23,
-            backgroundColor: Colors.white,
-            child: Icon(
-              Icons.person,
-              color: Color(0xFF15965D),
-              size: 27,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
+                const CircleAvatar(
+                  radius: 23,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.person,
+                    color: Color(0xFF315AD9),
+                    size: 27,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    id,
-                    department,
-                    section,
-                  ]
-                      .where(
-                        (v) => v.isNotEmpty,
-                  )
-                      .join(' • '),
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [id, department, section]
+                            .where((v) => v.isNotEmpty)
+                            .join(' • '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      DateFormat('MMMM yyyy').format(widget.month),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      submitted ? 'SUBMITTED' : 'DRAFT',
+                      style: TextStyle(
+                        color: submitted ? Colors.white : Colors.white70,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                DateFormat('MMMM yyyy').format(widget.month),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                submitted ? 'SUBMITTED' : 'DRAFT',
-                style: TextStyle(
-                  color: submitted ? Colors.white : Colors.white70,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
           ],
         ),
-      ],
-    ),
-  );
+      ),
+    );
   }
 
   // ==========================================================================
