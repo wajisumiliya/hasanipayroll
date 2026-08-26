@@ -184,46 +184,55 @@ class AttendancePayrollService {
     // 1. GET SALARY DEFAULTS
     // =========================================================================
 
-    final salaryDefault =
-        await _getSalaryDefault(
-      employeeId,
-    );
-
-    if (salaryDefault == null) {
-      return PayrollGenerationItem(
-        employeeId: employeeId,
-        employeeName: employeeName,
-        generated: false,
-        message:
-            'No salary default found for $employeeId.',
+    static Future<Map<String, dynamic>?> _getSalaryDefault(
+  String employeeId,
+) async {
+  final response = await SupabaseService.client
+      .from('employee_salary_defaults')
+      .select(
+        'employee_id,'
+        'basic_salary,'
+        'fw_salary,'
+        'elaun_kedatangan,'
+        'elaun_perkhidmatan,'
+        'elaun_kerajinan',
       );
+
+  print(
+    'SALARY DEFAULTS ROW COUNT = ${response.length}',
+  );
+
+  for (final row in response) {
+    print(
+      'SALARY DEFAULT ID = [${row['employee_id']}]',
+    );
+  }
+
+  final wanted =
+      employeeId.trim().toUpperCase();
+
+  for (final row in response) {
+    final id =
+        (row['employee_id'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
+
+    if (id == wanted) {
+      print(
+        'FOUND SALARY DEFAULT FOR $wanted',
+      );
+
+      return Map<String, dynamic>.from(row);
     }
+  }
 
-    final basicSalary =
-        _number(
-      salaryDefault['basic_salary'],
-    );
+  print(
+    'NOT FOUND SALARY DEFAULT FOR $wanted',
+  );
 
-    final fwSalary =
-        _number(
-      salaryDefault['fw_salary'],
-    );
-
-    final elaunKedatangan =
-        _number(
-      salaryDefault['elaun_kedatangan'],
-    );
-
-    final elaunPerkhidmatan =
-        _number(
-      salaryDefault['elaun_perkhidmatan'],
-    );
-
-    final elaunKerajinan =
-        _number(
-      salaryDefault['elaun_kerajinan'],
-    );
-
+  return null;
+}
     // =========================================================================
     // 2. GET SUBMITTED ATTENDANCE
     // =========================================================================
