@@ -227,9 +227,9 @@ class AttendancePayrollService {
 
     final _ContributionRow epf;
 
-    if (epfCategory == 'normal') {
+    if (epfCategory == 'reduced') {
       // SPECIAL RULE:
-      // epf_category = normal -> 2% employee + 2% employer.
+      // epf_category = reduced -> 2% employee + 2% employer.
       final epfTwoPercent = _roundMoney(statutoryWage * 0.02);
 
       epf = _ContributionRow(
