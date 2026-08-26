@@ -500,39 +500,36 @@ class AttendancePayrollService {
   // GET SALARY DEFAULT
   // ==========================================================================
 
-  static Future<
-      Map<String, dynamic>?>
-      _getSalaryDefault(
-    String employeeId,
-  ) async {
-    final response =
-        await SupabaseService.client
-            .from(
-              'employee_salary_defaults',
-            )
-            .select(
-              'employee_id,'
-              'basic_salary,'
-              'fw_salary,'
-              'elaun_kedatangan,'
-              'elaun_perkhidmatan,'
-              'elaun_kerajinan',
-            )
-            .eq(
-              'employee_id',
-              employeeId,
-            )
-            .maybeSingle();
+  static Future<Map<String, dynamic>?> _getSalaryDefault(
+  String employeeId,
+) async {
+  final response = await SupabaseService.client
+      .from('employee_salary_defaults')
+      .select(
+        'employee_id,'
+        'basic_salary,'
+        'fw_salary,'
+        'elaun_kedatangan,'
+        'elaun_perkhidmatan,'
+        'elaun_kerajinan',
+      );
 
-    if (response == null) {
-      return null;
+  final wantedId = employeeId.trim().toUpperCase();
+
+  for (final row in response) {
+    final databaseId =
+        (row['employee_id'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
+
+    if (databaseId == wantedId) {
+      return Map<String, dynamic>.from(row);
     }
-
-    return Map<String, dynamic>.from(
-      response,
-    );
   }
 
+  return null;
+}
   // ==========================================================================
   // GET SUBMITTED ATTENDANCE FOR MONTH
   // ==========================================================================
