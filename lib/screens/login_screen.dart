@@ -556,71 +556,103 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-      const Color(0xFFF5F7FB),
+      backgroundColor: const Color(0xFF101A3A),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding:
-            const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints:
-              const BoxConstraints(
-                maxWidth: 440,
-              ),
-              child: _loginCard(),
-            ),
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 520;
+            return Stack(
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: compact ? 8 : 12,
+                    color: const Color(0xFFC89A45),
+                  ),
+                ),
+                Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      compact ? 18 : 24,
+                      compact ? 28 : 42,
+                      compact ? 18 : 24,
+                      24,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: _loginCard(compact: compact),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _loginCard() {
+  Widget _loginCard({bool compact = false}) {
     return Container(
-      padding:
-      const EdgeInsets.all(32),
+      padding: EdgeInsets.all(compact ? 22 : 32),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-        BorderRadius.circular(20),
-        boxShadow: [
+        color: const Color(0xFFFFFCF5),
+        borderRadius: BorderRadius.circular(compact ? 18 : 22),
+        border: Border.all(
+          color: const Color(0xFFC89A45),
+          width: 1.2,
+        ),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              0.07,
-            ),
-            blurRadius: 30,
-            offset:
-            const Offset(0, 12),
+            color: Color(0x55000000),
+            blurRadius: 28,
+            offset: Offset(0, 16),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _logo(),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 22),
 
-          const Text(
-            'Welcome Back',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight:
-              FontWeight.w800,
-              color:
-              Color(0xFF172033),
+          Center(
+            child: Container(
+              width: 54,
+              height: 3,
+              decoration: BoxDecoration(
+                color: const Color(0xFFC89A45),
+                borderRadius: BorderRadius.circular(3),
+              ),
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 18),
 
-          const Text(
+          const Center(
+            child: Text(
+            'Welcome Back',
+            style: TextStyle(
+              fontSize: 27,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF101A3A),
+            ),
+            ),
+          ),
+
+          const SizedBox(height: 7),
+
+          const Center(
+            child: Text(
             'Sign in securely to continue to the payroll portal.',
             style: TextStyle(
-              color: Colors.black54,
+              color: Color(0xFF687083),
               fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
             ),
           ),
 
@@ -742,16 +774,20 @@ class _LoginScreenState extends State<LoginScreen> {
               style:
               ElevatedButton.styleFrom(
                 backgroundColor:
-                const Color(0xFF15965D),
+                const Color(0xFF101A3A),
                 foregroundColor:
-                Colors.white,
+                const Color(0xFFFFF8E8),
                 disabledBackgroundColor:
-                Colors.grey.shade300,
-                elevation: 0,
+                const Color(0xFFB8B8B8),
+                elevation: 4,
+                shadowColor: const Color(0x55C89A45),
                 shape:
                 RoundedRectangleBorder(
                   borderRadius:
-                  BorderRadius.circular(10),
+                  BorderRadius.circular(12),
+                  side: const BorderSide(
+                    color: Color(0xFFC89A45),
+                  ),
                 ),
               ),
               child: loading
@@ -789,9 +825,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _logo() {
     return Center(
-      child: SizedBox(
-        width: 230,
-        height: 100,
+      child: Container(
+        width: 270,
+        height: 112,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8E8),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFFC89A45),
+            width: 1.4,
+          ),
+        ),
         child: Image.asset(
           'assets/hasani_books_logo.jpg',
           fit: BoxFit.contain,
@@ -804,8 +849,7 @@ class _LoginScreenState extends State<LoginScreen> {
               alignment:
               Alignment.center,
               decoration: BoxDecoration(
-                color:
-                const Color(0xFFF5F7FB),
+                color: const Color(0xFFFFF8E8),
                 borderRadius:
                 BorderRadius.circular(12),
               ),
@@ -817,8 +861,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   fontSize: 25,
                   fontWeight:
                   FontWeight.w900,
-                  color:
-                  Color(0xFF2D55D8),
+                  color: Color(0xFF101A3A),
                   letterSpacing: 1,
                 ),
               ),
@@ -839,10 +882,12 @@ class _LoginScreenState extends State<LoginScreen> {
       padding:
       const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:
-        const Color(0xFFF5F7FB),
+        color: const Color(0xFFF4EFE2),
         borderRadius:
-        BorderRadius.circular(10),
+        BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE1D2B4),
+        ),
       ),
       child: const Column(
         crossAxisAlignment:
@@ -911,31 +956,31 @@ class _LoginScreenState extends State<LoginScreen> {
       prefixIcon: Icon(icon),
       filled: true,
       fillColor:
-      const Color(0xFFF8F9FC),
+      const Color(0xFFFFFDF8),
       border: OutlineInputBorder(
         borderRadius:
-        BorderRadius.circular(10),
+        BorderRadius.circular(12),
         borderSide:
         const BorderSide(
-          color: Colors.black12,
+          color: Color(0xFFD8CCB7),
         ),
       ),
       enabledBorder:
       OutlineInputBorder(
         borderRadius:
-        BorderRadius.circular(10),
+        BorderRadius.circular(12),
         borderSide:
         const BorderSide(
-          color: Colors.black12,
+          color: Color(0xFFD8CCB7),
         ),
       ),
       focusedBorder:
       OutlineInputBorder(
         borderRadius:
-        BorderRadius.circular(10),
+        BorderRadius.circular(12),
         borderSide:
         const BorderSide(
-          color: Color(0xFF15965D),
+          color: Color(0xFFC89A45),
           width: 2,
         ),
       ),

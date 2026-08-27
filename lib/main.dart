@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
+import 'screens/admin_dashboard.dart';
+import 'screens/branch_dashboard.dart';
+import 'screens/employee_portal.dart';
 import 'screens/login_screen.dart';
 import 'screens/supabase_service.dart';
+import 'services/app_service.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
@@ -29,6 +33,8 @@ Future<void> main() async {
 
   await NotificationService.initialize();
 
+  await AppService.instance.restore();
+
   // ============================================================
   // START APPLICATION
   // ============================================================
@@ -38,6 +44,15 @@ Future<void> main() async {
 
 class HasaniPayrollApp extends StatelessWidget {
   const HasaniPayrollApp({super.key});
+
+  Widget _homePage() {
+    final user = AppService.instance.currentUser;
+
+    if (user?.isAdmin == true) return const AdminDashboard();
+    if (user?.isBranch == true) return const BranchPortal();
+    if (user?.isEmployee == true) return const EmployeePortal();
+    return const LoginScreen();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +91,7 @@ class HasaniPayrollApp extends StatelessWidget {
         ),
       ),
 
-      home: const LoginScreen(),
+      home: _homePage(),
     );
   }
 }
