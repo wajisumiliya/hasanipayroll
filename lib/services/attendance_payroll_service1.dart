@@ -435,25 +435,7 @@ class AttendancePayrollService {
       'bank_code': _text(employee['bank_code']),
       'bank_account': _text(employee['bank_account']),
 
-      // Debug / audit information
-      'remarks':
-          'Generated payroll. '
-          'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
-          'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
-          'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
-          'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '
-          'SOCSO employer: ${socso.employer.toStringAsFixed(2)}. '
-          'EIS employee: ${eis.employee.toStringAsFixed(2)}. '
-          'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
-          'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
-          'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
-          'Required daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
-          'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
-          'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
-          'Unpaid days: $unpaidDays. '
-          'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
-          'Public holiday worked days: $publicHolidayWorkedDays. '
-          'Cuti Umum: ${cutiUmum.toStringAsFixed(2)}.',
+        'remarks': null,
     };
 
     // ------------------------------------------------------------------------
