@@ -111,6 +111,12 @@ class _AttendanceDialogState
   double _requiredWorkHours = 7.5;
   bool _salaryRuleLoaded = false;
 
+  // Attendance rules requested by Admin.
+  static const int _allocatedBreakMinutes = 60;
+  static const int _otThresholdMinutes = 10;
+  static const int _scheduledStartMinutes = 8 * 60; // 08:00
+
+
   // ==========================================================================
   // INIT / DISPOSE
   // ==========================================================================
@@ -699,12 +705,14 @@ class _AttendanceDialogState
                 afternoonMinutes +
                 eveningBreakMinutes;
 
-        // NET WORKING = WORKING PERIOD - ALL BREAKS.
-        final netWorkingMinutes =
-            (workMinutes - breakMinutes).clamp(0, 24 * 60).toInt();
+        // The employee must fulfill the allocated 01:00 break.
+        // If less than 01:00 is recorded, the missing break time is treated
+        // as break time first; it cannot become OT.
+        final effectiveBreakMinutes = _effectiveBreakMinutes(breakMinutes);
 
-        // OT is available only when the employee exceeds the required
-        // working hours AND Admin has explicitly authorized OT.
+        final netWorkingMinutes =
+            (workMinutes - effectiveBreakMinutes).clamp(0, 24 * 60).toInt();
+
         final dailyOtMinutes = _calculateDailyOtMinutes(
           c: row,
           netWorkingMinutes: netWorkingMinutes,
@@ -1064,15 +1072,32 @@ class _AttendanceDialogState
       ) {
     final total = calculateWorkMinutes(c);
     final breakMinutes = _calculateBreakMinutes(c);
+    final effectiveBreakMinutes = _effectiveBreakMinutes(breakMinutes);
     final netWorkingMinutes =
-        (total - breakMinutes).clamp(0, 24 * 60).toInt();
+        (total - effectiveBreakMinutes).clamp(0, 24 * 60).toInt();
     final overtimeMinutes = _calculateDailyOtMinutes(
       c: c,
       netWorkingMinutes: netWorkingMinutes,
     );
 
-    return SizedBox(
+    final late = _isLate(c);
+    final breakMissing = _calculateBreakMinutes(c) < _allocatedBreakMinutes && total > 0;
+    final otEligible = _otEligible(c);
+    final rowColor = c.isUnpaid
+        ? Colors.purple.withOpacity(.08)
+        : c.isPublicHoliday
+            ? Colors.red.withOpacity(.08)
+            : breakMissing
+                ? Colors.amber.withOpacity(.10)
+                : late
+                    ? Colors.red.withOpacity(.06)
+                    : otEligible
+                        ? Colors.orange.withOpacity(.07)
+                        : Colors.transparent;
+
+    return Container(
       height: 42,
+      color: rowColor,
       child: Row(
         children: [
           _tableCell(day.toString(), 55, bold: true),
@@ -1132,30 +1157,53 @@ class _AttendanceDialogState
         calculateMinutes(c.overtimeIn.text, c.overtimeOut.text);
   }
 
+  int _effectiveBreakMinutes(int actualBreakMinutes) {
+    return actualBreakMinutes < _allocatedBreakMinutes
+        ? _allocatedBreakMinutes
+        : actualBreakMinutes;
+  }
+
+  bool _breakFulfilled(AttendanceDayControllers c) {
+    return _calculateBreakMinutes(c) >= _allocatedBreakMinutes;
+  }
+
   bool _otAllowedForEmployee() {
-    // 10:30-hour employees (EIS not applicable) have no OT under your rule.
     return _requiredWorkHours <= 7.5;
+  }
+
+  int _rawOtMinutes(AttendanceDayControllers c) {
+    if (!_otAllowedForEmployee()) return 0;
+    final actualBreak = _calculateBreakMinutes(c);
+    final effectiveBreak = _effectiveBreakMinutes(actualBreak);
+    final net = (calculateWorkMinutes(c) - effectiveBreak)
+        .clamp(0, 24 * 60).toInt();
+    final requiredMinutes = (_requiredWorkHours * 60).round();
+    final extra = net - requiredMinutes;
+
+    // First 10 minutes beyond required working time are not OT.
+    return extra > _otThresholdMinutes
+        ? extra
+        : 0;
   }
 
   int _calculateDailyOtMinutes({
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
-    if (!c.otAuthorized || !_otAllowedForEmployee()) {
-      return 0;
-    }
+    if (!c.otAuthorized || !_otAllowedForEmployee()) return 0;
 
     final requiredMinutes = (_requiredWorkHours * 60).round();
     final extra = netWorkingMinutes - requiredMinutes;
-    return extra > 0 ? extra : 0;
+    return extra > _otThresholdMinutes ? extra : 0;
   }
 
   bool _otEligible(AttendanceDayControllers c) {
-    if (!_otAllowedForEmployee()) return false;
-    final net = (calculateWorkMinutes(c) - _calculateBreakMinutes(c))
-        .clamp(0, 24 * 60).toInt();
-    final requiredMinutes = (_requiredWorkHours * 60).round();
-    return net > requiredMinutes;
+    return _rawOtMinutes(c) > 0;
+  }
+
+  bool _isLate(AttendanceDayControllers c) {
+    final checkIn = parseTimeToMinutes(c.workingIn.text);
+    return checkIn != null && checkIn > _scheduledStartMinutes;
   }
 
   Widget _statusCell(
@@ -1177,10 +1225,15 @@ class _AttendanceDialogState
     }
 
     final otEligible = _otEligible(c);
+    final actualBreak = _calculateBreakMinutes(c);
+    final breakMissing = actualBreak < _allocatedBreakMinutes && netWorkingMinutes > 0;
+    final late = _isLate(c);
     final labels = <String>[];
-    if (c.otAuthorized) labels.add('OT');
-    if (c.isPublicHoliday) labels.add('PH');
+    if (late) labels.add('LATE');
+    if (otEligible) labels.add(c.otAuthorized ? 'OT AUTHORIZED' : 'OT AVAILABLE');
+    if (c.isPublicHoliday) labels.add('PUBLIC HOLIDAY');
     if (c.isUnpaid) labels.add('UNPAID');
+    if (breakMissing) labels.add('BREAK INCOMPLETE');
 
     return PopupMenuButton<String>(
       tooltip: 'Payroll options for day $day',
@@ -1216,7 +1269,7 @@ class _AttendanceDialogState
               Text(
                 otEligible || c.otAuthorized
                     ? 'OT Authorized'
-                    : 'OT Authorized (net hours not exceeded)',
+                    : 'OT Authorized (less than 10 min / break not fulfilled)',
               ),
             ],
           ),
@@ -1256,20 +1309,51 @@ class _AttendanceDialogState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
-          color: labels.isNotEmpty
-              ? const Color(0xFFE8F5E9)
-              : Colors.transparent,
+          color: c.isUnpaid
+              ? Colors.purple.withOpacity(.14)
+              : c.isPublicHoliday
+                  ? Colors.red.withOpacity(.14)
+                  : breakMissing
+                      ? Colors.amber.withOpacity(.18)
+                      : late
+                          ? Colors.red.withOpacity(.12)
+                          : otEligible
+                              ? Colors.orange.withOpacity(.14)
+                              : Colors.transparent,
           borderRadius: BorderRadius.circular(5),
+          border: Border.all(
+            color: c.isUnpaid
+                ? Colors.purple
+                : c.isPublicHoliday
+                    ? Colors.redAccent
+                    : breakMissing
+                        ? Colors.amber.shade700
+                        : late
+                            ? Colors.redAccent
+                            : otEligible
+                                ? Colors.orange
+                                : Colors.transparent,
+          ),
         ),
         child: Text(
           labels.isNotEmpty ? labels.join(' • ') : 'OPTIONS',
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w800,
-            color: labels.isNotEmpty
-                ? const Color(0xFF315AD9)
-                : Colors.black54,
+            fontSize: 8,
+            fontWeight: FontWeight.w900,
+            color: c.isUnpaid
+                ? Colors.purple.shade800
+                : c.isPublicHoliday
+                    ? Colors.red.shade800
+                    : breakMissing
+                        ? Colors.amber.shade900
+                        : late
+                            ? Colors.red.shade800
+                            : otEligible
+                                ? Colors.orange.shade900
+                                : Colors.black54,
           ),
         ),
       ),
@@ -1828,7 +1912,8 @@ class _AttendanceDialogState
       final c = controllers[i];
       final work = calculateWorkMinutes(c);
       final breaks = _calculateBreakMinutes(c);
-      final net = (work - breaks).clamp(0, 24 * 60).toInt();
+      final effectiveBreaks = _effectiveBreakMinutes(breaks);
+      final net = (work - effectiveBreaks).clamp(0, 24 * 60).toInt();
       final ot = _calculateDailyOtMinutes(
         c: c,
         netWorkingMinutes: net,
