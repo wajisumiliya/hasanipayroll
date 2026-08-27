@@ -12,33 +12,12 @@ import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ============================================================
-  // SUPABASE INITIALIZATION
-  // ============================================================
-
   await SupabaseService.initialize();
-
-  // ============================================================
-  // FIREBASE INITIALIZATION
-  // ============================================================
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  // ============================================================
-  // PUSH NOTIFICATION INITIALIZATION
-  // ============================================================
-
   await NotificationService.initialize();
-
   await AppService.instance.restore();
-
-  // ============================================================
-  // START APPLICATION
-  // ============================================================
-
   runApp(const HasaniPayrollApp());
 }
 
@@ -47,7 +26,6 @@ class HasaniPayrollApp extends StatelessWidget {
 
   Widget _homePage() {
     final user = AppService.instance.currentUser;
-
     if (user?.isAdmin == true) return const AdminDashboard();
     if (user?.isBranch == true) return const BranchPortal();
     if (user?.isEmployee == true) return const EmployeePortal();
@@ -58,101 +36,88 @@ class HasaniPayrollApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Hasani Books Payroll Portal',
-
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
         useMaterial3: true,
-
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF101A3A),
+          seedColor: const Color(0xFF263451),
           brightness: Brightness.light,
         ).copyWith(
-          primary: const Color(0xFF101A3A),
-          onPrimary: const Color(0xFFFFF8E8),
-          secondary: const Color(0xFFC89A45),
-          onSecondary: const Color(0xFF101A3A),
-          surface: const Color(0xFFFFFCF5),
-          onSurface: const Color(0xFF101A3A),
-          outline: const Color(0xFFD8CCB7),
+          primary: const Color(0xFF263451),
+          onPrimary: const Color(0xFFF7F3EA),
+          secondary: const Color(0xFFB68A3A),
+          onSecondary: const Color(0xFF263451),
+          surface: const Color(0xFFF7F3EA),
+          onSurface: const Color(0xFF263451),
+          outline: const Color(0xFFC9C0AD),
         ),
-
-        scaffoldBackgroundColor: const Color(0xFFF4EFE2),
-
+        scaffoldBackgroundColor: const Color(0xFFE9E5DC),
         textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Color(0xFF24304F)),
-          bodyMedium: TextStyle(color: Color(0xFF4E5870)),
+          bodyLarge: TextStyle(color: Color(0xFF34415B)),
+          bodyMedium: TextStyle(color: Color(0xFF5D6677)),
           titleLarge: TextStyle(
-            color: Color(0xFF101A3A),
+            color: Color(0xFF263451),
             fontWeight: FontWeight.w800,
           ),
           titleMedium: TextStyle(
-            color: Color(0xFF101A3A),
+            color: Color(0xFF263451),
             fontWeight: FontWeight.w700,
           ),
         ),
-
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF101A3A),
-          foregroundColor: Color(0xFFFFF8E8),
+          backgroundColor: Color(0xFF263451),
+          foregroundColor: Color(0xFFF7F3EA),
           elevation: 0,
           centerTitle: false,
         ),
-
         cardTheme: CardThemeData(
           elevation: 0,
-          color: Color(0xFFFFFCF5),
+          color: const Color(0xFFF7F3EA),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(
-              color: Color(0xFFE1D2B4),
-            ),
+            side: const BorderSide(color: Color(0xFFD4CBB9)),
           ),
         ),
-
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFFFFFDF8),
+          fillColor: const Color(0xFFFBF8F1),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD8CCB7)),
+            borderSide: const BorderSide(color: Color(0xFFC9C0AD)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD8CCB7)),
+            borderSide: const BorderSide(color: Color(0xFFC9C0AD)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(
-              color: Color(0xFFC89A45),
+              color: Color(0xFFB68A3A),
               width: 2,
             ),
           ),
         ),
-
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF101A3A),
-            foregroundColor: const Color(0xFFFFF8E8),
+            backgroundColor: const Color(0xFF263451),
+            foregroundColor: const Color(0xFFF7F3EA),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
-              side: const BorderSide(color: Color(0xFFC89A45)),
+              side: const BorderSide(color: Color(0xFFB68A3A)),
             ),
           ),
         ),
-
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF101A3A),
-            foregroundColor: const Color(0xFFFFF8E8),
+            backgroundColor: const Color(0xFF263451),
+            foregroundColor: const Color(0xFFF7F3EA),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
-              side: const BorderSide(color: Color(0xFFC89A45)),
+              side: const BorderSide(color: Color(0xFFB68A3A)),
             ),
           ),
         ),
       ),
-
       home: _homePage(),
     );
   }

@@ -556,7 +556,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF101A3A),
+      backgroundColor: const Color(0xFF263451),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -569,7 +569,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   right: 0,
                   child: Container(
                     height: compact ? 8 : 12,
-                    color: const Color(0xFFC89A45),
+                    color: const Color(0xFFB68A3A),
                   ),
                 ),
                 Center(
@@ -598,10 +598,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       padding: EdgeInsets.all(compact ? 22 : 32),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFCF5),
+        color: const Color(0xFFF7F3EA),
         borderRadius: BorderRadius.circular(compact ? 18 : 22),
         border: Border.all(
-          color: const Color(0xFFC89A45),
+          color: const Color(0xFFB68A3A),
           width: 1.2,
         ),
         boxShadow: const [
@@ -615,8 +615,6 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _logo(),
-
           const SizedBox(height: 22),
 
           Center(
@@ -624,7 +622,7 @@ class _LoginScreenState extends State<LoginScreen> {
               width: 54,
               height: 3,
               decoration: BoxDecoration(
-                color: const Color(0xFFC89A45),
+                color: const Color(0xFFB68A3A),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -638,7 +636,7 @@ class _LoginScreenState extends State<LoginScreen> {
             style: TextStyle(
               fontSize: 27,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF101A3A),
+              color: Color(0xFF263451),
             ),
             ),
           ),
@@ -774,9 +772,9 @@ class _LoginScreenState extends State<LoginScreen> {
               style:
               ElevatedButton.styleFrom(
                 backgroundColor:
-                const Color(0xFF101A3A),
+                const Color(0xFF263451),
                 foregroundColor:
-                const Color(0xFFFFF8E8),
+                const Color(0xFFF7F3EA),
                 disabledBackgroundColor:
                 const Color(0xFFB8B8B8),
                 elevation: 4,
@@ -786,7 +784,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius:
                   BorderRadius.circular(12),
                   side: const BorderSide(
-                    color: Color(0xFFC89A45),
+                    color: Color(0xFFB68A3A),
                   ),
                 ),
               ),
@@ -830,10 +828,10 @@ class _LoginScreenState extends State<LoginScreen> {
         height: 112,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF8E8),
+          color: const Color(0xFFFBF8F1),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0xFFC89A45),
+            color: const Color(0xFFB68A3A),
             width: 1.4,
           ),
         ),
@@ -861,7 +859,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   fontSize: 25,
                   fontWeight:
                   FontWeight.w900,
-                  color: Color(0xFF101A3A),
+                  color: Color(0xFF263451),
                   letterSpacing: 1,
                 ),
               ),
@@ -882,7 +880,7 @@ class _LoginScreenState extends State<LoginScreen> {
       padding:
       const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4EFE2),
+        color: const Color(0xFFE9E5DC),
         borderRadius:
         BorderRadius.circular(12),
         border: Border.all(
@@ -980,7 +978,7 @@ class _LoginScreenState extends State<LoginScreen> {
         BorderRadius.circular(12),
         borderSide:
         const BorderSide(
-          color: Color(0xFFC89A45),
+          color: Color(0xFFB68A3A),
           width: 2,
         ),
       ),
