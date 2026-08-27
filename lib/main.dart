@@ -44,14 +44,14 @@ class HasaniPayrollApp extends StatelessWidget {
           brightness: Brightness.light,
         ).copyWith(
           primary: const Color(0xFF263451),
-          onPrimary: const Color(0xFFF7F3EA),
-          secondary: const Color(0xFFB68A3A),
+          onPrimary: const Color(0xFFF3F5F8),
+          secondary: const Color(0xFF8B6F7A),
           onSecondary: const Color(0xFF263451),
-          surface: const Color(0xFFF7F3EA),
+          surface: const Color(0xFFF3F5F8),
           onSurface: const Color(0xFF263451),
-          outline: const Color(0xFFC9C0AD),
+          outline: const Color(0xFFC5CBD5),
         ),
-        scaffoldBackgroundColor: const Color(0xFFE9E5DC),
+        scaffoldBackgroundColor: const Color(0xFFE7EAF0),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(color: Color(0xFF34415B)),
           bodyMedium: TextStyle(color: Color(0xFF5D6677)),
@@ -66,13 +66,13 @@ class HasaniPayrollApp extends StatelessWidget {
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF263451),
-          foregroundColor: Color(0xFFF7F3EA),
+          foregroundColor: Color(0xFFF3F5F8),
           elevation: 0,
           centerTitle: false,
         ),
         cardTheme: CardThemeData(
           elevation: 0,
-          color: const Color(0xFFF7F3EA),
+          color: const Color(0xFFF3F5F8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: const BorderSide(color: Color(0xFFD4CBB9)),
@@ -83,16 +83,16 @@ class HasaniPayrollApp extends StatelessWidget {
           fillColor: const Color(0xFFFBF8F1),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFC9C0AD)),
+            borderSide: const BorderSide(color: Color(0xFFC5CBD5)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFC9C0AD)),
+            borderSide: const BorderSide(color: Color(0xFFC5CBD5)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(
-              color: Color(0xFFB68A3A),
+              color: Color(0xFF8B6F7A),
               width: 2,
             ),
           ),
@@ -100,20 +100,20 @@ class HasaniPayrollApp extends StatelessWidget {
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF263451),
-            foregroundColor: const Color(0xFFF7F3EA),
+            foregroundColor: const Color(0xFFF3F5F8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
-              side: const BorderSide(color: Color(0xFFB68A3A)),
+              side: const BorderSide(color: Color(0xFF8B6F7A)),
             ),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF263451),
-            foregroundColor: const Color(0xFFF7F3EA),
+            foregroundColor: const Color(0xFFF3F5F8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
-              side: const BorderSide(color: Color(0xFFB68A3A)),
+              side: const BorderSide(color: Color(0xFF8B6F7A)),
             ),
           ),
         ),

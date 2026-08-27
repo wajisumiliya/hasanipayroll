@@ -1393,6 +1393,7 @@ class _EmployeePortalState
       await PdfService.buildPayslip(
         employee: employee!,
         p: payroll,
+        history: records,
       );
 
       await Printing.layoutPdf(

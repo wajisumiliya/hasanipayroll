@@ -763,6 +763,12 @@ class AppService extends ChangeNotifier {
         data['other_earnings'] ??
             data['otherEarnings'],
       ),
+      housingAllowance: _doubleValue(
+        data['housing_allowance'] ?? data['housingAllowance'],
+      ),
+      travelAllowance: _doubleValue(
+        data['travel_allowance'] ?? data['travelAllowance'],
+      ),
       cutiUmum:
           _doubleValue(
         data['cuti_umum'] ??
@@ -790,6 +796,18 @@ class AppService extends ChangeNotifier {
       zakat:
           _doubleValue(
         data['zakat'],
+      ),
+      advanceDeduction: _doubleValue(
+        data['advance_deduction'] ?? data['advanceDeduction'],
+      ),
+      loanDeduction: _doubleValue(
+        data['loan_deduction'] ?? data['loanDeduction'],
+      ),
+      unpaidLeave: _doubleValue(
+        data['unpaid_leave'] ?? data['unpaidLeave'],
+      ),
+      otherDeductionAmount: _doubleValue(
+        data['other_deduction'] ?? data['otherDeduction'],
       ),
       epfEmployer:
           _doubleValue(
@@ -824,6 +842,20 @@ class AppService extends ChangeNotifier {
               data['bankAccount']
                   ?.toString() ??
               '',
+      bankName: data['bank_name']?.toString() ?? data['bankName']?.toString() ?? '',
+      storedGrossSalary: _nullableDoubleValue(
+        data['gross_salary'] ?? data['grossSalary'],
+      ),
+      storedNetSalary: _nullableDoubleValue(
+        data['net_salary'] ?? data['netSalary'],
+      ),
+      storedTotalDeductions: _nullableDoubleValue(
+        data['total_deductions'] ?? data['totalDeductions'],
+      ),
+      isPaid: _supabaseBool(data['is_paid'] ?? data['isPaid']),
+      paidAt: _supabaseDate(data['paid_at'] ?? data['paidAt']),
+      paymentReference: data['payment_reference']?.toString() ??
+          data['paymentReference']?.toString() ?? '',
       remarks:
           data['remarks']?.toString(),
       createdAt:
@@ -3895,6 +3927,11 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           value.toString(),
         ) ??
         0;
+  }
+
+  double? _nullableDoubleValue(dynamic value) {
+    if (value == null || value.toString().trim().isEmpty) return null;
+    return _doubleValue(value);
   }
 
   // ==========================================================================

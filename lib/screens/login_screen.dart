@@ -569,7 +569,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   right: 0,
                   child: Container(
                     height: compact ? 8 : 12,
-                    color: const Color(0xFFB68A3A),
+                    color: const Color(0xFF8B6F7A),
                   ),
                 ),
                 Center(
@@ -598,10 +598,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       padding: EdgeInsets.all(compact ? 22 : 32),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F3EA),
+        color: const Color(0xFFF3F5F8),
         borderRadius: BorderRadius.circular(compact ? 18 : 22),
         border: Border.all(
-          color: const Color(0xFFB68A3A),
+          color: const Color(0xFF8B6F7A),
           width: 1.2,
         ),
         boxShadow: const [
@@ -624,7 +624,7 @@ class _LoginScreenState extends State<LoginScreen> {
               width: 54,
               height: 3,
               decoration: BoxDecoration(
-                color: const Color(0xFFB68A3A),
+                color: const Color(0xFF8B6F7A),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -776,7 +776,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 backgroundColor:
                 const Color(0xFF263451),
                 foregroundColor:
-                const Color(0xFFF7F3EA),
+                const Color(0xFFF3F5F8),
                 disabledBackgroundColor:
                 const Color(0xFFB8B8B8),
                 elevation: 4,
@@ -786,7 +786,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius:
                   BorderRadius.circular(12),
                   side: const BorderSide(
-                    color: Color(0xFFB68A3A),
+                    color: Color(0xFF8B6F7A),
                   ),
                 ),
               ),
@@ -830,10 +830,10 @@ class _LoginScreenState extends State<LoginScreen> {
         height: 112,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFFBF8F1),
+          color: const Color(0xFFF9FAFC),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0xFFB68A3A),
+            color: const Color(0xFF8B6F7A),
             width: 1.4,
           ),
         ),
@@ -849,7 +849,7 @@ class _LoginScreenState extends State<LoginScreen> {
               alignment:
               Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E8),
+                color: const Color(0xFFF3F5F8),
                 borderRadius:
                 BorderRadius.circular(12),
               ),
@@ -980,7 +980,7 @@ class _LoginScreenState extends State<LoginScreen> {
         BorderRadius.circular(12),
         borderSide:
         const BorderSide(
-          color: Color(0xFFB68A3A),
+          color: Color(0xFF8B6F7A),
           width: 2,
         ),
       ),

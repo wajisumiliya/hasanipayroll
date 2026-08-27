@@ -31,6 +31,8 @@ class PayrollRecord {
   final double bonus;
   final double commission;
   final double otherEarnings;
+  final double housingAllowance;
+  final double travelAllowance;
 
   // --------------------------------------------------------------------------
   // EMPLOYEE DEDUCTIONS
@@ -44,6 +46,10 @@ class PayrollRecord {
   final double eisEmployee;
   final double pcb;
   final double zakat;
+  final double advanceDeduction;
+  final double loanDeduction;
+  final double unpaidLeave;
+  final double otherDeductionAmount;
 
   // --------------------------------------------------------------------------
   // EMPLOYER CONTRIBUTIONS
@@ -60,6 +66,13 @@ class PayrollRecord {
   final String newIcNo;
   final String bankCode;
   final String bankAccount;
+  final String bankName;
+  final double? storedGrossSalary;
+  final double? storedNetSalary;
+  final double? storedTotalDeductions;
+  final bool isPaid;
+  final DateTime? paidAt;
+  final String paymentReference;
 
   final String? remarks;
   final DateTime? createdAt;
@@ -80,6 +93,8 @@ class PayrollRecord {
     this.bonus = 0,
     this.commission = 0,
     this.otherEarnings = 0,
+    this.housingAllowance = 0,
+    this.travelAllowance = 0,
 
     // Employee deductions
     required this.cutiUmum,
@@ -88,6 +103,10 @@ class PayrollRecord {
     required this.eisEmployee,
     required this.pcb,
     required this.zakat,
+    this.advanceDeduction = 0,
+    this.loanDeduction = 0,
+    this.unpaidLeave = 0,
+    this.otherDeductionAmount = 0,
 
     // Employer contributions
     required this.epfEmployer,
@@ -98,6 +117,13 @@ class PayrollRecord {
     this.newIcNo = '',
     this.bankCode = '',
     this.bankAccount = '',
+    this.bankName = '',
+    this.storedGrossSalary,
+    this.storedNetSalary,
+    this.storedTotalDeductions,
+    this.isPaid = false,
+    this.paidAt,
+    this.paymentReference = '',
 
     this.remarks,
     this.createdAt,
@@ -115,7 +141,8 @@ class PayrollRecord {
   }
 
   double get otherDeduction {
-    return cutiUmum + zakat;
+    return cutiUmum + zakat + advanceDeduction + loanDeduction +
+        unpaidLeave + otherDeductionAmount;
   }
 
   // ==========================================================================
@@ -137,7 +164,9 @@ class PayrollRecord {
         overtime +
         bonus +
         commission +
-        otherEarnings;
+        otherEarnings +
+        housingAllowance +
+        travelAllowance;
   }
 
   double get totalEarnings {
@@ -153,7 +182,12 @@ class PayrollRecord {
   }
 
   double get totalDeductions {
-    return cutiUmum + statutoryDeductions;
+    return cutiUmum +
+        statutoryDeductions +
+        advanceDeduction +
+        loanDeduction +
+        unpaidLeave +
+        otherDeductionAmount;
   }
 
   double get netPay {
@@ -339,6 +373,10 @@ class PayrollRecord {
       commission: _doubleValue(json['commission']),
       otherEarnings:
       _doubleValue(json['otherEarnings']),
+      housingAllowance:
+      _doubleValue(json['housingAllowance'] ?? json['housing_allowance']),
+      travelAllowance:
+      _doubleValue(json['travelAllowance'] ?? json['travel_allowance']),
 
       cutiUmum: _doubleValue(
         json['cutiUmum'] ??
@@ -353,6 +391,18 @@ class PayrollRecord {
       _doubleValue(json['eisEmployee']),
       pcb: _doubleValue(json['pcb']),
       zakat: _doubleValue(json['zakat']),
+      advanceDeduction: _doubleValue(
+        json['advanceDeduction'] ?? json['advance_deduction'],
+      ),
+      loanDeduction: _doubleValue(
+        json['loanDeduction'] ?? json['loan_deduction'],
+      ),
+      unpaidLeave: _doubleValue(
+        json['unpaidLeave'] ?? json['unpaid_leave'],
+      ),
+      otherDeductionAmount: _doubleValue(
+        json['otherDeduction'] ?? json['other_deduction'],
+      ),
 
       epfEmployer:
       _doubleValue(json['epfEmployer']),
@@ -367,6 +417,21 @@ class PayrollRecord {
       _stringValue(json['bankCode']),
       bankAccount:
       _stringValue(json['bankAccount']),
+      bankName: _stringValue(json['bankName'] ?? json['bank_name']),
+      storedGrossSalary: _nullableDouble(
+        json['grossSalary'] ?? json['gross_salary'],
+      ),
+      storedNetSalary: _nullableDouble(
+        json['netSalary'] ?? json['net_salary'],
+      ),
+      storedTotalDeductions: _nullableDouble(
+        json['totalDeductions'] ?? json['total_deductions'],
+      ),
+      isPaid: _boolValue(json['isPaid'] ?? json['is_paid']),
+      paidAt: _parseNullableDate(json['paidAt'] ?? json['paid_at']),
+      paymentReference: _stringValue(
+        json['paymentReference'] ?? json['payment_reference'],
+      ),
 
       remarks:
       _nullableString(json['remarks']),
@@ -1079,4 +1144,9 @@ bool _boolValue(
     default:
       return defaultValue;
   }
+}
+
+double? _nullableDouble(dynamic value) {
+  if (value == null || value.toString().trim().isEmpty) return null;
+  return _doubleValue(value);
 }
