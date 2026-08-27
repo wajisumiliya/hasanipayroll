@@ -734,12 +734,16 @@ class AppService extends ChangeNotifier {
       elaunKedatangan:
           _doubleValue(
         data['elaun_kedatangan'] ??
-            data['elaunKedatangan'],
+            data['elaunKedatangan'] ??
+            data['food_allowance'] ??
+            data['foodAllowance'],
       ),
       elaunPerkhidmatan:
           _doubleValue(
         data['elaun_perkhidmatan'] ??
-            data['elaunPerkhidmatan'],
+            data['elaunPerkhidmatan'] ??
+            data['other_allowance'] ??
+            data['otherAllowance'],
       ),
       elaunKerajinan:
           _doubleValue(
