@@ -47,11 +47,6 @@ class PdfService {
       'ELAUN PERKHIDMATAN': p.elaunPerkhidmatan,
       'ELAUN KERAJINAN': p.elaunKerajinan,
       'OVERTIME': p.overtime,
-      'BONUS': p.bonus,
-      'COMMISSION': p.commission,
-      'OTHER EARNINGS': p.otherEarnings,
-      'HOUSING ALLOWANCE': p.housingAllowance,
-      'TRAVEL ALLOWANCE': p.travelAllowance,
     };
 
     final deductions = <String, double>{
@@ -66,15 +61,14 @@ class PdfService {
       'OTHER DEDUCTION': p.otherDeductionAmount,
     };
 
-    final employer = <String, double>{
-      'EMPLOYER EPF': p.epfEmployer,
-      'EMPLOYER SOCSO': p.socsoEmployer,
-      'EMPLOYER EIS': p.eisEmployer,
-    };
-
-    final calculatedGross = p.storedGrossSalary ?? p.totalEarnings;
-    final calculatedDeductions = p.storedTotalDeductions ?? p.totalDeductions;
-    final calculatedNet = p.storedNetSalary ?? p.netPay;
+    final calculatedGross = p.basicSalary +
+        p.fwSalary +
+        p.elaunKedatangan +
+        p.elaunPerkhidmatan +
+        p.elaunKerajinan +
+        p.overtime;
+    final calculatedDeductions = p.totalDeductions;
+    final calculatedNet = calculatedGross - calculatedDeductions;
 
     doc.addPage(
       pw.Page(
@@ -159,28 +153,18 @@ class PdfService {
                 _summaryRow(
                   'GROSS SALARY',
                   calculatedGross,
-                  ytd((record) => record.totalEarnings),
+                  ytd(_payslipGross),
                   'TOTAL DEDUCTIONS',
                   calculatedDeductions,
                   ytd((record) => record.totalDeductions),
                 ),
-                ...employer.entries.map(
-                  (entry) => _detailRow(
-                    '',
-                    0,
-                    0,
-                    entry.key,
-                    entry.value,
-                    ytd((record) => _employerValue(record, entry.key)),
-                  ),
-                ),
                 _summaryRow(
                   'NET INCOME',
                   calculatedNet,
-                  ytd((record) => record.netPay),
-                  'EMPLOYER COST',
-                  p.totalEmployerCost,
-                  ytd((record) => record.totalEmployerCost),
+                  ytd((record) => _payslipGross(record) - record.totalDeductions),
+                  '',
+                  0,
+                  0,
                 ),
               ],
             ),
@@ -189,7 +173,6 @@ class PdfService {
               children: [
                 _footerValue('PAYMENT REFERENCE', p.paymentReference),
                 _footerValue('PAID DATE', _date(p.paidAt)),
-                _footerValue('REMARKS', p.remarks ?? ''),
               ],
             ),
             pw.SizedBox(height: 12),
@@ -334,13 +317,17 @@ class PdfService {
       case 'ELAUN PERKHIDMATAN': return p.elaunPerkhidmatan;
       case 'ELAUN KERAJINAN': return p.elaunKerajinan;
       case 'OVERTIME': return p.overtime;
-      case 'BONUS': return p.bonus;
-      case 'COMMISSION': return p.commission;
-      case 'OTHER EARNINGS': return p.otherEarnings;
-      case 'HOUSING ALLOWANCE': return p.housingAllowance;
-      case 'TRAVEL ALLOWANCE': return p.travelAllowance;
       default: return 0;
     }
+  }
+
+  static double _payslipGross(PayrollRecord p) {
+    return p.basicSalary +
+        p.fwSalary +
+        p.elaunKedatangan +
+        p.elaunPerkhidmatan +
+        p.elaunKerajinan +
+        p.overtime;
   }
 
   static double _deductionValue(PayrollRecord p, String key) {
