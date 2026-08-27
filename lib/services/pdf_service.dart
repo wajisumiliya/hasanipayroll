@@ -12,6 +12,7 @@ class PdfService {
     required Employee employee,
     required PayrollRecord p,
     List<PayrollRecord> history = const [],
+    List<AttendanceRecord> attendance = const [],
   }) async {
     final doc = pw.Document();
     pw.MemoryImage? logo;
@@ -45,7 +46,8 @@ class PdfService {
         p.elaunKedatangan +
         p.elaunPerkhidmatan +
         p.elaunKerajinan +
-        p.overtime;
+        p.overtime +
+        p.cutiUmum;
     final calculatedDeductions = p.totalDeductions;
     final calculatedNet = calculatedGross - calculatedDeductions;
     final currentRows = <String, double>{
@@ -55,6 +57,7 @@ class PdfService {
       'ELAUN PERKHIDMATAN': p.elaunPerkhidmatan,
       'ELAUN KERAJINAN': p.elaunKerajinan,
       'NORMAL OT': p.overtime,
+      'CUTI UMUM': p.cutiUmum,
     };
 
     doc.addPage(
@@ -135,7 +138,15 @@ class PdfService {
               },
               children: [
                 _sixHeaderRow(),
-                ..._currentPayslipRows(currentRows, deductions, p),
+                ..._currentPayslipRows(
+                  currentRows,
+                  deductions,
+                  p,
+                  attendance.where((record) =>
+                      record.employeeId == p.employeeId &&
+                      record.date.year == p.period.year &&
+                      record.date.month == p.period.month).toList(),
+                ),
                 _sixSummaryRow(
                   'TOTAL', calculatedGross, 'TOTAL', calculatedDeductions,
                   'NET PAY', calculatedNet,
@@ -223,34 +234,33 @@ class PdfService {
     Map<String, double> income,
     Map<String, double> deductions,
     PayrollRecord current,
+    List<AttendanceRecord> attendance,
   ) {
     final incomeEntries = income.entries.toList();
     final deductionEntries = deductions.entries.toList();
-    final labels = <String>[
-      'WORKING DAYS',
-      'DAY WORK',
-      'NORMAL OT',
-      'REST OT',
-      'EARLY OUT',
-      'LATENESS',
-      'TIME OFF',
-    ];
+    final calendarDays = DateTime(current.period.year, current.period.month + 1, 0).day;
+    final workedDays = attendance.where(_isWorked).length;
+    final overtimeHours = attendance.fold<double>(0, (sum, record) => sum + _overtimeHours(record));
+    final earlyOutDays = attendance.where(_isEarlyOut).length;
+    final unpaidDays = attendance.where(_isUnpaid).length;
+    final others = <String, String>{
+      'WORKING DAYS': calendarDays.toString(),
+      'DAY WORK': workedDays.toString(),
+      'OVERTIME': overtimeHours.toStringAsFixed(2),
+      'EARLY OUT': earlyOutDays.toString(),
+      'TIME OFF': unpaidDays.toString(),
+    };
     return List.generate(9, (index) {
       final incomeEntry = index < incomeEntries.length ? incomeEntries[index] : null;
       final deductionEntry = index < deductionEntries.length ? deductionEntries[index] : null;
-      final otherLabel = index < labels.length ? labels[index] : '';
-      final otherValue = index == 0
-          ? (current.isPaid ? 'PAID' : 'UNPAID')
-          : index == 1
-              ? _date(current.paidAt)
-              : '';
+        final otherEntry = index < others.length ? others.entries.elementAt(index) : null;
       return pw.TableRow(children: [
         _cell(incomeEntry?.key ?? ''),
         _cell(_money(incomeEntry?.value ?? 0), right: true),
         _cell(deductionEntry?.key ?? ''),
         _cell(_money(deductionEntry?.value ?? 0), right: true),
-        _cell(otherLabel),
-        _cell(otherValue, right: true),
+        _cell(otherEntry?.key ?? ''),
+        _cell(otherEntry?.value ?? '', right: true),
       ]);
     });
   }
@@ -465,8 +475,50 @@ class PdfService {
       case 'ELAUN PERKHIDMATAN': return p.elaunPerkhidmatan;
       case 'ELAUN KERAJINAN': return p.elaunKerajinan;
       case 'OVERTIME': return p.overtime;
+      case 'CUTI UMUM': return p.cutiUmum;
       default: return 0;
     }
+  }
+
+  static bool _isWorked(AttendanceRecord record) {
+    final status = record.status.toLowerCase().trim();
+    return status != 'absent' && status != 'leave' && status != 'vacation' &&
+        (record.effectiveCheckIn.isNotEmpty || record.morningOut.isNotEmpty);
+  }
+
+  static bool _isUnpaid(AttendanceRecord record) {
+    final status = record.status.toLowerCase().trim();
+    return status == 'time off' || status == 'unpaid' || status == 'unpaid leave';
+  }
+
+  static bool _isEarlyOut(AttendanceRecord record) {
+    if (!_isWorked(record) || _isUnpaid(record)) return false;
+    final workedMinutes = _workMinutes(record);
+    return workedMinutes > 0 && workedMinutes < 630;
+  }
+
+  static double _overtimeHours(AttendanceRecord record) {
+    if (!record.otAuthorized) return 0;
+    final start = _minutes(record.overtimeIn);
+    final end = _minutes(record.overtimeOut);
+    if (start == null || end == null || end <= start) return 0;
+    return (end - start) / 60.0;
+  }
+
+  static int _workMinutes(AttendanceRecord record) {
+    final start = _minutes(record.effectiveCheckIn);
+    final end = _minutes(record.effectiveCheckOut);
+    if (start == null || end == null || end <= start) return 0;
+    return end - start;
+  }
+
+  static int? _minutes(String value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(value.trim());
+    if (match == null) return null;
+    final hour = int.tryParse(match.group(1)!);
+    final minute = int.tryParse(match.group(2)!);
+    if (hour == null || minute == null || hour > 23 || minute > 59) return null;
+    return hour * 60 + minute;
   }
 
   static double _payslipGross(PayrollRecord p) {

@@ -808,7 +808,10 @@ class AppService extends ChangeNotifier {
         data['loan_deduction'] ?? data['loanDeduction'],
       ),
       unpaidLeave: _doubleValue(
-        data['unpaid_leave'] ?? data['unpaidLeave'],
+        data['unpaid_leave'] ??
+            data['unpaidLeave'] ??
+            data['unpaid_deduction'] ??
+            data['unpaidDeduction'],
       ),
       otherDeductionAmount: _doubleValue(
         data['other_deduction'] ?? data['otherDeduction'],

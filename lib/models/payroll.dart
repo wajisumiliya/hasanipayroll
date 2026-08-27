@@ -166,7 +166,8 @@ class PayrollRecord {
         commission +
         otherEarnings +
         housingAllowance +
-        travelAllowance;
+        travelAllowance +
+        cutiUmum;
   }
 
   double get totalEarnings {
@@ -182,8 +183,7 @@ class PayrollRecord {
   }
 
   double get totalDeductions {
-    return cutiUmum +
-        statutoryDeductions +
+    return statutoryDeductions +
         advanceDeduction +
         loanDeduction +
         unpaidLeave +
@@ -398,7 +398,10 @@ class PayrollRecord {
         json['loanDeduction'] ?? json['loan_deduction'],
       ),
       unpaidLeave: _doubleValue(
-        json['unpaidLeave'] ?? json['unpaid_leave'],
+        json['unpaidLeave'] ??
+            json['unpaid_leave'] ??
+            json['unpaidDeduction'] ??
+            json['unpaid_deduction'],
       ),
       otherDeductionAmount: _doubleValue(
         json['otherDeduction'] ?? json['other_deduction'],

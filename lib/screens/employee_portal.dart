@@ -1394,6 +1394,7 @@ class _EmployeePortalState
         employee: employee!,
         p: payroll,
         history: records,
+        attendance: service.employeeAttendance(employeeId),
       );
 
       await Printing.layoutPdf(
