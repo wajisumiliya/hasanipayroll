@@ -31,6 +31,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
 
   excel: ^4.0.6
+  archive: ^3.6.1
   file_saver: ^0.2.14
 
 dev_dependencies:

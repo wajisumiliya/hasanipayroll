@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:flutter/services.dart' show ByteData, rootBundle;
 import 'package:excel/excel.dart' as xls;
+import 'package:archive/archive.dart';
 import 'package:file_saver/file_saver.dart';
 import 'dart:typed_data';
 import '../screens/supabase_service.dart';
@@ -6311,7 +6312,8 @@ Future<void> _exportPayrollBranchExcel(
       templateData.lengthInBytes,
     );
 
-    final excel = xls.Excel.decodeBytes(templateBytes);
+    final compatibleTemplateBytes = _normalizeExcelTemplate(templateBytes);
+    final excel = xls.Excel.decodeBytes(compatibleTemplateBytes);
     final sheet = excel['Sheet1'];
 
     // --------------------------------------------------------------------------
@@ -6684,6 +6686,33 @@ Future<void> _exportPayrollBranchExcel(
   } catch (e) {
     _message('Excel export failed: $e');
   }
+}
+
+Uint8List _normalizeExcelTemplate(Uint8List bytes) {
+  final archive = ZipDecoder().decodeBytes(bytes);
+  final normalized = Archive();
+
+  for (final file in archive) {
+    if (file.name != 'xl/styles.xml') {
+      normalized.addFile(file);
+      continue;
+    }
+
+    final styles = String.fromCharCodes(file.content as List<int>);
+    final updatedStyles = styles.replaceAll(
+      'numFmtId="43"',
+      'numFmtId="167"',
+    );
+    normalized.addFile(
+      ArchiveFile(file.name, updatedStyles.length, updatedStyles),
+    );
+  }
+
+  final encoded = ZipEncoder().encode(normalized);
+  if (encoded == null) {
+    throw Exception('Excel template could not be prepared.');
+  }
+  return Uint8List.fromList(encoded);
 }
 
 // ============================================================================
