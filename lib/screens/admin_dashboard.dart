@@ -6520,7 +6520,7 @@ Future<void> _exportPayrollBranchExcel(
           const [
             'unpaid_deduction',
             'cuti_tanpa_gaji',
-            'cuti_tanpa_gaji_deduction',
+            'late_deduction',
           ],
         ),
       );
@@ -6531,7 +6531,7 @@ Future<void> _exportPayrollBranchExcel(
 
       // "POTONGAN" is the remaining employee deductions after KWSP,
       // PERKESO and SIP, which already have their own columns.
-      final otherDeductions = money(payroll['late_deduction']) +
+      //final otherDeductions = money(payroll['late_deduction']) +
           money(payroll['pcb']) +
           money(payroll['zakat']);
 
