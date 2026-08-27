@@ -300,15 +300,6 @@ class PdfService {
     );
   }
 
-  static double _employerValue(PayrollRecord p, String key) {
-    switch (key) {
-      case 'EMPLOYER EPF': return p.epfEmployer;
-      case 'EMPLOYER SOCSO': return p.socsoEmployer;
-      case 'EMPLOYER EIS': return p.eisEmployer;
-      default: return 0;
-    }
-  }
-
   static double _incomeValue(PayrollRecord p, String key) {
     switch (key) {
       case 'BASIC SALARY': return p.basicSalary;
