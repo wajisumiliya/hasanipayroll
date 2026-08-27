@@ -65,29 +65,91 @@ class HasaniPayrollApp extends StatelessWidget {
         useMaterial3: true,
 
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2D55D8),
-          primary: const Color(0xFF2D55D8),
+          seedColor: const Color(0xFF101A3A),
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: const Color(0xFF101A3A),
+          onPrimary: const Color(0xFFFFF8E8),
+          secondary: const Color(0xFFC89A45),
+          onSecondary: const Color(0xFF101A3A),
+          surface: const Color(0xFFFFFCF5),
+          onSurface: const Color(0xFF101A3A),
+          outline: const Color(0xFFD8CCB7),
         ),
 
-        scaffoldBackgroundColor: const Color(0xFFF5F7FB),
+        scaffoldBackgroundColor: const Color(0xFFF4EFE2),
+
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Color(0xFF24304F)),
+          bodyMedium: TextStyle(color: Color(0xFF4E5870)),
+          titleLarge: TextStyle(
+            color: Color(0xFF101A3A),
+            fontWeight: FontWeight.w800,
+          ),
+          titleMedium: TextStyle(
+            color: Color(0xFF101A3A),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
 
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
+          backgroundColor: Color(0xFF101A3A),
+          foregroundColor: Color(0xFFFFF8E8),
           elevation: 0,
           centerTitle: false,
         ),
 
         cardTheme: CardThemeData(
           elevation: 0,
-          color: Colors.white,
+          color: Color(0xFFFFFCF5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(
+              color: Color(0xFFE1D2B4),
+            ),
           ),
         ),
 
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFFFFDF8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD8CCB7)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD8CCB7)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Color(0xFFC89A45),
+              width: 2,
+            ),
+          ),
+        ),
+
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF101A3A),
+            foregroundColor: const Color(0xFFFFF8E8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: Color(0xFFC89A45)),
+            ),
+          ),
+        ),
+
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF101A3A),
+            foregroundColor: const Color(0xFFFFF8E8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: Color(0xFFC89A45)),
+            ),
+          ),
         ),
       ),
 
