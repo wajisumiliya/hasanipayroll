@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/payroll.dart';
@@ -129,6 +130,8 @@ class AppService extends ChangeNotifier {
 
   static final AppService instance =
       AppService._();
+
+  static const String _currentUserStorageKey = 'hasani_current_user';
 
   SupabaseClient get _supabase =>
       Supabase.instance.client;
@@ -411,6 +414,20 @@ class AppService extends ChangeNotifier {
 
   Future<void> restore() async {
     try {
+      final preferences = await SharedPreferences.getInstance();
+      final storedUser = preferences.getString(_currentUserStorageKey);
+
+      if (storedUser != null && storedUser.isNotEmpty) {
+        _currentUser = app_user.fromJson(
+          Map<String, dynamic>.from(jsonDecode(storedUser) as Map),
+        );
+      }
+    } catch (e) {
+      debugPrint('Restore current user error: $e');
+      await _clearStoredUser();
+    }
+
+    try {
       await loadUsersFromSupabase();
     } catch (e) {
       debugPrint(
@@ -443,6 +460,22 @@ class AppService extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  Future<void> _persistCurrentUser() async {
+    final user = _currentUser;
+    if (user == null) return;
+
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      _currentUserStorageKey,
+      jsonEncode(user.toJson()),
+    );
+  }
+
+  Future<void> _clearStoredUser() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_currentUserStorageKey);
   }
 
   // ==========================================================================
@@ -1019,6 +1052,7 @@ if (role == 'employee' && firstLogin) {
 );
 
       _firstLoginOtpState = null;
+      await _persistCurrentUser();
       notifyListeners();
       await _loadDataForCurrentUser();
       return null;
@@ -1189,6 +1223,7 @@ return 'OTP verification failed: $e';
 );
 
       _firstLoginOtpState = null;
+      await _persistCurrentUser();
       notifyListeners();
       await _loadDataForCurrentUser();
       return null;
@@ -1231,6 +1266,7 @@ return 'OTP verification failed: $e';
 
   Future<void> logout() async {
     _currentUser = null;
+    await _clearStoredUser();
 
     notifyListeners();
   }
