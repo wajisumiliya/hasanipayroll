@@ -16,60 +16,6 @@ import 'supabase_service.dart';
 ///   authorizes OT.
 /// The payroll service should consume these attendance totals.
 ///
-
-/// Header background: blue on the left and red on the right with a smooth
-/// curved split. The existing header content remains unchanged.
-class _BlueRedCurvedHeaderPainter extends CustomPainter {
-  const _BlueRedCurvedHeaderPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const blue = Color(0xFF315AD9);
-    const red = Color(0xFFD32F2F);
-
-    canvas.drawRect(Offset.zero & size, Paint()..color = blue);
-
-    final split = Path()
-      ..moveTo(size.width * 0.55, 0)
-      ..cubicTo(
-        size.width * 0.52,
-        size.height * 0.20,
-        size.width * 0.50,
-        size.height * 0.78,
-        size.width * 0.43,
-        size.height,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(size.width, 0)
-      ..close();
-
-    canvas.drawPath(split, Paint()..color = red);
-
-    final curve = Path()
-      ..moveTo(size.width * 0.55, 0)
-      ..cubicTo(
-        size.width * 0.52,
-        size.height * 0.20,
-        size.width * 0.50,
-        size.height * 0.78,
-        size.width * 0.43,
-        size.height,
-      );
-
-    canvas.drawPath(
-      curve,
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _BlueRedCurvedHeaderPainter oldDelegate) => false;
-}
-
 class AttendanceDialog extends StatefulWidget {
   const AttendanceDialog({
     super.key,
@@ -110,12 +56,6 @@ class _AttendanceDialogState
 
   double _requiredWorkHours = 7.5;
   bool _salaryRuleLoaded = false;
-
-  // Attendance rules requested by Admin.
-  static const int _allocatedBreakMinutes = 60;
-  static const int _otThresholdMinutes = 10;
-  static const int _scheduledStartMinutes = 8 * 60; // 08:00
-
 
   // ==========================================================================
   // INIT / DISPOSE
@@ -352,6 +292,10 @@ class _AttendanceDialogState
         c.overtimeOut.text =
             (row['overtime_out'] ?? '').toString();
 
+        c.status =
+            (row['status'] ?? '').toString().trim();
+        c.otRequested =
+            _toBool(row['ot_requested']);
         c.otAuthorized =
             _toBool(row['ot_authorized']);
         c.isUnpaid =
@@ -567,7 +511,7 @@ class _AttendanceDialogState
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: submitted ? Colors.green.shade50 : Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.zero,
                       ),
                       child: Text(
                         submitted ? 'Submitted by Branch' : 'Not Submitted',
@@ -705,14 +649,12 @@ class _AttendanceDialogState
                 afternoonMinutes +
                 eveningBreakMinutes;
 
-        // The employee must fulfill the allocated 01:00 break.
-        // If less than 01:00 is recorded, the missing break time is treated
-        // as break time first; it cannot become OT.
-        final effectiveBreakMinutes = _effectiveBreakMinutes(breakMinutes);
-
+        // NET WORKING = WORKING PERIOD - ALL BREAKS.
         final netWorkingMinutes =
-            (workMinutes - effectiveBreakMinutes).clamp(0, 24 * 60).toInt();
+            (workMinutes - breakMinutes).clamp(0, 24 * 60).toInt();
 
+        // OT is available only when the employee exceeds the required
+        // working hours AND Admin has explicitly authorized OT.
         final dailyOtMinutes = _calculateDailyOtMinutes(
           c: row,
           netWorkingMinutes: netWorkingMinutes,
@@ -759,9 +701,11 @@ class _AttendanceDialogState
           overtimeOut:
           row.overtimeOut.text.trim(),
 
-          // Admin authorization is retained for the attendance row.
-          otAuthorized:
-          row.otAuthorized,
+          status: row.status.trim(),
+          otRequested: row.otRequested,
+          otAuthorized: widget.adminOnlyAfterSubmit
+              ? row.otAuthorized
+              : false,
 
           // CALCULATED
           workMinutes:
@@ -781,7 +725,10 @@ class _AttendanceDialogState
               'net_working_duration': formatMinutes(netWorkingMinutes),
               'overtime_minutes': dailyOtMinutes,
               'overtime_duration': formatMinutes(dailyOtMinutes),
-              'ot_authorized': row.otAuthorized ? 'true' : 'false',
+              'ot_requested': row.otRequested,
+              'ot_authorized': widget.adminOnlyAfterSubmit
+                  ? row.otAuthorized
+                  : false,
               'is_unpaid': row.isUnpaid,
               'is_public_holiday': row.isPublicHoliday,
             })
@@ -870,98 +817,79 @@ class _AttendanceDialogState
     final department = _department();
     final section = _section();
 
-    // Give the header a fixed height. This is important because the curved
-    // CustomPaint and Stack must receive real constraints; otherwise Flutter
-    // can produce "Cannot hit test a render box with no size" errors.
-    return SizedBox(
-      height: 72,
-      width: double.infinity,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 10,
-        ),
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          color: Color(0xFF315AD9),
-        ),
-        child: Stack(
-          children: [
-            const Positioned.fill(
-              child: CustomPaint(
-                painter: _BlueRedCurvedHeaderPainter(),
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 14,
+      ),
+      color: const Color(0xFF15965D),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 23,
+            backgroundColor: Colors.white,
+            child: Icon(
+              Icons.person,
+              color: Color(0xFF15965D),
+              size: 27,
             ),
-            Row(
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  radius: 23,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.person,
-                    color: Color(0xFF315AD9),
-                    size: 27,
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        [id, department, section]
-                            .where((v) => v.isNotEmpty)
-                            .join(' • '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    id,
+                    department,
+                    section,
+                  ]
+                      .where(
+                        (v) => v.isNotEmpty,
+                  )
+                      .join(' • '),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      DateFormat('MMMM yyyy').format(widget.month),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      submitted ? 'SUBMITTED' : 'DRAFT',
-                      style: TextStyle(
-                        color: submitted ? Colors.white : Colors.white70,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                DateFormat('MMMM yyyy').format(widget.month),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                submitted ? 'SUBMITTED' : 'DRAFT',
+                style: TextStyle(
+                  color: submitted ? Colors.white : Colors.white70,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1072,32 +1000,15 @@ class _AttendanceDialogState
       ) {
     final total = calculateWorkMinutes(c);
     final breakMinutes = _calculateBreakMinutes(c);
-    final effectiveBreakMinutes = _effectiveBreakMinutes(breakMinutes);
     final netWorkingMinutes =
-        (total - effectiveBreakMinutes).clamp(0, 24 * 60).toInt();
+        (total - breakMinutes).clamp(0, 24 * 60).toInt();
     final overtimeMinutes = _calculateDailyOtMinutes(
       c: c,
       netWorkingMinutes: netWorkingMinutes,
     );
 
-    final late = _isLate(c);
-    final breakMissing = _calculateBreakMinutes(c) < _allocatedBreakMinutes && total > 0;
-    final otEligible = _otEligible(c);
-    final rowColor = c.isUnpaid
-        ? Colors.purple.withOpacity(.08)
-        : c.isPublicHoliday
-            ? Colors.red.withOpacity(.08)
-            : breakMissing
-                ? Colors.amber.withOpacity(.10)
-                : late
-                    ? Colors.red.withOpacity(.06)
-                    : otEligible
-                        ? Colors.orange.withOpacity(.07)
-                        : Colors.transparent;
-
-    return Container(
+    return SizedBox(
       height: 42,
-      color: rowColor,
       child: Row(
         children: [
           _tableCell(day.toString(), 55, bold: true),
@@ -1157,53 +1068,33 @@ class _AttendanceDialogState
         calculateMinutes(c.overtimeIn.text, c.overtimeOut.text);
   }
 
-  int _effectiveBreakMinutes(int actualBreakMinutes) {
-    return actualBreakMinutes < _allocatedBreakMinutes
-        ? _allocatedBreakMinutes
-        : actualBreakMinutes;
-  }
-
-  bool _breakFulfilled(AttendanceDayControllers c) {
-    return _calculateBreakMinutes(c) >= _allocatedBreakMinutes;
-  }
-
   bool _otAllowedForEmployee() {
+    // 10:30-hour employees (EIS not applicable) have no OT under your rule.
     return _requiredWorkHours <= 7.5;
-  }
-
-  int _rawOtMinutes(AttendanceDayControllers c) {
-    if (!_otAllowedForEmployee()) return 0;
-    final actualBreak = _calculateBreakMinutes(c);
-    final effectiveBreak = _effectiveBreakMinutes(actualBreak);
-    final net = (calculateWorkMinutes(c) - effectiveBreak)
-        .clamp(0, 24 * 60).toInt();
-    final requiredMinutes = (_requiredWorkHours * 60).round();
-    final extra = net - requiredMinutes;
-
-    // First 10 minutes beyond required working time are not OT.
-    return extra > _otThresholdMinutes
-        ? extra
-        : 0;
   }
 
   int _calculateDailyOtMinutes({
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
-    if (!c.otAuthorized || !_otAllowedForEmployee()) return 0;
+    // Calculate the exact OT entitlement from actual NET working minutes.
+    // Authorization controls whether payroll pays it, not whether it is
+    // calculated/saved. This keeps Branch request and Admin approval in sync.
+    if (!_otAllowedForEmployee()) {
+      return 0;
+    }
 
-    final requiredMinutes = (_requiredWorkHours * 60).round();
+    const requiredMinutes = 450; // 7:30 NET for reduced/reduced1
     final extra = netWorkingMinutes - requiredMinutes;
-    return extra > _otThresholdMinutes ? extra : 0;
+    return extra > 0 ? extra : 0;
   }
 
   bool _otEligible(AttendanceDayControllers c) {
-    return _rawOtMinutes(c) > 0;
-  }
-
-  bool _isLate(AttendanceDayControllers c) {
-    final checkIn = parseTimeToMinutes(c.workingIn.text);
-    return checkIn != null && checkIn > _scheduledStartMinutes;
+    if (!_otAllowedForEmployee()) return false;
+    final net = (calculateWorkMinutes(c) - _calculateBreakMinutes(c))
+        .clamp(0, 24 * 60).toInt();
+    final requiredMinutes = (_requiredWorkHours * 60).round();
+    return net > requiredMinutes;
   }
 
   Widget _statusCell(
@@ -1211,152 +1102,226 @@ class _AttendanceDialogState
     AttendanceDayControllers c,
     int netWorkingMinutes,
   ) {
-    if (!_isAdminView()) {
-      return Text(
-        netWorkingMinutes > 0 ? 'RECORDED' : '-',
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: netWorkingMinutes > 0
-              ? const Color(0xFF315AD9)
-              : Colors.black38,
-        ),
-      );
+    final hasWorkingTime =
+        c.workingIn.text.trim().isNotEmpty &&
+        c.workingOut.text.trim().isNotEmpty &&
+        c.workingIn.text.trim() != '-' &&
+        c.workingOut.text.trim() != '-';
+
+    final breakMinutes = _calculateBreakMinutes(c);
+    final requiredMinutes = (_requiredWorkHours * 60).round();
+    final extraMinutes = netWorkingMinutes > requiredMinutes
+        ? netWorkingMinutes - requiredMinutes
+        : 0;
+    final breakFulfilled = breakMinutes >= 60;
+    final otEligible = _otAllowedForEmployee() &&
+        breakFulfilled &&
+        extraMinutes > 10;
+
+    String effectiveStatus = c.status.trim();
+    if (effectiveStatus.isEmpty) {
+      if (c.isPublicHoliday) {
+        effectiveStatus = 'PH';
+      } else if (c.isUnpaid) {
+        effectiveStatus = 'UNPAID';
+      } else if (hasWorkingTime) {
+        final checkIn = parseTimeToMinutes(c.workingIn.text);
+        effectiveStatus =
+            checkIn != null && checkIn > 480 ? 'Late' : 'Present';
+      } else {
+        effectiveStatus = 'OFF';
+      }
     }
 
-    final otEligible = _otEligible(c);
-    final actualBreak = _calculateBreakMinutes(c);
-    final breakMissing = actualBreak < _allocatedBreakMinutes && netWorkingMinutes > 0;
-    final late = _isLate(c);
-    final labels = <String>[];
-    if (late) labels.add('LATE');
-    if (otEligible) labels.add(c.otAuthorized ? 'OT AUTHORIZED' : 'OT AVAILABLE');
-    if (c.isPublicHoliday) labels.add('PUBLIC HOLIDAY');
-    if (c.isUnpaid) labels.add('UNPAID');
-    if (breakMissing) labels.add('BREAK INCOMPLETE');
+    Color background;
+    Color foreground;
+    switch (effectiveStatus) {
+      case 'Late':
+        background = const Color(0xFFFFE0B2);
+        foreground = const Color(0xFFE65100);
+        break;
+      case 'OFF':
+        background = const Color(0xFFECEFF1);
+        foreground = const Color(0xFF455A64);
+        break;
+      case 'MC':
+        background = const Color(0xFFFFCDD2);
+        foreground = const Color(0xFFC62828);
+        break;
+      case 'PL':
+      case 'AL':
+        background = const Color(0xFFE1BEE7);
+        foreground = const Color(0xFF6A1B9A);
+        break;
+      case 'EL':
+        background = const Color(0xFFBBDEFB);
+        foreground = const Color(0xFF1565C0);
+        break;
+      case 'PH':
+        background = const Color(0xFFFFCDD2);
+        foreground = const Color(0xFFB71C1C);
+        break;
+      case 'UNPAID':
+        background = const Color(0xFFD1C4E9);
+        foreground = const Color(0xFF4527A0);
+        break;
+      default:
+        background = const Color(0xFFE8F5E9);
+        foreground = const Color(0xFF2E7D32);
+    }
+
+    String otLabel = '';
+    if (c.otAuthorized) {
+      otLabel = 'OT APPROVED';
+    } else if (c.otRequested) {
+      otLabel = 'OT REQUESTED';
+    } else if (otEligible) {
+      otLabel = 'OT AVAILABLE';
+    }
+
+    final labels = <String>[effectiveStatus];
+    if (otLabel.isNotEmpty) labels.add(otLabel);
+    if (hasWorkingTime && !breakFulfilled) labels.add('BREAK < 1H');
+
+    final child = Container(
+      width: double.infinity,
+      height: double.infinity,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      color: background,
+      child: Text(
+        labels.join(' • '),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 8.5,
+          fontWeight: FontWeight.w800,
+          color: foreground,
+        ),
+      ),
+    );
+
+    if (!_canEdit) return child;
 
     return PopupMenuButton<String>(
-      tooltip: 'Payroll options for day $day',
-      enabled: _canEdit,
+      tooltip: 'Status / OT for day $day',
       padding: EdgeInsets.zero,
       onSelected: (value) {
         setState(() {
-          if (value == 'ot' && otEligible) {
-            c.otAuthorized = !c.otAuthorized;
-          } else if (value == 'unpaid') {
-            c.isUnpaid = !c.isUnpaid;
-          } else if (value == 'ph') {
-            c.isPublicHoliday = !c.isPublicHoliday;
+          switch (value) {
+            case 'OFF':
+            case 'MC':
+            case 'PL':
+            case 'AL':
+            case 'EL':
+            case 'PH':
+            case 'UNPAID':
+              c.status = value;
+              c.isPublicHoliday = value == 'PH';
+              c.isUnpaid = value == 'UNPAID';
+              if (!hasWorkingTime) {
+                c.otRequested = false;
+                c.otAuthorized = false;
+              }
+              break;
+            case 'CLEAR_STATUS':
+              c.status = '';
+              c.isPublicHoliday = false;
+              c.isUnpaid = false;
+              break;
+            case 'REQUEST_OT':
+              if (!_isAdminView() && otEligible) {
+                c.otRequested = true;
+                c.otAuthorized = false;
+              }
+              break;
+            case 'CANCEL_OT':
+              c.otRequested = false;
+              c.otAuthorized = false;
+              break;
+            case 'APPROVE_OT':
+              if (_isAdminView() && c.otRequested && otEligible) {
+                c.otAuthorized = true;
+              }
+              break;
+            case 'REJECT_OT':
+              if (_isAdminView()) {
+                c.otRequested = false;
+                c.otAuthorized = false;
+              }
+              break;
           }
         });
       },
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          value: 'ot',
-          enabled: otEligible || c.otAuthorized,
-          child: Row(
-            children: [
-              Icon(
+      itemBuilder: (context) {
+        final items = <PopupMenuEntry<String>>[
+          const PopupMenuItem(value: 'OFF', child: Text('OFF')),
+          const PopupMenuItem(value: 'MC', child: Text('MC')),
+          const PopupMenuItem(value: 'PL', child: Text('PL')),
+          const PopupMenuItem(value: 'AL', child: Text('AL')),
+          const PopupMenuItem(value: 'EL', child: Text('EL')),
+          const PopupMenuItem(
+            value: 'PH',
+            child: Text('PH - PUBLIC HOLIDAY'),
+          ),
+          const PopupMenuItem(
+            value: 'UNPAID',
+            child: Text('UNPAID'),
+          ),
+          const PopupMenuDivider(),
+        ];
+
+        if (_isAdminView()) {
+          items.add(
+            PopupMenuItem(
+              value: 'APPROVE_OT',
+              enabled: c.otRequested && otEligible,
+              child: Text(
                 c.otAuthorized
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                size: 19,
-                color: otEligible || c.otAuthorized
-                    ? Colors.orange
-                    : Colors.grey,
+                    ? 'OT APPROVED'
+                    : (c.otRequested && otEligible
+                        ? 'APPROVE OT'
+                        : 'APPROVE OT (request required)'),
               ),
-              const SizedBox(width: 8),
-              Text(
-                otEligible || c.otAuthorized
-                    ? 'OT Authorized'
-                    : 'OT Authorized (less than 10 min / break not fulfilled)',
+            ),
+          );
+          items.add(
+            PopupMenuItem(
+              value: 'REJECT_OT',
+              enabled: c.otRequested || c.otAuthorized,
+              child: const Text('REJECT OT'),
+            ),
+          );
+        } else {
+          items.add(
+            PopupMenuItem(
+              value: 'REQUEST_OT',
+              enabled: otEligible && !c.otRequested,
+              child: Text(
+                otEligible
+                    ? 'REQUEST OT'
+                    : 'REQUEST OT (break ≥ 1H and >10 min extra required)',
               ),
-            ],
+            ),
+          );
+          items.add(
+            PopupMenuItem(
+              value: 'CANCEL_OT',
+              enabled: c.otRequested,
+              child: const Text('CANCEL OT REQUEST'),
+            ),
+          );
+        }
+
+        items.add(const PopupMenuDivider());
+        items.add(
+          const PopupMenuItem(
+            value: 'CLEAR_STATUS',
+            child: Text('CLEAR STATUS'),
           ),
-        ),
-        PopupMenuItem<String>(
-          value: 'unpaid',
-          child: Row(
-            children: [
-              Icon(
-                c.isUnpaid
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                size: 19,
-              ),
-              const SizedBox(width: 8),
-              const Text('Unpaid'),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'ph',
-          child: Row(
-            children: [
-              Icon(
-                c.isPublicHoliday
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                size: 19,
-                color: Colors.redAccent,
-              ),
-              const SizedBox(width: 8),
-              const Text('Public Holiday'),
-            ],
-          ),
-        ),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        decoration: BoxDecoration(
-          color: c.isUnpaid
-              ? Colors.purple.withOpacity(.14)
-              : c.isPublicHoliday
-                  ? Colors.red.withOpacity(.14)
-                  : breakMissing
-                      ? Colors.amber.withOpacity(.18)
-                      : late
-                          ? Colors.red.withOpacity(.12)
-                          : otEligible
-                              ? Colors.orange.withOpacity(.14)
-                              : Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(
-            color: c.isUnpaid
-                ? Colors.purple
-                : c.isPublicHoliday
-                    ? Colors.redAccent
-                    : breakMissing
-                        ? Colors.amber.shade700
-                        : late
-                            ? Colors.redAccent
-                            : otEligible
-                                ? Colors.orange
-                                : Colors.transparent,
-          ),
-        ),
-        child: Text(
-          labels.isNotEmpty ? labels.join(' • ') : 'OPTIONS',
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            color: c.isUnpaid
-                ? Colors.purple.shade800
-                : c.isPublicHoliday
-                    ? Colors.red.shade800
-                    : breakMissing
-                        ? Colors.amber.shade900
-                        : late
-                            ? Colors.red.shade800
-                            : otEligible
-                                ? Colors.orange.shade900
-                                : Colors.black54,
-          ),
-        ),
-      ),
+        );
+        return items;
+      },
+      child: child,
     );
   }
 
@@ -1912,8 +1877,7 @@ class _AttendanceDialogState
       final c = controllers[i];
       final work = calculateWorkMinutes(c);
       final breaks = _calculateBreakMinutes(c);
-      final effectiveBreaks = _effectiveBreakMinutes(breaks);
-      final net = (work - effectiveBreaks).clamp(0, 24 * 60).toInt();
+      final net = (work - breaks).clamp(0, 24 * 60).toInt();
       final ot = _calculateDailyOtMinutes(
         c: c,
         netWorkingMinutes: net,
@@ -1963,7 +1927,7 @@ class _AttendanceDialogState
       ),
       decoration: BoxDecoration(
         color: color.withOpacity(.08),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.zero,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2125,6 +2089,8 @@ class AttendanceDayControllers {
   final TextEditingController overtimeOut =
   TextEditingController();
 
+  String status = '';
+  bool otRequested = false;
   bool otAuthorized = false;
   bool isUnpaid = false;
   bool isPublicHoliday = false;

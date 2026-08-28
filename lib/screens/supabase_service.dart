@@ -1268,6 +1268,12 @@ class SupabaseService {
     // Kept for compatibility with existing calls.
     bool otAuthorized = false,
 
+    // Branch OT request. Admin approval is required before OT is payable.
+    bool otRequested = false,
+
+    // Daily attendance status selected by Branch/Admin.
+    String status = '',
+
     // Kept for compatibility with existing branch_dashboard.dart.
     // The service recalculates these and DOES NOT trust them.
     int? workMinutes,
@@ -1440,25 +1446,25 @@ class SupabaseService {
       // 7:30 = 450 minutes
       // ==========================================================
 
-      var calculatedOvertimeMinutes =
-          calculatedNetWorkingMinutes -
-              normalWorkingMinutes;
+      final extraMinutes = calculatedNetWorkingMinutes > normalWorkingMinutes
+          ? calculatedNetWorkingMinutes - normalWorkingMinutes
+          : 0;
 
-      if (calculatedOvertimeMinutes < 0) {
-        calculatedOvertimeMinutes = 0;
-      }
+      // OT requires ALL conditions:
+      // 1) allocated break fulfilled (60 minutes),
+      // 2) more than 10 minutes above the normal 7:30 net target,
+      // 3) Branch requested OT,
+      // 4) Admin approved OT.
+      final bool breakFulfilled = calculatedBreakMinutes >= 60;
+      final bool otEligible = breakFulfilled && extraMinutes > 10;
 
-      // ==========================================================
-      // 6. OT AUTHORIZATION
-      // ==========================================================
+      final int calculatedOvertimeMinutes =
+          (otEligible && otRequested && otAuthorized)
+              ? extraMinutes
+              : 0;
 
-      final String otStatus;
-
-      if (calculatedOvertimeMinutes > 0) {
-        otStatus = 'pending';
-      } else {
-        otStatus = 'approved';
-      }
+      final String otStatus =
+          otAuthorized ? 'true' : 'false';
 
       // ==========================================================
       // 7. DATE
@@ -1485,8 +1491,38 @@ class SupabaseService {
               workingOut.trim().isNotEmpty &&
               workingOut.trim() != '-';
 
-      final String attendanceStatus =
-      hasWorkingTime ? 'Present' : 'Absent';
+      // Never send an empty/unsupported status. The attendance table uses
+      // these business statuses: Present, Late, OFF, MC, PL, AL, EL, PH, UNPAID.
+      String attendanceStatus = status.trim();
+
+      if (attendanceStatus.isEmpty) {
+        if (hasWorkingTime) {
+          final checkIn = parseTime(workingIn);
+          attendanceStatus =
+              (checkIn != null && checkIn > 480) ? 'Late' : 'Present';
+        } else {
+          attendanceStatus = 'OFF';
+        }
+      }
+
+      const allowedStatuses = {
+        'Present',
+        'Late',
+        'Absent',
+        'OFF',
+        'MC',
+        'PL',
+        'AL',
+        'EL',
+        'PH',
+        'UNPAID',
+      };
+
+      if (!allowedStatuses.contains(attendanceStatus)) {
+        throw Exception(
+          'Invalid attendance status: $attendanceStatus',
+        );
+      }
 
       // ==========================================================
       // 10. DATABASE DATA
@@ -1575,6 +1611,7 @@ class SupabaseService {
         // --------------------------------------------------------
 
         'ot_authorized': otStatus,
+        'ot_requested': otRequested,
 
         // --------------------------------------------------------
         // CALCULATIONS

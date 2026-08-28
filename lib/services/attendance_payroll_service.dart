@@ -8,7 +8,7 @@ import '../screens/supabase_service.dart';
 ///
 /// 1. Employee is selected by Admin.
 /// 2. Salary defaults come from employee_salary_defaults.
-/// 3. cuti_umum = 0 for now. It will be calculated from attendance later.
+/// 3. cuti_umum = Basic Salary / 26 x 2 for each worked public holiday.
 /// 4. Statutory wage = basic_salary - cuti_umum.
 /// 5. If employee_salary_defaults.epf_category = "normal":
 ///      EPF employee = statutory wage x 2%
@@ -21,7 +21,7 @@ import '../screens/supabase_service.dart';
 ///    Otherwise EIS uses the supplied EIS schedule.
 /// 8. Overtime is summed from submitted attendance where ot_authorized is
 ///    "true", "1", "yes", or a boolean true.
-/// 9. No OT money/rate conversion is performed yet.
+/// 9. Approved OT is calculated from synchronized NET working minutes above 7h30.
 /// 10. bonus, commission, other_earnings remain 0.
 /// 11. Existing statutory values are overwritten when overwriteExisting=true.
 /// 12. Attendance rules: submitted attendance drives working-time shortage,
@@ -239,7 +239,7 @@ class AttendancePayrollService {
     double totalOvertimeHours = 0.0;
     double cutiUmum = 0.0;
     int unpaidDays = 0;
-    int publicHolidayWorkedDays = 0;
+    //int publicHolidayWorkedDays = 0;
 
     for (final row in attendance) {
       final workMinutes = _attendanceWorkMinutes(row);
@@ -261,8 +261,9 @@ class AttendancePayrollService {
       // --------------------------------------------------------------
       // Only pay public holiday when the employee actually worked.
       if (isPublicHoliday && worked) {
-        publicHolidayWorkedDays++;
-        cutiUmum += basicSalary / 26.0;
+        //publicHolidayWorkedDays++;
+        // Public holiday payment is exactly Basic Salary / 26 x 2 per day.
+        cutiUmum += (basicSalary / 26.0) * 2.0;
       }
 
       // --------------------------------------------------------------
@@ -435,7 +436,25 @@ class AttendancePayrollService {
       'bank_code': _text(employee['bank_code']),
       'bank_account': _text(employee['bank_account']),
 
-        'remarks': null,
+      // Debug / audit information
+      'remarks':
+          'Generated payroll. '
+          'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
+          'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
+          'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
+          'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '
+          'SOCSO employer: ${socso.employer.toStringAsFixed(2)}. '
+          'EIS employee: ${eis.employee.toStringAsFixed(2)}. '
+          'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
+          'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
+          'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
+          'Required daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
+          'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
+          'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
+          'Unpaid days: $unpaidDays. '
+          'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
+          //'Public holiday worked days: $publicHolidayWorkedDays. '
+          'Cuti Umum: ${cutiUmum.toStringAsFixed(2)}.',
     };
 
     // ------------------------------------------------------------------------
@@ -465,7 +484,7 @@ class AttendancePayrollService {
           lateDeduction: totalLateDeduction,
           unpaidDeduction: unpaidDeduction,
           unpaidDays: unpaidDays,
-          publicHolidayWorkedDays: publicHolidayWorkedDays,
+         //publicHolidayWorkedDays: publicHolidayWorkedDays,
           shortageMinutes: totalShortageMinutes,
           epfEmployee: epf.employee,
           epfEmployer: epf.employer,
@@ -511,7 +530,7 @@ class AttendancePayrollService {
       lateDeduction: totalLateDeduction,
       unpaidDeduction: unpaidDeduction,
       unpaidDays: unpaidDays,
-      publicHolidayWorkedDays: publicHolidayWorkedDays,
+      //publicHolidayWorkedDays: publicHolidayWorkedDays,
       shortageMinutes: totalShortageMinutes,
       epfEmployee: epf.employee,
       epfEmployer: epf.employer,
@@ -616,9 +635,10 @@ class AttendancePayrollService {
     final response = await SupabaseService.client
         .from('attendance')
         .select(
-          'employee_id,attendance_date,work_minutes,overtime_minutes,'
+          'employee_id,attendance_date,work_minutes,break_minutes,'
+          'net_working_minutes,net_working_duration,overtime_minutes,'
           'overtime_duration,ot_authorized,is_submitted,'
-          'is_public_holiday,is_unpaid',
+          'is_public_holiday,is_unpaid,status',
         )
         .eq('employee_id', employeeId)
         .eq('is_submitted', true)
@@ -711,23 +731,40 @@ class AttendancePayrollService {
   }
 
   static double _attendanceOvertimeHours(Map<String, dynamic> row) {
-    // Prefer overtime_minutes because overtime_duration is TEXT and may be
-    // stored as HH:MM (for example 02:30).
+    // IMPORTANT:
+    // Payroll must use the same NET working time shown/saved by Attendance
+    // Dialog. Do NOT trust an old/stale overtime_minutes value, because that
+    // can turn a real 01:23 OT into an old 02:00 value.
+    //
+    // reduced/reduced1 required NET = 7:30 = 450 minutes.
+    // OT = synchronized NET working minutes - 450.
+    final netMinutes = _intNumber(row['net_working_minutes']);
+    if (netMinutes > 0) {
+      final calculatedOtMinutes = netMinutes - 450;
+      return calculatedOtMinutes > 0
+          ? calculatedOtMinutes / 60.0
+          : 0.0;
+    }
+
+    // Fallback for older rows without net_working_minutes:
+    // derive NET from work_minutes - break_minutes.
+    final workMinutes = _intNumber(row['work_minutes']);
+    final breakMinutes = _intNumber(row['break_minutes']);
+    if (workMinutes > 0) {
+      final netMinutesFallback = workMinutes - breakMinutes;
+      final calculatedOtMinutes = netMinutesFallback - 450;
+      return calculatedOtMinutes > 0
+          ? calculatedOtMinutes / 60.0
+          : 0.0;
+    }
+
+    // Last-resort compatibility fallback for legacy rows.
     final overtimeMinutes = _intNumber(row['overtime_minutes']);
     if (overtimeMinutes > 0) {
       return overtimeMinutes / 60.0;
     }
 
-    final duration = _text(row['overtime_duration']).trim();
-    if (duration.isEmpty || duration == '-') return 0.0;
-
-    final parsedMinutes = _durationToMinutes(duration);
-    if (parsedMinutes > 0) {
-      return parsedMinutes / 60.0;
-    }
-
-    // Allow a plain decimal value such as 2.5 hours.
-    return _number(duration);
+    return 0.0;
   }
 
   static int _durationToMinutes(dynamic value) {
@@ -1473,7 +1510,7 @@ class PayrollGenerationItem {
   final double lateDeduction;
   final double unpaidDeduction;
   final int unpaidDays;
-  final int publicHolidayWorkedDays;
+  //final int publicHolidayWorkedDays;
   final double shortageMinutes;
 
   final double statutoryWage;
@@ -1503,7 +1540,7 @@ class PayrollGenerationItem {
     this.lateDeduction = 0.0,
     this.unpaidDeduction = 0.0,
     this.unpaidDays = 0,
-    this.publicHolidayWorkedDays = 0,
+    //this.publicHolidayWorkedDays = 0,
     this.shortageMinutes = 0.0,
     this.statutoryWage = 0.0,
     this.epfEmployee = 0.0,

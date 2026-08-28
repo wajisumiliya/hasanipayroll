@@ -6532,15 +6532,11 @@ Future<void> _exportPayrollBranchExcel(
       // "POTONGAN" is the remaining employee deductions after KWSP,
       // PERKESO and SIP, which already have their own columns.
       //final otherDeductions = money(payroll['late_deduction']) +
-          money(payroll['pcb']) +
-          money(payroll['zakat']);
+         
 
-      final net = jumlah -
-          unpaidDeduction -
-          epf -
-          socso -
-          eis -
-          otherDeductions;
+      final otherDeductions = money(payroll['late_deduction']) +
+    money(payroll['pcb']) +
+    money(payroll['zakat']);
 
       final lastIncrement = firstValue(
         salary,
@@ -6614,7 +6610,7 @@ Future<void> _exportPayrollBranchExcel(
         socso,
         eis,
         otherDeductions,
-        net,
+        
       ];
 
       for (var column = 0; column < values.length; column++) {
