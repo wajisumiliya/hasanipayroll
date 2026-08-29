@@ -4604,17 +4604,29 @@ Widget _payrollPage() {
                     },
                   ),
                   OutlinedButton.icon(
-                    onPressed: selectedPayrollBranchId == null ||
-                            visiblePayrollRecords.isEmpty
+                    onPressed: visiblePayrollRecords.isEmpty
                         ? null
-                        : () => _exportPayrollBranchExcel(
-                            visiblePayrollRecords,
-                            selectedPayrollBranchId!,
-                            branchNames[selectedPayrollBranchId!] ??
+                        : () {
+                            if (selectedPayrollBranchId == null) {
+                              _exportPayrollAllBranchesExcel(
+                                visiblePayrollRecords,
+                                branchNames,
+                              );
+                            } else {
+                              _exportPayrollBranchExcel(
+                                visiblePayrollRecords,
                                 selectedPayrollBranchId!,
-                          ),
+                                branchNames[selectedPayrollBranchId!] ??
+                                    selectedPayrollBranchId!,
+                              );
+                            }
+                          },
                     icon: const Icon(Icons.table_view_outlined),
-                    label: const Text('Export Branch Excel'),
+                    label: Text(
+                      selectedPayrollBranchId == null
+                          ? 'Export All Branches Excel'
+                          : 'Export Branch Excel',
+                    ),
                   ),
                 ],
               ),
@@ -6550,14 +6562,16 @@ Future<void> _exportPayrollBranchExcel(
       final socso = money(payroll['socso_employee']);
       final eis = money(payroll['eis_employee']);
 
-      // "POTONGAN" is the remaining employee deductions after KWSP,
-      // PERKESO and SIP, which already have their own columns.
-      final otherDeductions = money(payroll['late_deduction']) +
-          money(payroll['pcb']) +
+      // M01 / CUTI TANPA GAJI contains BOTH unpaid and late deduction.
+      final lateDeduction = money(payroll['late_deduction']);
+      final cutiTanpaGaji = unpaidDeduction + lateDeduction;
+
+      // POTONGAN contains only PCB + Zakat. Late deduction is already in M01.
+      final otherDeductions = money(payroll['pcb']) +
           money(payroll['zakat']);
 
       final net = jumlah -
-          unpaidDeduction -
+          cutiTanpaGaji -
           epf -
           socso -
           eis -
@@ -6630,7 +6644,7 @@ Future<void> _exportPayrollBranchExcel(
         overtime,
         cutiUmum,
         jumlah,
-        unpaidDeduction,
+        cutiTanpaGaji,
         epf,
         socso,
         eis,
@@ -6706,6 +6720,222 @@ Future<void> _exportPayrollBranchExcel(
     _message('$fileName exported successfully.');
   } catch (e) {
     _message('Excel export failed: $e');
+  }
+}
+
+
+Future<void> _exportPayrollAllBranchesExcel(
+  List<Map<String, dynamic>> records,
+  Map<String, String> branchNames,
+) async {
+  if (records.isEmpty) {
+    _message('No payroll records for the selected month.');
+    return;
+  }
+
+  try {
+    _message('Preparing one Excel file for all branches...');
+
+    final employeeIds = records
+        .map((r) => _normalizeBranchValue(r['employee_id']))
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final employeeResponse = await SupabaseService.client
+        .from('employees')
+        .select()
+        .inFilter('employee_id', employeeIds);
+
+    final employeeMap = <String, Map<String, dynamic>>{};
+    for (final row in List<Map<String, dynamic>>.from(employeeResponse)) {
+      final id = _normalizeBranchValue(row['employee_id']);
+      if (id.isNotEmpty) employeeMap[id] = Map<String, dynamic>.from(row);
+    }
+
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final row in records) {
+      final employeeId = _normalizeBranchValue(row['employee_id']);
+      final employee = employeeMap[employeeId];
+      final branchId = _normalizeBranchValue(
+        row['branch_id'] ?? employee?['branch_id'],
+      );
+      if (branchId.isEmpty) continue;
+      grouped.putIfAbsent(branchId, () => []).add(row);
+    }
+
+    if (grouped.isEmpty) {
+      _message('No branch information found for the selected payroll.');
+      return;
+    }
+
+    final excel = xls.Excel.createExcel();
+    final defaultSheet = excel.getDefaultSheet();
+
+    final headers = <String>[
+      'NO', 'EMPLOYEE ID', 'JOINING DATE', 'LAST INCREMENT', 'NEXT INCREMENT',
+      'NAME', 'NEW_IC_NO', 'BASIC + FW', 'ELAUN KEDATANGAN',
+      'ELAUN PERKHIDMATAN', 'ELAUN KERAJINAN', 'OVERTIME', 'CUTI UMUM',
+      'JUMLAH', 'M01 CUTI TANPA GAJI', 'EPF', 'SOCSO', 'EIS', 'POTONGAN',
+      'NET SALARY',
+    ];
+
+    String safeSheetName(String name, Set<String> used) {
+      var base = name.trim().isEmpty ? 'Branch' : name.trim();
+      base = base.replaceAll(RegExp(r'[\\/:*?\[\]]'), '_');
+      if (base.length > 31) base = base.substring(0, 31);
+      var result = base;
+      var n = 2;
+      while (used.contains(result.toLowerCase())) {
+        final suffix = ' ($n)';
+        final max = 31 - suffix.length;
+        result = '${base.substring(0, base.length > max ? max : base.length)}$suffix';
+        n++;
+      }
+      used.add(result.toLowerCase());
+      return result;
+    }
+
+    final usedNames = <String>{};
+    final sortedBranchIds = grouped.keys.toList()
+      ..sort((a, b) => (branchNames[a] ?? a)
+          .toLowerCase()
+          .compareTo((branchNames[b] ?? b).toLowerCase()));
+
+    double money(dynamic value) => _payrollNumber(value);
+
+    String dateText(dynamic value) {
+      if (value == null) return '';
+      if (value is DateTime) return DateFormat('dd/MM/yyyy').format(value);
+      final text = value.toString().trim();
+      final parsed = DateTime.tryParse(text);
+      return parsed == null ? text : DateFormat('dd/MM/yyyy').format(parsed);
+    }
+
+    dynamic firstValue(Map<String, dynamic> row, List<String> keys) {
+      for (final key in keys) {
+        final v = row[key];
+        if (v != null && v.toString().trim().isNotEmpty) return v;
+      }
+      return null;
+    }
+
+    var isFirstSheet = true;
+    for (final branchId in sortedBranchIds) {
+      final branchName = branchNames[branchId] ?? branchId;
+      final sheetName = safeSheetName(branchName, usedNames);
+
+      xls.Sheet sheet;
+      if (isFirstSheet && defaultSheet != null) {
+        excel.rename(defaultSheet, sheetName);
+        sheet = excel[sheetName];
+        isFirstSheet = false;
+      } else {
+        sheet = excel[sheetName];
+      }
+      final branchRecords = List<Map<String, dynamic>>.from(grouped[branchId]!)
+        ..sort((a, b) => _normalizeBranchValue(a['employee_id'])
+            .compareTo(_normalizeBranchValue(b['employee_id'])));
+
+      sheet.cell(xls.CellIndex.indexByString('A1')).value =
+          xls.TextCellValue('PENYATA GAJI - ${branchName.toUpperCase()}');
+      sheet.cell(xls.CellIndex.indexByString('A2')).value =
+          xls.TextCellValue(DateFormat('MMM-yyyy').format(selectedPayrollMonth));
+
+      for (var c = 0; c < headers.length; c++) {
+        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
+          columnIndex: c,
+          rowIndex: 3,
+        ));
+        cell.value = xls.TextCellValue(headers[c]);
+      }
+
+      for (var i = 0; i < branchRecords.length; i++) {
+        final payroll = branchRecords[i];
+        final row = i + 4;
+        final employeeId = _normalizeBranchValue(payroll['employee_id']);
+        final employee = employeeMap[employeeId] ?? <String, dynamic>{};
+
+        final basic = money(payroll['basic_salary']);
+        final fw = money(payroll['fw_salary']);
+        final elaunKedatangan = money(payroll['elaun_kedatangan']);
+        final elaunPerkhidmatan = money(payroll['elaun_perkhidmatan']);
+        final elaunKerajinan = money(payroll['elaun_kerajinan']);
+        final overtime = money(payroll['overtime']);
+        final cutiUmum = money(payroll['cuti_umum']);
+        final jumlah = basic + fw + elaunKedatangan + elaunPerkhidmatan +
+            elaunKerajinan + overtime + cutiUmum;
+        final unpaid = money(payroll['unpaid_deduction']);
+        final late = money(payroll['late_deduction']);
+        final cutiTanpaGaji = unpaid + late;
+        final epf = money(payroll['epf_employee']);
+        final socso = money(payroll['socso_employee']);
+        final eis = money(payroll['eis_employee']);
+        final potongan = money(payroll['pcb']) + money(payroll['zakat']);
+        final net = jumlah - cutiTanpaGaji - epf - socso - eis - potongan;
+
+        final lastIncrement = firstValue(employee, [
+          'last_increment', 'last_increament', 'last_increment_date',
+          'last_increament_date',
+        ]);
+        final nextIncrement = firstValue(employee, [
+          'next_increment', 'next_increament', 'next_increment_date',
+          'next_increament_date', 'month',
+        ]);
+
+        final values = <dynamic>[
+          i + 1,
+          employeeId,
+          dateText(employee['joining_date']),
+          dateText(lastIncrement),
+          dateText(nextIncrement),
+          employee['name'] ?? payroll['name'] ?? '',
+          employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '',
+          basic + fw,
+          elaunKedatangan,
+          elaunPerkhidmatan,
+          elaunKerajinan,
+          overtime,
+          cutiUmum,
+          jumlah,
+          cutiTanpaGaji,
+          epf,
+          socso,
+          eis,
+          potongan,
+          net,
+        ];
+
+        for (var c = 0; c < values.length; c++) {
+          final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
+            columnIndex: c,
+            rowIndex: row,
+          ));
+          final value = values[c];
+          cell.value = value is num
+              ? xls.DoubleCellValue(value.toDouble())
+              : xls.TextCellValue(value.toString());
+        }
+      }
+    }
+
+    final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
+    final fileName = 'Penyata_Gaji_All_Branches_$monthFile.xlsx';
+    final output = excel.encode();
+    if (output == null || output.isEmpty) {
+      throw Exception('Excel file could not be generated.');
+    }
+
+    await FileSaver.instance.saveFile(
+      name: fileName.replaceFirst(RegExp(r'\.xlsx$'), ''),
+      bytes: Uint8List.fromList(output),
+      ext: 'xlsx',
+      mimeType: MimeType.microsoftExcel,
+    );
+
+    _message('$fileName exported successfully with ${sortedBranchIds.length} branch sheets.');
+  } catch (e) {
+    _message('All branches Excel export failed: $e');
   }
 }
 
@@ -6865,8 +7095,11 @@ Future<void> _exportRhbLayout() async {
 
       rhb.add([name, ic, bankAccount, net, selectedMonth]);
       epf.add([name, ic, epfNo, epfEmployee, epfEmployer, net]);
-      eis.add([name, ic, eisEmployee, eisEmployer]);
-      socso.add([name, ic, socsoEmployee, socsoEmployer]);
+      final eisTotal = eisEmployee + eisEmployer;
+      final socsoTotal = socsoEmployee + socsoEmployer;
+
+      eis.add([name, ic, eisTotal]);
+      socso.add([name, ic, socsoTotal]);
     }
 
     saveExcel('RHB_Layout_$monthFile.xlsx', 'RHB Layout', const [
@@ -6878,11 +7111,11 @@ Future<void> _exportRhbLayout() async {
     ], epf);
 
     saveExcel('EIS_$monthFile.xlsx', 'EIS', const [
-      'NAME', 'NEW_IC_NO', 'EMPLOYEE EIS AMOUNT', 'EMPLOYER EIS AMOUNT'
+      'NAME', 'NEW_IC_NO', 'EIS TOTAL AMOUNT'
     ], eis);
 
     saveExcel('SOSCO_$monthFile.xlsx', 'SOSCO', const [
-      'NAME', 'NEW_IC_NO', 'EMPLOYEE SOCSO AMOUNT', 'EMPLOYER SOSCO AMOUNT'
+      'NAME', 'NEW_IC_NO', 'SOCSO TOTAL AMOUNT'
     ], socso);
 
     _message('Generated 4 Excel files for $selectedMonth: RHB Layout, EPF, EIS and SOSCO.');
