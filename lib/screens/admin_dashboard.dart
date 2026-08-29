@@ -83,6 +83,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // ===========================================================================
 
   void changePage(int page) {
+    // RHB Layout is an export action, not a normal page.
+    if (page == 8) {
+      _exportRhbLayout();
+      return;
+    }
+
     setState(() {
       selectedPage = page;
 
@@ -110,6 +116,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return 'Reports';
       case 7:
         return 'Settings';
+      case 8:
+        return 'RHB Layout';
       default:
         return 'Dashboard';
     }
@@ -194,6 +202,9 @@ Widget _statusChip(String status) {
 
       case 7:
         return _settingsPage();
+
+      case 8:
+        return _rhbLayoutPage();
 
       default:
         return _dashboardPage();
@@ -311,6 +322,11 @@ Widget _statusChip(String status) {
                       2,
                     ),
                     _drawerItem(
+                      'RHB Layout',
+                      Icons.account_balance_outlined,
+                      8,
+                    ),
+                    _drawerItem(
                       'Attendance',
                       Icons.access_time,
                       3,
@@ -401,6 +417,11 @@ Widget _statusChip(String status) {
                   'Payroll',
                   Icons.payments_outlined,
                   2,
+                ),
+                _sidebarItem(
+                  'RHB Layout',
+                  Icons.account_balance_outlined,
+                  8,
                 ),
                 _sidebarItem(
                   'Attendance',
@@ -6520,7 +6541,7 @@ Future<void> _exportPayrollBranchExcel(
           const [
             'unpaid_deduction',
             'cuti_tanpa_gaji',
-            'late_deduction',
+            'cuti_tanpa_gaji_deduction',
           ],
         ),
       );
@@ -6531,12 +6552,16 @@ Future<void> _exportPayrollBranchExcel(
 
       // "POTONGAN" is the remaining employee deductions after KWSP,
       // PERKESO and SIP, which already have their own columns.
-      //final otherDeductions = money(payroll['late_deduction']) +
-         
-
       final otherDeductions = money(payroll['late_deduction']) +
-    money(payroll['pcb']) +
-    money(payroll['zakat']);
+          money(payroll['pcb']) +
+          money(payroll['zakat']);
+
+      final net = jumlah -
+          unpaidDeduction -
+          epf -
+          socso -
+          eis -
+          otherDeductions;
 
       final lastIncrement = firstValue(
         salary,
@@ -6610,7 +6635,7 @@ Future<void> _exportPayrollBranchExcel(
         socso,
         eis,
         otherDeductions,
-        
+        net,
       ];
 
       for (var column = 0; column < values.length; column++) {
@@ -6709,6 +6734,181 @@ Uint8List _normalizeExcelTemplate(Uint8List bytes) {
     throw Exception('Excel template could not be prepared.');
   }
   return Uint8List.fromList(encoded);
+}
+
+// ============================================================================
+// RHB / STATUTORY LAYOUT EXPORTS
+// One click generates four separate Excel files for the selected payroll month.
+
+Future<void> _exportRhbLayout() async {
+  try {
+    _message('Preparing RHB, EPF, EIS and SOCSO layouts...');
+
+    final selectedMonth = DateFormat('MMMM yyyy').format(selectedPayrollMonth);
+    final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
+
+    final response = await SupabaseService.client
+        .from('payroll')
+        .select()
+        .order('employee_id');
+
+    final payrollRows = List<Map<String, dynamic>>.from(response)
+        .where((row) => _payrollPeriodMatchesMonth(row['period'], selectedPayrollMonth))
+        .toList();
+
+    if (payrollRows.isEmpty) {
+      _message('No generated payroll found for $selectedMonth.');
+      return;
+    }
+
+    final employeeIds = payrollRows
+        .map((row) => _normalizeBranchValue(row['employee_id']))
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final employeeResponse = await SupabaseService.client
+        .from('employees')
+        .select()
+        .inFilter('employee_id', employeeIds);
+
+    final employeeMap = <String, Map<String, dynamic>>{};
+    for (final employee in List<Map<String, dynamic>>.from(employeeResponse)) {
+      final id = _normalizeBranchValue(employee['employee_id']);
+      if (id.isNotEmpty) employeeMap[id] = employee;
+    }
+
+    double money(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString().replaceAll(',', '').replaceAll('RM', '').trim()) ?? 0.0;
+    }
+
+    String value(Map<String, dynamic> row, List<String> keys) {
+      for (final key in keys) {
+        final v = row[key]?.toString().trim() ?? '';
+        if (v.isNotEmpty) return v;
+      }
+      return '';
+    }
+
+    double netSalary(Map<String, dynamic> row) {
+      for (final key in const ['net_pay', 'net_salary', 'total_net', 'netPay']) {
+        if (row[key] != null) return money(row[key]);
+      }
+      final gross = money(row['basic_salary']) + money(row['fw_salary']) +
+          money(row['elaun_kedatangan']) + money(row['elaun_perkhidmatan']) +
+          money(row['elaun_kerajinan']) + money(row['overtime']) +
+          money(row['bonus']) + money(row['commission']) +
+          money(row['other_earnings']) + money(row['cuti_umum']);
+      final deductions = money(row['epf_employee']) + money(row['socso_employee']) +
+          money(row['eis_employee']) + money(row['pcb']) + money(row['zakat']) +
+          money(row['late_deduction']) + money(row['unpaid_deduction']) +
+          money(row['other_deductions']);
+      return gross - deductions;
+    }
+
+    void writeRow(xls.Sheet sheet, int row, List<dynamic> values) {
+      for (var c = 0; c < values.length; c++) {
+        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row));
+        final item = values[c];
+        cell.value = item is num
+            ? xls.DoubleCellValue(item.toDouble())
+            : xls.TextCellValue(item?.toString() ?? '');
+      }
+    }
+
+    void saveExcel(String fileName, String sheetName, List<String> headers, List<List<dynamic>> rows) {
+      final excel = xls.Excel.createExcel();
+      final defaultSheet = excel.getDefaultSheet();
+      if (defaultSheet != null && defaultSheet != sheetName) {
+        excel.rename(defaultSheet, sheetName);
+      }
+      final sheet = excel[sheetName];
+      writeRow(sheet, 0, headers);
+      for (var r = 0; r < rows.length; r++) {
+        writeRow(sheet, r + 1, rows[r]);
+      }
+      final bytes = excel.save(fileName: fileName);
+      if (bytes == null || bytes.isEmpty) throw Exception('$fileName could not be generated.');
+    }
+
+    final rhb = <List<dynamic>>[];
+    final epf = <List<dynamic>>[];
+    final eis = <List<dynamic>>[];
+    final socso = <List<dynamic>>[];
+
+    for (final payroll in payrollRows) {
+      final id = _normalizeBranchValue(payroll['employee_id']);
+      final employee = employeeMap[id] ?? <String, dynamic>{};
+
+      final name = value(employee, const ['name', 'employee_name']).isNotEmpty
+          ? value(employee, const ['name', 'employee_name'])
+          : value(payroll, const ['name', 'employee_name']);
+      final ic = value(employee, const ['new_ic_no', 'newIcNo']).isNotEmpty
+          ? value(employee, const ['new_ic_no', 'newIcNo'])
+          : value(payroll, const ['new_ic_no', 'newIcNo']);
+      final bankAccount = value(employee, const ['bank_account', 'bankAccount']).isNotEmpty
+          ? value(employee, const ['bank_account', 'bankAccount'])
+          : value(payroll, const ['bank_account', 'bankAccount']);
+      final epfNo = value(employee, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']).isNotEmpty
+          ? value(employee, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo'])
+          : value(payroll, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']);
+
+      final net = netSalary(payroll);
+      final epfEmployee = money(payroll['epf_employee']);
+      final epfEmployer = money(payroll['epf_employer']);
+      final eisEmployee = money(payroll['eis_employee']);
+      final eisEmployer = money(payroll['eis_employer']);
+      final socsoEmployee = money(payroll['socso_employee']);
+      final socsoEmployer = money(payroll['socso_employer']);
+
+      rhb.add([name, ic, bankAccount, net, selectedMonth]);
+      epf.add([name, ic, epfNo, epfEmployee, epfEmployer, net]);
+      eis.add([name, ic, eisEmployee, eisEmployer]);
+      socso.add([name, ic, socsoEmployee, socsoEmployer]);
+    }
+
+    saveExcel('RHB_Layout_$monthFile.xlsx', 'RHB Layout', const [
+      'NAME', 'NEW_IC_NO', 'BANK_ACCOUNT', 'NETAMOUNT', 'SELECTED PAYROLL MONTH'
+    ], rhb);
+
+    saveExcel('EPF_$monthFile.xlsx', 'EPF', const [
+      'NAME', 'NEW_IC_NO', 'EPF_NO', 'EMPLOYEE EPF AMOUNT', 'EMPLOYER EPF AMOUNT', 'NETAMOUNT'
+    ], epf);
+
+    saveExcel('EIS_$monthFile.xlsx', 'EIS', const [
+      'NAME', 'NEW_IC_NO', 'EMPLOYEE EIS AMOUNT', 'EMPLOYER EIS AMOUNT'
+    ], eis);
+
+    saveExcel('SOSCO_$monthFile.xlsx', 'SOSCO', const [
+      'NAME', 'NEW_IC_NO', 'EMPLOYEE SOCSO AMOUNT', 'EMPLOYER SOSCO AMOUNT'
+    ], socso);
+
+    _message('Generated 4 Excel files for $selectedMonth: RHB Layout, EPF, EIS and SOSCO.');
+  } catch (e) {
+    _message('RHB / statutory Excel export failed: $e');
+  }
+}
+
+Widget _rhbLayoutPage() {
+  return Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.account_balance, size: 56),
+        const SizedBox(height: 12),
+        const Text(
+          'RHB Layout',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Salary month: ${DateFormat('MMMM yyyy').format(selectedPayrollMonth)}',
+        ),
+      ],
+    ),
+  );
 }
 
 // ============================================================================
