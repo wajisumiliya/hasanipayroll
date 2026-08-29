@@ -1,3 +1,16 @@
+## License
+
+**Proprietary — All Rights Reserved**
+
+This project is proprietary software. No permission is granted to copy,
+use, modify, distribute, publish, sell, sublicense, or incorporate this
+code into another project without prior written permission from the
+copyright owner.
+
+See the [LICENSE](LICENSE) file for the complete terms.
+
+Unauthorized use of this code is prohibited.
+
 # Hasani Books Payroll Portal
 
 Flutter-based payroll, attendance, employee, branch and employee self-service portal for Hasani Books.
