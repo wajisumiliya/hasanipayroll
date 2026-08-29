@@ -1,150 +1,99 @@
 # Hasani Books Payroll Portal
 
-A complete payroll and employee management application developed for Hasani Books.
+Flutter-based payroll, attendance, employee, branch and employee self-service portal for Hasani Books.
 
-The system provides separate portals for:
-- Admin
-- Branch
-- Employee
-
-It supports employee management, payroll management, attendance, payslips, first-login OTP verification, password management, notifications and PDF/printing functionality.
+> **Repository:** `wajisumiliya/hasanipayroll`  
+> **Application:** Hasani Books Payroll Portal  
+> **Version declared in `pubspec.yaml`:** `1.0.0+1`
 
 ---
 
-## 🚀 Features
+## 1. What this project contains
 
-### 👨‍💼 Admin Portal
+The repository contains a Flutter application with three user portals:
 
-Administrators can:
-- Manage employees
-- Add new employees
-- Edit employee information
-- Activate/deactivate employees
-- Manage branches
-- Manage departments
-- Manage payroll
-- Manage attendance
-- View employee information
-- View payroll history
-- Manage salary information
-- Manage allowances
-- Manage deductions
-- Manage EPF
-- Manage SOCSO
-- Manage EIS
-- Manage employee contributions
-- Manage employer contributions
-- Generate payslips
-- Print payslips
-- Export payroll information
-- Manage employee access
-- Send employee notifications
+- **Admin**
+- **Branch**
+- **Employee**
 
-### 🏢 Branch Portal
+The current codebase integrates:
 
-Branch users can:
-- View employees assigned to their branch
-- View employee information
-- Manage branch attendance
-- View payroll information
-- Manage branch-related employee records
-- View new joiners
-- Filter employees by department
-- View employee status
-
-Branch users should be restricted to their assigned branch.
-
-### 👤 Employee Portal
-
-Employees can:
-- Login using their employee account
-- Complete first-login verification
-- Verify OTP
-- Create a new password
-- View personal information
-- View payroll history
-- View payslips
-- Download payslips
-- Print payslips
-- View attendance
-- View salary information
-- Receive notifications
-- Update their password
-
-Employees should only be able to access their own information.
+- Supabase / PostgreSQL data access
+- Firebase initialization and Firebase Cloud Messaging
+- Employee management
+- Branch management
+- Attendance management
+- Monthly payroll generation
+- Salary defaults and salary rules
+- Overtime request/authorization workflow
+- EPF, SOCSO and EIS calculations
+- Public-holiday payroll
+- Unpaid and late/short-working deductions
+- Payslip PDF generation and printing
+- Payroll Excel export
+- RHB/statutory Excel exports
+- Employee notifications
+- First-login OTP/password flow
 
 ---
 
-# 🔐 Authentication
+## 2. Technology stack
 
-The application supports:
-- Username / Employee ID login
-- Role-based portal access
-- First-login OTP verification
-- Password creation
-- Password update
-- Session restoration
-- Admin authentication
-- Branch authentication
-- Employee authentication
+### Flutter
 
-### User Roles
+The application is written in Dart/Flutter.
 
-```text
-ADMIN
-BRANCH
-EMPLOYEE
+`pubspec.yaml` currently declares:
+
+- Dart SDK: `>=3.5.0 <4.0.0`
+- Flutter Material UI
+- `intl`
+- `supabase_flutter`
+- `firebase_core`
+- `firebase_messaging`
+- `flutter_local_notifications`
+- `pdf`
+- `printing`
+- `excel`
+- `archive`
+- `file_saver`
+- `csv`
+- `file_picker`
+- `http`
+- `shared_preferences`
+
+### Backend
+
+The repository also contains a separate Node.js backend under `backend/`.
+
+Current backend stack:
+
+- Node.js
+- Express 5
+- Prisma 7
+- PostgreSQL
+- `pg`
+- JWT
+- bcrypt/bcryptjs
+- Nodemailer
+- Multer
+- CORS
+
+Backend scripts currently include:
+
+```bash
+npm run dev
+npm start
+npm run db:generate
+npm run db:push
+npm run db:studio
 ```
 
----
-
-# 📱 Supported Platforms
-
-The Flutter application is designed for:
-- Android
-- iOS
-- Web
-- Windows
-- macOS
-- Linux
-
-The primary deployment target is Android.
+The Flutter application, however, contains substantial direct Supabase access through `lib/screens/supabase_service.dart`. Treat the Flutter/Supabase path and the Node/Prisma backend as two components of the repository rather than assuming every feature uses the Node API.
 
 ---
 
-# 🛠 Technology Stack
-
-## Frontend
-- Flutter
-- Dart
-- Material 3
-
-## Database
-- Supabase
-- PostgreSQL
-
-## Backend
-- Node.js
-- Express.js
-- REST API
-
-## Authentication
-- Supabase
-- Application authentication
-- OTP verification
-
-## Notifications
-- Firebase Cloud Messaging
-- Flutter Local Notifications
-
-## Documents
-- PDF
-- Printing
-- CSV import/export
-
----
-
-# 📂 Project Structure
+# 3. Project structure
 
 ```text
 hasanipayroll/
@@ -157,13 +106,25 @@ hasanipayroll/
 ├── windows/
 │
 ├── assets/
-│   └── hasani_books_logo.jpg
+│   ├── hasani_books_logo.jpg
+│   └── payroll_export_template.xlsx
+│
+├── backend/
+│   ├── prisma/
+│   │   └── schema.prisma
+│   ├── src/
+│   │   ├── server.js
+│   │   └── scripts/
+│   ├── data/
+│   ├── package.json
+│   └── prisma.config.ts
 │
 ├── lib/
-│   │
 │   ├── main.dart
+│   ├── firebase_options.dart
 │   │
 │   ├── models/
+│   │   ├── attendance.dart
 │   │   └── payroll.dart
 │   │
 │   ├── screens/
@@ -171,239 +132,804 @@ hasanipayroll/
 │   │   ├── admin_dashboard.dart
 │   │   ├── branch_dashboard.dart
 │   │   ├── employee_portal.dart
+│   │   ├── attendance_dialog.dart
 │   │   └── supabase_service.dart
 │   │
-│   └── services/
-│       ├── app_service.dart
-│       ├── pdf_service.dart
-│       └── notification_service.dart
-│
-├── supabase/
-│   └── schema.sql
+│   ├── services/
+│   │   ├── app_service.dart
+│   │   ├── attendance_payroll_service.dart
+│   │   ├── payroll_supabase_service.dart
+│   │   ├── pdf_service.dart
+│   │   └── notification_service.dart
+│   │
+│   └── widgets/
+│       └── shared_attendance_sheet.dart
 │
 ├── .github/
 │   └── workflows/
+│       └── android.yml
+│
+├── test/
+│   └── widget_test.dart
 │
 ├── pubspec.yaml
+├── pubspec.lock
+├── hasani_payroll.dump
+├── LICENSE
 └── README.md
 ```
 
 ---
 
-# 🗄 Database
+# 4. Application startup
 
-The application uses Supabase PostgreSQL.
-
-Main data areas include:
+`lib/main.dart` initializes:
 
 ```text
-app_user
-employees
-payroll
-attendance
+Flutter
+  ↓
+Supabase
+  ↓
+Firebase
+  ↓
+Notification service
+  ↓
+Restore application session
+  ↓
+Select portal based on logged-in role
 ```
 
-Additional tables may be used for:
+The application routes users to:
 
 ```text
-notifications
-OTP verification
-employee records
-salary records
-payslips
-device tokens
+ADMIN    → AdminDashboard
+BRANCH   → BranchPortal
+EMPLOYEE → EmployeePortal
 ```
+
+If there is no valid restored session, the login screen is shown.
 
 ---
 
-# 👥 Employee Information
+# 5. Authentication
 
-Employee records can contain:
+The login screen implements:
+
+- Employee ID / username login
+- Session restoration
+- Role-based portal routing
+- First-login detection
+- OTP verification
+- Password creation after first-login verification
+- Password update
+- Logout
+
+The code recognizes the application roles:
+
+```text
+ADMIN
+BRANCH
+EMPLOYEE
+```
+
+The repository also contains a Node/Prisma `app_user` model with:
+
+- username
+- email
+- password hash
+- role
+- active state
+- first-login password-change state
+- OTP hash
+- OTP expiry
+- OTP attempts
+- login timestamps
+
+---
+
+# 6. Admin portal
+
+`lib/screens/admin_dashboard.dart` provides the main administrative workspace.
+
+Current areas include:
+
+- Dashboard
+- Employee management
+- Branch management
+- Department filtering
+- Payroll
+- Attendance review
+- Employee details
+- Payroll history
+- Payroll generation
+- Payroll Excel export
+- RHB Layout export
+
+The dashboard obtains employee, branch, payroll and attendance information through `SupabaseService`.
+
+---
+
+# 7. Branch portal
+
+`lib/screens/branch_dashboard.dart` provides branch-level employee and attendance functionality.
+
+Current branch functionality includes:
+
+- Viewing employees belonging to the branch
+- Branch employee filtering
+- Opening attendance sheets
+- Viewing employee attendance
+- Refreshing branch data
+
+Branch access should be restricted by the application's authorization/database policies.
+
+---
+
+# 8. Employee portal
+
+`lib/screens/employee_portal.dart` provides employee self-service functionality.
+
+The portal includes access to employee/payroll information and payslips, together with password management and notification-related functionality.
+
+Employees should only be allowed to access records belonging to their own employee account.
+
+---
+
+# 9. Attendance
+
+Attendance is handled primarily by:
+
+```text
+lib/screens/attendance_dialog.dart
+lib/screens/supabase_service.dart
+lib/models/attendance.dart
+```
+
+Attendance records contain working and break information such as:
 
 ```text
 Employee ID
-Name
-Designation
-Department
-Email
-Phone
-IC Number
-Bank Code
-Bank Account
-Address
-Joining Date
-Branch
-Active/Inactive Status
-```
-
-Sensitive employee information must be protected using database-level security policies.
-
----
-
-# 💰 Payroll
-
-Payroll records support information such as:
-
-```text
-Employee
-Payroll Month
-Basic Salary
-Allowance
-Gross Salary
-Deduction
-EPF
-SOCSO
-EIS
-Employee Contribution
-Employer Contribution
-Net Salary
-```
-
-Payroll history can be stored for previous months and years.
-
----
-
-# 📅 Attendance
-
-Attendance management supports employee attendance records.
-
-Typical information includes:
-
-```text
-Employee
-Date
+Branch ID
+Attendance Date
 Status
 Check In
 Check Out
-Working Hours
-Remarks
-Branch
+
+Morning Break In / Out
+Afternoon Break In / Out
+Evening Break In / Out
+
+Work Minutes
+Break Minutes
+Net Working Minutes
+
+Overtime Minutes
+Overtime Duration
+OT Requested
+OT Authorized
 ```
 
-Possible attendance statuses include:
+The database status handling in the current Flutter service allows:
 
 ```text
 Present
-Absent
-Leave
-MC
 Late
-Half Day
-Off Day
+Absent
+OFF
+MC
+PL
+AL
+EL
+PH
+UNPAID
 ```
 
 ---
 
-# 📄 Payslips
+# 10. Net working time
 
-The application supports payslip generation using PDF.
+The current attendance service calculates:
 
-Employees can:
-- View payslips
-- Download payslips
-- Print payslips
-- Access previous payroll periods
+```text
+NET WORKING TIME
+= TOTAL WORKING TIME - TOTAL BREAK TIME
+```
 
-Administrators can generate payslips for employees.
+Break time is the sum of:
+
+```text
+Morning break
++ Afternoon break
++ Evening break
+```
+
+The attendance service explicitly treats the evening fields as break information rather than automatically treating them as overtime.
+
+The calculated values are stored as minutes and display durations, including:
+
+```text
+work_minutes
+break_minutes
+net_working_minutes
+work_duration
+break_duration
+net_working_duration
+```
 
 ---
 
-# 🔔 Notifications
+# 11. Working-hour rules
 
-Firebase Cloud Messaging is used for push notifications.
+The current payroll service contains these main working targets:
 
-Examples:
+### `epf_category = normal1`
+
+Target:
 
 ```text
-Salary Credited
-Payslip Available
-Salary Increment
-Important Announcement
-Attendance Notification
-Company Announcement
+7:30 NET
+```
+
+### `eis_applicable = false`
+
+Target:
+
+```text
+10:30 NET
+```
+
+and overtime is not paid under this rule.
+
+### Other applicable employees
+
+Target:
+
+```text
+7:30 NET
+```
+
+The exact salary rule is loaded from the employee salary defaults configuration.
+
+---
+
+# 12. Overtime workflow
+
+The current system separates:
+
+```text
+OT Requested
+OT Authorized
+```
+
+The intended workflow is:
+
+```text
+Branch records attendance
+        ↓
+Branch requests OT
+        ↓
+Admin reviews / authorizes OT
+        ↓
+Approved OT becomes payable payroll OT
+```
+
+The attendance service stores OT-related minutes and authorization state.
+
+### Current calculation basis
+
+For the 7:30 target:
+
+```text
+7:30 = 450 minutes
+```
+
+Extra net working time is:
+
+```text
+NET WORKING MINUTES - 450
+```
+
+Approved OT is then carried into monthly payroll.
+
+The current attendance-save implementation also contains a break-fulfilment and extra-minute eligibility check before saving calculated OT. Therefore, if changing OT eligibility rules in future, update the calculation in `supabase_service.dart` and the payroll service together so the attendance and payroll layers remain synchronized.
+
+---
+
+# 13. Payroll generation
+
+The main payroll calculation service is:
+
+```text
+lib/services/attendance_payroll_service.dart
+```
+
+The service generates monthly payroll from employee salary defaults plus submitted attendance.
+
+Payroll generation includes:
+
+- Basic salary
+- FW salary
+- Allowances
+- Overtime
+- Cuti Umum
+- Late/short-working deduction
+- Unpaid deduction
+- EPF employee/employer
+- SOCSO employee/employer
+- EIS employee/employer
+- Other payroll fields
+- Net payroll amount
+
+Existing payroll can be updated when the generation flow is configured to overwrite existing records.
+
+---
+
+# 14. Unpaid leave
+
+The current business rule is:
+
+```text
+If employee_salary_defaults.eis_applicable = false:
+    Unpaid per day = Basic Salary / 28
+
+Otherwise:
+    Unpaid per day = Basic Salary / 26
+```
+
+Therefore:
+
+```text
+UNPAID DEDUCTION
+= DAILY UNPAID RATE × UNPAID DAYS
+```
+
+An attendance row marked as unpaid is handled as an unpaid day in payroll.
+
+---
+
+# 15. Late / short-working deduction
+
+The payroll service calculates shortage against the employee's required net working target.
+
+The calculation is based on the employee's basic salary and required working hours.
+
+The current monthly rule is:
+
+```text
+If total late/short-working deduction < RM5:
+    Deduction = RM0
+
+If total late/short-working deduction >= RM5:
+    Deduct the calculated amount
+```
+
+Unpaid and public-holiday rows are excluded from the normal late/short-working calculation.
+
+---
+
+# 16. Public holiday / Cuti Umum
+
+The current payroll implementation uses:
+
+```text
+Cuti Umum
+= Basic Salary / 26 × 2 × number of worked public holidays
 ```
 
 Example:
 
 ```text
-Salary Credited
+Basic Salary = RM1,700
+1 public holiday worked
 
-Your salary for August 2026 has been credited.
+1,700 / 26 × 2
+= RM130.77
+```
+
+For two worked public holidays:
+
+```text
+1,700 / 26 × 2 × 2
+= RM261.54
+```
+
+Public-holiday attendance is excluded from normal shortage deduction.
+
+---
+
+# 17. OFF and leave statuses
+
+The attendance UI/database supports statuses including:
+
+```text
+OFF
+MC
+PL
+AL
+EL
+PH
+UNPAID
+```
+
+Payroll treatment is controlled by the attendance flags and payroll service rules.
+
+In particular:
+
+- **OFF** should not create a normal working-time deduction.
+- **Public holiday** is handled separately when the employee worked.
+- **UNPAID** creates an unpaid-day deduction.
+- Other leave/medical statuses should follow the attendance/payroll rules implemented in the current service.
+
+---
+
+# 18. EPF, SOCSO and EIS
+
+The payroll service calculates employee and employer statutory contributions.
+
+The current service documents:
+
+### EPF
+
+EPF calculation uses the configured EPF schedule.
+
+### SOCSO
+
+SOCSO uses the **first category** schedule in the current payroll implementation.
+
+### EIS
+
+If:
+
+```text
+employee_salary_defaults.eis_applicable = false
+```
+
+the payroll service sets EIS employee/employer contributions to zero.
+
+Otherwise the configured EIS schedule is used.
+
+The payroll service contains the statutory schedules used by the application; update those schedules carefully when statutory rates/tables change.
+
+---
+
+# 19. Payroll data
+
+The Flutter payroll model contains fields including:
+
+### Earnings
+
+```text
+basicSalary
+fwSalary
+elaunKedatangan
+elaunPerkhidmatan
+elaunKerajinan
+overtime
+bonus
+commission
+otherEarnings
+housingAllowance
+travelAllowance
+cutiUmum
+```
+
+### Employee deductions
+
+```text
+epfEmployee
+socsoEmployee
+eisEmployee
+pcb
+zakat
+advanceDeduction
+loanDeduction
+unpaidLeave
+otherDeductionAmount
+```
+
+### Employer contributions
+
+```text
+epfEmployer
+socsoEmployer
+eisEmployer
+```
+
+### Banking / employee information
+
+```text
+newIcNo
+bankCode
+bankAccount
+bankName
+```
+
+The model exposes calculated totals such as:
+
+```text
+totalEarnings
+totalDeductions
+netPay
+totalEmployerContribution
+totalEmployerCost
 ```
 
 ---
 
-# 🔑 First Login
+# 20. Excel exports
 
-New employees can be required to complete first-login verification.
+The Admin dashboard currently contains payroll Excel export functionality using the `excel` package.
 
-The flow is:
+There is also an RHB/statutory export action.
+
+## RHB Layout
+
+One click generates the RHB and statutory files for the selected payroll month.
+
+### RHB file
 
 ```text
-Employee Login
-      ↓
-First Login Detected
-      ↓
-Request OTP
-      ↓
-OTP Sent
-      ↓
-Enter OTP
-      ↓
-Verify OTP
-      ↓
-Create New Password
-      ↓
-Employee Portal
+RHB_Layout_YYYY_MM.xlsx
+```
+
+Headers:
+
+```text
+NAME
+NEW_IC_NO
+BANK_ACCOUNT
+NETAMOUNT
+SELECTED PAYROLL MONTH
+```
+
+### EPF file
+
+```text
+EPF_YYYY_MM.xlsx
+```
+
+Headers:
+
+```text
+NAME
+NEW_IC_NO
+EPF_NO
+EMPLOYEE EPF AMOUNT
+EMPLOYER EPF AMOUNT
+NETAMOUNT
+```
+
+### EIS file
+
+```text
+EIS_YYYY_MM.xlsx
+```
+
+Headers:
+
+```text
+NAME
+NEW_IC_NO
+EMPLOYEE EIS AMOUNT
+EMPLOYER EIS AMOUNT
+```
+
+### SOCSO file
+
+```text
+SOSCO_YYYY_MM.xlsx
+```
+
+Headers:
+
+```text
+NAME
+NEW_IC_NO
+EMPLOYEE SOCSO AMOUNT
+EMPLOYER SOCSO AMOUNT
+```
+
+The export obtains employee identity/bank information from the `employees` table and payroll contribution/net information from `payroll`.
+
+---
+
+# 21. Existing payroll template export
+
+The repository also contains:
+
+```text
+assets/payroll_export_template.xlsx
+```
+
+The Admin dashboard has an export routine that loads and normalizes this template before creating a branch payroll Excel export.
+
+This is separate from the four RHB/statutory files described above.
+
+---
+
+# 22. Payslips
+
+Payslip generation is implemented in:
+
+```text
+lib/services/pdf_service.dart
+```
+
+The PDF service uses the `pdf` package and the `printing` package.
+
+Payslip information includes payroll earnings and deductions such as:
+
+```text
+Basic salary
+Allowances
+Overtime
+Cuti Umum
+EPF
+SOCSO
+EIS
+Unpaid leave
+Other deductions
+Net pay
+Employer contributions
+```
+
+The employee portal can display/print payroll-related information through the application's payslip functionality.
+
+---
+
+# 23. Notifications
+
+`lib/services/notification_service.dart` initializes Firebase Cloud Messaging and local notifications.
+
+The application includes notification handling for foreground/background notification scenarios.
+
+The backend Prisma schema also contains notification-related entities:
+
+```text
+Notification
+NotificationRecipient
+DeviceToken
+Announcement
+```
+
+Supported notification types include:
+
+```text
+SALARY_CREDITED
+SALARY_INCREMENT
+ANNOUNCEMENT
+COMMON_UPDATE
+PAYROLL
+SYSTEM
 ```
 
 ---
 
-# 🌐 Backend
+# 24. Employee and database information
 
-The application can communicate with the payroll backend through a REST API.
-
-Default production API:
+The repository's Flutter Supabase service works with employee information including:
 
 ```text
-https://hasaniworkhub.onrender.com/
+employee_id
+name
+designation
+department
+email
+new_ic_no
+bank_code
+bank_account
+epf_no
+address
+joining_date
+is_active
+branch_id
+socso_no
 ```
 
-The API URL can be configured using:
+The supplied database schema for `employees` uses `employee_id` as the primary key and links `branch_id` to the `branches` table.
 
-```text
-API_BASE_URL
-```
-
-Example:
-
-```bash
-flutter run --dart-define=API_BASE_URL=https://your-api-url.com
-```
+For EPF export, the employee EPF number is taken from the employee record.
 
 ---
 
-# ⚙️ Installation
+# 25. Supabase
 
-## 1. Clone Repository
+The primary Flutter data-access class is:
 
-```bash
-git clone https://github.com/wajisumiliya/hasanipayroll.git
+```text
+lib/screens/supabase_service.dart
 ```
 
-Go to the project:
+It provides operations for:
 
-```bash
-cd hasanipayroll
+- Authentication
+- Employee records
+- Branch records
+- Payroll
+- Attendance
+- OT authorization
+- Monthly attendance rows
+- Employee/branch filtering
+- Payroll-related data access
+
+The project contains direct Supabase client initialization in the Flutter application.
+
+### Security requirement
+
+Do not expose Supabase service-role/secret credentials in the Flutter client.
+
+Use only credentials intended for client-side use and enforce authorization with database policies.
+
+---
+
+# 26. Node / Prisma backend
+
+The repository additionally contains:
+
+```text
+backend/
 ```
 
-## 2. Install Flutter Dependencies
+The Prisma schema currently defines entities including:
 
-```bash
-flutter pub get
+```text
+app_user
+Employee
+PayrollRecord
+SalaryIncrement
+DeviceToken
+Notification
+NotificationRecipient
+Announcement
 ```
 
-## 3. Check Flutter
+The backend `PayrollRecord` model contains payroll information including:
+
+```text
+basicSalary
+overtime
+EPF
+SOCSO
+EIS
+grossSalary
+netSalary
+totalDeductions
+unpaidLeave
+bank information
+payment status
+```
+
+The Node backend is therefore a separate persistence/API component and its Prisma schema should be kept synchronized with any production PostgreSQL schema actually used by the Flutter application.
+
+---
+
+# 27. Important repository architecture note
+
+There are currently **two database/backend representations** in the repository:
+
+1. Flutter's direct Supabase/PostgreSQL access.
+2. A Node.js/Prisma/PostgreSQL backend under `backend/`.
+
+Before changing database structures, confirm which database path is being used by the production deployment.
+
+Do not assume that changing only `backend/prisma/schema.prisma` automatically changes the Supabase schema used by the Flutter application.
+
+---
+
+# 28. Installation
+
+## Requirements
+
+Install:
+
+- Flutter
+- Dart SDK compatible with `pubspec.yaml`
+- Android SDK for Android builds
+- Node.js/npm if the backend is used
+- A configured Supabase project
+- Firebase configuration for notification-enabled builds
+
+Check Flutter:
 
 ```bash
 flutter doctor
@@ -411,55 +937,61 @@ flutter doctor
 
 ---
 
-# ▶️ Run Application
+# 29. Install Flutter dependencies
 
-## Android
-
-Connect an Android device or start an emulator.
+From the project root:
 
 ```bash
-flutter devices
+flutter pub get
 ```
 
-Run:
+---
 
-```bash
-flutter run
-```
+# 30. Run Flutter application
 
-## Chrome / Web
+### Chrome
 
 ```bash
 flutter run -d chrome
 ```
 
+### Android
+
+Check devices:
+
+```bash
+flutter devices
+```
+
+Then:
+
+```bash
+flutter run
+```
+
 ---
 
-# 🏗 Build Android APK
+# 31. Build Android
 
-For a release APK:
+### APK
 
 ```bash
 flutter build apk --release
 ```
 
-Generated APK:
+Output:
 
 ```text
 build/app/outputs/flutter-apk/app-release.apk
 ```
 
----
-
-# 📦 Build Android App Bundle
-
-For Google Play Store:
+### Android App Bundle
 
 ```bash
 flutter build appbundle --release
 ```
 
-Generated AAB:
+Output:
 
 ```text
 build/app/outputs/bundle/release/app-release.aab
@@ -467,7 +999,7 @@ build/app/outputs/bundle/release/app-release.aab
 
 ---
 
-# 🌐 Build Web
+# 32. Build Web
 
 ```bash
 flutter build web --release
@@ -481,149 +1013,95 @@ build/web/
 
 ---
 
-# 🔥 Firebase Setup
+# 33. Run backend
 
-Firebase is used for push notifications.
+If the Node/Prisma backend is required:
 
-Required Firebase configuration files must be present for the platforms being built.
-
-Android normally requires:
-
-```text
-google-services.json
+```bash
+cd backend
+npm install
 ```
 
-Flutter Firebase configuration is generated/configured through:
+Generate Prisma client:
 
-```text
-firebase_options.dart
+```bash
+npm run db:generate
 ```
 
-Do not commit private Firebase service-account credentials to GitHub.
+Development:
+
+```bash
+npm run dev
+```
+
+Production-style start:
+
+```bash
+npm start
+```
+
+Prisma database commands:
+
+```bash
+npm run db:push
+npm run db:studio
+```
+
+Configure the backend environment variables required by `backend/src/server.js` and Prisma before starting the server.
 
 ---
 
-# 🟦 Supabase Setup
+# 34. Firebase
 
-Create a Supabase project and configure the required PostgreSQL database.
-
-The application requires the Supabase URL and public client key.
-
-The Supabase client should be configured using public/publishable credentials.
-
-### Important
-
-Never place a Supabase:
+The repository contains:
 
 ```text
-service_role
-secret key
-private key
+lib/firebase_options.dart
+web/firebase-messaging-sw.js
+android/app/google-services.json
 ```
 
-inside the Flutter application.
+Firebase is initialized during application startup.
 
-Only public/publishable credentials should be exposed to the client.
+Do not commit private Firebase service-account credentials or other server-side secrets.
 
 ---
 
-# 🔒 Security
+# 35. GitHub Actions
 
-Payroll information is sensitive.
-
-The application should use Supabase Row Level Security (RLS).
-
-Recommended access model:
+The repository contains:
 
 ```text
-ADMIN
-  ↓
-All authorized payroll data
-
-BRANCH
-  ↓
-Only assigned branch data
-
-EMPLOYEE
-  ↓
-Only own employee/payroll data
+.github/workflows/android.yml
 ```
 
-Database security must be enforced by PostgreSQL/Supabase policies and not only by Flutter UI restrictions.
+The current workflow:
 
----
+1. Checks out the repository.
+2. Installs Flutter stable `3.47.0`.
+3. Regenerates Android platform files.
+4. Runs `flutter pub get`.
+5. Builds a release APK.
+6. Builds a release AAB.
+7. Uploads both artifacts.
 
-# 🛡 Recommended RLS Rules
+Workflow trigger:
 
-## Employees
-
-Employees should only access their own employee record.
-
-Branch users should only access employees belonging to their branch.
-
-Administrators should have appropriate administrative access.
-
-## Payroll
-
-Employees:
 ```text
-SELECT own payroll
+push to main
 ```
 
-Branch users:
-```text
-SELECT payroll belonging to their branch
-```
+and manual:
 
-Administrators:
 ```text
-FULL authorized access
-```
-
-## Attendance
-
-Employees:
-```text
-VIEW own attendance
-```
-
-Branch users:
-```text
-VIEW/manage attendance for their branch
-```
-
-Administrators:
-```text
-MANAGE authorized attendance records
+workflow_dispatch
 ```
 
 ---
 
-# 🔐 Password Security
+# 36. Testing and code checks
 
-Passwords must never be stored as plain text in production.
-
-Recommended architecture:
-
-```text
-Flutter
-   ↓
-Authentication Service
-   ↓
-Authenticated User
-   ↓
-Supabase RLS
-   ↓
-Payroll Data
-```
-
-Do not expose passwords through employee or payroll queries.
-
----
-
-# 🧪 Testing
-
-Run static analysis:
+Run:
 
 ```bash
 flutter analyze
@@ -635,98 +1113,247 @@ Run tests:
 flutter test
 ```
 
-Check dependencies:
-
-```bash
-flutter pub outdated
-```
-
-Check connected devices:
-
-```bash
-flutter devices
-```
-
----
-
-# 🧹 Code Quality
-
-Before creating a production release:
-
-```bash
-flutter analyze
-flutter test
-flutter build apk --release
-```
-
-All critical errors should be resolved before deployment.
-
----
-
-# 🚀 Production Checklist
-
-Before publishing:
-
-- [ ] Flutter analyzer passes
-- [ ] All tests pass
-- [ ] Android release build succeeds
-- [ ] Supabase database configured
-- [ ] RLS enabled
-- [ ] RLS policies tested
-- [ ] Admin permissions tested
-- [ ] Branch permissions tested
-- [ ] Employee permissions tested
-- [ ] Password security verified
-- [ ] OTP flow tested
-- [ ] Firebase notifications tested
-- [ ] Salary notification tested
-- [ ] Payslip generation tested
-- [ ] PDF printing tested
-- [ ] Employee data protection verified
-- [ ] Production API tested
-- [ ] Database backup configured
-- [ ] Firebase production configuration verified
-- [ ] App icon configured
-- [ ] Application version updated
-- [ ] Android signing configured
-- [ ] Google Play release tested
-
----
-
-# 📈 Version
-
-Current application version:
+The repository currently contains a basic widget smoke test under:
 
 ```text
-1.0.0+1
+test/widget_test.dart
+```
+
+The current test is a template-style counter test and should be replaced/expanded with payroll-specific tests before treating it as comprehensive application coverage.
+
+Recommended payroll tests include:
+
+```text
+OT minutes
+Net working minutes
+Unpaid deduction
+Late deduction
+Public holiday
+EPF
+SOCSO
+EIS
+Net salary
 ```
 
 ---
 
-# 🏢 About
+# 37. Recommended payroll test examples
 
-**Hasani Books Payroll Portal**
+### Public holiday
 
-An employee and payroll management platform designed for managing:
+For:
 
-- Employees
-- Branches
-- Payroll
-- Attendance
-- Payslips
-- Notifications
-- Employee self-service
+```text
+Basic salary = RM1,700
+PH worked = 1 day
+```
+
+Expected:
+
+```text
+1,700 / 26 × 2 = RM130.77
+```
+
+### Unpaid
+
+If `eis_applicable = false`:
+
+```text
+Unpaid per day = Basic Salary / 28
+```
+
+Otherwise:
+
+```text
+Unpaid per day = Basic Salary / 26
+```
+
+### OT
+
+For a 7:30 net target:
+
+```text
+8:53 net
+= 533 minutes
+
+533 - 450
+= 83 minutes
+
+83 minutes
+= 1 hour 23 minutes
+```
+
+This is an important regression test because OT must remain synchronized in **minutes**, rather than accidentally interpreting `1.23` as decimal hours or reusing a stale two-hour value.
 
 ---
 
-# 📞 Support
+# 38. Security
 
-For application support and system administration, contact the Hasani Books system administrator.
+Payroll and employee information is sensitive.
+
+Production deployment should enforce authorization at the database/API layer, not only by hiding buttons in Flutter.
+
+Recommended authorization model:
+
+```text
+ADMIN
+  ↓
+Authorized administrative payroll/employee access
+
+BRANCH
+  ↓
+Authorized assigned-branch access
+
+EMPLOYEE
+  ↓
+Own employee/payroll access
+```
+
+Protect:
+
+- IC/passport numbers
+- Bank accounts
+- EPF numbers
+- SOCSO numbers
+- Salary
+- Payroll deductions
+- Payroll contribution data
+- Authentication credentials
+- OTP information
+
+Never commit:
+
+```text
+service_role keys
+private API keys
+passwords
+JWT signing secrets
+Firebase service-account credentials
+database passwords
+```
 
 ---
 
-# 📜 License
+# 39. Production checklist
 
-This project is proprietary software developed for Hasani Books.
+Before production deployment:
 
-Unauthorized copying, distribution, modification or commercial use is prohibited.
+- [ ] `flutter analyze` passes
+- [ ] `flutter test` passes
+- [ ] Android release APK builds
+- [ ] Android AAB builds
+- [ ] Supabase connection verified
+- [ ] Database RLS policies verified
+- [ ] Admin access verified
+- [ ] Branch access verified
+- [ ] Employee access verified
+- [ ] First-login OTP tested
+- [ ] Password creation tested
+- [ ] Attendance saving tested
+- [ ] Attendance statuses tested
+- [ ] Net working minutes tested
+- [ ] OT request tested
+- [ ] OT authorization tested
+- [ ] OT minute synchronization tested
+- [ ] Unpaid calculation tested
+- [ ] Late deduction tested
+- [ ] Public holiday calculation tested
+- [ ] EPF tested
+- [ ] SOCSO tested
+- [ ] EIS tested
+- [ ] Payroll overwrite behavior tested
+- [ ] Payslip PDF tested
+- [ ] RHB Excel tested
+- [ ] EPF Excel tested
+- [ ] EIS Excel tested
+- [ ] SOCSO Excel tested
+- [ ] Bank account data verified
+- [ ] EPF number data verified
+- [ ] Firebase notifications tested
+- [ ] Secrets removed from source control
+- [ ] Database backup/recovery verified
+
+---
+
+# 40. Known audit observations
+
+This README is based on an audit of the supplied repository snapshot.
+
+### 1. Flutter test is still the default counter smoke test
+
+`test/widget_test.dart` tests a counter UI rather than the payroll application. Payroll-specific automated tests should be added.
+
+### 2. Backend and Flutter data layers are separate
+
+The repository contains both direct Supabase access and a Node/Prisma backend. They should be intentionally synchronized rather than treated as automatically interchangeable.
+
+### 3. OT rule comments and implementation should remain synchronized
+
+The attendance save logic currently contains explicit OT eligibility checks involving break fulfilment and extra minutes. Any future business-rule change should update both:
+
+```text
+lib/screens/supabase_service.dart
+lib/services/attendance_payroll_service.dart
+```
+
+together.
+
+### 4. Payslip field labels should be reviewed
+
+`pdf_service.dart` contains employee/bank-related display mappings that should be reviewed before production release to ensure every label corresponds to the correct database field.
+
+### 5. Database schema source of truth should be documented
+
+The repository contains a PostgreSQL dump and a separate Prisma schema, while the Flutter application directly accesses Supabase. Production should designate one authoritative schema/migration process.
+
+---
+
+# 41. Development workflow
+
+Recommended workflow:
+
+```text
+1. Update database/schema
+        ↓
+2. Update Supabase/data service
+        ↓
+3. Update payroll calculation service
+        ↓
+4. Update UI
+        ↓
+5. Test calculation
+        ↓
+6. Test Excel/PDF exports
+        ↓
+7. flutter analyze
+        ↓
+8. flutter test
+        ↓
+9. Build release
+        ↓
+10. Commit and push
+```
+
+For payroll calculation changes, always test at least one manually verified employee before generating the complete monthly payroll.
+
+---
+
+# 42. Repository
+
+GitHub:
+
+```text
+https://github.com/wajisumiliya/hasanipayroll
+```
+
+---
+
+# 43. License
+
+The repository contains a `LICENSE` file. Refer to that file for the authoritative license terms.
+
+---
+
+## Hasani Books Payroll Portal
+
+Payroll • Attendance • Employees • Branches • Payslips • Statutory Contributions • Excel Exports • Notifications
