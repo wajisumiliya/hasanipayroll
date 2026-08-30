@@ -1,25 +1,86 @@
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import "dotenv/config";
+
+import crypto from "crypto";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import pg from "pg";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import nodemailer from "nodemailer";
-
 // ============================================================
-// ENVIRONMENT
+// CONFIGURATION
 // ============================================================
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const PORT = Number(process.env.PORT || 5000);
 
-dotenv.config({
-  path: path.join(__dirname, "../.env"),
-});
+const JWT_SECRET = String(
+  process.env.JWT_SECRET || "",
+).trim();
+
+const JWT_EXPIRES_IN =
+  process.env.JWT_EXPIRES_IN || "8h";
+
+const FRONTEND_URL =
+  String(
+    process.env.FRONTEND_URL ||
+      "http://localhost:3000",
+  ).trim();
+
+const OTP_EXPIRES_MINUTES =
+  Number(
+    process.env.OTP_EXPIRES_MINUTES || 5,
+  );
+
+const OTP_MAX_ATTEMPTS =
+  Number(
+    process.env.OTP_MAX_ATTEMPTS || 5,
+  );
+
+const OTP_RESEND_SECONDS =
+  Number(
+    process.env.OTP_RESEND_SECONDS || 60,
+  );
+
+const OTP_VERIFICATION_MINUTES =
+  Number(
+    process.env.OTP_VERIFICATION_MINUTES || 15,
+  );
+
+// ============================================================
+// STARTUP SECURITY CHECKS
+// ============================================================
+
+if (!JWT_SECRET) {
+  console.error(
+    "FATAL: JWT_SECRET is not configured.",
+  );
+
+  process.exit(1);
+}
+
+if (JWT_SECRET.length < 32) {
+  console.error(
+    "FATAL: JWT_SECRET must be at least 32 characters.",
+  );
+
+  process.exit(1);
+}
+
+if (
+  !process.env.DATABASE_URL
+) {
+  console.error(
+    "FATAL: DATABASE_URL is not configured.",
+  );
+
+  process.exit(1);
+}
 
 // ============================================================
 // APP
@@ -27,31 +88,91 @@ dotenv.config({
 
 const app = express();
 
+app.disable("x-powered-by");
+
+app.set(
+  "trust proxy",
+  1,
+);
+
+// ============================================================
+// SECURITY HEADERS
+// ============================================================
+
 app.use(
-  cors({
-    origin: true,
-    credentials: true,
+  helmet({
+    contentSecurityPolicy: false,
   }),
 );
 
+// ============================================================
+// CORS
+// ============================================================
 
+const allowedOrigins =
+  FRONTEND_URL
+    .split(",")
+    .map((value) =>
+      value.trim(),
+    )
+    .filter(Boolean);
 
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow non-browser requests.
+      if (!origin) {
+        return callback(
+          null,
+          true,
+        );
+      }
 
+      if (
+        allowedOrigins.includes(
+          origin,
+        )
+      ) {
+        return callback(
+          null,
+          true,
+        );
+      }
 
-app.use(cors({
-  origin: '*', // Or specify 'https://hasanihub.onrender.com'
-  credentials: true
-}));
+      return callback(
+        new Error(
+          "CORS origin not allowed",
+        ),
+      );
+    },
 
+    credentials: true,
 
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
+  }),
+);
+
+// ============================================================
+// BODY LIMIT
+// ============================================================
 
 app.use(
   express.json({
-    limit: "10mb",
+    limit: "2mb",
   }),
 );
-
-
 
 // ============================================================
 // DATABASE
@@ -60,89 +181,140 @@ app.use(
 const { Pool } = pg;
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString:
+    process.env.DATABASE_URL,
+
+  max: Number(
+    process.env.DB_POOL_MAX || 10,
+  ),
+
+  idleTimeoutMillis: 30000,
+
+  connectionTimeoutMillis: 10000,
 });
 
-const adapter = new PrismaPg(pool);
+const adapter =
+  new PrismaPg(pool);
 
-const prisma = new PrismaClient({
-  adapter,
-});
+const prisma =
+  new PrismaClient({
+    adapter,
+  });
 
 // ============================================================
-// DATABASE TEST
+// RATE LIMITERS
 // ============================================================
 
-async function testDatabase() {
-  try {
-    const connection = await pool.query(`
-      SELECT
-        current_database(),
-        current_schema()
-    `);
+const loginLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
 
-    console.log(
-      "CONNECTED DATABASE:",
-      connection.rows[0],
-    );
+    max: 10,
 
-    const tables = await pool.query(`
-      SELECT
-        table_schema,
-        table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-      ORDER BY table_name
-    `);
+    standardHeaders: true,
 
-    console.log("PUBLIC TABLES:");
-    console.table(tables.rows);
+    legacyHeaders: false,
 
-    const columns = await pool.query(`
-      SELECT
-        column_name,
-        data_type
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'app_user'
-      ORDER BY ordinal_position
-    `);
+    skipSuccessfulRequests: true,
 
-    console.log("APP_USER COLUMNS:");
-    console.table(columns.rows);
+    message: {
+      ok: false,
+      message:
+        "Too many login attempts. Please try again later.",
+    },
+  });
 
-    const users = await pool.query(`
-      SELECT COUNT(*)::int AS count
-      FROM public."app_user"
-    `);
+const otpSendLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
 
-    console.log(
-      "APP_USER COUNT:",
-      users.rows[0].count,
-    );
-  } catch (error) {
-    console.error(
-      "DATABASE CONNECTION ERROR:",
-      error,
-    );
-  }
-}
+    max: 5,
 
-testDatabase();
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+      ok: false,
+      message:
+        "Too many OTP requests. Please try again later.",
+    },
+  });
+
+const otpVerifyLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
+
+    max: 10,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+      ok: false,
+      message:
+        "Too many OTP verification attempts. Please try again later.",
+    },
+  });
+
+const passwordLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
+
+    max: 5,
+
+    standardHeaders: true,
+
+    legacyHeaders: false,
+
+    message: {
+      ok: false,
+      message:
+        "Too many password attempts. Please try again later.",
+    },
+  });
 
 // ============================================================
 // HELPERS
 // ============================================================
 
 function normalizeLogin(value) {
-  return String(value ?? "").trim();
+  return String(
+    value ?? "",
+  )
+    .trim()
+    .slice(0, 200);
 }
 
-function normalizeEmployeeId(value) {
-  return normalizeLogin(value).toUpperCase();
+function normalizeEmployeeId(
+  value,
+) {
+  return normalizeLogin(
+    value,
+  ).toUpperCase();
 }
 
-function numberValue(value) {
+function isValidEmployeeId(
+  value,
+) {
+  return (
+    typeof value === "string" &&
+    value.length >= 1 &&
+    value.length <= 100 &&
+    /^[A-Z0-9._-]+$/i.test(
+      value,
+    )
+  );
+}
+
+function safeNumber(
+  value,
+) {
   if (
     value === null ||
     value === undefined ||
@@ -151,93 +323,320 @@ function numberValue(value) {
     return 0;
   }
 
-  const cleaned = String(value)
-    .replace(/RM/gi, "")
-    .replace(/,/g, "")
-    .trim();
+  const cleaned =
+    String(value)
+      .replace(/RM/gi, "")
+      .replace(/,/g, "")
+      .trim();
 
-  const result = Number(cleaned);
+  const result =
+    Number(cleaned);
 
-  return Number.isFinite(result)
+  return Number.isFinite(
+    result,
+  )
     ? result
     : 0;
 }
 
-// ============================================================
-// PASSWORD VERIFICATION
-// ============================================================
-//
-// Supports:
-//
-// 1. bcrypt hash
-// 2. legacy plain-text password
-//
-// Recommended: migrate all passwords to bcrypt.
-//
-
-async function verifyPassword(
-  enteredPassword,
-  storedPassword,
+function genericError(
+  res,
+  status = 500,
 ) {
-  if (
-    !enteredPassword ||
-    !storedPassword
-  ) {
-    return false;
-  }
+  return res.status(status).json({
+    ok: false,
+    message:
+      status === 500
+        ? "Internal server error."
+        : "Request failed.",
+  });
+}
 
-  const stored =
-    String(storedPassword).trim();
+function generateOtp() {
+  return crypto
+    .randomInt(
+      100000,
+      1000000,
+    )
+    .toString();
+}
 
-  // bcrypt
-  if (
-    stored.startsWith("$2a$") ||
-    stored.startsWith("$2b$") ||
-    stored.startsWith("$2y$")
-  ) {
-    try {
-      return await bcrypt.compare(
-        enteredPassword,
-        stored,
-      );
-    } catch (error) {
-      console.error(
-        "BCRYPT ERROR:",
-        error,
-      );
-
-      return false;
-    }
-  }
-
-  // Legacy plain text
-  return enteredPassword === stored;
+function generateRandomToken(
+  bytes = 32,
+) {
+  return crypto
+    .randomBytes(bytes)
+    .toString("hex");
 }
 
 // ============================================================
-// FIND APP USER
-// ============================================================
-//
-// ACTUAL TABLE:
-//
-// public."app_user"
-//
-// ACTUAL COLUMNS:
-//
-// username
-// email
-// passwordHash
-// role
-// isActive
-// employeeId
-// mustChangePassword
-// otpHash
-// otpExpiresAt
-// ...
-//
+// JWT
 // ============================================================
 
-async function findAppUser(login) {
+function createAccessToken(
+  user,
+) {
+  return jwt.sign(
+    {
+      sub: String(user.id),
+
+      role: String(
+        user.role,
+      ),
+
+      employeeId:
+        user.employeeId ||
+        null,
+
+      type: "access",
+    },
+
+    JWT_SECRET,
+
+    {
+      expiresIn:
+        JWT_EXPIRES_IN,
+
+      issuer:
+        "hasani-payroll",
+
+      audience:
+        "hasani-payroll-app",
+    },
+  );
+}
+
+function createOtpVerificationToken(
+  user,
+) {
+  return jwt.sign(
+    {
+      sub: String(user.id),
+
+      employeeId:
+        user.employeeId ||
+        null,
+
+      type:
+        "otp-verification",
+
+      nonce:
+        generateRandomToken(
+          16,
+        ),
+    },
+
+    JWT_SECRET,
+
+    {
+      expiresIn: `${OTP_VERIFICATION_MINUTES}m`,
+
+      issuer:
+        "hasani-payroll",
+
+      audience:
+        "hasani-payroll-otp",
+    },
+  );
+}
+
+function verifyOtpVerificationToken(
+  token,
+) {
+  return jwt.verify(
+    token,
+    JWT_SECRET,
+    {
+      issuer:
+        "hasani-payroll",
+
+      audience:
+        "hasani-payroll-otp",
+    },
+  );
+}
+
+// ============================================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================================
+
+async function authenticate(
+  req,
+  res,
+  next,
+) {
+  try {
+    const header =
+      req.headers.authorization ||
+      "";
+
+    if (
+      !header.startsWith(
+        "Bearer ",
+      )
+    ) {
+      return res.status(401).json({
+        ok: false,
+        message:
+          "Authentication required.",
+      });
+    }
+
+    const token =
+      header.slice(7).trim();
+
+    if (!token) {
+      return res.status(401).json({
+        ok: false,
+        message:
+          "Authentication required.",
+      });
+    }
+
+    const payload =
+      jwt.verify(
+        token,
+        JWT_SECRET,
+        {
+          issuer:
+            "hasani-payroll",
+
+          audience:
+            "hasani-payroll-app",
+        },
+      );
+
+    if (
+      payload.type !==
+      "access"
+    ) {
+      return res.status(401).json({
+        ok: false,
+        message:
+          "Invalid authentication token.",
+      });
+    }
+
+    const user =
+      await prisma.app_user.findUnique({
+        where: {
+          id: String(
+            payload.sub,
+          ),
+        },
+      });
+
+    if (!user) {
+      return res.status(401).json({
+        ok: false,
+        message:
+          "Authentication required.",
+      });
+    }
+
+    if (
+      user.isActive !== true
+    ) {
+      return res.status(403).json({
+        ok: false,
+        message:
+          "This account is inactive.",
+      });
+    }
+
+    req.user = user;
+
+    req.auth = payload;
+
+    next();
+  } catch {
+    return res.status(401).json({
+      ok: false,
+      message:
+        "Invalid or expired authentication token.",
+    });
+  }
+}
+
+// ============================================================
+// ADMIN AUTHORIZATION
+// ============================================================
+
+function requireAdmin(
+  req,
+  res,
+  next,
+) {
+  if (
+    !req.user ||
+    String(
+      req.user.role,
+    ).toUpperCase() !==
+      "ADMIN"
+  ) {
+    return res.status(403).json({
+      ok: false,
+      message:
+        "Administrator access required.",
+    });
+  }
+
+  next();
+}
+
+// ============================================================
+// EMPLOYEE AUTHORIZATION
+// ============================================================
+
+function requireEmployeeAccess(
+  req,
+  res,
+  next,
+) {
+  const requestedId =
+    normalizeEmployeeId(
+      req.params.employeeId,
+    );
+
+  const authenticatedId =
+    normalizeEmployeeId(
+      req.user.employeeId,
+    );
+
+  const role =
+    String(
+      req.user.role,
+    ).toUpperCase();
+
+  // Admin can access any employee.
+  if (role === "ADMIN") {
+    return next();
+  }
+
+  // Employee can access only own record.
+  if (
+    role === "EMPLOYEE" &&
+    authenticatedId &&
+    requestedId ===
+      authenticatedId
+  ) {
+    return next();
+  }
+
+  return res.status(403).json({
+    ok: false,
+    message:
+      "You are not authorized to access this employee's payroll.",
+  });
+}
+
+// ============================================================
+// USER LOOKUP
+// ============================================================
+
+async function findAppUser(
+  login,
+) {
   const cleanLogin =
     normalizeLogin(login);
 
@@ -246,103 +645,87 @@ async function findAppUser(login) {
   }
 
   const employeeId =
-    normalizeEmployeeId(cleanLogin);
-
-  const result = await pool.query(
-    `
-    SELECT
-      "id",
-      "employeeId",
-      "username",
-      "email",
-      "passwordHash",
-      "role",
-      "isActive",
-      "mustChangePassword",
-      "passwordChangedAt",
-      "otpHash",
-      "otpExpiresAt",
-      "otpAttempts",
-      "otpLastSentAt",
-      "otpVerifiedAt",
-      "lastLoginAt",
-      "createdAt",
-      "updatedAt"
-    FROM public."app_user"
-    WHERE
-      LOWER(TRIM(COALESCE("username", ''))) =
-      LOWER(TRIM($1))
-      OR
-      LOWER(TRIM(COALESCE("email", ''))) =
-      LOWER(TRIM($1))
-      OR
-      UPPER(TRIM(COALESCE("employeeId", ''))) =
-      $2
-    LIMIT 1
-    `,
-    [
+    normalizeEmployeeId(
       cleanLogin,
-      employeeId,
-    ],
-  );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return result.rows[0];
-}
-
-// ============================================================
-// GET EMPLOYEE
-// ============================================================
-
-async function getEmployeeByEmployeeId(
-  employeeId,
-) {
-  if (!employeeId) {
-    return null;
-  }
-
-  try {
-    return await prisma.employee.findUnique({
-      where: {
-        employeeId:
-          normalizeEmployeeId(
-            employeeId,
-          ),
-      },
-    });
-  } catch (error) {
-    console.error(
-      "EMPLOYEE LOOKUP ERROR:",
-      error.message,
     );
 
-    return null;
-  }
+  const result =
+    await pool.query(
+      `
+      SELECT
+        "id",
+        "employeeId",
+        "username",
+        "email",
+        "passwordHash",
+        "role",
+        "isActive",
+        "mustChangePassword",
+        "passwordChangedAt",
+        "otpHash",
+        "otpExpiresAt",
+        "otpAttempts",
+        "otpLastSentAt",
+        "otpVerifiedAt",
+        "lastLoginAt",
+        "createdAt",
+        "updatedAt"
+      FROM public."app_user"
+      WHERE
+        LOWER(TRIM(COALESCE("username", ''))) =
+        LOWER(TRIM($1))
+      OR
+        LOWER(TRIM(COALESCE("email", ''))) =
+        LOWER(TRIM($1))
+      OR
+        UPPER(TRIM(COALESCE("employeeId", ''))) =
+        $2
+      LIMIT 1
+      `,
+      [
+        cleanLogin,
+        employeeId,
+      ],
+    );
+
+  return (
+    result.rows[0] ||
+    null
+  );
 }
 
 // ============================================================
-// PUBLIC USER
+// SAFE USER
 // ============================================================
 
-async function publicAppUser(user) {
+async function publicAppUser(
+  user,
+) {
   const role =
-    String(user.role ?? "")
+    String(
+      user.role ?? "",
+    )
       .trim()
       .toLowerCase();
 
-  const employee =
-    user.employeeId
-      ? await getEmployeeByEmployeeId(
-          user.employeeId,
-        )
-      : null;
+  let employee = null;
+
+  if (user.employeeId) {
+    employee =
+      await prisma.employee.findUnique(
+        {
+          where: {
+            employeeId:
+              normalizeEmployeeId(
+                user.employeeId,
+              ),
+          },
+        },
+      );
+  }
 
   return {
-    id:
-      user.id ?? null,
+    id: user.id ?? null,
 
     username:
       user.username ?? "",
@@ -353,7 +736,8 @@ async function publicAppUser(user) {
     role,
 
     employeeId:
-      user.employeeId ?? null,
+      user.employeeId ??
+      null,
 
     displayName:
       employee?.name ??
@@ -364,10 +748,12 @@ async function publicAppUser(user) {
       user.isActive === true,
 
     firstLogin:
-      user.mustChangePassword === true,
+      user.mustChangePassword ===
+      true,
 
     mustChangePassword:
-      user.mustChangePassword === true,
+      user.mustChangePassword ===
+      true,
 
     employee,
 
@@ -383,16 +769,73 @@ async function publicAppUser(user) {
 }
 
 // ============================================================
+// PASSWORD VERIFICATION
+// ============================================================
+
+async function verifyPassword(
+  enteredPassword,
+  storedPassword,
+) {
+  if (
+    !enteredPassword ||
+    !storedPassword
+  ) {
+    return false;
+  }
+
+  const stored =
+    String(
+      storedPassword,
+    ).trim();
+
+  // SECURITY:
+  // Plain-text passwords are NOT accepted.
+  //
+  // All passwords must be bcrypt hashes.
+
+  if (
+    !stored.startsWith(
+      "$2a$",
+    ) &&
+    !stored.startsWith(
+      "$2b$",
+    ) &&
+    !stored.startsWith(
+      "$2y$",
+    )
+  ) {
+    return false;
+  }
+
+  try {
+    return await bcrypt.compare(
+      enteredPassword,
+      stored,
+    );
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================
 // ROOT
 // ============================================================
 
-app.get("/", (req, res) => {
-  res.json({
-    name: "Hasani Payroll API",
-    status: "online",
-    version: "4.0.0",
-  });
-});
+app.get(
+  "/",
+  (req, res) => {
+    res.json({
+      name:
+        "Hasani Payroll API",
+
+      status:
+        "online",
+
+      version:
+        "5.0.0-security",
+    });
+  },
+);
 
 // ============================================================
 // HEALTH
@@ -406,81 +849,30 @@ app.get(
         "SELECT 1",
       );
 
-      const result =
-        await pool.query(`
-          SELECT COUNT(*)::int AS count
-          FROM public."app_user"
-        `);
-
-      return res.json({
+      res.json({
         ok: true,
-        database: "connected",
-        appUsers:
-          result.rows[0].count,
-        message:
-          "Hasani Payroll API is running",
+
+        database:
+          "connected",
+
+        service:
+          "Hasani Payroll API",
+
         time:
           new Date().toISOString(),
       });
     } catch (error) {
       console.error(
-        "HEALTH ERROR:",
-        error,
+        "HEALTH CHECK FAILED:",
+        error.message,
       );
 
-      return res.status(500).json({
+      res.status(503).json({
         ok: false,
-        database: "disconnected",
+        database:
+          "unavailable",
         message:
-          error.message,
-      });
-    }
-  },
-);
-
-// ============================================================
-// DEBUG APP USERS
-// ============================================================
-//
-// NEVER returns passwords.
-//
-
-app.get(
-  "/api/debug/app-users",
-  async (req, res) => {
-    try {
-      const result =
-        await pool.query(`
-          SELECT
-            "id",
-            "username",
-            "email",
-            "role",
-            "employeeId",
-            "isActive",
-            "mustChangePassword",
-            "createdAt"
-          FROM public."app_user"
-          ORDER BY "username"
-        `);
-
-      return res.json({
-        ok: true,
-        count:
-          result.rows.length,
-        users:
-          result.rows,
-      });
-    } catch (error) {
-      console.error(
-        "DEBUG USERS ERROR:",
-        error,
-      );
-
-      return res.status(500).json({
-        ok: false,
-        message:
-          error.message,
+          "Service temporarily unavailable.",
       });
     }
   },
@@ -492,6 +884,7 @@ app.get(
 
 app.post(
   "/api/auth/login",
+  loginLimiter,
   async (req, res) => {
     try {
       const username =
@@ -501,45 +894,28 @@ app.post(
 
       const password =
         String(
-          req.body?.password ?? "",
+          req.body?.password ??
+            "",
         );
 
-      console.log(
-        "LOGIN REQUEST:",
-        username,
-      );
-
-      if (!username) {
+      if (
+        !username ||
+        !password
+      ) {
         return res.status(400).json({
           ok: false,
           message:
-            "Username, email or Employee ID is required.",
+            "Username and password are required.",
         });
       }
-
-      if (!password) {
-        return res.status(400).json({
-          ok: false,
-          message:
-            "Password is required.",
-        });
-      }
-
-      // ------------------------------------------
-      // FIND USER
-      // ------------------------------------------
 
       const user =
         await findAppUser(
           username,
         );
 
+      // Generic response prevents account enumeration.
       if (!user) {
-        console.log(
-          "USER NOT FOUND:",
-          username,
-        );
-
         return res.status(401).json({
           ok: false,
           message:
@@ -547,64 +923,29 @@ app.post(
         });
       }
 
-      console.log(
-        "USER FOUND:",
-        {
-          id:
-            user.id,
-          username:
-            user.username,
-          email:
-            user.email,
-          employeeId:
-            user.employeeId,
-          role:
-            user.role,
-          isActive:
-            user.isActive,
-          mustChangePassword:
-            user.mustChangePassword,
-        },
-      );
-
-      // ------------------------------------------
-      // ACTIVE
-      // ------------------------------------------
-
-      if (user.isActive !== true) {
-        return res.status(403).json({
+      if (
+        user.isActive !== true
+      ) {
+        return res.status(401).json({
           ok: false,
           message:
-            "This account is inactive.",
+            "Invalid username or password.",
         });
       }
 
-      // ------------------------------------------
-      // PASSWORD
-      // ------------------------------------------
-
-      const passwordMatches =
+      const matches =
         await verifyPassword(
           password,
           user.passwordHash,
         );
 
-      if (!passwordMatches) {
-        console.log(
-          "PASSWORD FAILED:",
-          username,
-        );
-
+      if (!matches) {
         return res.status(401).json({
           ok: false,
           message:
             "Invalid username or password.",
         });
       }
-
-      // ------------------------------------------
-      // UPDATE LOGIN
-      // ------------------------------------------
 
       await pool.query(
         `
@@ -614,24 +955,40 @@ app.post(
           "updatedAt" = NOW()
         WHERE "id" = $1
         `,
-        [
-          user.id,
-        ],
+        [user.id],
       );
-
-      // ------------------------------------------
-      // SAFE USER
-      // ------------------------------------------
 
       const safeUser =
         await publicAppUser(
           user,
         );
 
-      console.log(
-        "LOGIN SUCCESS:",
-        user.username,
-      );
+      // First-login account.
+      if (
+        user.mustChangePassword ===
+        true
+      ) {
+        return res.json({
+          ok: true,
+
+          message:
+            "First login requires email verification.",
+
+          firstLogin:
+            true,
+
+          requiresOtp:
+            true,
+
+          user:
+            safeUser,
+        });
+      }
+
+      const accessToken =
+        createAccessToken(
+          user,
+        );
 
       return res.json({
         ok: true,
@@ -640,10 +997,18 @@ app.post(
           "Login successful.",
 
         firstLogin:
-          user.mustChangePassword === true,
+          false,
 
         requiresOtp:
           false,
+
+        accessToken,
+
+        tokenType:
+          "Bearer",
+
+        expiresIn:
+          JWT_EXPIRES_IN,
 
         user:
           safeUser,
@@ -651,36 +1016,114 @@ app.post(
     } catch (error) {
       console.error(
         "LOGIN ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          "Login failed.",
-        error:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
 
 // ============================================================
-// GET CURRENT USER
+// CURRENT USER
+// ============================================================
+
+app.get(
+  "/api/auth/me",
+  authenticate,
+  async (req, res) => {
+    try {
+      const safeUser =
+        await publicAppUser(
+          req.user,
+        );
+
+      res.json({
+        ok: true,
+        user:
+          safeUser,
+      });
+    } catch (error) {
+      console.error(
+        "ME ERROR:",
+        error.message,
+      );
+
+      return genericError(
+        res,
+      );
+    }
+  },
+);
+
+// ============================================================
+// COMPATIBILITY USER ROUTE
+//
+// IMPORTANT:
+// This route is authenticated.
+// It cannot be used to retrieve arbitrary users.
 // ============================================================
 
 app.get(
   "/api/auth/user/:username",
+  authenticate,
   async (req, res) => {
     try {
-      const username =
+      const requested =
         normalizeLogin(
           req.params.username,
         );
 
+      const current =
+        req.user;
+
+      const currentUsername =
+        normalizeLogin(
+          current.username,
+        );
+
+      const currentEmail =
+        normalizeLogin(
+          current.email,
+        );
+
+      const currentEmployeeId =
+        normalizeEmployeeId(
+          current.employeeId,
+        );
+
+      const requestedNormalized =
+        normalizeEmployeeId(
+          requested,
+        );
+
+      const isOwnAccount =
+        requested ===
+          currentUsername ||
+        requested ===
+          currentEmail ||
+        requestedNormalized ===
+          currentEmployeeId;
+
+      if (
+        !isOwnAccount &&
+        String(
+          current.role,
+        ).toUpperCase() !==
+          "ADMIN"
+      ) {
+        return res.status(403).json({
+          ok: false,
+          message:
+            "Not authorized.",
+        });
+      }
+
       const user =
         await findAppUser(
-          username,
+          requested,
         );
 
       if (!user) {
@@ -691,35 +1134,33 @@ app.get(
         });
       }
 
-      if (user.isActive !== true) {
-        return res.status(403).json({
+      if (
+        user.isActive !== true
+      ) {
+        return res.status(404).json({
           ok: false,
           message:
-            "This account is inactive.",
+            "User not found.",
         });
       }
 
-      const safeUser =
-        await publicAppUser(
-          user,
-        );
-
-      return res.json({
+      res.json({
         ok: true,
+
         user:
-          safeUser,
+          await publicAppUser(
+            user,
+          ),
       });
     } catch (error) {
       console.error(
         "GET USER ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
@@ -730,33 +1171,37 @@ app.get(
 
 app.get(
   "/api/admin/employees",
+  authenticate,
+  requireAdmin,
   async (req, res) => {
     try {
       const employees =
-        await prisma.employee.findMany({
-          orderBy: {
-            employeeId:
-              "asc",
+        await prisma.employee.findMany(
+          {
+            orderBy: {
+              employeeId:
+                "asc",
+            },
           },
-        });
+        );
 
-      return res.json({
+      res.json({
         ok: true,
+
         count:
           employees.length,
+
         employees,
       });
     } catch (error) {
       console.error(
         "EMPLOYEE LIST ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
@@ -767,43 +1212,49 @@ app.get(
 
 app.get(
   "/api/admin/payroll",
+  authenticate,
+  requireAdmin,
   async (req, res) => {
     try {
       const records =
-        await prisma.payrollRecord.findMany({
-          include: {
-            employee: true,
-          },
-          orderBy: [
-            {
-              period:
-                "desc",
+        await prisma.payrollRecord.findMany(
+          {
+            include: {
+              employee: true,
             },
-            {
-              employeeId:
-                "asc",
-            },
-          ],
-        });
 
-      return res.json({
+            orderBy: [
+              {
+                period:
+                  "desc",
+              },
+
+              {
+                employeeId:
+                  "asc",
+              },
+            ],
+          },
+        );
+
+      res.json({
         ok: true,
+
         count:
           records.length,
+
         payroll:
           records,
       });
     } catch (error) {
       console.error(
         "PAYROLL LIST ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
@@ -814,6 +1265,8 @@ app.get(
 
 app.get(
   "/api/employees/:employeeId/payroll",
+  authenticate,
+  requireEmployeeAccess,
   async (req, res) => {
     try {
       const employeeId =
@@ -821,12 +1274,26 @@ app.get(
           req.params.employeeId,
         );
 
-      const employee =
-        await prisma.employee.findUnique({
-          where: {
-            employeeId,
-          },
+      if (
+        !isValidEmployeeId(
+          employeeId,
+        )
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Invalid employee ID.",
         });
+      }
+
+      const employee =
+        await prisma.employee.findUnique(
+          {
+            where: {
+              employeeId,
+            },
+          },
+        );
 
       if (!employee) {
         return res.status(404).json({
@@ -837,34 +1304,38 @@ app.get(
       }
 
       const payroll =
-        await prisma.payrollRecord.findMany({
-          where: {
-            employeeId,
-          },
-          orderBy: {
-            period:
-              "desc",
-          },
-        });
+        await prisma.payrollRecord.findMany(
+          {
+            where: {
+              employeeId,
+            },
 
-      return res.json({
+            orderBy: {
+              period:
+                "desc",
+            },
+          },
+        );
+
+      res.json({
         ok: true,
+
         employee,
+
         count:
           payroll.length,
+
         payroll,
       });
     } catch (error) {
       console.error(
         "EMPLOYEE PAYROLL ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
@@ -875,6 +1346,8 @@ app.get(
 
 app.get(
   "/api/employees/:employeeId/payroll/:year/:month",
+  authenticate,
+  requireEmployeeAccess,
   async (req, res) => {
     try {
       const employeeId =
@@ -893,8 +1366,26 @@ app.get(
         );
 
       if (
-        !Number.isInteger(year) ||
-        !Number.isInteger(month) ||
+        !isValidEmployeeId(
+          employeeId,
+        )
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Invalid employee ID.",
+        });
+      }
+
+      if (
+        !Number.isInteger(
+          year,
+        ) ||
+        year < 2000 ||
+        year > 2100 ||
+        !Number.isInteger(
+          month,
+        ) ||
         month < 1 ||
         month > 12
       ) {
@@ -924,22 +1415,25 @@ app.get(
         );
 
       const payroll =
-        await prisma.payrollRecord.findFirst({
-          where: {
-            employeeId,
+        await prisma.payrollRecord.findFirst(
+          {
+            where: {
+              employeeId,
 
-            period: {
-              gte:
-                startDate,
-              lt:
-                endDate,
+              period: {
+                gte:
+                  startDate,
+
+                lt:
+                  endDate,
+              },
+            },
+
+            include: {
+              employee: true,
             },
           },
-
-          include: {
-            employee: true,
-          },
-        });
+        );
 
       if (!payroll) {
         return res.status(404).json({
@@ -949,31 +1443,32 @@ app.get(
         });
       }
 
-      return res.json({
+      res.json({
         ok: true,
+
         payroll,
       });
     } catch (error) {
       console.error(
         "PAYSLIP ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
 
 // ============================================================
-// PAYROLL IMPORT
+// ADMIN - PAYROLL IMPORT
 // ============================================================
 
 app.post(
   "/api/admin/payroll/import",
+  authenticate,
+  requireAdmin,
   async (req, res) => {
     try {
       const rows =
@@ -990,11 +1485,27 @@ app.post(
         });
       }
 
+      // Prevent massive imports.
+      if (
+        rows.length > 5000
+      ) {
+        return res.status(413).json({
+          ok: false,
+          message:
+            "Import is limited to 5000 rows per request.",
+        });
+      }
+
       const results = {
         total:
           rows.length,
-        imported: 0,
-        updated: 0,
+
+        imported:
+          0,
+
+        updated:
+          0,
+
         errors: [],
       };
 
@@ -1018,25 +1529,35 @@ app.post(
 
         const periodText =
           String(
-            row.period ?? "",
+            row.period ??
+              "",
           ).trim();
 
-        if (!employeeId) {
+        if (
+          !isValidEmployeeId(
+            employeeId,
+          )
+        ) {
           results.errors.push({
             row:
               rowNumber,
+
             message:
-              "Missing employee_id.",
+              "Invalid employee_id.",
           });
 
           continue;
         }
 
-        if (!periodText) {
+        if (
+          !periodText
+        ) {
           results.errors.push({
             row:
               rowNumber,
+
             employeeId,
+
             message:
               "Missing payroll period.",
           });
@@ -1057,9 +1578,11 @@ app.post(
           results.errors.push({
             row:
               rowNumber,
+
             employeeId,
+
             message:
-              `Invalid period: ${periodText}`,
+              "Invalid payroll period.",
           });
 
           continue;
@@ -1075,19 +1598,23 @@ app.post(
           );
 
         const employee =
-          await prisma.employee.findUnique({
-            where: {
-              employeeId,
+          await prisma.employee.findUnique(
+            {
+              where: {
+                employeeId,
+              },
             },
-          });
+          );
 
         if (!employee) {
           results.errors.push({
             row:
               rowNumber,
+
             employeeId,
+
             message:
-              "Employee does not exist in database.",
+              "Employee does not exist.",
           });
 
           continue;
@@ -1095,87 +1622,87 @@ app.post(
 
         const payrollData = {
           basicSalary:
-            numberValue(
+            safeNumber(
               row.basic_salary ??
                 row.basicSalary,
             ),
 
           foodAllowance:
-            numberValue(
+            safeNumber(
               row.food_allowance ??
                 row.foodAllowance,
             ),
 
           otherAllowance:
-            numberValue(
+            safeNumber(
               row.other_allowance ??
                 row.otherAllowance,
             ),
 
           overtime:
-            numberValue(
+            safeNumber(
               row.overtime,
             ),
 
           bonus:
-            numberValue(
+            safeNumber(
               row.bonus,
             ),
 
           commission:
-            numberValue(
+            safeNumber(
               row.commission,
             ),
 
           otherEarnings:
-            numberValue(
+            safeNumber(
               row.other_earnings ??
                 row.otherEarnings,
             ),
 
           epfEmployee:
-            numberValue(
+            safeNumber(
               row.epf_employee ??
                 row.epfEmployee,
             ),
 
           socsoEmployee:
-            numberValue(
+            safeNumber(
               row.socso_employee ??
                 row.socsoEmployee,
             ),
 
           eisEmployee:
-            numberValue(
+            safeNumber(
               row.eis_employee ??
                 row.eisEmployee,
             ),
 
           pcb:
-            numberValue(
+            safeNumber(
               row.pcb,
             ),
 
           otherDeduction:
-            numberValue(
+            safeNumber(
               row.other_deduction ??
                 row.otherDeduction,
             ),
 
           epfEmployer:
-            numberValue(
+            safeNumber(
               row.epf_employer ??
                 row.epfEmployer,
             ),
 
           socsoEmployer:
-            numberValue(
+            safeNumber(
               row.socso_employer ??
                 row.socsoEmployer,
             ),
 
           eisEmployer:
-            numberValue(
+            safeNumber(
               row.eis_employer ??
                 row.eisEmployer,
             ),
@@ -1186,7 +1713,7 @@ app.post(
                 row.bankCode ??
                 employee.bankCode ??
                 "",
-            ),
+            ).slice(0, 100),
 
           bankAccount:
             String(
@@ -1194,7 +1721,7 @@ app.post(
                 row.bankAccount ??
                 employee.bankAccount ??
                 "",
-            ),
+            ).slice(0, 100),
 
           remarks:
             row.remarks !==
@@ -1206,40 +1733,53 @@ app.post(
             ).trim() !== ""
               ? String(
                   row.remarks,
+                ).slice(
+                  0,
+                  1000,
                 )
               : null,
         };
 
         const existing =
-          await prisma.payrollRecord.findUnique({
-            where: {
-              employeeId_period: {
-                employeeId,
-                period:
-                  normalizedPeriod,
+          await prisma.payrollRecord.findUnique(
+            {
+              where: {
+                employeeId_period:
+                  {
+                    employeeId,
+
+                    period:
+                      normalizedPeriod,
+                  },
               },
             },
-          });
+          );
 
-        await prisma.payrollRecord.upsert({
-          where: {
-            employeeId_period: {
+        await prisma.payrollRecord.upsert(
+          {
+            where: {
+              employeeId_period:
+                {
+                  employeeId,
+
+                  period:
+                    normalizedPeriod,
+                },
+            },
+
+            update:
+              payrollData,
+
+            create: {
               employeeId,
+
               period:
                 normalizedPeriod,
+
+              ...payrollData,
             },
           },
-
-          update:
-            payrollData,
-
-          create: {
-            employeeId,
-            period:
-              normalizedPeriod,
-            ...payrollData,
-          },
-        });
+        );
 
         if (existing) {
           results.updated++;
@@ -1248,193 +1788,137 @@ app.post(
         }
       }
 
-      return res.json({
+      res.json({
         ok: true,
+
         message:
           "Payroll import completed.",
+
         ...results,
       });
     } catch (error) {
       console.error(
         "PAYROLL IMPORT ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          "Payroll import failed.",
-        error:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
 
 // ============================================================
-// DELETE PAYROLL
+// ADMIN - DELETE PAYROLL
 // ============================================================
 
 app.delete(
   "/api/admin/payroll/:id",
+  authenticate,
+  requireAdmin,
   async (req, res) => {
     try {
-      await prisma.payrollRecord.delete({
-        where: {
-          id:
-            req.params.id,
-        },
-      });
+      const id =
+        String(
+          req.params.id ??
+            "",
+        ).trim();
 
-      return res.json({
+      if (
+        !id ||
+        id.length > 100
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Invalid payroll ID.",
+        });
+      }
+
+      const existing =
+        await prisma.payrollRecord.findUnique(
+          {
+            where: {
+              id,
+            },
+          },
+        );
+
+      if (!existing) {
+        return res.status(404).json({
+          ok: false,
+          message:
+            "Payroll record not found.",
+        });
+      }
+
+      await prisma.payrollRecord.delete(
+        {
+          where: {
+            id,
+          },
+        },
+      );
+
+      res.json({
         ok: true,
+
         message:
           "Payroll record deleted.",
       });
     } catch (error) {
       console.error(
         "DELETE PAYROLL ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-        message:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
 
 // ============================================================
-// SERVER
+// SEND OTP
 // ============================================================
 
-const port =
-  Number(
-    process.env.PORT || 5000,
-  );
+const mailTransporter =
+  nodemailer.createTransport(
+    {
+      host:
+        process.env.SMTP_HOST ||
+        "smtp.gmail.com",
 
-const server =
-  app.listen(
-    port,
-    () => {
-      console.log("");
-      console.log(
-        "========================================",
-      );
-      console.log(
-        "HASANI PAYROLL API",
-      );
-      console.log(
-        `http://localhost:${port}`,
-      );
-      console.log(
-        "========================================",
-      );
-      console.log("");
+      port:
+        Number(
+          process.env.SMTP_PORT ||
+            587,
+        ),
+
+      secure:
+        String(
+          process.env.SMTP_SECURE ||
+            "false",
+        ).toLowerCase() ===
+        "true",
+
+      auth: {
+        user:
+          String(
+            process.env.SMTP_USER ||
+              "",
+          ).trim(),
+
+        pass:
+          String(
+            process.env.SMTP_PASSWORD ||
+              "",
+          ),
+      },
     },
   );
-
-// ============================================================
-// SHUTDOWN
-// ============================================================
-
-async function shutdown() {
-  console.log(
-    "\nShutting down Hasani Payroll API...",
-  );
-
-  server.close(
-    async () => {
-      try {
-        await prisma.$disconnect();
-        await pool.end();
-      } catch (error) {
-        console.error(
-          "Shutdown error:",
-          error,
-        );
-      }
-
-      process.exit(0);
-    },
-  );
-}
-
-process.on(
-  "SIGINT",
-  shutdown,
-);
-
-process.on(
-  "SIGTERM",
-  shutdown,
-);
-// ============================================================
-// OTP CONFIGURATION
-// ============================================================
-
-const OTP_EXPIRES_MINUTES =
-  Number(process.env.OTP_EXPIRES_MINUTES || 5);
-
-const OTP_MAX_ATTEMPTS =
-  Number(process.env.OTP_MAX_ATTEMPTS || 5);
-
-const OTP_RESEND_SECONDS =
-  Number(process.env.OTP_RESEND_SECONDS || 60);
-
-
-// ============================================================
-// SMTP
-// ============================================================
-
-const mailTransporter = nodemailer.createTransport({
-  host:
-    process.env.SMTP_HOST ||
-    "smtp.gmail.com",
-
-  port:
-    Number(
-      process.env.SMTP_PORT || 587,
-    ),
-
-  secure:
-    String(
-      process.env.SMTP_SECURE || "false",
-    ).toLowerCase() === "true",
-
-  auth: {
-    user:
-      String(
-        process.env.SMTP_USER || "",
-      ).trim(),
-
-    pass:
-      String(
-        process.env.SMTP_PASSWORD || "",
-      ),
-  },
-});
-
-
-// ============================================================
-// GENERATE OTP
-// ============================================================
-
-function generateOtp() {
-  return String(
-    Math.floor(
-      100000 +
-        Math.random() * 900000,
-    ),
-  );
-}
-
-
-// ============================================================
-// SEND OTP EMAIL
-// ============================================================
 
 async function sendOtpEmail({
   email,
@@ -1445,51 +1929,49 @@ async function sendOtpEmail({
     process.env.SMTP_FROM ||
     process.env.SMTP_USER;
 
-  await mailTransporter.sendMail({
-    from,
-    to: email,
+  await mailTransporter.sendMail(
+    {
+      from,
 
-    subject:
-      "Hasani Payroll - First Login Verification",
+      to: email,
 
-    text: `
-Hello ${name || "User"},
+      subject:
+        "Hasani Payroll - Verification Code",
+
+      text: `Hello ${
+        name || "User"
+      },
 
 Your Hasani Payroll verification code is:
 
 ${otp}
 
-This code will expire in ${OTP_EXPIRES_MINUTES} minutes.
+This code expires in ${OTP_EXPIRES_MINUTES} minutes.
 
 If you did not request this code, please ignore this email.
 
-Hasani Payroll
-`,
+Hasani Payroll`,
 
-    html: `
-      <div
-        style="
+      html: `
+        <div style="
           font-family:Arial,sans-serif;
           max-width:600px;
           margin:auto;
           padding:20px;
-        "
-      >
+        ">
+          <h2>Hasani Payroll</h2>
 
-        <h2 style="color:#15965D">
-          Hasani Payroll
-        </h2>
+          <p>
+            Hello ${
+              name || "User"
+            },
+          </p>
 
-        <p>
-          Hello ${name || "User"},
-        </p>
+          <p>
+            Your verification code is:
+          </p>
 
-        <p>
-          Your first-login verification code is:
-        </p>
-
-        <div
-          style="
+          <div style="
             font-size:32px;
             font-weight:bold;
             letter-spacing:8px;
@@ -1498,100 +1980,47 @@ Hasani Payroll
             text-align:center;
             border-radius:8px;
             margin:20px 0;
-          "
-        >
-          ${otp}
-        </div>
+          ">
+            ${otp}
+          </div>
 
-        <p>
-          This code will expire in
-          <strong>
-            ${OTP_EXPIRES_MINUTES} minutes
-          </strong>.
-        </p>
+          <p>
+            This code expires in
+            <strong>
+              ${OTP_EXPIRES_MINUTES} minutes
+            </strong>.
+          </p>
 
-        <p>
-          If you did not request this code,
-          please ignore this email.
-        </p>
+          <p>
+            If you did not request this code,
+            please ignore this email.
+          </p>
 
-        <hr>
+          <hr>
 
-        <p
-          style="
+          <p style="
             color:#6b7280;
             font-size:12px;
-          "
-        >
-          Hasani Payroll
-        </p>
-
-      </div>
-    `,
-  });
-}
-
-
-// ============================================================
-// FIND USER FOR OTP
-// ============================================================
-//
-// Accepts:
-//
-// username
-// email
-// employeeId
-//
-// This matches the Flutter application.
-//
-
-async function findOtpUser(value) {
-  const cleanValue =
-    normalizeLogin(value);
-
-  if (!cleanValue) {
-    return null;
-  }
-
-  return await findAppUser(
-    cleanValue,
+          ">
+            Hasani Payroll
+          </p>
+        </div>
+      `,
+    },
   );
 }
 
-
-// ============================================================
-// SEND OTP
-// ============================================================
-//
-// Flutter sends:
-//
-// {
-//   employeeId: "..."
-// }
-//
-// This endpoint also accepts:
-//
-// {
-//   username: "..."
-// }
-//
-// or:
-//
-// {
-//   email: "..."
-// }
-//
-
 app.post(
   "/api/auth/send-otp",
+  otpSendLimiter,
   async (req, res) => {
     try {
       const loginValue =
         normalizeLogin(
           req.body?.employeeId ??
-          req.body?.username ??
-          req.body?.email ??
-          "",
+            req.body?.username ??
+            req.body?.email ??
+            "",
         );
 
       if (!loginValue) {
@@ -1602,85 +2031,26 @@ app.post(
         });
       }
 
-      console.log(
-        "SEND OTP REQUEST:",
-        loginValue,
-      );
-
-      // ------------------------------------------
-      // FIND USER
-      // ------------------------------------------
-
       const user =
-        await findOtpUser(
+        await findAppUser(
           loginValue,
         );
 
-      if (!user) {
-        console.log(
-          "OTP USER NOT FOUND:",
-          loginValue,
-        );
-
-        return res.status(404).json({
-          ok: false,
-          message:
-            "User not found.",
-        });
-      }
-
-      console.log(
-        "OTP USER FOUND:",
-        {
-          id:
-            user.id,
-
-          username:
-            user.username,
-
-          email:
-            user.email,
-
-          employeeId:
-            user.employeeId,
-
-          role:
-            user.role,
-
-          mustChangePassword:
-            user.mustChangePassword,
-        },
-      );
-
-      // ------------------------------------------
-      // ACTIVE
-      // ------------------------------------------
-
-      if (user.isActive !== true) {
-        return res.status(403).json({
-          ok: false,
-          message:
-            "This account is inactive.",
-        });
-      }
-
-      // ------------------------------------------
-      // FIRST LOGIN CHECK
-      // ------------------------------------------
-
+      // Do not reveal whether an account exists.
       if (
-        user.mustChangePassword !== true
+        !user ||
+        user.isActive !==
+          true ||
+        user.mustChangePassword !==
+          true
       ) {
-        return res.status(400).json({
-          ok: false,
+        return res.json({
+          ok: true,
+
           message:
-            "First-login verification is not required for this account.",
+            "If the account is eligible, a verification code has been sent.",
         });
       }
-
-      // ------------------------------------------
-      // EMAIL
-      // ------------------------------------------
 
       const email =
         String(
@@ -1694,15 +2064,14 @@ app.post(
         return res.status(400).json({
           ok: false,
           message:
-            "This account does not have a valid registered email address.",
+            "The account does not have a registered email address.",
         });
       }
 
-      // ------------------------------------------
-      // RESEND LIMIT
-      // ------------------------------------------
-
-      if (user.otpLastSentAt) {
+      // Database resend protection.
+      if (
+        user.otpLastSentAt
+      ) {
         const lastSent =
           new Date(
             user.otpLastSentAt,
@@ -1712,15 +2081,18 @@ app.post(
           Date.now() -
           lastSent;
 
-        const waitMs =
+        if (
+          elapsed <
           OTP_RESEND_SECONDS *
-          1000;
-
-        if (elapsed < waitMs) {
+            1000
+        ) {
           const remaining =
             Math.ceil(
-              (waitMs - elapsed) /
-                1000,
+              (
+                OTP_RESEND_SECONDS *
+                  1000 -
+                elapsed
+              ) / 1000,
             );
 
           return res.status(429).json({
@@ -1735,22 +2107,13 @@ app.post(
         }
       }
 
-      // ------------------------------------------
-      // GENERATE OTP
-      // ------------------------------------------
-
       const otp =
         generateOtp();
-
-      console.log(
-        "GENERATED OTP FOR:",
-        user.username,
-      );
 
       const otpHash =
         await bcrypt.hash(
           otp,
-          10,
+          12,
         );
 
       const expiresAt =
@@ -1760,10 +2123,6 @@ app.post(
               60 *
               1000,
         );
-
-      // ------------------------------------------
-      // SAVE OTP
-      // ------------------------------------------
 
       await pool.query(
         `
@@ -1784,28 +2143,24 @@ app.post(
         ],
       );
 
-      // ------------------------------------------
-      // SEND EMAIL
-      // ------------------------------------------
-
       try {
-        await sendOtpEmail({
-          email,
+        await sendOtpEmail(
+          {
+            email,
 
-          name:
-            user.username ||
-            user.email ||
-            "User",
+            name:
+              user.username ||
+              "User",
 
-          otp,
-        });
+            otp,
+          },
+        );
       } catch (emailError) {
         console.error(
           "OTP EMAIL ERROR:",
-          emailError,
+          emailError.message,
         );
 
-        // Remove OTP if email failed.
         await pool.query(
           `
           UPDATE public."app_user"
@@ -1817,53 +2172,56 @@ app.post(
             "updatedAt" = NOW()
           WHERE "id" = $1
           `,
-          [
-            user.id,
-          ],
+          [user.id],
         );
 
         return res.status(500).json({
           ok: false,
-
           message:
-            "Failed to send OTP email.",
-
-          error:
-            emailError.message,
+            "Unable to send verification code.",
         });
       }
 
-      console.log(
-        "OTP SENT:",
-        {
-          username:
-            user.username,
+      // Signed token instead of exposing database ID
+      // as the OTP session identifier.
+      const otpId =
+        jwt.sign(
+          {
+            sub:
+              String(
+                user.id,
+              ),
 
-          email,
+            type:
+              "otp-session",
 
-          employeeId:
-            user.employeeId,
-        },
-      );
+            nonce:
+              generateRandomToken(
+                16,
+              ),
+          },
 
-      // ------------------------------------------
-      // IMPORTANT
-      //
-      // Flutter expects otpId.
-      //
-      // We use the app_user ID as the OTP session
-      // identifier because the database already
-      // stores the OTP against this user.
-      // ------------------------------------------
+          JWT_SECRET,
+
+          {
+            expiresIn:
+              `${OTP_EXPIRES_MINUTES}m`,
+
+            issuer:
+              "hasani-payroll",
+
+            audience:
+              "hasani-payroll-otp",
+          },
+        );
 
       return res.json({
         ok: true,
 
         message:
-          "OTP has been sent to your registered email address.",
+          "Verification code sent to your registered email address.",
 
-        otpId:
-          String(user.id),
+        otpId,
 
         employeeId:
           user.employeeId,
@@ -1880,140 +2238,42 @@ app.post(
     } catch (error) {
       console.error(
         "SEND OTP ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-
-        message:
-          "Failed to send OTP.",
-
-        error:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
 
-
-// ============================================================
-// FIND USER BY OTP ID
-// ============================================================
-//
-// Flutter sends:
-//
-// {
-//   otpId: "...",
-//   otp: "123456"
-// }
-//
-
-async function findUserByOtpId(
-  otpId,
-) {
-  const cleanId =
-    String(
-      otpId ?? "",
-    ).trim();
-
-  if (!cleanId) {
-    return null;
-  }
-
-  const result =
-    await pool.query(
-      `
-      SELECT
-        "id",
-        "employeeId",
-        "username",
-        "email",
-        "passwordHash",
-        "role",
-        "isActive",
-        "mustChangePassword",
-        "passwordChangedAt",
-        "otpHash",
-        "otpExpiresAt",
-        "otpAttempts",
-        "otpLastSentAt",
-        "otpVerifiedAt",
-        "lastLoginAt",
-        "createdAt",
-        "updatedAt"
-      FROM public."app_user"
-      WHERE "id"::text = $1
-      LIMIT 1
-      `,
-      [
-        cleanId,
-      ],
-    );
-
-  if (
-    result.rows.length === 0
-  ) {
-    return null;
-  }
-
-  return result.rows[0];
-}
-
-
 // ============================================================
 // VERIFY OTP
 // ============================================================
-//
-// Accepts both:
-//
-// Flutter:
-//
-// {
-//   otpId,
-//   otp
-// }
-//
-// Also supports:
-//
-// {
-//   username,
-//   otp
-// }
-//
-// and:
-//
-// {
-//   employeeId,
-//   otp
-// }
-//
 
 app.post(
   "/api/auth/verify-otp",
+  otpVerifyLimiter,
   async (req, res) => {
     try {
       const otp =
         String(
-          req.body?.otp ?? "",
+          req.body?.otp ??
+            "",
         ).trim();
 
       const otpId =
         String(
-          req.body?.otpId ?? "",
+          req.body?.otpId ??
+            "",
         ).trim();
 
-      const username =
-        normalizeLogin(
-          req.body?.username,
-        );
-
-      const employeeId =
-        normalizeEmployeeId(
-          req.body?.employeeId,
-        );
-
-      if (!/^\d{6}$/.test(otp)) {
+      if (
+        !/^\d{6}$/.test(
+          otp,
+        )
+      ) {
         return res.status(400).json({
           ok: false,
           message:
@@ -2021,126 +2281,113 @@ app.post(
         });
       }
 
-      let user = null;
-
-      // ------------------------------------------
-      // FIND BY OTP ID
-      // ------------------------------------------
-
-      if (otpId) {
-        user =
-          await findUserByOtpId(
-            otpId,
-          );
-      }
-
-      // ------------------------------------------
-      // FALLBACK USERNAME / EMAIL
-      // ------------------------------------------
-
-      if (!user && username) {
-        user =
-          await findAppUser(
-            username,
-          );
-      }
-
-      // ------------------------------------------
-      // FALLBACK EMPLOYEE ID
-      // ------------------------------------------
-
-      if (!user && employeeId) {
-        user =
-          await findAppUser(
-            employeeId,
-          );
-      }
-
-      if (!user) {
-        return res.status(404).json({
-          ok: false,
-          message:
-            "User or OTP session not found. Please login again and request a new OTP.",
-        });
-      }
-
-      console.log(
-        "VERIFY OTP REQUEST:",
-        {
-          username:
-            user.username,
-
-          employeeId:
-            user.employeeId,
-
-          otpId:
-            otpId || null,
-        },
-      );
-
-      // ------------------------------------------
-      // ACTIVE
-      // ------------------------------------------
-
-      if (user.isActive !== true) {
-        return res.status(403).json({
-          ok: false,
-          message:
-            "This account is inactive.",
-        });
-      }
-
-      // ------------------------------------------
-      // FIRST LOGIN
-      // ------------------------------------------
-
       if (
-        user.mustChangePassword !== true
+        !otpId ||
+        otpId.length > 2000
       ) {
         return res.status(400).json({
           ok: false,
           message:
-            "First-login verification is not required for this account.",
+            "OTP session is required.",
         });
       }
 
-      // ------------------------------------------
-      // OTP EXISTS
-      // ------------------------------------------
+      let session;
 
-      if (!user.otpHash) {
+      try {
+        session =
+          jwt.verify(
+            otpId,
+            JWT_SECRET,
+            {
+              issuer:
+                "hasani-payroll",
+
+              audience:
+                "hasani-payroll-otp",
+            },
+          );
+      } catch {
+        return res.status(401).json({
+          ok: false,
+          message:
+            "OTP session has expired. Please request a new OTP.",
+        });
+      }
+
+      if (
+        session.type !==
+        "otp-session"
+      ) {
+        return res.status(401).json({
+          ok: false,
+          message:
+            "Invalid OTP session.",
+        });
+      }
+
+      const user =
+        await prisma.app_user.findUnique(
+          {
+            where: {
+              id: String(
+                session.sub,
+              ),
+            },
+          },
+        );
+
+      if (
+        !user ||
+        user.isActive !==
+          true
+      ) {
+        return res.status(401).json({
+          ok: false,
+          message:
+            "Invalid OTP session.",
+        });
+      }
+
+      if (
+        user.mustChangePassword !==
+        true
+      ) {
         return res.status(400).json({
           ok: false,
           message:
-            "No OTP has been requested. Please request a new OTP.",
+            "First-login verification is not required.",
         });
       }
 
-      // ------------------------------------------
-      // OTP EXPIRY
-      // ------------------------------------------
+      if (
+        !user.otpHash ||
+        !user.otpExpiresAt
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "No active OTP. Please request a new code.",
+        });
+      }
 
       if (
-        !user.otpExpiresAt ||
         new Date(
           user.otpExpiresAt,
         ).getTime() <=
-          Date.now()
+        Date.now()
       ) {
         return res.status(400).json({
           ok: false,
           message:
-            "OTP has expired. Please request a new OTP.",
+            "OTP has expired. Please request a new code.",
         });
       }
 
-      // ------------------------------------------
-      // MAX ATTEMPTS
-      // ------------------------------------------
-
       const attempts =
         Number(
-          user.otpAttempts || 0,
+          user.otpAttempts ||
+            0,
         );
 
       if (
@@ -2154,10 +2401,6 @@ app.post(
         });
       }
 
-      // ------------------------------------------
-      // VERIFY
-      // ------------------------------------------
-
       const matches =
         await bcrypt.compare(
           otp,
@@ -2170,48 +2413,29 @@ app.post(
           UPDATE public."app_user"
           SET
             "otpAttempts" =
-              COALESCE("otpAttempts", 0) + 1,
+              COALESCE(
+                "otpAttempts",
+                0
+              ) + 1,
             "updatedAt" = NOW()
           WHERE "id" = $1
           `,
-          [
-            user.id,
-          ],
+          [user.id],
         );
-
-        const remaining =
-          Math.max(
-            0,
-            OTP_MAX_ATTEMPTS -
-              attempts -
-              1,
-          );
 
         return res.status(401).json({
           ok: false,
-
           message:
-            remaining > 0
-              ? `Invalid OTP. ${remaining} attempt(s) remaining.`
-              : "Invalid OTP. Maximum attempts exceeded.",
-
+            "Invalid OTP.",
           attemptsRemaining:
-            remaining,
+            Math.max(
+              0,
+              OTP_MAX_ATTEMPTS -
+                attempts -
+                1,
+            ),
         });
       }
-
-      // ------------------------------------------
-      // OTP SUCCESS
-      // ------------------------------------------
-      //
-      // IMPORTANT:
-      //
-      // Do NOT remove otpVerifiedAt.
-      //
-      // completeFirstLogin() needs this field to
-      // confirm that the OTP was successfully
-      // verified before allowing password change.
-      //
 
       await pool.query(
         `
@@ -2224,97 +2448,69 @@ app.post(
           "updatedAt" = NOW()
         WHERE "id" = $1
         `,
-        [
-          user.id,
-        ],
+        [user.id],
       );
 
-      console.log(
-        "OTP VERIFIED:",
-        {
-          username:
-            user.username,
-
-          employeeId:
-            user.employeeId,
-        },
-      );
-
-      const safeUser =
-        await publicAppUser(
+      const verificationToken =
+        createOtpVerificationToken(
           user,
         );
 
       return res.json({
         ok: true,
 
-        message:
-          "OTP verified successfully.",
-
         verified:
           true,
 
+        message:
+          "OTP verified successfully.",
+
         verificationId:
-          String(user.id),
+          verificationToken,
 
         employeeId:
           user.employeeId,
 
         username:
           user.username,
-
-        user:
-          safeUser,
       });
     } catch (error) {
       console.error(
         "VERIFY OTP ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-
-        message:
-          "OTP verification failed.",
-
-        error:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
 
-
 // ============================================================
-// SET NEW PASSWORD
+// SET PASSWORD AFTER OTP
 // ============================================================
-//
-// Flutter sends:
-//
-// {
-//   verificationId: "...",
-//   newPassword: "..."
-// }
-//
-// This is used after successful OTP verification.
-//
 
 app.post(
   "/api/auth/set-password",
+  passwordLimiter,
   async (req, res) => {
     try {
       const verificationId =
         String(
-          req.body?.verificationId ?? "",
+          req.body?.verificationId ??
+            "",
         ).trim();
 
       const newPassword =
         String(
-          req.body?.newPassword ?? "",
-        ).trim();
+          req.body?.newPassword ??
+            "",
+        );
 
-      if (!verificationId) {
+      if (
+        !verificationId
+      ) {
         return res.status(400).json({
           ok: false,
           message:
@@ -2322,112 +2518,113 @@ app.post(
         });
       }
 
-      if (newPassword.length < 6) {
-        return res.status(400).json({
-          ok: false,
-          message:
-            "Password must contain at least 6 characters.",
-        });
-      }
-
-      // ------------------------------------------
-      // FIND USER
-      // ------------------------------------------
-
-      const user =
-        await findUserByOtpId(
-          verificationId,
-        );
-
-      if (!user) {
-        return res.status(404).json({
-          ok: false,
-          message:
-            "Verification session not found. Please login again.",
-        });
-      }
-
-      // ------------------------------------------
-      // ACTIVE
-      // ------------------------------------------
-
-      if (user.isActive !== true) {
-        return res.status(403).json({
-          ok: false,
-          message:
-            "This account is inactive.",
-        });
-      }
-
-      // ------------------------------------------
-      // FIRST LOGIN REQUIRED
-      // ------------------------------------------
-
       if (
-        user.mustChangePassword !== true
+        newPassword.length <
+          8 ||
+        newPassword.length >
+          128
       ) {
         return res.status(400).json({
           ok: false,
           message:
-            "This account does not require first-login password setup.",
+            "Password must contain between 8 and 128 characters.",
         });
       }
 
-      // ------------------------------------------
-      // VERIFY OTP WAS COMPLETED
-      // ------------------------------------------
+      let session;
 
-      if (!user.otpVerifiedAt) {
+      try {
+        session =
+          verifyOtpVerificationToken(
+            verificationId,
+          );
+      } catch {
         return res.status(403).json({
           ok: false,
           message:
-            "Please verify the OTP before creating your new password.",
+            "Verification session has expired. Please verify your OTP again.",
         });
       }
 
-      // ------------------------------------------
-      // VERIFY OTP VERIFICATION IS RECENT
-      // ------------------------------------------
-      //
-      // Allow 15 minutes after OTP verification.
-      //
+      if (
+        session.type !==
+        "otp-verification"
+      ) {
+        return res.status(403).json({
+          ok: false,
+          message:
+            "Invalid verification session.",
+        });
+      }
+
+      const user =
+        await prisma.app_user.findUnique(
+          {
+            where: {
+              id: String(
+                session.sub,
+              ),
+            },
+          },
+        );
+
+      if (
+        !user ||
+        user.isActive !==
+          true
+      ) {
+        return res.status(403).json({
+          ok: false,
+          message:
+            "Invalid verification session.",
+        });
+      }
+
+      if (
+        user.mustChangePassword !==
+        true
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "Password setup is not required.",
+        });
+      }
+
+      if (
+        !user.otpVerifiedAt
+      ) {
+        return res.status(403).json({
+          ok: false,
+          message:
+            "OTP verification is required.",
+        });
+      }
 
       const verifiedAt =
         new Date(
           user.otpVerifiedAt,
         ).getTime();
 
-      const verificationAge =
-        Date.now() -
-        verifiedAt;
-
-      const maxVerificationAge =
-        15 * 60 * 1000;
-
       if (
-        verificationAge >
-        maxVerificationAge
+        Date.now() -
+          verifiedAt >
+        OTP_VERIFICATION_MINUTES *
+          60 *
+          1000
       ) {
         return res.status(403).json({
           ok: false,
           message:
-            "Your OTP verification session has expired. Please login again and request a new OTP.",
+            "Verification session has expired. Please verify OTP again.",
         });
       }
-
-      // ------------------------------------------
-      // HASH NEW PASSWORD
-      // ------------------------------------------
 
       const passwordHash =
         await bcrypt.hash(
           newPassword,
           12,
         );
-
-      // ------------------------------------------
-      // UPDATE USER
-      // ------------------------------------------
 
       const updated =
         await pool.query(
@@ -2449,12 +2646,10 @@ app.post(
             "employeeId",
             "username",
             "email",
-            "passwordHash",
             "role",
             "isActive",
             "mustChangePassword",
             "passwordChangedAt",
-            "otpVerifiedAt",
             "lastLoginAt",
             "createdAt",
             "updatedAt"
@@ -2466,43 +2661,34 @@ app.post(
         );
 
       if (
-        updated.rows.length === 0
+        updated.rows.length ===
+        0
       ) {
         return res.status(500).json({
           ok: false,
           message:
-            "Unable to update your password.",
+            "Unable to create password.",
         });
       }
 
       const updatedUser =
         updated.rows[0];
 
-      // ------------------------------------------
-      // SAFE USER
-      // ------------------------------------------
-
       const safeUser =
         await publicAppUser(
           updatedUser,
         );
 
-      console.log(
-        "FIRST LOGIN COMPLETED:",
-        {
-          username:
-            updatedUser.username,
-
-          employeeId:
-            updatedUser.employeeId,
-        },
-      );
+      const accessToken =
+        createAccessToken(
+          updatedUser,
+        );
 
       return res.json({
         ok: true,
 
         message:
-          "Password created successfully. First login completed.",
+          "Password created successfully.",
 
         firstLogin:
           false,
@@ -2510,53 +2696,414 @@ app.post(
         requiresOtp:
           false,
 
+        accessToken,
+
+        tokenType:
+          "Bearer",
+
+        expiresIn:
+          JWT_EXPIRES_IN,
+
         user:
           safeUser,
       });
     } catch (error) {
       console.error(
         "SET PASSWORD ERROR:",
-        error,
+        error.message,
       );
 
-      return res.status(500).json({
-        ok: false,
-
-        message:
-          "Unable to create the new password.",
-
-        error:
-          error.message,
-      });
+      return genericError(
+        res,
+      );
     }
   },
 );
 
-
 // ============================================================
-// OTP ALIASES
+// OTP COMPATIBILITY ALIAS
 // ============================================================
-//
-// These are optional compatibility routes.
-//
 
 app.post(
   "/api/auth/request-otp",
+  otpSendLimiter,
   async (req, res) => {
-    req.url =
-      "/api/auth/send-otp";
+    // Keep compatibility with existing Flutter code.
+    try {
+      const loginValue =
+        normalizeLogin(
+          req.body?.employeeId ??
+            req.body?.username ??
+            req.body?.email ??
+            "",
+        );
 
-    return app._router
-      ? res.redirect(307, "/api/auth/send-otp")
-      : res.status(500).json({
+      if (!loginValue) {
+        return res.status(400).json({
           ok: false,
           message:
-            "OTP service unavailable.",
+            "Username, email or Employee ID is required.",
         });
+      }
+
+      const user =
+        await findAppUser(
+          loginValue,
+        );
+
+      if (
+        !user ||
+        user.isActive !==
+          true ||
+        user.mustChangePassword !==
+          true
+      ) {
+        return res.json({
+          ok: true,
+          message:
+            "If the account is eligible, a verification code has been sent.",
+        });
+      }
+
+      const email =
+        String(
+          user.email || "",
+        ).trim();
+
+      if (
+        !email ||
+        !email.includes("@")
+      ) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            "The account does not have a registered email address.",
+        });
+      }
+
+      if (
+        user.otpLastSentAt
+      ) {
+        const elapsed =
+          Date.now() -
+          new Date(
+            user.otpLastSentAt,
+          ).getTime();
+
+        if (
+          elapsed <
+          OTP_RESEND_SECONDS *
+            1000
+        ) {
+          const remaining =
+            Math.ceil(
+              (
+                OTP_RESEND_SECONDS *
+                  1000 -
+                elapsed
+              ) / 1000,
+            );
+
+          return res.status(429).json({
+            ok: false,
+
+            message:
+              `Please wait ${remaining} seconds before requesting another OTP.`,
+
+            retryAfter:
+              remaining,
+          });
+        }
+      }
+
+      const otp =
+        generateOtp();
+
+      const otpHash =
+        await bcrypt.hash(
+          otp,
+          12,
+        );
+
+      const expiresAt =
+        new Date(
+          Date.now() +
+            OTP_EXPIRES_MINUTES *
+              60 *
+              1000,
+        );
+
+      await pool.query(
+        `
+        UPDATE public."app_user"
+        SET
+          "otpHash" = $1,
+          "otpExpiresAt" = $2,
+          "otpAttempts" = 0,
+          "otpLastSentAt" = NOW(),
+          "otpVerifiedAt" = NULL,
+          "updatedAt" = NOW()
+        WHERE "id" = $3
+        `,
+        [
+          otpHash,
+          expiresAt,
+          user.id,
+        ],
+      );
+
+      await sendOtpEmail({
+        email,
+
+        name:
+          user.username ||
+          "User",
+
+        otp,
+      });
+
+      const otpId =
+        jwt.sign(
+          {
+            sub:
+              String(
+                user.id,
+              ),
+
+            type:
+              "otp-session",
+
+            nonce:
+              generateRandomToken(
+                16,
+              ),
+          },
+
+          JWT_SECRET,
+
+          {
+            expiresIn:
+              `${OTP_EXPIRES_MINUTES}m`,
+
+            issuer:
+              "hasani-payroll",
+
+            audience:
+              "hasani-payroll-otp",
+          },
+        );
+
+      return res.json({
+        ok: true,
+
+        message:
+          "Verification code sent.",
+
+        otpId,
+
+        employeeId:
+          user.employeeId,
+
+        username:
+          user.username,
+
+        email,
+
+        expiresIn:
+          OTP_EXPIRES_MINUTES *
+          60,
+      });
+    } catch (error) {
+      console.error(
+        "REQUEST OTP ERROR:",
+        error.message,
+      );
+
+      return genericError(
+        res,
+      );
+    }
   },
 );
-const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Hasani Payroll API running on port ${PORT}`);
-});
+// ============================================================
+// 404
+// ============================================================
+
+app.use(
+  (req, res) => {
+    res.status(404).json({
+      ok: false,
+      message:
+        "Endpoint not found.",
+    });
+  },
+);
+
+// ============================================================
+// ERROR HANDLER
+// ============================================================
+
+app.use(
+  (
+    error,
+    req,
+    res,
+    next,
+  ) => {
+    console.error(
+      "UNHANDLED API ERROR:",
+      error.message,
+    );
+
+    if (
+      res.headersSent
+    ) {
+      return next(error);
+    }
+
+    res.status(500).json({
+      ok: false,
+      message:
+        "Internal server error.",
+    });
+  },
+);
+
+// ============================================================
+// DATABASE TEST
+// ============================================================
+
+async function testDatabase() {
+  try {
+    await pool.query(
+      "SELECT 1",
+    );
+
+    console.log(
+      "DATABASE: connected",
+    );
+  } catch (error) {
+    console.error(
+      "DATABASE CONNECTION FAILED:",
+      error.message,
+    );
+
+    process.exit(1);
+  }
+}
+
+// ============================================================
+// SERVER
+// ============================================================
+
+let server;
+
+async function startServer() {
+  await testDatabase();
+
+  server =
+    app.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+        console.log(
+          "========================================",
+        );
+
+        console.log(
+          "HASANI PAYROLL API",
+        );
+
+        console.log(
+          `PORT: ${PORT}`,
+        );
+
+        console.log(
+          "SECURITY: ENABLED",
+        );
+
+        console.log(
+          "JWT AUTH: ENABLED",
+        );
+
+        console.log(
+          "RBAC: ENABLED",
+        );
+
+        console.log(
+          "OTP: ENABLED",
+        );
+
+        console.log(
+          "========================================",
+        );
+      },
+    );
+}
+
+startServer().catch(
+  (error) => {
+    console.error(
+      "SERVER STARTUP FAILED:",
+      error.message,
+    );
+
+    process.exit(1);
+  },
+);
+
+// ============================================================
+// GRACEFUL SHUTDOWN
+// ============================================================
+
+async function shutdown(
+  signal,
+) {
+  console.log(
+    `${signal}: shutting down...`,
+  );
+
+  if (server) {
+    server.close(
+      async () => {
+        try {
+          await prisma.$disconnect();
+
+          await pool.end();
+
+          console.log(
+            "Shutdown complete.",
+          );
+
+          process.exit(0);
+        } catch (error) {
+          console.error(
+            "Shutdown error:",
+            error.message,
+          );
+
+          process.exit(1);
+        }
+      },
+    );
+  } else {
+    await prisma.$disconnect();
+
+    await pool.end();
+
+    process.exit(0);
+  }
+}
+
+process.on(
+  "SIGINT",
+  () =>
+    shutdown("SIGINT"),
+);
+
+process.on(
+  "SIGTERM",
+  () =>
+    shutdown("SIGTERM"),
+);
