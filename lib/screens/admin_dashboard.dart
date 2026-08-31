@@ -7103,11 +7103,11 @@ Future<void> _exportRhbLayout() async {
     }
 
     saveExcel('RHB_Layout_$monthFile.xlsx', 'RHB Layout', const [
-      'NAME', 'NEW_IC_NO', 'BANK_ACCOUNT', 'NETAMOUNT', 'SELECTED PAYROLL MONTH'
+      'NAME', 'NEW_IC_NO', 'BANK_ACCOUNT', 'JUMLAH', 'SELECTED PAYROLL MONTH'
     ], rhb);
 
     saveExcel('EPF_$monthFile.xlsx', 'EPF', const [
-      'NAME', 'NEW_IC_NO', 'EPF_NO', 'EMPLOYEE EPF AMOUNT', 'EMPLOYER EPF AMOUNT', 'NETAMOUNT'
+      'NAME', 'NEW_IC_NO', 'EPF_NO', 'EMPLOYEE EPF AMOUNT', 'EMPLOYER EPF AMOUNT', 'JUMLAH'
     ], epf);
 
     saveExcel('EIS_$monthFile.xlsx', 'EIS', const [
