@@ -29,7 +29,7 @@ const JWT_EXPIRES_IN =
 const FRONTEND_URL =
   String(
     process.env.FRONTEND_URL ||
-      "https://hasanihub.onrender.com/",
+      "https://hasanihub.onrender.com",
   ).trim();
 
 const OTP_EXPIRES_MINUTES =
