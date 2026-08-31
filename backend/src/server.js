@@ -111,16 +111,25 @@ app.use(
 // CORS
 // ============================================================
 
-const allowedOrigins = FRONTEND_URL
+// ============================================================
+// CORS
+// ============================================================
+
+const allowedOrigins = String(
+  process.env.FRONTEND_URL ||
+    "https://hasanihub.onrender.com,http://localhost:3000",
+)
   .split(",")
-  .map((value) =>
-    value.trim().replace(/\/+$/, ""),
-  )
+  .map((value) => value.trim().replace(/\/+$/, ""))
   .filter(Boolean);
+
+console.log("CORS allowed origins:", allowedOrigins);
 
 app.use(
   cors({
     origin(origin, callback) {
+      // Requests such as curl/Postman/server-to-server
+      // may not contain an Origin header.
       if (!origin) {
         return callback(null, true);
       }
@@ -129,27 +138,23 @@ app.use(
         .trim()
         .replace(/\/+$/, "");
 
-      if (
-        allowedOrigins.includes(
-          normalizedOrigin,
-        )
-      ) {
+      if (allowedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       }
 
       console.error(
-        "CORS blocked origin:",
-        origin,
+        "CORS BLOCKED:",
+        normalizedOrigin,
       );
 
       console.error(
-        "Allowed origins:",
+        "ALLOWED ORIGINS:",
         allowedOrigins,
       );
 
       return callback(
         new Error(
-          `CORS origin not allowed: ${origin}`,
+          `CORS origin not allowed: ${normalizedOrigin}`,
         ),
       );
     },
@@ -169,6 +174,8 @@ app.use(
       "Content-Type",
       "Authorization",
     ],
+
+    optionsSuccessStatus: 204,
   }),
 );
 

@@ -117574,56 +117574,56 @@ l.MS(p,o,m,0)
 i.xm(0,l)}k=A.bhy().ip(i)
 if(k==null)throw A.c(A.c2("Excel template could not be prepared."))
 return new Uint8Array(A.b4(k))},
-Ai(){var s=0,r=A.z(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,e0,e1,e2
-var $async$Ai=A.A(function(e3,e4){if(e3===1){o.push(e4)
+Ai(){var s=0,r=A.z(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,e0,e1
+var $async$Ai=A.A(function(e2,e3){if(e2===1){o.push(e3)
 s=p}for(;;)switch(s){case 0:p=4
 n.jW("Preparing RHB, EPF, EIS and SOCSO layouts...")
 m=A.eu("MMMM yyyy").d1(n.x)
 l=A.eu("yyyy_MM").d1(n.x)
-d2=$.d_()
-d3=d2.b
-d3===$&&A.a()
+d1=$.d_()
+d2=d1.b
+d2===$&&A.a()
 s=7
-return A.t(d3.d4("payroll").h1(0).KA(0,"employee_id"),$async$Ai)
-case 7:k=e4
-d3=t.a
-d4=A.ct(k,!0,d3)
-d5=A.Z(d4).i("aq<1>")
-d6=A.Q(new A.aq(d4,new A.aMC(n),d5),d5.i("n.E"))
-j=d6
+return A.t(d2.d4("payroll").h1(0).KA(0,"employee_id"),$async$Ai)
+case 7:k=e3
+d2=t.a
+d3=A.ct(k,!0,d2)
+d4=A.Z(d3).i("aq<1>")
+d5=A.Q(new A.aq(d3,new A.aMC(n),d4),d4.i("n.E"))
+j=d5
 if(J.an(j)===0){n.jW("No generated payroll found for "+A.h(m)+".")
 s=1
-break}d4=j
-d4=new A.a3(d4,new A.aMD(n),A.Z(d4).i("a3<1,f>")).n_(0,new A.aME())
-d4=A.e7(d4,d4.$ti.i("n.E"))
-d7=A.Q(d4,A.m(d4).c)
-i=d7
+break}d3=j
+d3=new A.a3(d3,new A.aMD(n),A.Z(d3).i("a3<1,f>")).n_(0,new A.aME())
+d3=A.e7(d3,d3.$ti.i("n.E"))
+d6=A.Q(d3,A.m(d3).c)
+i=d6
 s=8
-return A.t(d2.b.d4("employees").h1(0).yd("employee_id",i),$async$Ai)
-case 8:h=e4
-d2=t.N
-g=A.u(d2,d3)
-for(d3=A.ct(h,!0,d3),d4=d3.length,d8=0;d8<d4;++d8){f=d3[d8]
-d5=J.i(f,"employee_id")
-d9=d5==null?null:B.o.a1(J.W(d5)).toUpperCase()
-e=d9==null?"":d9
+return A.t(d1.b.d4("employees").h1(0).yd("employee_id",i),$async$Ai)
+case 8:h=e3
+d1=t.N
+g=A.u(d1,d2)
+for(d2=A.ct(h,!0,d2),d3=d2.length,d7=0;d7<d3;++d7){f=d2[d7]
+d4=J.i(f,"employee_id")
+d8=d4==null?null:B.o.a1(J.W(d4)).toUpperCase()
+e=d8==null?"":d8
 if(J.an(e)!==0)J.bn(g,e,f)}d=new A.aMG()
 c=new A.aMJ()
 b=new A.aMF(d)
 a=new A.aMH(d,b)
 a0=new A.aMK()
 a1=new A.aMI(a0)
-d3=t.X6
-a2=A.b([],d3)
-a3=A.b([],d3)
-a4=A.b([],d3)
-a5=A.b([],d3)
-for(d3=j,d4=d3.length,d5=t.z,d8=0;d8<d3.length;d3.length===d4||(0,A.D)(d3),++d8){a6=d3[d8]
-e0=J.i(a6,"employee_id")
-e=e0==null?null:B.o.a1(J.W(e0)).toUpperCase()
+d2=t.X6
+a2=A.b([],d2)
+a3=A.b([],d2)
+a4=A.b([],d2)
+a5=A.b([],d2)
+for(d2=j,d3=d2.length,d4=t.z,d7=0;d7<d2.length;d2.length===d3||(0,A.D)(d2),++d7){a6=d2[d7]
+d9=J.i(a6,"employee_id")
+e=d9==null?null:B.o.a1(J.W(d9)).toUpperCase()
 a7=e==null?"":e
 f=J.i(g,a7)
-a8=f==null?A.u(d2,d5):f
+a8=f==null?A.u(d1,d4):f
 a9=c.$2(a8,B.GG)
 b0=c.$2(a6,B.GG)
 b1=J.an(a9)!==0?a9:b0
@@ -117637,19 +117637,19 @@ b8=c.$2(a8,B.Gz)
 b9=c.$2(a6,B.Gz)
 c0=J.an(b8)!==0?b8:b9
 c1=b.$1(a6)
-c2=a.$1(a6)
-c3=d.$1(J.i(a6,"epf_employee"))
-c4=d.$1(J.i(a6,"epf_employer"))
-c5=d.$1(J.i(a6,"eis_employee"))
-c6=d.$1(J.i(a6,"eis_employer"))
-c7=d.$1(J.i(a6,"socso_employee"))
-c8=d.$1(J.i(a6,"socso_employer"))
-J.dr(a2,[b1,b4,b7,c2,m])
-J.dr(a3,[b1,b4,c0,c3,c4,c1])
-c9=c5+c6
-J.dr(a4,[b1,b4,c9])
-d0=c7+c8
-J.dr(a5,[b1,b4,d0])}a1.$4("RHB_Layout_"+A.h(l)+".xlsx","RHB Layout",B.aSQ,a2)
+a.$1(a6)
+c2=d.$1(J.i(a6,"epf_employee"))
+c3=d.$1(J.i(a6,"epf_employer"))
+c4=d.$1(J.i(a6,"eis_employee"))
+c5=d.$1(J.i(a6,"eis_employer"))
+c6=d.$1(J.i(a6,"socso_employee"))
+c7=d.$1(J.i(a6,"socso_employer"))
+J.dr(a2,[b1,b4,b7,c1,m])
+J.dr(a3,[b1,b4,c0,c2,c3,c1])
+c8=c4+c5
+J.dr(a4,[b1,b4,c8])
+c9=c6+c7
+J.dr(a5,[b1,b4,c9])}a1.$4("RHB_Layout_"+A.h(l)+".xlsx","RHB Layout",B.aSQ,a2)
 a1.$4("EPF_"+A.h(l)+".xlsx","EPF",B.aRi,a3)
 a1.$4("EIS_"+A.h(l)+".xlsx","EIS",B.aWa,a4)
 a1.$4("SOSCO_"+A.h(l)+".xlsx","SOSCO",B.aVn,a5)
@@ -117658,9 +117658,9 @@ p=2
 s=6
 break
 case 4:p=3
-e2=o.pop()
-d1=A.a0(e2)
-n.jW("RHB / statutory Excel export failed: "+A.h(d1))
+e1=o.pop()
+d0=A.a0(e1)
+n.jW("RHB / statutory Excel export failed: "+A.h(d0))
 s=6
 break
 case 3:s=2
