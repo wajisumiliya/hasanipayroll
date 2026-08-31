@@ -55,3 +55,22 @@ app.*.map.json
 .env.*
 !.env.example
 node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Database backups
+*.dump
+*.sql
+*.backup
+*.bak
+
+# Private application data
+backend/data/*.json
+!backend/data/*.example.json
+
+# Flutter generated files
+build/
+.dart_tool/
