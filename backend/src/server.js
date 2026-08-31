@@ -109,39 +109,47 @@ app.use(
 // CORS
 // ============================================================
 
-const allowedOrigins =
-  FRONTEND_URL
-    .split(",")
-    .map((value) =>
-      value.trim(),
-    )
-    .filter(Boolean);
+const FRONTEND_URL = String(
+  process.env.FRONTEND_URL ||
+    "https://hasanihub.onrender.com",
+)
+  .trim()
+  .replace(/\/+$/, "");
+
+const allowedOrigins = FRONTEND_URL
+  .split(",")
+  .map((value) => value.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
 
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow non-browser requests.
+      // Allow requests that don't have an Origin header.
       if (!origin) {
-        return callback(
-          null,
-          true,
-        );
+        return callback(null, true);
       }
 
-      if (
-        allowedOrigins.includes(
-          origin,
-        )
-      ) {
-        return callback(
-          null,
-          true,
-        );
+      const normalizedOrigin = origin
+        .trim()
+        .replace(/\/+$/, "");
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
       }
+
+      console.error(
+        "CORS blocked origin:",
+        origin,
+      );
+
+      console.error(
+        "Allowed origins:",
+        allowedOrigins,
+      );
 
       return callback(
         new Error(
-          "CORS origin not allowed",
+          `CORS origin not allowed: ${origin}`,
         ),
       );
     },
@@ -163,6 +171,7 @@ app.use(
     ],
   }),
 );
+
 
 // ============================================================
 // BODY LIMIT
