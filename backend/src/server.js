@@ -26,11 +26,13 @@ const JWT_SECRET = String(
 const JWT_EXPIRES_IN =
   process.env.JWT_EXPIRES_IN || "8h";
 
-const FRONTEND_URL =
-  String(
-    process.env.FRONTEND_URL ||
-      "https://hasanihub.onrender.com",
-  ).trim();
+const FRONTEND_URL = String(process.env.FRONTEND_URL ||
+    "https://hasanihub.onrender.com",
+)
+  .trim()
+  .replace(/\/+$/, "");
+
+
 
 const OTP_EXPIRES_MINUTES =
   Number(
@@ -109,22 +111,16 @@ app.use(
 // CORS
 // ============================================================
 
-const FRONTEND_URL = String(
-  process.env.FRONTEND_URL ||
-    "https://hasanihub.onrender.com",
-)
-  .trim()
-  .replace(/\/+$/, "");
-
 const allowedOrigins = FRONTEND_URL
   .split(",")
-  .map((value) => value.trim().replace(/\/+$/, ""))
+  .map((value) =>
+    value.trim().replace(/\/+$/, ""),
+  )
   .filter(Boolean);
 
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow requests that don't have an Origin header.
       if (!origin) {
         return callback(null, true);
       }
@@ -133,7 +129,11 @@ app.use(
         .trim()
         .replace(/\/+$/, "");
 
-      if (allowedOrigins.includes(normalizedOrigin)) {
+      if (
+        allowedOrigins.includes(
+          normalizedOrigin,
+        )
+      ) {
         return callback(null, true);
       }
 
@@ -171,6 +171,7 @@ app.use(
     ],
   }),
 );
+
 
 
 // ============================================================
