@@ -7402,7 +7402,7 @@ Future<void> _exportRhbLayout() async {
         name,
         ic,
         bankAccount,
-        net,
+        jumlahPayroll,
         selectedMonth,
       ]);
 
