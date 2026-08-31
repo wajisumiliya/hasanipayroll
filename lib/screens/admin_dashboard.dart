@@ -6974,8 +6974,14 @@ Future<void> _exportRhbLayout() async {
   try {
     _message('Preparing RHB, EPF, EIS and SOCSO layouts...');
 
-    final selectedMonth = DateFormat('MMMM yyyy').format(selectedPayrollMonth);
-    final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
+    final selectedMonth =
+        DateFormat('MMMM yyyy').format(selectedPayrollMonth);
+    final monthFile =
+        DateFormat('yyyy_MM').format(selectedPayrollMonth);
+
+    // ============================================================
+    // GET PAYROLL
+    // ============================================================
 
     final response = await SupabaseService.client
         .from('payroll')
@@ -6983,16 +6989,31 @@ Future<void> _exportRhbLayout() async {
         .order('employee_id');
 
     final payrollRows = List<Map<String, dynamic>>.from(response)
-        .where((row) => _payrollPeriodMatchesMonth(row['period'], selectedPayrollMonth))
+        .where(
+          (row) => _payrollPeriodMatchesMonth(
+            row['period'],
+            selectedPayrollMonth,
+          ),
+        )
         .toList();
 
     if (payrollRows.isEmpty) {
-      _message('No generated payroll found for $selectedMonth.');
+      _message(
+        'No generated payroll found for $selectedMonth.',
+      );
       return;
     }
 
+    // ============================================================
+    // GET EMPLOYEES
+    // ============================================================
+
     final employeeIds = payrollRows
-        .map((row) => _normalizeBranchValue(row['employee_id']))
+        .map(
+          (row) => _normalizeBranchValue(
+            row['employee_id'],
+          ),
+        )
         .where((id) => id.isNotEmpty)
         .toSet()
         .toList();
@@ -7000,129 +7021,515 @@ Future<void> _exportRhbLayout() async {
     final employeeResponse = await SupabaseService.client
         .from('employees')
         .select()
-        .inFilter('employee_id', employeeIds);
+        .inFilter(
+          'employee_id',
+          employeeIds,
+        );
 
-    final employeeMap = <String, Map<String, dynamic>>{};
-    for (final employee in List<Map<String, dynamic>>.from(employeeResponse)) {
-      final id = _normalizeBranchValue(employee['employee_id']);
-      if (id.isNotEmpty) employeeMap[id] = employee;
+    final employeeMap =
+        <String, Map<String, dynamic>>{};
+
+    for (final employee
+        in List<Map<String, dynamic>>.from(employeeResponse)) {
+      final id = _normalizeBranchValue(
+        employee['employee_id'],
+      );
+
+      if (id.isNotEmpty) {
+        employeeMap[id] = employee;
+      }
     }
+
+    // ============================================================
+    // MONEY HELPER
+    // ============================================================
 
     double money(dynamic value) {
-      if (value == null) return 0.0;
-      if (value is num) return value.toDouble();
-      return double.tryParse(value.toString().replaceAll(',', '').replaceAll('RM', '').trim()) ?? 0.0;
+      if (value == null) {
+        return 0.0;
+      }
+
+      if (value is num) {
+        return value.toDouble();
+      }
+
+      return double.tryParse(
+            value
+                .toString()
+                .replaceAll(',', '')
+                .replaceAll('RM', '')
+                .trim(),
+          ) ??
+          0.0;
     }
 
-    String value(Map<String, dynamic> row, List<String> keys) {
+    // ============================================================
+    // VALUE HELPER
+    // ============================================================
+
+    String value(
+      Map<String, dynamic> row,
+      List<String> keys,
+    ) {
       for (final key in keys) {
         final v = row[key]?.toString().trim() ?? '';
-        if (v.isNotEmpty) return v;
+
+        if (v.isNotEmpty) {
+          return v;
+        }
       }
+
       return '';
     }
 
-    double netSalary(Map<String, dynamic> row) {
-      for (final key in const ['net_pay', 'net_salary', 'total_net', 'netPay']) {
-        if (row[key] != null) return money(row[key]);
+    // ============================================================
+    // JUMLAH / GROSS PAY
+    // ============================================================
+    //
+    // This represents the employee's total earnings BEFORE
+    // employee deductions.
+    //
+    // First try existing database gross fields.
+    // If they don't exist, calculate from the earning columns.
+    // ============================================================
+
+    double jumlah(
+      Map<String, dynamic> row,
+    ) {
+      for (final key in const [
+        'gross_pay',
+        'gross_salary',
+        'total_gross',
+        'grossPay',
+      ]) {
+        if (row[key] != null) {
+          return money(row[key]);
+        }
       }
-      final gross = money(row['basic_salary']) + money(row['fw_salary']) +
-          money(row['elaun_kedatangan']) + money(row['elaun_perkhidmatan']) +
-          money(row['elaun_kerajinan']) + money(row['overtime']) +
-          money(row['bonus']) + money(row['commission']) +
-          money(row['other_earnings']) + money(row['cuti_umum']);
-      final deductions = money(row['epf_employee']) + money(row['socso_employee']) +
-          money(row['eis_employee']) + money(row['pcb']) + money(row['zakat']) +
-          money(row['late_deduction']) + money(row['unpaid_deduction']) +
-          money(row['other_deductions']);
+
+      return money(row['basic_salary']) +
+          money(row['fw_salary']) +
+          money(row['elaun_kedatangan']) +
+          money(row['elaun_perkhidmatan']) +
+          money(row['elaun_kerajinan']) +
+          money(row['overtime']) +
+          money(row['bonus']) +
+          money(row['commission']) +
+          money(row['other_earnings']) +
+          money(row['cuti_umum']);
+    }
+
+    // ============================================================
+    // NET SALARY
+    // ============================================================
+    //
+    // This represents the amount actually paid to the employee
+    // after employee deductions.
+    // ============================================================
+
+    double netSalary(
+      Map<String, dynamic> row,
+    ) {
+      // Use existing calculated net salary if available.
+      for (final key in const [
+        'net_pay',
+        'net_salary',
+        'total_net',
+        'netPay',
+      ]) {
+        if (row[key] != null) {
+          return money(row[key]);
+        }
+      }
+
+      // Otherwise calculate net salary.
+      final gross = jumlah(row);
+
+      final deductions =
+          money(row['epf_employee']) +
+              money(row['socso_employee']) +
+              money(row['eis_employee']) +
+              money(row['pcb']) +
+              money(row['zakat']) +
+              money(row['late_deduction']) +
+              money(row['unpaid_deduction']) +
+              money(row['other_deductions']);
+
       return gross - deductions;
     }
 
-    void writeRow(xls.Sheet sheet, int row, List<dynamic> values) {
+    // ============================================================
+    // EXCEL ROW WRITER
+    // ============================================================
+
+    void writeRow(
+      xls.Sheet sheet,
+      int row,
+      List<dynamic> values,
+    ) {
       for (var c = 0; c < values.length; c++) {
-        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row));
+        final cell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(
+            columnIndex: c,
+            rowIndex: row,
+          ),
+        );
+
         final item = values[c];
+
         cell.value = item is num
-            ? xls.DoubleCellValue(item.toDouble())
-            : xls.TextCellValue(item?.toString() ?? '');
+            ? xls.DoubleCellValue(
+                item.toDouble(),
+              )
+            : xls.TextCellValue(
+                item?.toString() ?? '',
+              );
       }
     }
 
-    void saveExcel(String fileName, String sheetName, List<String> headers, List<List<dynamic>> rows) {
+    // ============================================================
+    // EXCEL FILE CREATOR
+    // ============================================================
+
+    void saveExcel(
+      String fileName,
+      String sheetName,
+      List<String> headers,
+      List<List<dynamic>> rows,
+    ) {
       final excel = xls.Excel.createExcel();
-      final defaultSheet = excel.getDefaultSheet();
-      if (defaultSheet != null && defaultSheet != sheetName) {
-        excel.rename(defaultSheet, sheetName);
+
+      final defaultSheet =
+          excel.getDefaultSheet();
+
+      if (defaultSheet != null &&
+          defaultSheet != sheetName) {
+        excel.rename(
+          defaultSheet,
+          sheetName,
+        );
       }
+
       final sheet = excel[sheetName];
-      writeRow(sheet, 0, headers);
+
+      // Header
+      writeRow(
+        sheet,
+        0,
+        headers,
+      );
+
+      // Data
       for (var r = 0; r < rows.length; r++) {
-        writeRow(sheet, r + 1, rows[r]);
+        writeRow(
+          sheet,
+          r + 1,
+          rows[r],
+        );
       }
-      final bytes = excel.save(fileName: fileName);
-      if (bytes == null || bytes.isEmpty) throw Exception('$fileName could not be generated.');
+
+      final bytes = excel.save(
+        fileName: fileName,
+      );
+
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception(
+          '$fileName could not be generated.',
+        );
+      }
     }
+
+    // ============================================================
+    // EXCEL DATA
+    // ============================================================
 
     final rhb = <List<dynamic>>[];
     final epf = <List<dynamic>>[];
     final eis = <List<dynamic>>[];
     final socso = <List<dynamic>>[];
 
+    // ============================================================
+    // BUILD EXPORT DATA
+    // ============================================================
+
     for (final payroll in payrollRows) {
-      final id = _normalizeBranchValue(payroll['employee_id']);
-      final employee = employeeMap[id] ?? <String, dynamic>{};
+      final id = _normalizeBranchValue(
+        payroll['employee_id'],
+      );
 
-      final name = value(employee, const ['name', 'employee_name']).isNotEmpty
-          ? value(employee, const ['name', 'employee_name'])
-          : value(payroll, const ['name', 'employee_name']);
-      final ic = value(employee, const ['new_ic_no', 'newIcNo']).isNotEmpty
-          ? value(employee, const ['new_ic_no', 'newIcNo'])
-          : value(payroll, const ['new_ic_no', 'newIcNo']);
-      final bankAccount = value(employee, const ['bank_account', 'bankAccount']).isNotEmpty
-          ? value(employee, const ['bank_account', 'bankAccount'])
-          : value(payroll, const ['bank_account', 'bankAccount']);
-      final epfNo = value(employee, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']).isNotEmpty
-          ? value(employee, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo'])
-          : value(payroll, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']);
+      final employee =
+          employeeMap[id] ??
+              <String, dynamic>{};
 
-      final net = jumlah(payroll);
-      final epfEmployee = money(payroll['epf_employee']);
-      final epfEmployer = money(payroll['epf_employer']);
-      final eisEmployee = money(payroll['eis_employee']);
-      final eisEmployer = money(payroll['eis_employer']);
-      final socsoEmployee = money(payroll['socso_employee']);
-      final socsoEmployer = money(payroll['socso_employer']);
+      // ----------------------------------------------------------
+      // EMPLOYEE NAME
+      // ----------------------------------------------------------
 
-      rhb.add([name, ic, bankAccount, net, selectedMonth]);
-      epf.add([name, ic, epfNo, epfEmployee, epfEmployer, net]);
-      final eisTotal = eisEmployee + eisEmployer;
-      final socsoTotal = socsoEmployee + socsoEmployer;
+      final employeeName = value(
+        employee,
+        const [
+          'name',
+          'employee_name',
+        ],
+      );
 
-      eis.add([name, ic, eisTotal]);
-      socso.add([name, ic, socsoTotal]);
+      final payrollName = value(
+        payroll,
+        const [
+          'name',
+          'employee_name',
+        ],
+      );
+
+      final name = employeeName.isNotEmpty
+          ? employeeName
+          : payrollName;
+
+      // ----------------------------------------------------------
+      // IC NUMBER
+      // ----------------------------------------------------------
+
+      final employeeIc = value(
+        employee,
+        const [
+          'new_ic_no',
+          'newIcNo',
+        ],
+      );
+
+      final payrollIc = value(
+        payroll,
+        const [
+          'new_ic_no',
+          'newIcNo',
+        ],
+      );
+
+      final ic = employeeIc.isNotEmpty
+          ? employeeIc
+          : payrollIc;
+
+      // ----------------------------------------------------------
+      // BANK ACCOUNT
+      // ----------------------------------------------------------
+
+      final employeeBankAccount = value(
+        employee,
+        const [
+          'bank_account',
+          'bankAccount',
+        ],
+      );
+
+      final payrollBankAccount = value(
+        payroll,
+        const [
+          'bank_account',
+          'bankAccount',
+        ],
+      );
+
+      final bankAccount =
+          employeeBankAccount.isNotEmpty
+              ? employeeBankAccount
+              : payrollBankAccount;
+
+      // ----------------------------------------------------------
+      // EPF NUMBER
+      // ----------------------------------------------------------
+
+      final employeeEpfNo = value(
+        employee,
+        const [
+          'epf_no',
+          'epfNo',
+          'kwsp_no',
+          'kwspNo',
+        ],
+      );
+
+      final payrollEpfNo = value(
+        payroll,
+        const [
+          'epf_no',
+          'epfNo',
+          'kwsp_no',
+          'kwspNo',
+        ],
+      );
+
+      final epfNo = employeeEpfNo.isNotEmpty
+          ? employeeEpfNo
+          : payrollEpfNo;
+
+      // ==========================================================
+      // PAYROLL CALCULATIONS
+      // ==========================================================
+
+      final jumlahPayroll =
+          jumlah(payroll);
+
+      final net =
+          netSalary(payroll);
+
+      final epfEmployee =
+          money(payroll['epf_employee']);
+
+      final epfEmployer =
+          money(payroll['epf_employer']);
+
+      final eisEmployee =
+          money(payroll['eis_employee']);
+
+      final eisEmployer =
+          money(payroll['eis_employer']);
+
+      final socsoEmployee =
+          money(payroll['socso_employee']);
+
+      final socsoEmployer =
+          money(payroll['socso_employer']);
+
+      // ==========================================================
+      // RHB
+      // ==========================================================
+      //
+      // RHB JUMLAH = NET PAY
+      // This is the amount actually transferred to employee.
+      // ==========================================================
+
+      rhb.add([
+        name,
+        ic,
+        bankAccount,
+        net,
+        selectedMonth,
+      ]);
+
+      // ==========================================================
+      // EPF
+      // ==========================================================
+      //
+      // JUMLAH = GROSS PAY
+      // Employee EPF + Employer EPF are separate columns.
+      // ==========================================================
+
+      epf.add([
+        name,
+        ic,
+        epfNo,
+        epfEmployee,
+        epfEmployer,
+        jumlahPayroll,
+      ]);
+
+      // ==========================================================
+      // EIS
+      // ==========================================================
+
+      final eisTotal =
+          eisEmployee + eisEmployer;
+
+      eis.add([
+        name,
+        ic,
+        eisTotal,
+      ]);
+
+      // ==========================================================
+      // SOCSO
+      // ==========================================================
+
+      final socsoTotal =
+          socsoEmployee + socsoEmployer;
+
+      socso.add([
+        name,
+        ic,
+        socsoTotal,
+      ]);
     }
 
-    saveExcel('RHB_Layout_$monthFile.xlsx', 'RHB Layout', const [
-      'NAME', 'NEW_IC_NO', 'BANK_ACCOUNT', 'JUMLAH', 'SELECTED PAYROLL MONTH'
-    ], rhb);
+    // ============================================================
+    // SAVE RHB
+    // ============================================================
 
-    saveExcel('EPF_$monthFile.xlsx', 'EPF', const [
-      'NAME', 'NEW_IC_NO', 'EPF_NO', 'EMPLOYEE EPF AMOUNT', 'EMPLOYER EPF AMOUNT', 'JUMLAH'
-    ], epf);
+    saveExcel(
+      'RHB_Layout_$monthFile.xlsx',
+      'RHB Layout',
+      const [
+        'NAME',
+        'NEW_IC_NO',
+        'BANK_ACCOUNT',
+        'JUMLAH',
+        'SELECTED PAYROLL MONTH',
+      ],
+      rhb,
+    );
 
-    saveExcel('EIS_$monthFile.xlsx', 'EIS', const [
-      'NAME', 'NEW_IC_NO', 'EIS TOTAL AMOUNT'
-    ], eis);
+    // ============================================================
+    // SAVE EPF
+    // ============================================================
 
-    saveExcel('SOSCO_$monthFile.xlsx', 'SOSCO', const [
-      'NAME', 'NEW_IC_NO', 'SOCSO TOTAL AMOUNT'
-    ], socso);
+    saveExcel(
+      'EPF_$monthFile.xlsx',
+      'EPF',
+      const [
+        'NAME',
+        'NEW_IC_NO',
+        'EPF_NO',
+        'EMPLOYEE EPF AMOUNT',
+        'EMPLOYER EPF AMOUNT',
+        'JUMLAH',
+      ],
+      epf,
+    );
 
-    _message('Generated 4 Excel files for $selectedMonth: RHB Layout, EPF, EIS and SOSCO.');
+    // ============================================================
+    // SAVE EIS
+    // ============================================================
+
+    saveExcel(
+      'EIS_$monthFile.xlsx',
+      'EIS',
+      const [
+        'NAME',
+        'NEW_IC_NO',
+        'EIS TOTAL AMOUNT',
+      ],
+      eis,
+    );
+
+    // ============================================================
+    // SAVE SOCSO
+    // ============================================================
+
+    saveExcel(
+      'SOSCO_$monthFile.xlsx',
+      'SOSCO',
+      const [
+        'NAME',
+        'NEW_IC_NO',
+        'SOCSO TOTAL AMOUNT',
+      ],
+      socso,
+    );
+
+    // ============================================================
+    // SUCCESS
+    // ============================================================
+
+    _message(
+      'Generated 4 Excel files for $selectedMonth: '
+      'RHB Layout, EPF, EIS and SOSCO.',
+    );
   } catch (e) {
-    _message('RHB / statutory Excel export failed: $e');
+    _message(
+      'RHB / statutory Excel export failed: $e',
+    );
   }
 }
+
 
 Widget _rhbLayoutPage() {
   return Center(
