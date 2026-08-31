@@ -7085,7 +7085,7 @@ Future<void> _exportRhbLayout() async {
           ? value(employee, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo'])
           : value(payroll, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']);
 
-      final net = netSalary(payroll);
+      final net = jumlah(payroll);
       final epfEmployee = money(payroll['epf_employee']);
       final epfEmployer = money(payroll['epf_employer']);
       final eisEmployee = money(payroll['eis_employee']);
