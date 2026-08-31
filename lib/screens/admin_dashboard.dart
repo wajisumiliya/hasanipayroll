@@ -6972,15 +6972,18 @@ Uint8List _normalizeExcelTemplate(Uint8List bytes) {
 
 Future<void> _exportRhbLayout() async {
   try {
-    _message('Preparing RHB, EPF, EIS and SOCSO layouts...');
+    _message(
+      'Preparing RHB, EPF, EIS and SOCSO layouts...',
+    );
 
     final selectedMonth =
         DateFormat('MMMM yyyy').format(selectedPayrollMonth);
+
     final monthFile =
         DateFormat('yyyy_MM').format(selectedPayrollMonth);
 
     // ============================================================
-    // GET PAYROLL
+    // LOAD PAYROLL
     // ============================================================
 
     final response = await SupabaseService.client
@@ -6988,14 +6991,15 @@ Future<void> _exportRhbLayout() async {
         .select()
         .order('employee_id');
 
-    final payrollRows = List<Map<String, dynamic>>.from(response)
-        .where(
-          (row) => _payrollPeriodMatchesMonth(
-            row['period'],
-            selectedPayrollMonth,
-          ),
-        )
-        .toList();
+    final payrollRows =
+        List<Map<String, dynamic>>.from(response)
+            .where(
+              (row) => _payrollPeriodMatchesMonth(
+                row['period'],
+                selectedPayrollMonth,
+              ),
+            )
+            .toList();
 
     if (payrollRows.isEmpty) {
       _message(
@@ -7005,7 +7009,7 @@ Future<void> _exportRhbLayout() async {
     }
 
     // ============================================================
-    // GET EMPLOYEES
+    // LOAD EMPLOYEES
     // ============================================================
 
     final employeeIds = payrollRows
@@ -7014,24 +7018,30 @@ Future<void> _exportRhbLayout() async {
             row['employee_id'],
           ),
         )
-        .where((id) => id.isNotEmpty)
+        .where(
+          (id) => id.isNotEmpty,
+        )
         .toSet()
         .toList();
 
-    final employeeResponse = await SupabaseService.client
-        .from('employees')
-        .select()
-        .inFilter(
-          'employee_id',
-          employeeIds,
-        );
+    final employeeResponse =
+        await SupabaseService.client
+            .from('employees')
+            .select()
+            .inFilter(
+              'employee_id',
+              employeeIds,
+            );
 
     final employeeMap =
         <String, Map<String, dynamic>>{};
 
     for (final employee
-        in List<Map<String, dynamic>>.from(employeeResponse)) {
-      final id = _normalizeBranchValue(
+        in List<Map<String, dynamic>>.from(
+      employeeResponse,
+    )) {
+      final id =
+          _normalizeBranchValue(
         employee['employee_id'],
       );
 
@@ -7053,18 +7063,20 @@ Future<void> _exportRhbLayout() async {
         return value.toDouble();
       }
 
-      return double.tryParse(
-            value
-                .toString()
-                .replaceAll(',', '')
-                .replaceAll('RM', '')
-                .trim(),
-          ) ??
-          0.0;
+      final cleaned = value
+          .toString()
+          .replaceAll(',', '')
+          .replaceAll(
+            RegExp(r'RM', caseSensitive: false),
+            '',
+          )
+          .trim();
+
+      return double.tryParse(cleaned) ?? 0.0;
     }
 
     // ============================================================
-    // VALUE HELPER
+    // TEXT VALUE HELPER
     // ============================================================
 
     String value(
@@ -7072,10 +7084,16 @@ Future<void> _exportRhbLayout() async {
       List<String> keys,
     ) {
       for (final key in keys) {
-        final v = row[key]?.toString().trim() ?? '';
+        final raw = row[key];
 
-        if (v.isNotEmpty) {
-          return v;
+        if (raw == null) {
+          continue;
+        }
+
+        final text = raw.toString().trim();
+
+        if (text.isNotEmpty) {
+          return text;
         }
       }
 
@@ -7083,32 +7101,42 @@ Future<void> _exportRhbLayout() async {
     }
 
     // ============================================================
-    // JUMLAH / GROSS PAY
-    // ============================================================
+    // JUMLAH / GROSS SALARY
     //
-    // This represents the employee's total earnings BEFORE
-    // employee deductions.
-    //
-    // First try existing database gross fields.
-    // If they don't exist, calculate from the earning columns.
+    // First use an existing gross field if available.
+    // Otherwise calculate gross from payroll components.
     // ============================================================
 
     double jumlah(
       Map<String, dynamic> row,
     ) {
+      // Existing calculated gross amount.
       for (final key in const [
         'gross_pay',
         'gross_salary',
         'total_gross',
         'grossPay',
+        'jumlah',
+        'total_earnings',
+        'totalEarnings',
       ]) {
         if (row[key] != null) {
           return money(row[key]);
         }
       }
 
-      return money(row['basic_salary']) +
+      // Calculate gross manually when the database
+      // does not contain a gross amount.
+
+      final gross =
+          money(row['basic_salary']) +
+          money(row['basicSalary']) +
           money(row['fw_salary']) +
+          money(row['fwSalary']) +
+          money(row['food_allowance']) +
+          money(row['foodAllowance']) +
+          money(row['other_allowance']) +
+          money(row['otherAllowance']) +
           money(row['elaun_kedatangan']) +
           money(row['elaun_perkhidmatan']) +
           money(row['elaun_kerajinan']) +
@@ -7116,44 +7144,54 @@ Future<void> _exportRhbLayout() async {
           money(row['bonus']) +
           money(row['commission']) +
           money(row['other_earnings']) +
+          money(row['otherEarnings']) +
           money(row['cuti_umum']);
+
+      return gross;
     }
 
     // ============================================================
     // NET SALARY
     // ============================================================
-    //
-    // This represents the amount actually paid to the employee
-    // after employee deductions.
-    // ============================================================
 
     double netSalary(
       Map<String, dynamic> row,
     ) {
-      // Use existing calculated net salary if available.
+      // Prefer an existing calculated net amount.
       for (final key in const [
         'net_pay',
         'net_salary',
         'total_net',
         'netPay',
+        'net',
       ]) {
         if (row[key] != null) {
           return money(row[key]);
         }
       }
 
-      // Otherwise calculate net salary.
-      final gross = jumlah(row);
+      // Otherwise calculate:
+      //
+      // GROSS - EMPLOYEE DEDUCTIONS
+
+      final gross =
+          jumlah(row);
 
       final deductions =
           money(row['epf_employee']) +
-              money(row['socso_employee']) +
-              money(row['eis_employee']) +
-              money(row['pcb']) +
-              money(row['zakat']) +
-              money(row['late_deduction']) +
-              money(row['unpaid_deduction']) +
-              money(row['other_deductions']);
+          money(row['epfEmployee']) +
+          money(row['socso_employee']) +
+          money(row['socsoEmployee']) +
+          money(row['eis_employee']) +
+          money(row['eisEmployee']) +
+          money(row['pcb']) +
+          money(row['zakat']) +
+          money(row['late_deduction']) +
+          money(row['lateDeduction']) +
+          money(row['unpaid_deduction']) +
+          money(row['unpaidDeduction']) +
+          money(row['other_deductions']) +
+          money(row['otherDeduction']);
 
       return gross - deductions;
     }
@@ -7168,7 +7206,8 @@ Future<void> _exportRhbLayout() async {
       List<dynamic> values,
     ) {
       for (var c = 0; c < values.length; c++) {
-        final cell = sheet.cell(
+        final cell =
+            sheet.cell(
           xls.CellIndex.indexByColumnRow(
             columnIndex: c,
             rowIndex: row,
@@ -7177,18 +7216,22 @@ Future<void> _exportRhbLayout() async {
 
         final item = values[c];
 
-        cell.value = item is num
-            ? xls.DoubleCellValue(
-                item.toDouble(),
-              )
-            : xls.TextCellValue(
-                item?.toString() ?? '',
-              );
+        if (item is num) {
+          cell.value =
+              xls.DoubleCellValue(
+            item.toDouble(),
+          );
+        } else {
+          cell.value =
+              xls.TextCellValue(
+            item?.toString() ?? '',
+          );
+        }
       }
     }
 
     // ============================================================
-    // EXCEL FILE CREATOR
+    // SAVE EXCEL
     // ============================================================
 
     void saveExcel(
@@ -7197,7 +7240,8 @@ Future<void> _exportRhbLayout() async {
       List<String> headers,
       List<List<dynamic>> rows,
     ) {
-      final excel = xls.Excel.createExcel();
+      final excel =
+          xls.Excel.createExcel();
 
       final defaultSheet =
           excel.getDefaultSheet();
@@ -7210,17 +7254,18 @@ Future<void> _exportRhbLayout() async {
         );
       }
 
-      final sheet = excel[sheetName];
+      final sheet =
+          excel[sheetName];
 
-      // Header
       writeRow(
         sheet,
         0,
         headers,
       );
 
-      // Data
-      for (var r = 0; r < rows.length; r++) {
+      for (var r = 0;
+          r < rows.length;
+          r++) {
         writeRow(
           sheet,
           r + 1,
@@ -7228,11 +7273,13 @@ Future<void> _exportRhbLayout() async {
         );
       }
 
-      final bytes = excel.save(
+      final bytes =
+          excel.save(
         fileName: fileName,
       );
 
-      if (bytes == null || bytes.isEmpty) {
+      if (bytes == null ||
+          bytes.isEmpty) {
         throw Exception(
           '$fileName could not be generated.',
         );
@@ -7240,20 +7287,29 @@ Future<void> _exportRhbLayout() async {
     }
 
     // ============================================================
-    // EXCEL DATA
+    // OUTPUT ROWS
     // ============================================================
 
-    final rhb = <List<dynamic>>[];
-    final epf = <List<dynamic>>[];
-    final eis = <List<dynamic>>[];
-    final socso = <List<dynamic>>[];
+    final rhb =
+        <List<dynamic>>[];
+
+    final epf =
+        <List<dynamic>>[];
+
+    final eis =
+        <List<dynamic>>[];
+
+    final socso =
+        <List<dynamic>>[];
 
     // ============================================================
     // BUILD EXPORT DATA
     // ============================================================
 
-    for (final payroll in payrollRows) {
-      final id = _normalizeBranchValue(
+    for (final payroll
+        in payrollRows) {
+      final id =
+          _normalizeBranchValue(
         payroll['employee_id'],
       );
 
@@ -7265,7 +7321,8 @@ Future<void> _exportRhbLayout() async {
       // EMPLOYEE NAME
       // ----------------------------------------------------------
 
-      final employeeName = value(
+      final employeeName =
+          value(
         employee,
         const [
           'name',
@@ -7273,7 +7330,8 @@ Future<void> _exportRhbLayout() async {
         ],
       );
 
-      final payrollName = value(
+      final payrollName =
+          value(
         payroll,
         const [
           'name',
@@ -7281,15 +7339,17 @@ Future<void> _exportRhbLayout() async {
         ],
       );
 
-      final name = employeeName.isNotEmpty
-          ? employeeName
-          : payrollName;
+      final name =
+          employeeName.isNotEmpty
+              ? employeeName
+              : payrollName;
 
       // ----------------------------------------------------------
-      // IC NUMBER
+      // IC
       // ----------------------------------------------------------
 
-      final employeeIc = value(
+      final employeeIc =
+          value(
         employee,
         const [
           'new_ic_no',
@@ -7297,7 +7357,8 @@ Future<void> _exportRhbLayout() async {
         ],
       );
 
-      final payrollIc = value(
+      final payrollIc =
+          value(
         payroll,
         const [
           'new_ic_no',
@@ -7305,15 +7366,17 @@ Future<void> _exportRhbLayout() async {
         ],
       );
 
-      final ic = employeeIc.isNotEmpty
-          ? employeeIc
-          : payrollIc;
+      final ic =
+          employeeIc.isNotEmpty
+              ? employeeIc
+              : payrollIc;
 
       // ----------------------------------------------------------
       // BANK ACCOUNT
       // ----------------------------------------------------------
 
-      final employeeBankAccount = value(
+      final employeeBank =
+          value(
         employee,
         const [
           'bank_account',
@@ -7321,7 +7384,8 @@ Future<void> _exportRhbLayout() async {
         ],
       );
 
-      final payrollBankAccount = value(
+      final payrollBank =
+          value(
         payroll,
         const [
           'bank_account',
@@ -7330,15 +7394,16 @@ Future<void> _exportRhbLayout() async {
       );
 
       final bankAccount =
-          employeeBankAccount.isNotEmpty
-              ? employeeBankAccount
-              : payrollBankAccount;
+          employeeBank.isNotEmpty
+              ? employeeBank
+              : payrollBank;
 
       // ----------------------------------------------------------
       // EPF NUMBER
       // ----------------------------------------------------------
 
-      final employeeEpfNo = value(
+      final employeeEpfNo =
+          value(
         employee,
         const [
           'epf_no',
@@ -7348,7 +7413,8 @@ Future<void> _exportRhbLayout() async {
         ],
       );
 
-      final payrollEpfNo = value(
+      final payrollEpfNo =
+          value(
         payroll,
         const [
           'epf_no',
@@ -7358,61 +7424,88 @@ Future<void> _exportRhbLayout() async {
         ],
       );
 
-      final epfNo = employeeEpfNo.isNotEmpty
-          ? employeeEpfNo
-          : payrollEpfNo;
+      final epfNo =
+          employeeEpfNo.isNotEmpty
+              ? employeeEpfNo
+              : payrollEpfNo;
 
-      // ==========================================================
-      // PAYROLL CALCULATIONS
-      // ==========================================================
+      // ----------------------------------------------------------
+      // CALCULATE AMOUNTS
+      // ----------------------------------------------------------
 
-      final jumlahPayroll =
+      final gross =
           jumlah(payroll);
 
       final net =
           netSalary(payroll);
 
       final epfEmployee =
-          money(payroll['epf_employee']);
+          money(
+        payroll['epf_employee'] ??
+            payroll['epfEmployee'],
+      );
 
       final epfEmployer =
-          money(payroll['epf_employer']);
+          money(
+        payroll['epf_employer'] ??
+            payroll['epfEmployer'],
+      );
 
       final eisEmployee =
-          money(payroll['eis_employee']);
+          money(
+        payroll['eis_employee'] ??
+            payroll['eisEmployee'],
+      );
 
       final eisEmployer =
-          money(payroll['eis_employer']);
+          money(
+        payroll['eis_employer'] ??
+            payroll['eisEmployer'],
+      );
 
       final socsoEmployee =
-          money(payroll['socso_employee']);
+          money(
+        payroll['socso_employee'] ??
+            payroll['socsoEmployee'],
+      );
 
       final socsoEmployer =
-          money(payroll['socso_employer']);
+          money(
+        payroll['socso_employer'] ??
+            payroll['socsoEmployer'],
+      );
 
-      // ==========================================================
+      // ----------------------------------------------------------
+      // TOTAL STATUTORY AMOUNTS
+      // ----------------------------------------------------------
+
+      final eisTotal =
+          eisEmployee +
+          eisEmployer;
+
+      final socsoTotal =
+          socsoEmployee +
+          socsoEmployer;
+
+      // ----------------------------------------------------------
       // RHB
-      // ==========================================================
       //
-      // RHB JUMLAH = NET PAY
-      // This is the amount actually transferred to employee.
-      // ==========================================================
+      // JUMLAH = NET SALARY
+      // ----------------------------------------------------------
 
       rhb.add([
         name,
         ic,
         bankAccount,
-        jumlahPayroll,
+        net,
         selectedMonth,
       ]);
 
-      // ==========================================================
+      // ----------------------------------------------------------
       // EPF
-      // ==========================================================
       //
-      // JUMLAH = GROSS PAY
-      // Employee EPF + Employer EPF are separate columns.
-      // ==========================================================
+      // JUMLAH = GROSS SALARY
+      // ----------------------------------------------------------
 
       epf.add([
         name,
@@ -7420,15 +7513,12 @@ Future<void> _exportRhbLayout() async {
         epfNo,
         epfEmployee,
         epfEmployer,
-        jumlahPayroll,
+        gross,
       ]);
 
-      // ==========================================================
+      // ----------------------------------------------------------
       // EIS
-      // ==========================================================
-
-      final eisTotal =
-          eisEmployee + eisEmployer;
+      // ----------------------------------------------------------
 
       eis.add([
         name,
@@ -7436,12 +7526,9 @@ Future<void> _exportRhbLayout() async {
         eisTotal,
       ]);
 
-      // ==========================================================
+      // ----------------------------------------------------------
       // SOCSO
-      // ==========================================================
-
-      final socsoTotal =
-          socsoEmployee + socsoEmployer;
+      // ----------------------------------------------------------
 
       socso.add([
         name,
@@ -7451,7 +7538,7 @@ Future<void> _exportRhbLayout() async {
     }
 
     // ============================================================
-    // SAVE RHB
+    // CREATE RHB EXCEL
     // ============================================================
 
     saveExcel(
@@ -7468,7 +7555,7 @@ Future<void> _exportRhbLayout() async {
     );
 
     // ============================================================
-    // SAVE EPF
+    // CREATE EPF EXCEL
     // ============================================================
 
     saveExcel(
@@ -7486,7 +7573,7 @@ Future<void> _exportRhbLayout() async {
     );
 
     // ============================================================
-    // SAVE EIS
+    // CREATE EIS EXCEL
     // ============================================================
 
     saveExcel(
@@ -7501,12 +7588,12 @@ Future<void> _exportRhbLayout() async {
     );
 
     // ============================================================
-    // SAVE SOCSO
+    // CREATE SOCSO EXCEL
     // ============================================================
 
     saveExcel(
-      'SOSCO_$monthFile.xlsx',
-      'SOSCO',
+      'SOCSO_$monthFile.xlsx',
+      'SOCSO',
       const [
         'NAME',
         'NEW_IC_NO',
@@ -7521,7 +7608,7 @@ Future<void> _exportRhbLayout() async {
 
     _message(
       'Generated 4 Excel files for $selectedMonth: '
-      'RHB Layout, EPF, EIS and SOSCO.',
+      'RHB Layout, EPF, EIS and SOCSO.',
     );
   } catch (e) {
     _message(
@@ -7529,7 +7616,6 @@ Future<void> _exportRhbLayout() async {
     );
   }
 }
-
 
 Widget _rhbLayoutPage() {
   return Center(
