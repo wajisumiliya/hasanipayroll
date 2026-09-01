@@ -1915,10 +1915,12 @@ function createMailTransporter() {
     .trim();
 
   // If using Gmail or no custom host specified, use Nodemailer's built-in Gmail service
-  // to avoid DNS getaddrinfo ENOTFOUND errors on cloud hosts
   if (!smtpHost || smtpHost.toLowerCase().includes("gmail")) {
     return nodemailer.createTransport({
       service: "gmail",
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 8000,
       auth: {
         user: smtpUser,
         pass: smtpPassword,
@@ -1938,6 +1940,9 @@ function createMailTransporter() {
     host: smtpHost,
     port: smtpPort,
     secure: smtpSecure,
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
     auth: {
       user: smtpUser,
       pass: smtpPassword,
@@ -1950,6 +1955,102 @@ async function sendOtpEmail({
   name,
   otp,
 }) {
+  const resendApiKey = String(process.env.RESEND_API_KEY || "")
+    .replace(/['"\r\n]/g, "")
+    .trim();
+
+  const textBody = `Hello ${
+    name || "User"
+  },\n\nYour Hasani Payroll verification code is:\n\n${otp}\n\nThis code expires in ${OTP_EXPIRES_MINUTES} minutes.\n\nIf you did not request this code, please ignore this email.\n\nHasani Payroll`;
+
+  const htmlBody = `
+    <div style="
+      font-family:Arial,sans-serif;
+      max-width:600px;
+      margin:auto;
+      padding:20px;
+    ">
+      <h2>Hasani Payroll</h2>
+
+      <p>
+        Hello ${name || "User"},
+      </p>
+
+      <p>
+        Your verification code is:
+      </p>
+
+      <div style="
+        font-size:32px;
+        font-weight:bold;
+        letter-spacing:8px;
+        padding:20px;
+        background:#f3f4f6;
+        text-align:center;
+        border-radius:8px;
+        margin:20px 0;
+      ">
+        ${otp}
+      </div>
+
+      <p>
+        This code expires in
+        <strong>
+          ${OTP_EXPIRES_MINUTES} minutes
+        </strong>.
+      </p>
+
+      <p>
+        If you did not request this code,
+        please ignore this email.
+      </p>
+
+      <hr>
+
+      <p style="
+        color:#6b7280;
+        font-size:12px;
+      ">
+        Hasani Payroll
+      </p>
+    </div>
+  `;
+
+  // 1. If RESEND_API_KEY is configured, send via Resend HTTPS API (Port 443 - zero cloud port blocking)
+  if (resendApiKey) {
+    const fromAddress = String(
+      process.env.RESEND_FROM ||
+        process.env.SMTP_FROM ||
+        "Hasani Payroll <onboarding@resend.dev>",
+    )
+      .replace(/['"\r\n]/g, "")
+      .trim();
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [email],
+        subject: "Hasani Payroll - Verification Code",
+        text: textBody,
+        html: htmlBody,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Resend API error (${response.status})`,
+      );
+    }
+    return;
+  }
+
+  // 2. Otherwise send via Nodemailer (Gmail or Custom SMTP)
   const transporter = createMailTransporter();
 
   const rawFrom = String(
@@ -1971,80 +2072,10 @@ async function sendOtpEmail({
   await transporter.sendMail(
     {
       from,
-
       to: email,
-
-      subject:
-        "Hasani Payroll - Verification Code",
-
-      text: `Hello ${
-        name || "User"
-      },
-
-Your Hasani Payroll verification code is:
-
-${otp}
-
-This code expires in ${OTP_EXPIRES_MINUTES} minutes.
-
-If you did not request this code, please ignore this email.
-
-Hasani Payroll`,
-
-      html: `
-        <div style="
-          font-family:Arial,sans-serif;
-          max-width:600px;
-          margin:auto;
-          padding:20px;
-        ">
-          <h2>Hasani Payroll</h2>
-
-          <p>
-            Hello ${
-              name || "User"
-            },
-          </p>
-
-          <p>
-            Your verification code is:
-          </p>
-
-          <div style="
-            font-size:32px;
-            font-weight:bold;
-            letter-spacing:8px;
-            padding:20px;
-            background:#f3f4f6;
-            text-align:center;
-            border-radius:8px;
-            margin:20px 0;
-          ">
-            ${otp}
-          </div>
-
-          <p>
-            This code expires in
-            <strong>
-              ${OTP_EXPIRES_MINUTES} minutes
-            </strong>.
-          </p>
-
-          <p>
-            If you did not request this code,
-            please ignore this email.
-          </p>
-
-          <hr>
-
-          <p style="
-            color:#6b7280;
-            font-size:12px;
-          ">
-            Hasani Payroll
-          </p>
-        </div>
-      `,
+      subject: "Hasani Payroll - Verification Code",
+      text: textBody,
+      html: htmlBody,
     },
   );
 }

@@ -168,7 +168,7 @@ class AppService extends ChangeNotifier {
           },
           body: jsonEncode(body),
         )
-        .timeout(const Duration(seconds: 20));
+        .timeout(const Duration(seconds: 45));
 
     Map<String, dynamic> data = {};
     if (response.body.trim().isNotEmpty) {
