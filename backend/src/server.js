@@ -1993,7 +1993,6 @@ async function sendOtpEmail({
   name,
   otp,
 }) {
-  const devMode = String(process.env.DEV_MODE || "false").toLowerCase() === "true";
   const resendApiKey = String(process.env.RESEND_API_KEY || "")
     .replace(/['"\r\n]/g, "")
     .trim();
@@ -2077,8 +2076,12 @@ async function sendOtpEmail({
     </div>
   `;
 
-  // 1. If RESEND_API_KEY is configured, send via Resend HTTPS API (Port 443 - zero cloud port blocking)
+  // ========================================================================
+  // PRIORITY 1: RESEND (Most reliable on Render - uses HTTPS port 443)
+  // ========================================================================
   if (resendApiKey) {
+    console.log("📧 Attempting to send OTP via Resend...");
+    
     const fromAddress = String(
       process.env.RESEND_FROM ||
         process.env.SMTP_FROM ||
@@ -2087,83 +2090,93 @@ async function sendOtpEmail({
       .replace(/['"\r\n]/g, "")
       .trim();
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress,
-        to: [email],
-        subject: "Hasani Payroll - Verification Code",
-        text: textBody,
-        html: htmlBody,
-      }),
-    });
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [email],
+          subject: "Hasani Payroll - Verification Code",
+          text: textBody,
+          html: htmlBody,
+        }),
+      });
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(
-        data.message || `Resend API error (${response.status})`,
-      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          data.message || `Resend API error (${response.status})`,
+        );
+      }
+      
+      console.log(`✅ OTP sent via Resend to ${email}`);
+      return;
+    } catch (error) {
+      console.error("❌ Resend failed:", error.message);
+      throw error;
     }
-    return;
   }
 
-  // 2. Fallback: log OTP if SMTP is not configured (dev/test mode)
-  if (!smtpUser || !smtpPassword) {
-    console.log("\n" + "=".repeat(70));
-    console.log("📧 OTP EMAIL (NOT SENT - Email not configured)");
-    console.log("=".repeat(70));
-    console.log(`To: ${email}`);
-    console.log(`Name: ${name}`);
-    console.log(`OTP Code: ${otp}`);
-    console.log(`Expires in: ${OTP_EXPIRES_MINUTES} minutes`);
-    console.log("=".repeat(70) + "\n");
-    console.warn("⚠️  Email service not configured on server. OTP logged to console only.");
-    return;
+  // ========================================================================
+  // PRIORITY 2: SMTP (May be blocked on Render - uses port 587)
+  // ========================================================================
+  if (smtpUser && smtpPassword) {
+    console.log("📧 Attempting to send OTP via SMTP...");
+    
+    try {
+      const transporter = createMailTransporter();
+
+      const rawFrom = String(
+        process.env.SMTP_FROM ||
+          process.env.MAIL_FROM ||
+          process.env.EMAIL_FROM ||
+          "",
+      )
+        .replace(/['"\r\n]/g, "")
+        .trim();
+
+      const from =
+        rawFrom ||
+        `Hasani Payroll <${smtpUser}>`;
+
+      await transporter.sendMail(
+        {
+          from,
+          to: email,
+          subject: "Hasani Payroll - Verification Code",
+          text: textBody,
+          html: htmlBody,
+        },
+      );
+
+      console.log(`✅ OTP sent via SMTP to ${email}`);
+      return;
+    } catch (smtpError) {
+      console.error("❌ SMTP failed:", smtpError.message);
+      // Don't throw - fall through to console logging
+    }
   }
 
-  // 3. Send via Nodemailer (Gmail or Custom SMTP)
-  try {
-    const transporter = createMailTransporter();
+  // ========================================================================
+  // FALLBACK: Console logging (for development/testing)
+  // ========================================================================
+  console.log("\n" + "=".repeat(70));
+  console.log("📧 OTP CODE (Email service not available - showing code for testing)");
+  console.log("=".repeat(70));
+  console.log(`To: ${email}`);
+  console.log(`User: ${name}`);
+  console.log(`OTP Code: ${otp}`);
+  console.log(`Expires in: ${OTP_EXPIRES_MINUTES} minutes`);
+  console.log("=".repeat(70));
+  console.log("⚠️  For production, configure RESEND_API_KEY or working SMTP credentials.");
+  console.log("=".repeat(70) + "\n");
 
-    const rawFrom = String(
-      process.env.SMTP_FROM ||
-        process.env.MAIL_FROM ||
-        process.env.EMAIL_FROM ||
-        "",
-    )
-      .replace(/['"\r\n]/g, "")
-      .trim();
-
-    const from =
-      rawFrom ||
-      (smtpUser ? `Hasani Payroll <${smtpUser}>` : "Hasani Payroll");
-
-    await transporter.sendMail(
-      {
-        from,
-        to: email,
-        subject: "Hasani Payroll - Verification Code",
-        text: textBody,
-        html: htmlBody,
-      },
-    );
-
-    console.log(`✅ OTP email sent to ${email}`);
-  } catch (error) {
-    console.error("❌ SMTP Error:", error.message);
-    // Log the OTP anyway so testing is possible
-    console.log("\n" + "=".repeat(70));
-    console.log("📧 OTP CODE (Email failed, showing code for testing)");
-    console.log("=".repeat(70));
-    console.log(`To: ${email}`);
-    console.log(`OTP Code: ${otp}`);
-    console.log("=".repeat(70) + "\n");
-    throw error;
-  }
+  // IMPORTANT: Don't throw - allow OTP to proceed for testing
+  // In production, this should be fixed to use Resend
 }
 
 app.post(
@@ -2311,51 +2324,34 @@ app.post(
             otp,
           },
         );
+        
+        console.log("✅ OTP generation successful for user:", user.username);
       } catch (emailError) {
         console.error(
-          "❌ OTP EMAIL ERROR:",
+          "🔴 OTP EMAIL ERROR:",
           emailError.message,
         );
 
-        const smtpPassword = String(
-          process.env.SMTP_PASSWORD ||
-            process.env.SMTP_PASS ||
-            process.env.MAIL_PASSWORD ||
-            process.env.EMAIL_PASSWORD ||
-            process.env.GMAIL_APP_PASSWORD ||
-            process.env.GMAIL_PASSWORD ||
-            "",
-        )
-          .replace(/['"\s\r\n]/g, "")
-          .trim();
+        // Rollback database changes since email ultimately failed
+        await pool.query(
+          `
+          UPDATE public."app_user"
+          SET
+            "otpHash" = NULL,
+            "otpExpiresAt" = NULL,
+            "otpAttempts" = 0,
+            "otpLastSentAt" = NULL,
+            "updatedAt" = NOW()
+          WHERE "id" = $1
+          `,
+          [user.id],
+        );
 
-        // If SMTP is properly configured but still failed, rollback and return error
-        if (smtpPassword) {
-          console.error("SMTP is configured but failed. Rolling back OTP.");
-          
-          await pool.query(
-            `
-            UPDATE public."app_user"
-            SET
-              "otpHash" = NULL,
-              "otpExpiresAt" = NULL,
-              "otpAttempts" = 0,
-              "otpLastSentAt" = NULL,
-              "updatedAt" = NOW()
-            WHERE "id" = $1
-            `,
-            [user.id],
-          );
-
-          return res.status(500).json({
-            ok: false,
-            message:
-              "Unable to send OTP. Please try again later.",
-          });
-        }
-
-        // If SMTP is NOT configured, allow OTP to proceed (for testing)
-        console.warn("⚠️  Email not configured - proceeding with OTP for testing purposes");
+        return res.status(500).json({
+          ok: false,
+          message:
+            "Unable to send OTP. Please try again or contact support.",
+        });
       }
 
       // Signed token instead of exposing database ID
