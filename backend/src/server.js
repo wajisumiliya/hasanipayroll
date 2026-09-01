@@ -1901,52 +1901,74 @@ app.delete(
 // SEND OTP
 // ============================================================
 
-const mailTransporter =
-  nodemailer.createTransport(
-    {
-      host:
-        process.env.SMTP_HOST ||
-        "smtp.gmail.com",
+function createMailTransporter() {
+  const smtpHost = String(process.env.SMTP_HOST || "")
+    .replace(/['"\r\n]/g, "")
+    .trim();
 
-      port:
-        Number(
-          process.env.SMTP_PORT ||
-            587,
-        ),
+  const smtpUser = String(process.env.SMTP_USER || "")
+    .replace(/['"\r\n]/g, "")
+    .trim();
 
-      secure:
-        String(
-          process.env.SMTP_SECURE ||
-            "false",
-        ).toLowerCase() ===
-        "true",
+  const smtpPassword = String(process.env.SMTP_PASSWORD || "")
+    .replace(/['"\s\r\n]/g, "")
+    .trim();
 
+  // If using Gmail or no custom host specified, use Nodemailer's built-in Gmail service
+  // to avoid DNS getaddrinfo ENOTFOUND errors on cloud hosts
+  if (!smtpHost || smtpHost.toLowerCase().includes("gmail")) {
+    return nodemailer.createTransport({
+      service: "gmail",
       auth: {
-        user:
-          String(
-            process.env.SMTP_USER ||
-              "",
-          ).trim(),
-
-        pass:
-          String(
-            process.env.SMTP_PASSWORD ||
-              "",
-          ),
+        user: smtpUser,
+        pass: smtpPassword,
       },
-    },
+    });
+  }
+
+  const smtpPort = Number(
+    String(process.env.SMTP_PORT || 587).replace(/['"\r\n]/g, "").trim(),
   );
+
+  const smtpSecure =
+    String(process.env.SMTP_SECURE || "false").toLowerCase().includes("true") ||
+    smtpPort === 465;
+
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: {
+      user: smtpUser,
+      pass: smtpPassword,
+    },
+  });
+}
 
 async function sendOtpEmail({
   email,
   name,
   otp,
 }) {
-  const from =
-    process.env.SMTP_FROM ||
-    process.env.SMTP_USER;
+  const transporter = createMailTransporter();
 
-  await mailTransporter.sendMail(
+  const rawFrom = String(
+    process.env.SMTP_FROM || "",
+  )
+    .replace(/['"\r\n]/g, "")
+    .trim();
+
+  const smtpUser = String(
+    process.env.SMTP_USER || "",
+  )
+    .replace(/['"\r\n]/g, "")
+    .trim();
+
+  const from =
+    rawFrom ||
+    (smtpUser ? `Hasani Payroll <${smtpUser}>` : "Hasani Payroll");
+
+  await transporter.sendMail(
     {
       from,
 
