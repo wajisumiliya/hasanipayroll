@@ -1062,6 +1062,20 @@ npm run db:studio
 
 Configure the backend environment variables required by `backend/src/server.js` and Prisma before starting the server.
 
+For first-login OTP email delivery, configure Render with either the canonical
+SMTP names or the Gmail aliases below. Gmail requires an app password, not the
+normal account password:
+
+```text
+SMTP_USER=your-gmail-address
+SMTP_PASSWORD=your-16-character-app-password
+SMTP_HOST=smtp.gmail.com          # optional; Gmail is used when omitted
+SMTP_FROM=Hasani Payroll <your-gmail-address>  # optional
+```
+
+The backend also accepts `GMAIL_USER`/`GMAIL_APP_PASSWORD`, `EMAIL_USER`/
+`EMAIL_PASSWORD`, and `MAIL_USER`/`MAIL_PASSWORD`.
+
 ---
 
 # 34. Firebase

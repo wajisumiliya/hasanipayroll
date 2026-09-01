@@ -1012,8 +1012,20 @@ class _AttendanceDialogState
       child: Row(
         children: [
           _tableCell(day.toString(), 55, bold: true),
-          _timeInput(c.workingIn, 95),
-          _timeInput(c.workingOut, 95),
+          _timeInput(
+            c.workingIn,
+            95,
+            focusNode: c.workingInFocus,
+            nextFocus: c.workingOutFocus,
+          ),
+          _timeInput(
+            c.workingOut,
+            95,
+            focusNode: c.workingOutFocus,
+            nextFocus: day < daysInMonth
+                ? controllers[day].workingInFocus
+                : null,
+          ),
           _tableCell(
             formatMinutes(total),
             75,
@@ -1509,12 +1521,16 @@ class _AttendanceDialogState
           Expanded(
             child: _smallTimeInput(
               c.morningIn,
+              focusNode: c.morningInFocus,
+              nextFocus: c.morningOutFocus,
             ),
           ),
 
           Expanded(
             child: _smallTimeInput(
               c.morningOut,
+              focusNode: c.morningOutFocus,
+              nextFocus: c.afternoonInFocus,
             ),
           ),
 
@@ -1525,12 +1541,16 @@ class _AttendanceDialogState
           Expanded(
             child: _smallTimeInput(
               c.afternoonIn,
+              focusNode: c.afternoonInFocus,
+              nextFocus: c.afternoonOutFocus,
             ),
           ),
 
           Expanded(
             child: _smallTimeInput(
               c.afternoonOut,
+              focusNode: c.afternoonOutFocus,
+              nextFocus: c.overtimeInFocus,
             ),
           ),
 
@@ -1546,12 +1566,18 @@ class _AttendanceDialogState
           Expanded(
             child: _smallTimeInput(
               c.overtimeIn,
+              focusNode: c.overtimeInFocus,
+              nextFocus: c.overtimeOutFocus,
             ),
           ),
 
           Expanded(
             child: _smallTimeInput(
               c.overtimeOut,
+              focusNode: c.overtimeOutFocus,
+              nextFocus: day < daysInMonth
+                  ? controllers[day].morningInFocus
+                  : null,
             ),
           ),
 
@@ -1757,6 +1783,10 @@ class _AttendanceDialogState
   Widget _timeInput(
       TextEditingController controller,
       double width,
+      {
+        required FocusNode focusNode,
+        FocusNode? nextFocus,
+      }
       ) {
     return Container(
       width: width,
@@ -1774,13 +1804,19 @@ class _AttendanceDialogState
       ),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         readOnly: !_canEdit,
         enabled: _canEdit,
-        onChanged: (_) {
+        textInputAction: nextFocus == null
+            ? TextInputAction.done
+            : TextInputAction.next,
+        onChanged: (value) {
+          _formatTimeInput(controller, value, nextFocus);
           if (mounted) {
             setState(() {});
           }
         },
+        onSubmitted: (_) => _moveToNextField(nextFocus),
         textAlign: TextAlign.center,
         keyboardType: TextInputType.datetime,
         style: const TextStyle(
@@ -1816,7 +1852,10 @@ class _AttendanceDialogState
   // ==========================================================================
 
   Widget _smallTimeInput(
-      TextEditingController controller,
+      TextEditingController controller, {
+        required FocusNode focusNode,
+        FocusNode? nextFocus,
+      }
       ) {
     return Container(
       height: double.infinity,
@@ -1832,13 +1871,19 @@ class _AttendanceDialogState
       ),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         readOnly: !_canEdit,
         enabled: _canEdit,
-        onChanged: (_) {
+        textInputAction: nextFocus == null
+            ? TextInputAction.done
+            : TextInputAction.next,
+        onChanged: (value) {
+          _formatTimeInput(controller, value, nextFocus);
           if (mounted) {
             setState(() {});
           }
         },
+        onSubmitted: (_) => _moveToNextField(nextFocus),
         textAlign: TextAlign.center,
         keyboardType: TextInputType.datetime,
         style: const TextStyle(
@@ -1861,6 +1906,41 @@ class _AttendanceDialogState
         ),
       ),
     );
+  }
+
+  void _formatTimeInput(
+    TextEditingController controller,
+    String value,
+    FocusNode? nextFocus,
+  ) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    final limited = digits.length > 4 ? digits.substring(0, 4) : digits;
+    final formatted = limited.length > 2
+        ? '${limited.substring(0, 2)}:${limited.substring(2)}'
+        : limited.length == 2
+            ? '$limited:'
+            : limited;
+
+    if (controller.text != formatted) {
+      controller.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
+
+    if (limited.length == 4 && nextFocus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) nextFocus.requestFocus();
+      });
+    }
+  }
+
+  void _moveToNextField(FocusNode? nextFocus) {
+    if (nextFocus != null) {
+      nextFocus.requestFocus();
+    } else {
+      FocusScope.of(context).unfocus();
+    }
   }
 
   // ==========================================================================
@@ -2057,18 +2137,24 @@ class AttendanceDayControllers {
 
   final TextEditingController workingOut =
   TextEditingController();
+  final FocusNode workingInFocus = FocusNode();
+  final FocusNode workingOutFocus = FocusNode();
 
   final TextEditingController morningIn =
   TextEditingController();
 
   final TextEditingController morningOut =
   TextEditingController();
+  final FocusNode morningInFocus = FocusNode();
+  final FocusNode morningOutFocus = FocusNode();
 
   final TextEditingController afternoonIn =
   TextEditingController();
 
   final TextEditingController afternoonOut =
   TextEditingController();
+  final FocusNode afternoonInFocus = FocusNode();
+  final FocusNode afternoonOutFocus = FocusNode();
 
   // ==========================================================================
   // IMPORTANT:
@@ -2088,6 +2174,8 @@ class AttendanceDayControllers {
 
   final TextEditingController overtimeOut =
   TextEditingController();
+  final FocusNode overtimeInFocus = FocusNode();
+  final FocusNode overtimeOutFocus = FocusNode();
 
   String status = '';
   bool otRequested = false;
@@ -2112,14 +2200,22 @@ class AttendanceDayControllers {
   void dispose() {
     workingIn.dispose();
     workingOut.dispose();
+    workingInFocus.dispose();
+    workingOutFocus.dispose();
 
     morningIn.dispose();
     morningOut.dispose();
+    morningInFocus.dispose();
+    morningOutFocus.dispose();
 
     afternoonIn.dispose();
     afternoonOut.dispose();
+    afternoonInFocus.dispose();
+    afternoonOutFocus.dispose();
 
     overtimeIn.dispose();
     overtimeOut.dispose();
+    overtimeInFocus.dispose();
+    overtimeOutFocus.dispose();
   }
 }
