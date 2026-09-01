@@ -1950,10 +1950,11 @@ class _AttendanceDialogState
               horizontal: 1,
               vertical: 11,
             ),
-          hintText: '--:--',
-          hintStyle: TextStyle(
-            fontSize: 9,
-            color: Colors.black26,
+            hintText: '--:--',
+            hintStyle: TextStyle(
+              fontSize: 9,
+              color: Colors.black26,
+            ),
           ),
         ),
       ),
