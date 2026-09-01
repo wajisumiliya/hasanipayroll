@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'supabase_service.dart';
 
@@ -1016,12 +1017,14 @@ class _AttendanceDialogState
             c.workingIn,
             95,
             focusNode: c.workingInFocus,
+            prevFocus: day > 1 ? controllers[day - 2].workingOutFocus : null,
             nextFocus: c.workingOutFocus,
           ),
           _timeInput(
             c.workingOut,
             95,
             focusNode: c.workingOutFocus,
+            prevFocus: c.workingInFocus,
             nextFocus: day < daysInMonth
                 ? controllers[day].workingInFocus
                 : null,
@@ -1522,6 +1525,7 @@ class _AttendanceDialogState
             child: _smallTimeInput(
               c.morningIn,
               focusNode: c.morningInFocus,
+              prevFocus: day > 1 ? controllers[day - 2].overtimeOutFocus : null,
               nextFocus: c.morningOutFocus,
             ),
           ),
@@ -1530,6 +1534,7 @@ class _AttendanceDialogState
             child: _smallTimeInput(
               c.morningOut,
               focusNode: c.morningOutFocus,
+              prevFocus: c.morningInFocus,
               nextFocus: c.afternoonInFocus,
             ),
           ),
@@ -1542,6 +1547,7 @@ class _AttendanceDialogState
             child: _smallTimeInput(
               c.afternoonIn,
               focusNode: c.afternoonInFocus,
+              prevFocus: c.morningOutFocus,
               nextFocus: c.afternoonOutFocus,
             ),
           ),
@@ -1550,6 +1556,7 @@ class _AttendanceDialogState
             child: _smallTimeInput(
               c.afternoonOut,
               focusNode: c.afternoonOutFocus,
+              prevFocus: c.afternoonInFocus,
               nextFocus: c.overtimeInFocus,
             ),
           ),
@@ -1567,6 +1574,7 @@ class _AttendanceDialogState
             child: _smallTimeInput(
               c.overtimeIn,
               focusNode: c.overtimeInFocus,
+              prevFocus: c.afternoonOutFocus,
               nextFocus: c.overtimeOutFocus,
             ),
           ),
@@ -1575,6 +1583,7 @@ class _AttendanceDialogState
             child: _smallTimeInput(
               c.overtimeOut,
               focusNode: c.overtimeOutFocus,
+              prevFocus: c.overtimeInFocus,
               nextFocus: day < daysInMonth
                   ? controllers[day].morningInFocus
                   : null,
@@ -1786,6 +1795,7 @@ class _AttendanceDialogState
       {
         required FocusNode focusNode,
         FocusNode? nextFocus,
+        FocusNode? prevFocus,
       }
       ) {
     return Container(
@@ -1802,40 +1812,61 @@ class _AttendanceDialogState
           ),
         ),
       ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        readOnly: !_canEdit,
-        enabled: _canEdit,
-        textInputAction: nextFocus == null
-            ? TextInputAction.done
-            : TextInputAction.next,
-        onChanged: (value) {
-          _formatTimeInput(controller, value, nextFocus);
-          if (mounted) {
-            setState(() {});
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: (event) {
+          if (!_canEdit) return;
+          
+          // Arrow Down or Right: Move to next focus
+          if (event.isKeyPressed(LogicalKeyboardKey.arrowDown) ||
+              event.isKeyPressed(LogicalKeyboardKey.arrowRight)) {
+            if (nextFocus != null) {
+              nextFocus.requestFocus();
+            }
+          }
+          // Arrow Up or Left: Move to previous focus
+          else if (event.isKeyPressed(LogicalKeyboardKey.arrowUp) ||
+              event.isKeyPressed(LogicalKeyboardKey.arrowLeft)) {
+            if (prevFocus != null) {
+              prevFocus.requestFocus();
+            }
           }
         },
-        onSubmitted: (_) => _moveToNextField(nextFocus),
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.datetime,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-        decoration:
-        const InputDecoration(
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding:
-          EdgeInsets.symmetric(
-            horizontal: 2,
-            vertical: 10,
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          readOnly: !_canEdit,
+          enabled: _canEdit,
+          textInputAction: nextFocus == null
+              ? TextInputAction.done
+              : TextInputAction.next,
+          onChanged: (value) {
+            _formatTimeInput(controller, value, nextFocus);
+            if (mounted) {
+              setState(() {});
+            }
+          },
+          onSubmitted: (_) => _moveToNextField(nextFocus),
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.datetime,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
           ),
-          hintText: '--:--',
-          hintStyle: TextStyle(
-            fontSize: 10,
-            color: Colors.black26,
+          decoration:
+          const InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding:
+            EdgeInsets.symmetric(
+              horizontal: 2,
+              vertical: 10,
+            ),
+            hintText: '--:--',
+            hintStyle: TextStyle(
+              fontSize: 10,
+              color: Colors.black26,
+            ),
           ),
         ),
       ),
@@ -1855,6 +1886,7 @@ class _AttendanceDialogState
       TextEditingController controller, {
         required FocusNode focusNode,
         FocusNode? nextFocus,
+        FocusNode? prevFocus,
       }
       ) {
     return Container(
@@ -1869,35 +1901,55 @@ class _AttendanceDialogState
           ),
         ),
       ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        readOnly: !_canEdit,
-        enabled: _canEdit,
-        textInputAction: nextFocus == null
-            ? TextInputAction.done
-            : TextInputAction.next,
-        onChanged: (value) {
-          _formatTimeInput(controller, value, nextFocus);
-          if (mounted) {
-            setState(() {});
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: (event) {
+          if (!_canEdit) return;
+          
+          // Arrow Down or Right: Move to next focus
+          if (event.isKeyPressed(LogicalKeyboardKey.arrowDown) ||
+              event.isKeyPressed(LogicalKeyboardKey.arrowRight)) {
+            if (nextFocus != null) {
+              nextFocus.requestFocus();
+            }
+          }
+          // Arrow Up or Left: Move to previous focus
+          else if (event.isKeyPressed(LogicalKeyboardKey.arrowUp) ||
+              event.isKeyPressed(LogicalKeyboardKey.arrowLeft)) {
+            if (prevFocus != null) {
+              prevFocus.requestFocus();
+            }
           }
         },
-        onSubmitted: (_) => _moveToNextField(nextFocus),
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.datetime,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding:
-          EdgeInsets.symmetric(
-            horizontal: 1,
-            vertical: 11,
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          readOnly: !_canEdit,
+          enabled: _canEdit,
+          textInputAction: nextFocus == null
+              ? TextInputAction.done
+              : TextInputAction.next,
+          onChanged: (value) {
+            _formatTimeInput(controller, value, nextFocus);
+            if (mounted) {
+              setState(() {});
+            }
+          },
+          onSubmitted: (_) => _moveToNextField(nextFocus),
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.datetime,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
           ),
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding:
+            EdgeInsets.symmetric(
+              horizontal: 1,
+              vertical: 11,
+            ),
           hintText: '--:--',
           hintStyle: TextStyle(
             fontSize: 9,
@@ -1913,14 +1965,30 @@ class _AttendanceDialogState
     String value,
     FocusNode? nextFocus,
   ) {
+    // Remove all non-digit characters
     final digits = value.replaceAll(RegExp(r'\D'), '');
+    
+    // Limit to 4 digits max (HHMM)
     final limited = digits.length > 4 ? digits.substring(0, 4) : digits;
-    final formatted = limited.length > 2
-        ? '${limited.substring(0, 2)}:${limited.substring(2)}'
-        : limited.length == 2
-            ? '$limited:'
-            : limited;
+    
+    // Format as HH:MM
+    String formatted;
+    if (limited.isEmpty) {
+      formatted = '';
+    } else if (limited.length == 1) {
+      formatted = limited;
+    } else if (limited.length == 2) {
+      // Auto-insert colon after 2 digits
+      formatted = '$limited:';
+    } else if (limited.length == 3) {
+      // Format: HH:M
+      formatted = '${limited.substring(0, 2)}:${limited.substring(2)}';
+    } else {
+      // Format: HH:MM
+      formatted = '${limited.substring(0, 2)}:${limited.substring(2)}';
+    }
 
+    // Update the controller only if the formatted value is different
     if (controller.text != formatted) {
       controller.value = TextEditingValue(
         text: formatted,
@@ -1928,6 +1996,7 @@ class _AttendanceDialogState
       );
     }
 
+    // Auto-move to next field when time is complete (HH:MM format)
     if (limited.length == 4 && nextFocus != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) nextFocus.requestFocus();

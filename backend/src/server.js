@@ -1980,6 +1980,7 @@ async function sendOtpEmail({
   name,
   otp,
 }) {
+  const devMode = String(process.env.DEV_MODE || "false").toLowerCase() === "true";
   const resendApiKey = String(process.env.RESEND_API_KEY || "")
     .replace(/['"\r\n]/g, "")
     .trim();
@@ -2100,6 +2101,30 @@ async function sendOtpEmail({
   const from =
     rawFrom ||
     (smtpUser ? `Hasani Payroll <${smtpUser}>` : "Hasani Payroll");
+
+  // Development mode: log OTP instead of sending if email is not fully configured
+  const smtpPassword = String(
+    process.env.SMTP_PASSWORD ||
+      process.env.SMTP_PASS ||
+      process.env.MAIL_PASSWORD ||
+      process.env.EMAIL_PASSWORD ||
+      process.env.GMAIL_APP_PASSWORD ||
+      process.env.GMAIL_PASSWORD ||
+      "",
+  )
+    .replace(/['"\s\r\n]/g, "")
+    .trim();
+
+  if (devMode && (!smtpUser || !smtpPassword)) {
+    console.log("\n" + "=".repeat(60));
+    console.log("📧 DEV MODE: OTP EMAIL LOG");
+    console.log("=".repeat(60));
+    console.log(`To: ${email}`);
+    console.log(`Name: ${name}`);
+    console.log(`OTP Code: ${otp}`);
+    console.log("=".repeat(60) + "\n");
+    return;
+  }
 
   await transporter.sendMail(
     {
@@ -2263,25 +2288,41 @@ app.post(
           emailError.message,
         );
 
-        await pool.query(
-          `
-          UPDATE public."app_user"
-          SET
-            "otpHash" = NULL,
-            "otpExpiresAt" = NULL,
-            "otpAttempts" = 0,
-            "otpLastSentAt" = NULL,
-            "updatedAt" = NOW()
-          WHERE "id" = $1
-          `,
-          [user.id],
-        );
+        // In dev mode, allow OTP to proceed anyway (it will be logged to console)
+        const devMode = String(process.env.DEV_MODE || "false").toLowerCase() === "true";
+        const smtpPassword = String(
+          process.env.SMTP_PASSWORD ||
+            process.env.SMTP_PASS ||
+            process.env.MAIL_PASSWORD ||
+            process.env.EMAIL_PASSWORD ||
+            process.env.GMAIL_APP_PASSWORD ||
+            process.env.GMAIL_PASSWORD ||
+            "",
+        )
+          .replace(/['"\s\r\n]/g, "")
+          .trim();
 
-        return res.status(500).json({
-          ok: false,
-          message:
-            "Unable to send verification code.",
-        });
+        if (!devMode || smtpPassword) {
+          await pool.query(
+            `
+            UPDATE public."app_user"
+            SET
+              "otpHash" = NULL,
+              "otpExpiresAt" = NULL,
+              "otpAttempts" = 0,
+              "otpLastSentAt" = NULL,
+              "updatedAt" = NOW()
+            WHERE "id" = $1
+            `,
+            [user.id],
+          );
+
+          return res.status(500).json({
+            ok: false,
+            message:
+              "Unable to send verification code. Please check your email configuration.",
+          });
+        }
       }
 
       // Signed token instead of exposing database ID
