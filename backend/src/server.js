@@ -1902,17 +1902,42 @@ app.delete(
 // ============================================================
 
 function createMailTransporter() {
-  const smtpHost = String(process.env.SMTP_HOST || "")
+  const smtpHost = String(
+    process.env.SMTP_HOST ||
+      process.env.MAIL_HOST ||
+      "",
+  )
     .replace(/['"\r\n]/g, "")
     .trim();
 
-  const smtpUser = String(process.env.SMTP_USER || "")
+  const smtpUser = String(
+    process.env.SMTP_USER ||
+      process.env.MAIL_USER ||
+      process.env.EMAIL_USER ||
+      process.env.GMAIL_USER ||
+      "",
+  )
     .replace(/['"\r\n]/g, "")
     .trim();
 
-  const smtpPassword = String(process.env.SMTP_PASSWORD || "")
+  const smtpPassword = String(
+    process.env.SMTP_PASSWORD ||
+      process.env.SMTP_PASS ||
+      process.env.MAIL_PASSWORD ||
+      process.env.EMAIL_PASSWORD ||
+      process.env.GMAIL_APP_PASSWORD ||
+      process.env.GMAIL_PASSWORD ||
+      "",
+  )
     .replace(/['"\s\r\n]/g, "")
     .trim();
+
+  if (!smtpUser || !smtpPassword) {
+    throw new Error(
+      "Email is not configured. Set SMTP_USER and SMTP_PASSWORD " +
+        "(or GMAIL_USER and GMAIL_APP_PASSWORD) in Render.",
+    );
+  }
 
   // If using Gmail or no custom host specified, use Nodemailer's built-in Gmail service
   if (!smtpHost || smtpHost.toLowerCase().includes("gmail")) {
@@ -2054,13 +2079,20 @@ async function sendOtpEmail({
   const transporter = createMailTransporter();
 
   const rawFrom = String(
-    process.env.SMTP_FROM || "",
+    process.env.SMTP_FROM ||
+      process.env.MAIL_FROM ||
+      process.env.EMAIL_FROM ||
+      "",
   )
     .replace(/['"\r\n]/g, "")
     .trim();
 
   const smtpUser = String(
-    process.env.SMTP_USER || "",
+    process.env.SMTP_USER ||
+      process.env.MAIL_USER ||
+      process.env.EMAIL_USER ||
+      process.env.GMAIL_USER ||
+      "",
   )
     .replace(/['"\r\n]/g, "")
     .trim();
@@ -3178,5 +3210,4 @@ process.on(
     shutdown("SIGTERM"),
 
 );
-
 
