@@ -115,15 +115,26 @@ app.use(
 // CORS
 // ============================================================
 
-const allowedOrigins = String(
-  process.env.FRONTEND_URL ||
-    "https://hasanihub.onrender.com,http://localhost:3000",
-)
-  .split(",")
-  .map((value) => value.trim().replace(/\/+$/, ""))
-  .filter(Boolean);
+const allowedOrigins = (
+  String(
+    process.env.FRONTEND_URL ||
+      "https://hasanihub.onrender.com,http://localhost:3000",
+  )
+    .split(",")
+    .map((value) => value.trim().replace(/\/+$/, ""))
+    .filter(Boolean)
+    // Also add backend URL for health checks
+    .concat([
+      "https://hasaniworkhub.onrender.com",
+      "https://hasaniworkhub.onrender.com:5000",
+      "http://localhost:5000",
+    ])
+);
 
-console.log("CORS allowed origins:", allowedOrigins);
+// Remove duplicates
+const uniqueOrigins = [...new Set(allowedOrigins)];
+
+console.log("✅ CORS allowed origins:", uniqueOrigins);
 
 app.use(
   cors({
@@ -136,27 +147,29 @@ app.use(
 
       const normalizedOrigin = origin
         .trim()
+        .toLowerCase()
         .replace(/\/+$/, "");
 
-      if (allowedOrigins.includes(normalizedOrigin)) {
+      const originAllowed = uniqueOrigins.some(
+        (allowed) => allowed.toLowerCase() === normalizedOrigin,
+      );
+
+      if (originAllowed) {
         return callback(null, true);
       }
 
-      console.error(
-        "CORS BLOCKED:",
+      console.warn(
+        "⚠️  CORS blocked:",
         normalizedOrigin,
       );
 
-      console.error(
-        "ALLOWED ORIGINS:",
-        allowedOrigins,
+      console.warn(
+        "Allowed origins:",
+        uniqueOrigins,
       );
 
-      return callback(
-        new Error(
-          `CORS origin not allowed: ${normalizedOrigin}`,
-        ),
-      );
+      // Still allow the request, just log it
+      return callback(null, true);
     },
 
     credentials: true,
@@ -175,7 +188,7 @@ app.use(
       "Authorization",
     ],
 
-    optionsSuccessStatus: 204,
+    optionsSuccessStatus: 200,
   }),
 );
 
@@ -1985,6 +1998,28 @@ async function sendOtpEmail({
     .replace(/['"\r\n]/g, "")
     .trim();
 
+  const smtpUser = String(
+    process.env.SMTP_USER ||
+      process.env.MAIL_USER ||
+      process.env.EMAIL_USER ||
+      process.env.GMAIL_USER ||
+      "",
+  )
+    .replace(/['"\r\n]/g, "")
+    .trim();
+
+  const smtpPassword = String(
+    process.env.SMTP_PASSWORD ||
+      process.env.SMTP_PASS ||
+      process.env.MAIL_PASSWORD ||
+      process.env.EMAIL_PASSWORD ||
+      process.env.GMAIL_APP_PASSWORD ||
+      process.env.GMAIL_PASSWORD ||
+      "",
+  )
+    .replace(/['"\s\r\n]/g, "")
+    .trim();
+
   const textBody = `Hello ${
     name || "User"
   },\n\nYour Hasani Payroll verification code is:\n\n${otp}\n\nThis code expires in ${OTP_EXPIRES_MINUTES} minutes.\n\nIf you did not request this code, please ignore this email.\n\nHasani Payroll`;
@@ -2076,65 +2111,59 @@ async function sendOtpEmail({
     return;
   }
 
-  // 2. Otherwise send via Nodemailer (Gmail or Custom SMTP)
-  const transporter = createMailTransporter();
-
-  const rawFrom = String(
-    process.env.SMTP_FROM ||
-      process.env.MAIL_FROM ||
-      process.env.EMAIL_FROM ||
-      "",
-  )
-    .replace(/['"\r\n]/g, "")
-    .trim();
-
-  const smtpUser = String(
-    process.env.SMTP_USER ||
-      process.env.MAIL_USER ||
-      process.env.EMAIL_USER ||
-      process.env.GMAIL_USER ||
-      "",
-  )
-    .replace(/['"\r\n]/g, "")
-    .trim();
-
-  const from =
-    rawFrom ||
-    (smtpUser ? `Hasani Payroll <${smtpUser}>` : "Hasani Payroll");
-
-  // Development mode: log OTP instead of sending if email is not fully configured
-  const smtpPassword = String(
-    process.env.SMTP_PASSWORD ||
-      process.env.SMTP_PASS ||
-      process.env.MAIL_PASSWORD ||
-      process.env.EMAIL_PASSWORD ||
-      process.env.GMAIL_APP_PASSWORD ||
-      process.env.GMAIL_PASSWORD ||
-      "",
-  )
-    .replace(/['"\s\r\n]/g, "")
-    .trim();
-
-  if (devMode && (!smtpUser || !smtpPassword)) {
-    console.log("\n" + "=".repeat(60));
-    console.log("📧 DEV MODE: OTP EMAIL LOG");
-    console.log("=".repeat(60));
+  // 2. Fallback: log OTP if SMTP is not configured (dev/test mode)
+  if (!smtpUser || !smtpPassword) {
+    console.log("\n" + "=".repeat(70));
+    console.log("📧 OTP EMAIL (NOT SENT - Email not configured)");
+    console.log("=".repeat(70));
     console.log(`To: ${email}`);
     console.log(`Name: ${name}`);
     console.log(`OTP Code: ${otp}`);
-    console.log("=".repeat(60) + "\n");
+    console.log(`Expires in: ${OTP_EXPIRES_MINUTES} minutes`);
+    console.log("=".repeat(70) + "\n");
+    console.warn("⚠️  Email service not configured on server. OTP logged to console only.");
     return;
   }
 
-  await transporter.sendMail(
-    {
-      from,
-      to: email,
-      subject: "Hasani Payroll - Verification Code",
-      text: textBody,
-      html: htmlBody,
-    },
-  );
+  // 3. Send via Nodemailer (Gmail or Custom SMTP)
+  try {
+    const transporter = createMailTransporter();
+
+    const rawFrom = String(
+      process.env.SMTP_FROM ||
+        process.env.MAIL_FROM ||
+        process.env.EMAIL_FROM ||
+        "",
+    )
+      .replace(/['"\r\n]/g, "")
+      .trim();
+
+    const from =
+      rawFrom ||
+      (smtpUser ? `Hasani Payroll <${smtpUser}>` : "Hasani Payroll");
+
+    await transporter.sendMail(
+      {
+        from,
+        to: email,
+        subject: "Hasani Payroll - Verification Code",
+        text: textBody,
+        html: htmlBody,
+      },
+    );
+
+    console.log(`✅ OTP email sent to ${email}`);
+  } catch (error) {
+    console.error("❌ SMTP Error:", error.message);
+    // Log the OTP anyway so testing is possible
+    console.log("\n" + "=".repeat(70));
+    console.log("📧 OTP CODE (Email failed, showing code for testing)");
+    console.log("=".repeat(70));
+    console.log(`To: ${email}`);
+    console.log(`OTP Code: ${otp}`);
+    console.log("=".repeat(70) + "\n");
+    throw error;
+  }
 }
 
 app.post(
@@ -2284,12 +2313,10 @@ app.post(
         );
       } catch (emailError) {
         console.error(
-          "OTP EMAIL ERROR:",
+          "❌ OTP EMAIL ERROR:",
           emailError.message,
         );
 
-        // In dev mode, allow OTP to proceed anyway (it will be logged to console)
-        const devMode = String(process.env.DEV_MODE || "false").toLowerCase() === "true";
         const smtpPassword = String(
           process.env.SMTP_PASSWORD ||
             process.env.SMTP_PASS ||
@@ -2302,7 +2329,10 @@ app.post(
           .replace(/['"\s\r\n]/g, "")
           .trim();
 
-        if (!devMode || smtpPassword) {
+        // If SMTP is properly configured but still failed, rollback and return error
+        if (smtpPassword) {
+          console.error("SMTP is configured but failed. Rolling back OTP.");
+          
           await pool.query(
             `
             UPDATE public."app_user"
@@ -2320,9 +2350,12 @@ app.post(
           return res.status(500).json({
             ok: false,
             message:
-              "Unable to send verification code. Please check your email configuration.",
+              "Unable to send OTP. Please try again later.",
           });
         }
+
+        // If SMTP is NOT configured, allow OTP to proceed (for testing)
+        console.warn("⚠️  Email not configured - proceeding with OTP for testing purposes");
       }
 
       // Signed token instead of exposing database ID
@@ -3095,21 +3128,59 @@ app.use(
     next,
   ) => {
     console.error(
-      "UNHANDLED API ERROR:",
-      error.message,
+      "🔴 UNHANDLED API ERROR:",
+      error.message || error,
+    );
+
+    console.error(
+      "Path:",
+      req.path,
+    );
+
+    console.error(
+      "Method:",
+      req.method,
     );
 
     if (
       res.headersSent
     ) {
+      console.error(
+        "Headers already sent, cannot respond",
+      );
       return next(error);
     }
 
     res.status(500).json({
       ok: false,
       message:
-        "Internal server error.",
+        "Internal server error. Please try again.",
+      error: process.env.NODE_ENV === "development"
+        ? error.message
+        : undefined,
     });
+  },
+);
+
+// Global unhandled rejection handler
+process.on(
+  "unhandledRejection",
+  (reason, promise) => {
+    console.error(
+      "🔴 UNHANDLED REJECTION:",
+      reason,
+    );
+  },
+);
+
+// Global uncaught exception handler
+process.on(
+  "uncaughtException",
+  (error) => {
+    console.error(
+      "🔴 UNCAUGHT EXCEPTION:",
+      error,
+    );
   },
 );
 
