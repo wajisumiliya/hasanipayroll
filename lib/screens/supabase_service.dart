@@ -59,6 +59,73 @@ class SupabaseService {
   }
 
   // ============================================================
+  // BRANCH ACTIVITY LOGS
+  // ============================================================
+
+  static Future<String?> startBranchActivity({
+    required String branchId,
+    required String action,
+    String? employeeId,
+    String? employeeName,
+    Map<String, dynamic>? details,
+  }) async {
+    try {
+      final response = await client
+          .from('branch_activity_logs')
+          .insert({
+            'branch_id': branchId.trim(),
+            'action': action.trim(),
+            'employee_id': employeeId?.trim(),
+            'employee_name': employeeName?.trim(),
+            'opened_at': DateTime.now().toUtc().toIso8601String(),
+            'details': details ?? <String, dynamic>{},
+          })
+          .select('id')
+          .single();
+
+      return response['id']?.toString();
+    } catch (e) {
+      debugPrint('START BRANCH ACTIVITY ERROR: $e');
+      return null;
+    }
+  }
+
+  static Future<void> closeBranchActivity(String? activityId) async {
+    if (activityId == null || activityId.trim().isEmpty) return;
+
+    try {
+      await client
+          .from('branch_activity_logs')
+          .update({'closed_at': DateTime.now().toUtc().toIso8601String()})
+          .eq('id', activityId);
+    } catch (e) {
+      debugPrint('CLOSE BRANCH ACTIVITY ERROR: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getBranchActivityLogs({
+    String? branchId,
+    int limit = 500,
+  }) async {
+    try {
+      var query = client.from('branch_activity_logs').select();
+
+      if (branchId != null && branchId.trim().isNotEmpty) {
+        query = query.eq('branch_id', branchId.trim());
+      }
+
+      final response = await query
+          .order('opened_at', ascending: false)
+          .limit(limit);
+      return _mapList(response);
+    } catch (e, stackTrace) {
+      debugPrint('GET BRANCH ACTIVITY LOGS ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  // ============================================================
   // AUTH
   // ============================================================
 

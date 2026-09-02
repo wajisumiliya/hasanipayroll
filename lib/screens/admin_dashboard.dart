@@ -44,6 +44,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
   DateTime selectedAttendanceMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime selectedPayrollMonth = DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
+  String? selectedLogBranchId;
+  Future<List<Map<String, dynamic>>>? _branchLogsFuture;
 
   final List<String> months = const [
     'Jan',
@@ -118,6 +120,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return 'Settings';
       case 8:
         return 'RHB Layout';
+      case 9:
+        return 'Branch Logs';
       default:
         return 'Dashboard';
     }
@@ -205,6 +209,9 @@ Widget _statusChip(String status) {
 
       case 8:
         return _rhbLayoutPage();
+
+      case 9:
+        return _branchLogsPage();
 
       default:
         return _dashboardPage();
@@ -332,6 +339,11 @@ Widget _statusChip(String status) {
                       3,
                     ),
                     _drawerItem(
+                      'Branch Logs',
+                      Icons.manage_history_outlined,
+                      9,
+                    ),
+                    _drawerItem(
                       'Import CSV',
                       Icons.upload_file_outlined,
                       4,
@@ -427,6 +439,11 @@ Widget _statusChip(String status) {
                   'Attendance',
                   Icons.access_time,
                   3,
+                ),
+                _sidebarItem(
+                  'Branch Logs',
+                  Icons.manage_history_outlined,
+                  9,
                 ),
                 _sidebarItem(
                   'Import CSV',
@@ -3072,6 +3089,150 @@ Widget _statusChip(String status) {
   }
 
   // ===========================================================================
+  // BRANCH ACTIVITY LOGS
+  // ===========================================================================
+
+  Future<List<Map<String, dynamic>>> _loadBranchLogs() {
+    return _branchLogsFuture ??= SupabaseService.getBranchActivityLogs(
+      branchId: selectedLogBranchId,
+    );
+  }
+
+  void _refreshBranchLogs() {
+    setState(() {
+      _branchLogsFuture = null;
+    });
+  }
+
+  DateTime? _logDate(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString())?.toLocal();
+  }
+
+  String _logDateText(dynamic value) {
+    final date = _logDate(value);
+    return date == null ? 'Still open' : DateFormat('dd MMM yyyy, hh:mm:ss a').format(date);
+  }
+
+  String _logDuration(Map<String, dynamic> log) {
+    final opened = _logDate(log['opened_at']);
+    final closed = _logDate(log['closed_at']);
+    if (opened == null || closed == null) return '-';
+    final duration = closed.difference(opened);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    return hours > 0
+        ? '${hours}h ${minutes}m ${seconds}s'
+        : '${minutes}m ${seconds}s';
+  }
+
+  String _logAction(dynamic value) {
+    switch (value?.toString()) {
+      case 'BRANCH_LOGIN':
+        return 'Branch login session';
+      case 'ATTENDANCE_OPENED':
+        return 'Attendance opened';
+      default:
+        return value?.toString().replaceAll('_', ' ') ?? 'Activity';
+    }
+  }
+
+  Widget _branchLogsPage() {
+    return Padding(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Branch Activity Logs', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 5),
+                    Text('Monitor branch login and employee attendance access.', style: TextStyle(color: Colors.black54)),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 220,
+                child: DropdownButtonFormField<String>(
+                  value: selectedLogBranchId,
+                  decoration: const InputDecoration(labelText: 'Branch', border: OutlineInputBorder()),
+                  hint: const Text('All branches'),
+                  items: [
+                    const DropdownMenuItem<String>(value: null, child: Text('All branches')),
+                    ...service.branches.map((branch) => DropdownMenuItem<String>(
+                      value: branch.id,
+                      child: Text(branch.name),
+                    )),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedLogBranchId = value;
+                      _branchLogsFuture = null;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton(onPressed: _refreshBranchLogs, tooltip: 'Refresh logs', icon: const Icon(Icons.refresh)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadBranchLogs(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Unable to load branch logs:\n${snapshot.error}', textAlign: TextAlign.center));
+                }
+                final logs = snapshot.data ?? const <Map<String, dynamic>>[];
+                if (logs.isEmpty) {
+                  return const Center(child: Text('No branch activity has been recorded yet.'));
+                }
+                return ListView.separated(
+                  itemCount: logs.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final log = logs[index];
+                    final employeeName = log['employee_name']?.toString().trim() ?? '';
+                    final employeeId = log['employee_id']?.toString().trim() ?? '';
+                    final isOpen = log['closed_at'] == null;
+                    return Card(
+                      elevation: 0,
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: isOpen ? Colors.orange.shade50 : Colors.green.shade50,
+                          child: Icon(isOpen ? Icons.visibility_outlined : Icons.history, color: isOpen ? Colors.orange : Colors.green),
+                        ),
+                        title: Text('${log['branch_id'] ?? '-'} • ${_logAction(log['action'])}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 7),
+                          child: Text([
+                            if (employeeName.isNotEmpty || employeeId.isNotEmpty) 'Employee: ${employeeName.isEmpty ? employeeId : employeeName}${employeeId.isEmpty ? '' : ' ($employeeId)'}',
+                            'Opened: ${_logDateText(log['opened_at'])}',
+                            'Closed: ${_logDateText(log['closed_at'])}',
+                          ].join('\n')),
+                        ),
+                        trailing: Text(_logDuration(log), style: const TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ATTENDANCE
   // ===========================================================================
 

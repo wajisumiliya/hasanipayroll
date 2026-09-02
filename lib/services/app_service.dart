@@ -190,6 +190,7 @@ class AppService extends ChangeNotifier {
   // ==========================================================================
 
   app_user? _currentUser;
+  String? _branchLoginActivityId;
 
   app_user? get currentUser =>
       _currentUser;
@@ -1118,6 +1119,29 @@ if (role == 'employee' && firstLogin) {
       await _persistCurrentUser();
       notifyListeners();
       await _loadDataForCurrentUser();
+
+      if (_currentUser?.isBranch == true) {
+        try {
+          final resolvedBranch =
+              getBranch(_currentUser?.branchId ?? enteredUsername)?.id ??
+                  _currentUser?.branchId ??
+                  enteredUsername;
+          final response = await _supabase
+              .from('branch_activity_logs')
+              .insert({
+                'branch_id': resolvedBranch,
+                'action': 'BRANCH_LOGIN',
+                'opened_at': DateTime.now().toUtc().toIso8601String(),
+                'details': {'username': accountUsername},
+              })
+              .select('id')
+              .single();
+          _branchLoginActivityId = response['id']?.toString();
+        } catch (e) {
+          debugPrint('Branch login activity error: $e');
+        }
+      }
+
       return null;
     } on http.ClientException catch (e) {
       debugPrint('AUTH CONNECTION ERROR: $e');
@@ -1328,6 +1352,20 @@ return 'OTP verification failed: $e';
   // ==========================================================================
 
   Future<void> logout() async {
+    final activityId = _branchLoginActivityId;
+    _branchLoginActivityId = null;
+
+    if (activityId != null) {
+      try {
+        await _supabase
+            .from('branch_activity_logs')
+            .update({'closed_at': DateTime.now().toUtc().toIso8601String()})
+            .eq('id', activityId);
+      } catch (e) {
+        debugPrint('Branch logout activity error: $e');
+      }
+    }
+
     _currentUser = null;
     await _clearStoredUser();
 

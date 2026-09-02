@@ -893,10 +893,25 @@ class _BranchPortalState extends State<BranchPortal> {
   // OPEN ATTENDANCE DIALOG
   // ==========================================================================
 
-  void _openAttendanceSheet(
+  Future<void> _openAttendanceSheet(
       Map<String, dynamic> employee,
-      ) {
-    showDialog(
+      ) async {
+    final employeeId = _liveEmployeeId(employee);
+    final employeeName = employee['name']?.toString() ?? 'Employee';
+    final resolvedBranchId = branch?.branchId ?? branchId;
+    final activityId = await SupabaseService.startBranchActivity(
+      branchId: resolvedBranchId,
+      action: 'ATTENDANCE_OPENED',
+      employeeId: employeeId,
+      employeeName: employeeName,
+      details: {
+        'month': DateFormat('yyyy-MM').format(attendanceMonth),
+      },
+    );
+
+    if (!mounted) return;
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) {
@@ -908,11 +923,13 @@ class _BranchPortalState extends State<BranchPortal> {
           showSubmitButton: true,
         );
       },
-    ).then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    );
+
+    await SupabaseService.closeBranchActivity(activityId);
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   // ==========================================================================
