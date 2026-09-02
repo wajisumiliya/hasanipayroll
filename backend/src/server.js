@@ -773,7 +773,9 @@ async function publicAppUser(
     // example "ALOR SETAR") and do not have an employee record.
     branchId:
       role === "branch"
-        ? normalizeLogin(user.username)
+        ? normalizeLogin(
+            user.username || user.email,
+          )
         : employee?.branch ?? null,
 
     displayName:

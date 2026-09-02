@@ -180,11 +180,25 @@ class SupabaseService {
   // ============================================================
 
   static String _normaliseBranchValue(String value) {
-    return value
+    final normalized = value
         .toLowerCase()
         .replaceAll('branch', '')
         .replaceAll(RegExp(r'[^a-z0-9]'), '')
         .trim();
+
+    const branchLoginAliases = <String, String>{
+      'hbsp': 'sungaipetani',
+      'hbamj': 'amanjaya',
+      'hbas': 'alorsetar',
+      'hbastana': 'astana',
+      'hbgurun': 'gurun',
+      'hbjitra': 'jitra',
+      'hbperai': 'prai',
+      'hbkulim': 'kulim',
+      'hblkw': 'langkawi',
+    };
+
+    return branchLoginAliases[normalized] ?? normalized;
   }
 
   // ============================================================

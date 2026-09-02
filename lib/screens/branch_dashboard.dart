@@ -31,7 +31,16 @@ class _BranchPortalState extends State<BranchPortal> {
   Future<List<Map<String, dynamic>>>? _employeesFuture;
   String? _employeesFutureBranchId;
 
-  String get branchId => service.currentUser?.branchId ?? '';
+  String get branchId {
+    final user = service.currentUser;
+    final assignedBranch = user?.branchId?.trim() ?? '';
+
+    if (assignedBranch.isNotEmpty) {
+      return assignedBranch;
+    }
+
+    return user?.username.trim() ?? '';
+  }
 
   Branch? get branch => service.branchById(branchId);
 
@@ -48,12 +57,14 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Future<List<Map<String, dynamic>>> _liveBranchEmployees() {
+    final resolvedBranchId = branch?.branchId ?? branchId;
+
     if (_employeesFuture == null ||
-        _employeesFutureBranchId != branchId) {
-      _employeesFutureBranchId = branchId;
+        _employeesFutureBranchId != resolvedBranchId) {
+      _employeesFutureBranchId = resolvedBranchId;
 
       _employeesFuture = SupabaseService.getEmployeesByBranch(
-        branchId,
+        resolvedBranchId,
         aliases: [
           branch?.branchName,
           service.currentUser?.displayName,

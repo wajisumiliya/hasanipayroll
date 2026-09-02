@@ -1066,11 +1066,30 @@ if (role == 'employee' && firstLogin) {
 
       if (role == 'branch' &&
           (branchId == null || branchId.trim().isEmpty)) {
-        branchId = userData['username']?.toString() ?? enteredUsername;
+        final backendUsername =
+            userData['username']?.toString().trim() ?? '';
+        final backendEmail =
+            userData['email']?.toString().trim() ?? '';
+
+        branchId = backendUsername.isNotEmpty
+            ? backendUsername
+            : backendEmail.isNotEmpty
+                ? backendEmail
+                : enteredUsername;
       }
 
       String? displayName =
           backendEmployee['name']?.toString();
+
+      final responseUsername =
+          userData['username']?.toString().trim() ?? '';
+      final responseEmail =
+          userData['email']?.toString().trim() ?? '';
+      final accountUsername = responseUsername.isNotEmpty
+          ? responseUsername
+          : responseEmail.isNotEmpty
+              ? responseEmail
+              : enteredUsername;
 
       try {
         if (!_employeesLoaded) {
@@ -1087,9 +1106,7 @@ if (role == 'employee' && firstLogin) {
 
       _currentUser = app_user(
   username:
-      userData['username']?.toString() ??
-      userData['email']?.toString() ??
-      employeeId,
+      accountUsername,
   password: enteredPassword,
   role: role,
   branchId: branchId,
