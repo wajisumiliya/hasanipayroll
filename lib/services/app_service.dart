@@ -1336,8 +1336,22 @@ return 'OTP verification failed: $e';
   Branch? getBranch(
     String branchId,
   ) {
-    final id =
+    var id =
         _normalise(branchId);
+
+    const branchLoginAliases = <String, String>{
+      'HBSP': 'SUNGAI PETANI',
+      'HBAMJ': 'AMANJAYA',
+      'HBAS': 'ALOR SETAR',
+      'HBASTANA': 'ASTANA',
+      'HBGURUN': 'GURUN',
+      'HBJITRA': 'JITRA',
+      'HBPERAI': 'PRAI',
+      'HBKULIM': 'KULIM',
+      'HBLKW': 'LANGKAWI',
+    };
+
+    id = branchLoginAliases[id] ?? id;
 
     if (id.isEmpty) {
       return null;
