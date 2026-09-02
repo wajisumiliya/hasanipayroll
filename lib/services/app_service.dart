@@ -1059,8 +1059,15 @@ if (role == 'employee' && firstLogin) {
           : <String, dynamic>{};
 
       String? branchId =
+          userData['branchId']?.toString() ??
+          userData['branch_id']?.toString() ??
           backendEmployee['branchId']?.toString() ??
           backendEmployee['branch_id']?.toString();
+
+      if (role == 'branch' &&
+          (branchId == null || branchId.trim().isEmpty)) {
+        branchId = userData['username']?.toString() ?? enteredUsername;
+      }
 
       String? displayName =
           backendEmployee['name']?.toString();

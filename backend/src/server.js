@@ -769,6 +769,13 @@ async function publicAppUser(
       user.employeeId ??
       null,
 
+    // Branch accounts are identified by their configured username (for
+    // example "ALOR SETAR") and do not have an employee record.
+    branchId:
+      role === "branch"
+        ? normalizeLogin(user.username)
+        : employee?.branch ?? null,
+
     displayName:
       employee?.name ??
       user.username ??
