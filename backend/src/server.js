@@ -3367,6 +3367,49 @@ async function ensureFrnBranchAccounts() {
   console.log(`FRN branch accounts ready: ${usernames.length}`);
 }
 
+async function ensureAdminAccount() {
+  const email = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const password = String(process.env.ADMIN_PASSWORD || "");
+
+  if (!email || !password) {
+    console.warn("Admin account bootstrap skipped: ADMIN_EMAIL or ADMIN_PASSWORD is not set.");
+    return;
+  }
+  if (password.length < 12) {
+    throw new Error("ADMIN_PASSWORD must contain at least 12 characters.");
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const updated = await pool.query(
+    `UPDATE public."app_user"
+     SET "username" = 'ADMIN',
+         "email" = $1,
+         "passwordHash" = $2,
+         "role" = 'ADMIN',
+         "isActive" = TRUE,
+         "mustChangePassword" = FALSE,
+         "passwordChangedAt" = NOW(),
+         "updatedAt" = NOW()
+     WHERE UPPER(TRIM(COALESCE("username", ''))) = 'ADMIN'
+        OR LOWER(TRIM(COALESCE("email", ''))) = $1
+     RETURNING "id"`,
+    [email, passwordHash],
+  );
+
+  if (updated.rows.length === 0) {
+    await pool.query(
+      `INSERT INTO public."app_user" (
+         "id", "username", "email", "passwordHash", "role",
+         "isActive", "mustChangePassword", "passwordChangedAt",
+         "createdAt", "updatedAt"
+       ) VALUES ($1, 'ADMIN', $2, $3, 'ADMIN', TRUE, FALSE, NOW(), NOW(), NOW())`,
+      [crypto.randomUUID(), email, passwordHash],
+    );
+  }
+
+  console.log("Admin account synchronized from environment configuration.");
+}
+
 // ============================================================
 // SERVER
 // ============================================================
@@ -3375,6 +3418,7 @@ let server;
 
 async function startServer() {
   await testDatabase();
+  await ensureAdminAccount();
   await ensureFrnBranchAccounts();
 
   server =

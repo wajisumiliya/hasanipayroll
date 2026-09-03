@@ -117,7 +117,14 @@ async function main() {
   // ADMIN
   // ----------------------------------------------------------
 
-  const adminPassword = await bcrypt.hash("admin123", 12);
+  const adminPlainPassword = String(process.env.ADMIN_PASSWORD || "");
+  const employeePlainPassword = String(process.env.SEED_EMPLOYEE_PASSWORD || "");
+  if (adminPlainPassword.length < 12 || employeePlainPassword.length < 12) {
+    throw new Error(
+      "ADMIN_PASSWORD and SEED_EMPLOYEE_PASSWORD must each contain at least 12 characters.",
+    );
+  }
+  const adminPassword = await bcrypt.hash(adminPlainPassword, 12);
 
   await prisma.user.upsert({
     where: {
@@ -142,7 +149,7 @@ async function main() {
   // EMPLOYEES
   // ----------------------------------------------------------
 
-  const employeePassword = await bcrypt.hash("demo123", 12);
+  const employeePassword = await bcrypt.hash(employeePlainPassword, 12);
 
   for (const employeeData of employees) {
     const employee = await prisma.employee.upsert({
@@ -198,12 +205,12 @@ async function main() {
   console.log("");
   console.log("Admin Login:");
   console.log("admin@hasani.local");
-  console.log("Password: admin123");
+  console.log("Password is configured through ADMIN_PASSWORD.");
 
   console.log("");
   console.log("Employee Login:");
   console.log("EMP00125");
-  console.log("Password: demo123");
+  console.log("Password is configured through SEED_EMPLOYEE_PASSWORD.");
 
   console.log("");
   console.log("=================================");
