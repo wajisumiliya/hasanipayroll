@@ -263,6 +263,7 @@ class SupabaseService {
       'hbperai': 'prai',
       'hbkulim': 'kulim',
       'hblkw': 'langkawi',
+      'hpspfrn': 'sungaipetani',
     };
 
     return branchLoginAliases[normalized] ?? normalized;
@@ -344,6 +345,7 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getEmployeesByBranch(
       String? branchId, {
         Iterable<String?> aliases = const [],
+        bool? frnOnly,
       }) async {
     try {
       final wanted = <String>{
@@ -365,6 +367,14 @@ class SupabaseService {
           .order('name', ascending: true);
 
       return _mapList(response).where((employee) {
+        final isFrn = employee['address']
+                ?.toString()
+                .toUpperCase()
+                .contains('FRN') ==
+            true;
+        if (frnOnly == true && !isFrn) return false;
+        if (frnOnly == false && isFrn) return false;
+
         final values = <dynamic>[
           employee['branch_id'],
           employee['branch_name'],
@@ -757,6 +767,90 @@ class SupabaseService {
     final payload = Map<String, dynamic>.from(employee)
       ..['branch_id'] = branchId.trim();
     return addEmployee(payload);
+  }
+
+  static Future<Map<String, dynamic>> submitEmployeeRequest({
+    required String branchId,
+    required Map<String, dynamic> employee,
+  }) async {
+    try {
+      final payload = Map<String, dynamic>.from(employee)
+        ..remove('employee_id')
+        ..remove('is_active')
+        ..['branch_id'] = branchId.trim()
+        ..['status'] = 'PENDING';
+      final response = await client
+          .from('employee_requests')
+          .insert(payload)
+          .select()
+          .single();
+      return _map(response);
+    } catch (e, stackTrace) {
+      debugPrint('SUBMIT EMPLOYEE REQUEST ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getEmployeeRequests({
+    String? status,
+  }) async {
+    try {
+      var query = client.from('employee_requests').select();
+      if (status != null && status.trim().isNotEmpty) {
+        query = query.eq('status', status.trim().toUpperCase());
+      }
+      final response = await query.order('requested_at', ascending: false);
+      return _mapList(response);
+    } catch (e, stackTrace) {
+      debugPrint('GET EMPLOYEE REQUESTS ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> approveEmployeeRequest({
+    required String requestId,
+    required String employeeId,
+  }) async {
+    try {
+      final response = await client.rpc(
+        'approve_employee_request',
+        params: {
+          'request_id': requestId,
+          'new_employee_id': employeeId.trim().toUpperCase(),
+        },
+      );
+      if (response is List && response.isNotEmpty) {
+        return _map(response.first);
+      }
+      return _map(response);
+    } catch (e, stackTrace) {
+      debugPrint('APPROVE EMPLOYEE REQUEST ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<void> rejectEmployeeRequest({
+    required String requestId,
+    String? note,
+  }) async {
+    try {
+      await client
+          .from('employee_requests')
+          .update({
+            'status': 'REJECTED',
+            'admin_note': note?.trim(),
+            'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', requestId)
+          .eq('status', 'PENDING');
+    } catch (e, stackTrace) {
+      debugPrint('REJECT EMPLOYEE REQUEST ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
   }
 
   // ============================================================

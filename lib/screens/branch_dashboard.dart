@@ -53,13 +53,37 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Branch? get branch => service.branchById(branchId);
 
-  List<Employee> get employees => service.branchEmployees(branchId);
+  bool get isFrnSession {
+    final user = service.currentUser;
+    return [user?.branchId, user?.username].any(
+      (value) => value?.trim().toUpperCase() == 'HPSPFRN',
+    );
+  }
 
-  List<AttendanceRecord> get attendance =>
-      service.branchAttendance(branchId);
+  String get branchDisplayName => isFrnSession
+      ? '${branch?.branchName ?? 'SUNGAI PETANI'} FRN'
+      : branch?.branchName ?? branchId;
 
-  List<AttendanceRecord> get todayAttendance =>
-      service.branchTodayAttendance(branchId);
+  List<Employee> get employees => service.branchEmployees(branchId).where((employee) {
+        final isFrn = employee.address.toUpperCase().contains('FRN');
+        return isFrnSession ? isFrn : !isFrn;
+      }).toList();
+
+  Set<String> get _visibleEmployeeIds => employees
+      .map((employee) => employee.employeeId.trim().toUpperCase())
+      .toSet();
+
+  List<AttendanceRecord> get attendance => service
+      .branchAttendance(branchId)
+      .where((record) =>
+          _visibleEmployeeIds.contains(record.employeeId.trim().toUpperCase()))
+      .toList();
+
+  List<AttendanceRecord> get todayAttendance => service
+      .branchTodayAttendance(branchId)
+      .where((record) =>
+          _visibleEmployeeIds.contains(record.employeeId.trim().toUpperCase()))
+      .toList();
 
   // ==========================================================================
   // EMPLOYEE FUTURE
@@ -74,6 +98,7 @@ class _BranchPortalState extends State<BranchPortal> {
 
       _employeesFuture = SupabaseService.getEmployeesByBranch(
         resolvedBranchId,
+        frnOnly: isFrnSession,
         aliases: [
           branch?.branchName,
           service.currentUser?.displayName,
@@ -328,7 +353,7 @@ class _BranchPortalState extends State<BranchPortal> {
           ),
           const SizedBox(height: 5),
           Text(
-            branch?.branchName ?? 'Branch',
+            branchDisplayName,
             style: const TextStyle(
               fontSize: 12,
               color: Colors.black54,
@@ -362,7 +387,7 @@ class _BranchPortalState extends State<BranchPortal> {
           ),
           const SizedBox(height: 4),
           Text(
-            branch?.branchName ?? 'Branch',
+            branchDisplayName,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 17,
@@ -473,7 +498,7 @@ class _BranchPortalState extends State<BranchPortal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                branch?.branchName ?? 'Branch',
+                branchDisplayName,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
@@ -529,9 +554,15 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Widget _dashboardPage() {
     final totalEmployees = employees.length;
-    final present = service.presentCount(branchId);
-    final late = service.lateCount(branchId);
-    final absent = service.absentCount(branchId);
+    final present = todayAttendance
+        .where((record) => record.status.trim().toLowerCase() == 'present')
+        .length;
+    final late = todayAttendance
+        .where((record) => record.status.trim().toLowerCase() == 'late')
+        .length;
+    final absent = todayAttendance
+        .where((record) => record.status.trim().toLowerCase() == 'absent')
+        .length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -547,7 +578,7 @@ class _BranchPortalState extends State<BranchPortal> {
           ),
           const SizedBox(height: 8),
           Text(
-            branch?.branchName ?? 'Branch',
+            branchDisplayName,
             style: const TextStyle(
               color: Colors.black54,
             ),
@@ -729,8 +760,7 @@ class _BranchPortalState extends State<BranchPortal> {
               ),
               const SizedBox(height: 8),
               Text(
-                '${liveEmployees.length} employees for '
-                    '${branch?.branchName ?? branchId}',
+                '${liveEmployees.length} employees for $branchDisplayName',
                 style: const TextStyle(
                   color: Colors.black54,
                 ),
@@ -909,7 +939,7 @@ class _BranchPortalState extends State<BranchPortal> {
     final employeeName = employee['name']?.toString() ?? 'Employee';
     final resolvedBranchId = branch?.branchId ?? branchId;
     final activityId = await SupabaseService.startBranchActivity(
-      branchId: resolvedBranchId,
+      branchId: isFrnSession ? 'HPSPFRN' : resolvedBranchId,
       action: 'ATTENDANCE_OPENED',
       employeeId: employeeId,
       employeeName: employeeName,
@@ -1099,17 +1129,22 @@ class _BranchPortalState extends State<BranchPortal> {
                       ),
                     ),
                   ),
+                  IconButton(
+                    onPressed: _refreshEmployees,
+                    tooltip: 'Refresh approved employees',
+                    icon: const Icon(Icons.refresh),
+                  ),
+                  const SizedBox(width: 6),
                   FilledButton.icon(
                     onPressed: _showAddBranchEmployee,
                     icon: const Icon(Icons.person_add_alt_1),
-                    label: const Text('Add Employee'),
+                    label: const Text('Request Employee'),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                '${allEmployees.length} employees assigned to '
-                    '${branch?.branchName ?? branchId}',
+                '${allEmployees.length} employees assigned to $branchDisplayName',
                 style: const TextStyle(
                   color: Colors.black54,
                 ),
@@ -1273,7 +1308,23 @@ class _BranchPortalState extends State<BranchPortal> {
     final phone = TextEditingController(
       text: employee?['phone']?.toString() ?? '',
     );
+    final newIcNo = TextEditingController(
+      text: employee?['new_ic_no']?.toString() ?? '',
+    );
+    final bankCode = TextEditingController(
+      text: employee?['bank_code']?.toString() ?? '',
+    );
+    final bankAccount = TextEditingController(
+      text: employee?['bank_account']?.toString() ?? '',
+    );
+    final address = TextEditingController(
+      text: employee?['address']?.toString() ?? '',
+    );
     var active = employee == null || _liveIsActive(employee);
+    var joiningDate = DateTime.tryParse(
+          employee?['joining_date']?.toString() ?? '',
+        ) ??
+        DateTime.now();
     var saving = false;
     String? error;
     final resolvedBranchId = branch?.branchId ?? branchId;
@@ -1283,37 +1334,68 @@ class _BranchPortalState extends State<BranchPortal> {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(editing ? 'Edit Employee' : 'Add Employee'),
+          title: Text(editing ? 'Edit Employee' : 'Request New Employee'),
           content: SizedBox(
             width: 520,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextFormField(
-                    controller: employeeId,
-                    enabled: !editing && !saving,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(labelText: 'Employee ID *'),
-                  ),
-                  const SizedBox(height: 12),
+                  if (editing) ...[
+                    TextFormField(
+                      controller: employeeId,
+                      enabled: false,
+                      decoration: const InputDecoration(labelText: 'Employee ID'),
+                    ),
+                    const SizedBox(height: 12),
+                  ] else ...[
+                    const Text(
+                      'Admin will verify this information and assign the Employee ID after approval.',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   _branchEmployeeField(name, 'Full Name *', enabled: !saving),
                   _branchEmployeeField(designation, 'Designation', enabled: !saving),
                   _branchEmployeeField(department, 'Department', enabled: !saving),
                   _branchEmployeeField(email, 'Email', enabled: !saving),
+                  _branchEmployeeField(newIcNo, 'New IC No.', enabled: !saving),
+                  _branchEmployeeField(bankCode, 'Bank Code', enabled: !saving),
+                  _branchEmployeeField(bankAccount, 'Bank Account', enabled: !saving),
                   _branchEmployeeField(phone, 'Phone', enabled: !saving),
+                  _branchEmployeeField(address, 'Address', enabled: !saving),
                   const SizedBox(height: 6),
-                  SwitchListTile(
+                  ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Active employee'),
-                    subtitle: Text(active
-                        ? 'Employee is visible as active'
-                        : 'Employee is marked inactive'),
-                    value: active,
-                    onChanged: saving
+                    title: const Text('Joining Date'),
+                    subtitle: Text(DateFormat('dd MMM yyyy').format(joiningDate)),
+                    trailing: const Icon(Icons.calendar_month_outlined),
+                    onTap: saving
                         ? null
-                        : (value) => setDialogState(() => active = value),
+                        : () async {
+                            final picked = await showDatePicker(
+                              context: dialogContext,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                              initialDate: joiningDate,
+                            );
+                            if (picked != null) {
+                              setDialogState(() => joiningDate = picked);
+                            }
+                          },
                   ),
+                  if (editing)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Active employee'),
+                      subtitle: Text(active
+                          ? 'Employee is visible as active'
+                          : 'Employee is marked inactive'),
+                      value: active,
+                      onChanged: saving
+                          ? null
+                          : (value) => setDialogState(() => active = value),
+                    ),
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -1334,9 +1416,11 @@ class _BranchPortalState extends State<BranchPortal> {
                   : () async {
                       final id = employeeId.text.trim().toUpperCase();
                       final employeeName = name.text.trim();
-                      if (id.isEmpty || employeeName.isEmpty) {
+                      if ((editing && id.isEmpty) || employeeName.isEmpty) {
                         setDialogState(() {
-                          error = 'Employee ID and full name are required.';
+                          error = editing
+                              ? 'Employee ID and full name are required.'
+                              : 'Full name is required.';
                         });
                         return;
                       }
@@ -1351,7 +1435,12 @@ class _BranchPortalState extends State<BranchPortal> {
                         'designation': designation.text.trim(),
                         'department': department.text.trim(),
                         'email': email.text.trim(),
+                        'new_ic_no': newIcNo.text.trim(),
+                        'bank_code': bankCode.text.trim(),
+                        'bank_account': bankAccount.text.trim(),
                         'phone': phone.text.trim(),
+                        'address': address.text.trim(),
+                        'joining_date': DateFormat('yyyy-MM-dd').format(joiningDate),
                         'is_active': active,
                       };
 
@@ -1363,13 +1452,9 @@ class _BranchPortalState extends State<BranchPortal> {
                             changes: values,
                           );
                         } else {
-                          await SupabaseService.addEmployeeForBranch(
+                          await SupabaseService.submitEmployeeRequest(
                             branchId: resolvedBranchId,
-                            employee: {
-                              ...values,
-                              'employee_id': id,
-                              'joining_date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                            },
+                            employee: values,
                           );
                         }
 
@@ -1382,7 +1467,7 @@ class _BranchPortalState extends State<BranchPortal> {
                             SnackBar(
                               content: Text(editing
                                   ? 'Employee updated successfully.'
-                                  : 'Employee added successfully.'),
+                                  : 'Employee request sent to admin for approval.'),
                             ),
                           );
                         }
@@ -1399,7 +1484,7 @@ class _BranchPortalState extends State<BranchPortal> {
                   ? 'Saving...'
                   : editing
                       ? 'Update Employee'
-                      : 'Add Employee'),
+                      : 'Send Request'),
             ),
           ],
         ),
@@ -1412,6 +1497,10 @@ class _BranchPortalState extends State<BranchPortal> {
     department.dispose();
     email.dispose();
     phone.dispose();
+    newIcNo.dispose();
+    bankCode.dispose();
+    bankAccount.dispose();
+    address.dispose();
   }
 
   Widget _branchEmployeeField(

@@ -1404,6 +1404,7 @@ return 'OTP verification failed: $e';
       'HBPERAI': 'PRAI',
       'HBKULIM': 'KULIM',
       'HBLKW': 'LANGKAWI',
+      'HPSPFRN': 'SUNGAI PETANI',
     };
 
     id = branchLoginAliases[id] ?? id;

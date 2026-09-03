@@ -47,6 +47,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String? selectedLogBranchId;
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
   Future<List<Map<String, dynamic>>>? _adminEmployeesFuture;
+  Future<List<Map<String, dynamic>>>? _employeeRequestsFuture;
   final TextEditingController _adminEmployeeSearchController =
       TextEditingController();
   String _adminEmployeeSearch = '';
@@ -129,6 +130,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return 'RHB Layout';
       case 9:
         return 'Branch Logs';
+      case 10:
+        return 'Employee Requests';
       default:
         return 'Dashboard';
     }
@@ -219,6 +222,9 @@ Widget _statusChip(String status) {
 
       case 9:
         return _branchLogsPage();
+
+      case 10:
+        return _employeeRequestsPage();
 
       default:
         return _dashboardPage();
@@ -351,6 +357,11 @@ Widget _statusChip(String status) {
                       9,
                     ),
                     _drawerItem(
+                      'Employee Requests',
+                      Icons.how_to_reg_outlined,
+                      10,
+                    ),
+                    _drawerItem(
                       'Import CSV',
                       Icons.upload_file_outlined,
                       4,
@@ -451,6 +462,11 @@ Widget _statusChip(String status) {
                   'Branch Logs',
                   Icons.manage_history_outlined,
                   9,
+                ),
+                _sidebarItem(
+                  'Employee Requests',
+                  Icons.how_to_reg_outlined,
+                  10,
                 ),
                 _sidebarItem(
                   'Import CSV',
@@ -3135,6 +3151,239 @@ Widget _statusChip(String status) {
   }
 
   // ===========================================================================
+  // EMPLOYEE REQUEST APPROVAL
+  // ===========================================================================
+
+  Future<List<Map<String, dynamic>>> _loadEmployeeRequests() {
+    return _employeeRequestsFuture ??=
+        SupabaseService.getEmployeeRequests(status: 'PENDING');
+  }
+
+  void _refreshEmployeeRequests() {
+    setState(() => _employeeRequestsFuture = null);
+  }
+
+  Widget _employeeRequestsPage() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Employee Requests', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 4),
+                    Text('Verify branch submissions, assign an Employee ID, then approve.', style: TextStyle(color: Colors.black54)),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _refreshEmployeeRequests,
+                tooltip: 'Refresh requests',
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadEmployeeRequests(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Unable to load employee requests:\n${snapshot.error}', textAlign: TextAlign.center));
+                }
+                final requests = snapshot.data ?? const <Map<String, dynamic>>[];
+                if (requests.isEmpty) {
+                  return const Center(child: Text('No pending employee requests.'));
+                }
+                return ListView.separated(
+                  itemCount: requests.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final request = requests[index];
+                    final name = request['name']?.toString() ?? 'Unnamed employee';
+                    final branch = request['branch_id']?.toString() ?? '-';
+                    final requestedAt = _logDateText(request['requested_at']);
+                    final details = <String>[
+                      if (request['designation']?.toString().trim().isNotEmpty == true) 'Designation: ${request['designation']}',
+                      if (request['department']?.toString().trim().isNotEmpty == true) 'Department: ${request['department']}',
+                      if (request['new_ic_no']?.toString().trim().isNotEmpty == true) 'IC: ${request['new_ic_no']}',
+                      if (request['email']?.toString().trim().isNotEmpty == true) 'Email: ${request['email']}',
+                      if (request['phone']?.toString().trim().isNotEmpty == true) 'Phone: ${request['phone']}',
+                      if (request['joining_date']?.toString().trim().isNotEmpty == true) 'Joining: ${request['joining_date']}',
+                      if (request['bank_code']?.toString().trim().isNotEmpty == true) 'Bank: ${request['bank_code']} ${request['bank_account'] ?? ''}',
+                      if (request['address']?.toString().trim().isNotEmpty == true) 'Address: ${request['address']}',
+                    ];
+                    return Card(
+                      elevation: 0,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const CircleAvatar(child: Icon(Icons.person_outline)),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 3),
+                                  Text('$branch • Requested $requestedAt', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                                  if (details.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 14,
+                                      runSpacing: 5,
+                                      children: details.map((detail) => Text(detail, style: const TextStyle(fontSize: 12))).toList(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            OutlinedButton(
+                              onPressed: () => _rejectEmployeeRequest(request),
+                              child: const Text('Reject'),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton.icon(
+                              onPressed: () => _approveEmployeeRequest(request),
+                              icon: const Icon(Icons.check),
+                              label: const Text('Approve'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _approveEmployeeRequest(Map<String, dynamic> request) async {
+    final employeeId = TextEditingController();
+    String? error;
+    var saving = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Approve ${request['name'] ?? 'Employee'}'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Branch: ${request['branch_id'] ?? '-'}'),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: employeeId,
+                  enabled: !saving,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Assign Employee ID *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(error!, style: const TextStyle(color: Colors.red)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: saving ? null : () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final id = employeeId.text.trim().toUpperCase();
+                      if (id.isEmpty) {
+                        setDialogState(() => error = 'Employee ID is required.');
+                        return;
+                      }
+                      setDialogState(() {
+                        saving = true;
+                        error = null;
+                      });
+                      try {
+                        await SupabaseService.approveEmployeeRequest(
+                          requestId: request['id'].toString(),
+                          employeeId: id,
+                        );
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                        setState(() {
+                          _employeeRequestsFuture = null;
+                          _adminEmployeesFuture = null;
+                        });
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(content: Text('Employee approved with ID $id.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (dialogContext.mounted) {
+                          setDialogState(() {
+                            saving = false;
+                            error = 'Approval failed: $e';
+                          });
+                        }
+                      }
+                    },
+              child: Text(saving ? 'Approving...' : 'Approve Employee'),
+            ),
+          ],
+        ),
+      ),
+    );
+    employeeId.dispose();
+  }
+
+  Future<void> _rejectEmployeeRequest(Map<String, dynamic> request) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reject Employee Request?'),
+        content: Text('Reject the request for ${request['name'] ?? 'this employee'}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await SupabaseService.rejectEmployeeRequest(requestId: request['id'].toString());
+      _refreshEmployeeRequests();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to reject request: $e')));
+      }
+    }
+  }
+
   // BRANCH ACTIVITY LOGS
   // ===========================================================================
 

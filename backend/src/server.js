@@ -3212,6 +3212,47 @@ async function testDatabase() {
   }
 }
 
+async function ensureFrnBranchAccount() {
+  const username = "HPSPFRN";
+  const email = "hpspfrn@hasani.local";
+  const password =
+    process.env.FRN_BRANCH_PASSWORD ||
+    "Hasanifrn123";
+  const passwordHash =
+    await bcrypt.hash(password, 12);
+
+  const updated = await pool.query(
+    `
+      UPDATE public."app_user"
+      SET "username" = $1,
+          "email" = $2,
+          "role" = 'BRANCH',
+          "isActive" = TRUE,
+          "mustChangePassword" = FALSE,
+          "updatedAt" = NOW()
+      WHERE UPPER(TRIM(COALESCE("username", ''))) = $1
+         OR LOWER(TRIM(COALESCE("email", ''))) = LOWER($2)
+      RETURNING "id"
+    `,
+    [username, email],
+  );
+
+  if (updated.rowCount === 0) {
+    await pool.query(
+      `
+        INSERT INTO public."app_user" (
+          "id", "username", "email", "passwordHash", "role",
+          "isActive", "mustChangePassword", "createdAt", "updatedAt"
+        )
+        VALUES ($1, $2, $3, $4, 'BRANCH', TRUE, FALSE, NOW(), NOW())
+      `,
+      [crypto.randomUUID(), username, email, passwordHash],
+    );
+  }
+
+  console.log("FRN branch account ready: HPSPFRN");
+}
+
 // ============================================================
 // SERVER
 // ============================================================
@@ -3220,6 +3261,7 @@ let server;
 
 async function startServer() {
   await testDatabase();
+  await ensureFrnBranchAccount();
 
   server =
     app.listen(
