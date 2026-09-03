@@ -6,6 +6,7 @@ import '../services/app_service.dart';
 import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
+import 'monthly_roster_page.dart';
 
 // ============================================================================
 // BRANCH PORTAL
@@ -224,6 +225,7 @@ class _BranchPortalState extends State<BranchPortal> {
                       Icons.people_outline,
                       2,
                     ),
+                    _drawerItem('Monthly Roster', Icons.calendar_view_month, 3),
                   ],
                 ),
               ),
@@ -286,6 +288,7 @@ class _BranchPortalState extends State<BranchPortal> {
                   Icons.people_outline,
                   2,
                 ),
+                _sidebarItem('Monthly Roster', Icons.calendar_view_month, 3),
               ],
             ),
           ),
@@ -533,6 +536,8 @@ class _BranchPortalState extends State<BranchPortal> {
         return 'Attendance';
       case 2:
         return 'Employees';
+      case 3:
+        return 'Monthly Roster';
       default:
         return 'Dashboard';
     }
@@ -544,6 +549,8 @@ class _BranchPortalState extends State<BranchPortal> {
         return _attendancePage();
       case 2:
         return _employeesPage();
+      case 3:
+        return MonthlyRosterPage(branchId: branchId);
       default:
         return _dashboardPage();
     }

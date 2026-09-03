@@ -4,6 +4,23 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
+  static Future<List<Map<String, dynamic>>> getMonthlyRosters({
+    required String branchId,
+    required int year,
+    required int month,
+    String? employeeId,
+  }) async {
+    var query = client.from('monthly_rosters').select()
+        .eq('branch_id', branchId).eq('roster_year', year).eq('roster_month', month);
+    if (employeeId != null) query = query.eq('employee_id', employeeId);
+    final response = await query.order('employee_id').order('week_number');
+    return _mapList(response);
+  }
+
+  static Future<void> saveMonthlyRoster(Map<String, dynamic> roster) async {
+    await client.from('monthly_rosters').upsert(roster,
+      onConflict: 'branch_id,employee_id,roster_year,roster_month,week_number');
+  }
   // ============================================================
   // SUPABASE CONFIGURATION
   // ============================================================

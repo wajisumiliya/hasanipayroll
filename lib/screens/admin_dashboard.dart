@@ -53,7 +53,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<List<Map<String, dynamic>>>? _otRequestsFuture;
   final TextEditingController _adminEmployeeSearchController =
       TextEditingController();
+  final TextEditingController _attendanceEmployeeSearchController =
+      TextEditingController();
   String _adminEmployeeSearch = '';
+  String _attendanceEmployeeSearch = '';
 
   final List<String> months = const [
     'Jan',
@@ -80,6 +83,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void dispose() {
     service.removeListener(_refresh);
     _adminEmployeeSearchController.dispose();
+    _attendanceEmployeeSearchController.dispose();
     super.dispose();
   }
 
@@ -3876,6 +3880,13 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
       final attendance = List<Map<String, dynamic>>.from(data[2] as List)
           .where((record) => _mapRecordMatchesMonth(record, selectedAttendanceMonth))
           .toList();
+      final search = _attendanceEmployeeSearch.trim().toLowerCase();
+      final filteredEmployees = employees.where((employee) {
+        if (search.isEmpty) return true;
+        final id = (employee['employee_id'] ?? employee['id'] ?? '').toString().toLowerCase();
+        final name = (employee['name'] ?? employee['full_name'] ?? '').toString().toLowerCase();
+        return id.contains(search) || name.contains(search);
+      }).toList();
 
       final branch = branches.firstWhere(
         (item) => (item['id'] ?? item['branch_id'] ?? '').toString() == branchId,
@@ -3912,31 +3923,65 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
               const SizedBox(height: 8),
               Text(branchName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              Text('${employees.length} employee(s)', style: const TextStyle(color: Colors.black54)),
+              Text('${filteredEmployees.length} of ${employees.length} employee(s)', style: const TextStyle(color: Colors.black54)),
               const SizedBox(height: 12),
-              _monthYearSelector(
-                value: selectedAttendanceMonth,
-                onChanged: (value) => setState(() => selectedAttendanceMonth = value),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.end,
+                children: [
+                  _monthYearSelector(
+                    value: selectedAttendanceMonth,
+                    onChanged: (value) => setState(() => selectedAttendanceMonth = value),
+                  ),
+                  SizedBox(
+                    width: 300,
+                    child: TextField(
+                      controller: _attendanceEmployeeSearchController,
+                      onSubmitted: (value) => setState(() => _attendanceEmployeeSearch = value),
+                      decoration: InputDecoration(
+                        labelText: 'Search employee',
+                        hintText: 'Name or employee ID',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: IconButton(
+                          tooltip: 'Search',
+                          icon: const Icon(Icons.search),
+                          onPressed: () => setState(() => _attendanceEmployeeSearch = _attendanceEmployeeSearchController.text),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_attendanceEmployeeSearch.isNotEmpty)
+                    IconButton(
+                      tooltip: 'Clear search',
+                      onPressed: () {
+                        _attendanceEmployeeSearchController.clear();
+                        setState(() => _attendanceEmployeeSearch = '');
+                      },
+                      icon: const Icon(Icons.clear),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
-              if (employees.isEmpty)
+              if (filteredEmployees.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(40),
-                  child: Center(child: Text('No employees assigned to this branch.')),
+                  child: Center(child: Text('No matching employees found.')),
                 )
               else
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 300,
-                    mainAxisExtent: 150,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    maxCrossAxisExtent: 250,
+                    mainAxisExtent: 112,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
                   ),
-                  itemCount: employees.length,
+                  itemCount: filteredEmployees.length,
                   itemBuilder: (context, index) {
-                    final employee = employees[index];
+                    final employee = filteredEmployees[index];
                     final employeeId = (employee['employee_id'] ?? employee['id'] ?? '').toString();
                     final name = (employee['name'] ?? employee['full_name'] ?? employeeId).toString();
                     final records = byEmployee[employeeId] ?? const <Map<String, dynamic>>[];
@@ -3958,14 +4003,14 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
       ),
     ),
     child: Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(9),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(
-                radius: 20,
+                radius: 15,
                 backgroundColor: const Color(0xFFE7F7EF),
                 child: Text(
                   name.isEmpty
@@ -3982,8 +4027,8 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
 
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: 7,
+                  vertical: 3,
                 ),
                 decoration: BoxDecoration(
                   color: submitted
@@ -4007,14 +4052,14 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
             ],
           ),
 
-          const Spacer(),
+          const SizedBox(height: 5),
 
           Text(
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 17,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -4024,7 +4069,7 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
           Text(
             'Employee ID: $employeeId',
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: Colors.black54,
             ),
           ),

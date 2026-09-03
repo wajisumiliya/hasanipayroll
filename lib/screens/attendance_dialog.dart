@@ -57,6 +57,7 @@ class _AttendanceDialogState
 
   double _requiredWorkHours = 7.5;
   bool _salaryRuleLoaded = false;
+  final Map<int, Map<String, dynamic>> _weeklyRoster = {};
 
   // ==========================================================================
   // INIT / DISPOSE
@@ -207,6 +208,16 @@ class _AttendanceDialogState
       if (widget.adminOnlyAfterSubmit && !_salaryRuleLoaded) {
         await _loadSalaryWorkingRule(employeeId);
       }
+
+      final rosterRows = await SupabaseService.getMonthlyRosters(
+        branchId: widget.branchId,
+        year: widget.month.year,
+        month: widget.month.month,
+        employeeId: employeeId,
+      );
+      _weeklyRoster
+        ..clear()
+        ..addEntries(rosterRows.map((row) => MapEntry(_intValue(row['week_number']), row)));
 
       final start = DateTime(widget.month.year, widget.month.month, 1);
       final end = DateTime(widget.month.year, widget.month.month + 1, 1);
@@ -1092,6 +1103,15 @@ class _AttendanceDialogState
     return extra > 0 ? extra : 0;
   }
 
+  int? _clockMinutes(String value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(value.trim());
+    if (match == null) return null;
+    final hour = int.tryParse(match.group(1)!);
+    final minute = int.tryParse(match.group(2)!);
+    if (hour == null || minute == null || hour > 23 || minute > 59) return null;
+    return hour * 60 + minute;
+  }
+
   Widget _statusCell(
     int day,
     AttendanceDayControllers c,
@@ -1109,6 +1129,26 @@ class _AttendanceDialogState
     );
 
     String effectiveStatus = c.status.trim();
+    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    int lateMinutes = 0;
+    var earlyOut = false;
+    if (hasWorkingTime && roster != null) {
+      final actualIn = _clockMinutes(c.workingIn.text);
+      final actualOut = _clockMinutes(c.workingOut.text);
+      final shiftIn = _clockMinutes(roster['shift_start']?.toString() ?? '');
+      final shiftOut = _clockMinutes(roster['shift_end']?.toString() ?? '');
+      if (actualIn != null && shiftIn != null) lateMinutes = (actualIn - shiftIn).clamp(0, 1440);
+      if (actualOut != null && shiftOut != null) earlyOut = actualOut < shiftOut;
+      if (lateMinutes > 0 && earlyOut) {
+        effectiveStatus = 'Late + Early Out';
+      } else if (lateMinutes > 0) {
+        effectiveStatus = 'Late';
+      } else if (earlyOut) {
+        effectiveStatus = 'Early Out';
+      }
+    } else if (hasWorkingTime && roster == null && effectiveStatus.isEmpty) {
+      effectiveStatus = 'Roster Not Assigned';
+    }
     if (effectiveStatus.isEmpty) {
       if (c.isPublicHoliday) {
         effectiveStatus = 'PH';
@@ -1125,8 +1165,17 @@ class _AttendanceDialogState
     Color foreground;
     switch (effectiveStatus) {
       case 'Late':
-        background = const Color(0xFFFFE0B2);
-        foreground = const Color(0xFFE65100);
+      case 'Late + Early Out':
+        background = lateMinutes > 5 ? const Color(0xFFFFCDD2) : lateMinutes == 5 ? const Color(0xFFFFCC80) : const Color(0xFFFFF59D);
+        foreground = lateMinutes > 5 ? const Color(0xFFC62828) : const Color(0xFFE65100);
+        break;
+      case 'Early Out':
+        background = const Color(0xFFFFCDD2);
+        foreground = const Color(0xFFC62828);
+        break;
+      case 'Roster Not Assigned':
+        background = const Color(0xFFECEFF1);
+        foreground = const Color(0xFF455A64);
         break;
       case 'OFF':
         background = const Color(0xFFECEFF1);
@@ -1167,7 +1216,18 @@ class _AttendanceDialogState
       otLabel = 'OT AVAILABLE';
     }
 
-    final labels = <String>[effectiveStatus];
+    final labels = <String>[lateMinutes > 0 ? '$effectiveStatus ($lateMinutes min)' : effectiveStatus];
+    if (roster != null) {
+      final start = (roster['shift_start'] ?? '').toString().substring(0, 5);
+      final end = (roster['shift_end'] ?? '').toString().substring(0, 5);
+      final startMinutes = _clockMinutes(start);
+      final endMinutes = _clockMinutes(end);
+      final breakMinutes = _intValue(roster['break_minutes']);
+      if (startMinutes != null && endMinutes != null) {
+        final scheduledNet = (endMinutes - startMinutes - breakMinutes).clamp(0, 1440);
+        labels.add('SHIFT $start-$end • NET ${formatMinutes(scheduledNet)}');
+      }
+    }
     if (otLabel.isNotEmpty) labels.add(otLabel);
 
     final child = Container(
