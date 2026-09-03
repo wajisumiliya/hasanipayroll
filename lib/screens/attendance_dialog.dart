@@ -8,13 +8,13 @@ import 'supabase_service.dart';
 // ATTENDANCE DIALOG
 // ============================================================================
 
-/// Late / Unpaid / Public Holiday calculation rules:
-/// - Late: automatically based on daily required net working hours.
+/// Attendance / payroll calculation rules:
+/// - Entered working time defaults to Present; Late is not assigned automatically.
 /// - Unpaid: automatically based on attendance rows marked unpaid by Admin.
 /// - Public holiday: only counted when Admin marks the day as public holiday
 ///   and the employee actually worked.
-/// - OT: only counted when the employee exceeds required hours AND Admin
-///   authorizes OT.
+/// - OT requests have no eligibility gate; displayed OT is calculated from
+///   net hours and Admin controls approval.
 /// The payroll service should consume these attendance totals.
 ///
 class AttendanceDialog extends StatefulWidget {
@@ -1083,33 +1083,13 @@ class _AttendanceDialogState
         calculateMinutes(c.overtimeIn.text, c.overtimeOut.text);
   }
 
-  bool _otAllowedForEmployee() {
-    // 10:30-hour employees (EIS not applicable) have no OT under your rule.
-    return _requiredWorkHours <= 7.5;
-  }
-
   int _calculateDailyOtMinutes({
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
-    // Calculate the exact OT entitlement from actual NET working minutes.
-    // Authorization controls whether payroll pays it, not whether it is
-    // calculated/saved. This keeps Branch request and Admin approval in sync.
-    if (!_otAllowedForEmployee()) {
-      return 0;
-    }
-
-    const requiredMinutes = 450; // 7:30 NET for reduced/reduced1
+    final requiredMinutes = (_requiredWorkHours * 60).round();
     final extra = netWorkingMinutes - requiredMinutes;
     return extra > 0 ? extra : 0;
-  }
-
-  bool _otEligible(AttendanceDayControllers c) {
-    if (!_otAllowedForEmployee()) return false;
-    final net = (calculateWorkMinutes(c) - _calculateBreakMinutes(c))
-        .clamp(0, 24 * 60).toInt();
-    final requiredMinutes = (_requiredWorkHours * 60).round();
-    return net > requiredMinutes;
   }
 
   Widget _statusCell(
@@ -1123,15 +1103,10 @@ class _AttendanceDialogState
         c.workingIn.text.trim() != '-' &&
         c.workingOut.text.trim() != '-';
 
-    final breakMinutes = _calculateBreakMinutes(c);
-    final requiredMinutes = (_requiredWorkHours * 60).round();
-    final extraMinutes = netWorkingMinutes > requiredMinutes
-        ? netWorkingMinutes - requiredMinutes
-        : 0;
-    final breakFulfilled = breakMinutes >= 60;
-    final otEligible = _otAllowedForEmployee() &&
-        breakFulfilled &&
-        extraMinutes > 10;
+    final overtimeMinutes = _calculateDailyOtMinutes(
+      c: c,
+      netWorkingMinutes: netWorkingMinutes,
+    );
 
     String effectiveStatus = c.status.trim();
     if (effectiveStatus.isEmpty) {
@@ -1140,9 +1115,7 @@ class _AttendanceDialogState
       } else if (c.isUnpaid) {
         effectiveStatus = 'UNPAID';
       } else if (hasWorkingTime) {
-        final checkIn = parseTimeToMinutes(c.workingIn.text);
-        effectiveStatus =
-            checkIn != null && checkIn > 480 ? 'Late' : 'Present';
+        effectiveStatus = 'Present';
       } else {
         effectiveStatus = 'OFF';
       }
@@ -1190,13 +1163,12 @@ class _AttendanceDialogState
       otLabel = 'OT APPROVED';
     } else if (c.otRequested) {
       otLabel = 'OT REQUESTED';
-    } else if (otEligible) {
+    } else if (overtimeMinutes > 0) {
       otLabel = 'OT AVAILABLE';
     }
 
     final labels = <String>[effectiveStatus];
     if (otLabel.isNotEmpty) labels.add(otLabel);
-    if (hasWorkingTime && !breakFulfilled) labels.add('BREAK < 1H');
 
     final child = Container(
       width: double.infinity,
@@ -1244,7 +1216,7 @@ class _AttendanceDialogState
               c.isUnpaid = false;
               break;
             case 'REQUEST_OT':
-              if (!_isAdminView() && otEligible) {
+              if (!_isAdminView()) {
                 c.otRequested = true;
                 c.otAuthorized = false;
               }
@@ -1254,7 +1226,7 @@ class _AttendanceDialogState
               c.otAuthorized = false;
               break;
             case 'APPROVE_OT':
-              if (_isAdminView() && c.otRequested && otEligible) {
+              if (_isAdminView() && c.otRequested) {
                 c.otAuthorized = true;
               }
               break;
@@ -1289,11 +1261,11 @@ class _AttendanceDialogState
           items.add(
             PopupMenuItem(
               value: 'APPROVE_OT',
-              enabled: c.otRequested && otEligible,
+              enabled: c.otRequested,
               child: Text(
                 c.otAuthorized
                     ? 'OT APPROVED'
-                    : (c.otRequested && otEligible
+                    : (c.otRequested
                         ? 'APPROVE OT'
                         : 'APPROVE OT (request required)'),
               ),
@@ -1310,12 +1282,8 @@ class _AttendanceDialogState
           items.add(
             PopupMenuItem(
               value: 'REQUEST_OT',
-              enabled: otEligible && !c.otRequested,
-              child: Text(
-                otEligible
-                    ? 'REQUEST OT'
-                    : 'REQUEST OT (break ≥ 1H and >10 min extra required)',
-              ),
+              enabled: !c.otRequested,
+              child: const Text('REQUEST OT'),
             ),
           );
           items.add(
@@ -2264,7 +2232,12 @@ class AttendanceDayControllers {
         afternoonIn.text.trim().isNotEmpty ||
         afternoonOut.text.trim().isNotEmpty ||
         overtimeIn.text.trim().isNotEmpty ||
-        overtimeOut.text.trim().isNotEmpty;
+        overtimeOut.text.trim().isNotEmpty ||
+        status.trim().isNotEmpty ||
+        otRequested ||
+        otAuthorized ||
+        isUnpaid ||
+        isPublicHoliday;
   }
 
   void dispose() {
