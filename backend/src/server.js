@@ -89,13 +89,6 @@ if (SUPABASE_JWT_SECRET.length < 32) {
   process.exit(1);
 }
 
-if (!SUPABASE_JWT_KEY_ID) {
-  console.error(
-    "FATAL: SUPABASE_JWT_KEY_ID is not configured.",
-  );
-  process.exit(1);
-}
-
 if (
   !process.env.DATABASE_URL
 ) {
@@ -459,9 +452,9 @@ function createAccessToken(
     SUPABASE_JWT_SECRET,
 
     {
-      keyid:
-        SUPABASE_JWT_KEY_ID,
-
+      ...(SUPABASE_JWT_KEY_ID
+        ? { keyid: SUPABASE_JWT_KEY_ID }
+        : {}),
       expiresIn:
         JWT_EXPIRES_IN,
 
