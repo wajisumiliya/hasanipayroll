@@ -161,6 +161,30 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  Future<Map<String, dynamic>> _getAuth(String path) async {
+    final token = _accessToken;
+    final response = await http.get(
+      _authUri(path),
+      headers: {
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 45));
+    Map<String, dynamic> data = {};
+    if (response.body.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) data = Map<String, dynamic>.from(decoded);
+      } catch (_) {
+        data = {'message': response.body};
+      }
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      data['ok'] = false;
+    }
+    return data;
+  }
+
   // ==========================================================================
   // CURRENT USER
   // ==========================================================================
@@ -335,50 +359,72 @@ class AppService extends ChangeNotifier {
   // ==========================================================================
 
   Future<void> restore() async {
-    // Remove sessions written by older builds. A user is authenticated only
-    // after the backend issues a token during this application session.
-    await _clearStoredUser();
-    _currentUser = null;
-    _accessToken = null;
-
+    if (_currentUser != null && _accessToken?.isNotEmpty == true) return;
+    final preferences = await SharedPreferences.getInstance();
+    final stored = preferences.getString(_currentUserStorageKey);
+    if (stored == null || stored.trim().isEmpty) return;
     try {
-      await loadUsersFromSupabase();
-    } catch (e) {
-      debugPrint(
-        'Restore users error: $e',
-      );
-    }
+      final decoded = jsonDecode(stored);
+      if (decoded is! Map) throw const FormatException('Invalid session');
+      final session = Map<String, dynamic>.from(decoded);
+      final token = session['access_token']?.toString() ?? '';
+      final savedUser = session['user'];
+      if (token.isEmpty || savedUser is! Map) {
+        throw const FormatException('Incomplete session');
+      }
+      _accessToken = token;
+      _currentUser = app_user.fromJson(Map<String, dynamic>.from(savedUser));
+      _supabase.rest.setAuth(token);
 
-    try {
-      await loadEmployeesFromSupabase();
-    } catch (e) {
-      debugPrint(
-        'Restore employees error: $e',
-      );
-    }
+      try {
+        final validation = await _getAuth('/api/auth/me');
+        if (validation['ok'] != true || validation['user'] is! Map) {
+          await _clearStoredUser();
+          _currentUser = null;
+          _accessToken = null;
+          _supabase.rest.setAuth(null);
+          notifyListeners();
+          return;
+        }
+        final verified = Map<String, dynamic>.from(validation['user']);
+        _currentUser = app_user(
+          username: verified['username']?.toString() ?? _currentUser!.username,
+          role: verified['role']?.toString() ?? _currentUser!.role,
+          branchId: verified['branchId']?.toString() ?? _currentUser!.branchId,
+          employeeId:
+              verified['employeeId']?.toString() ?? _currentUser!.employeeId,
+          displayName:
+              verified['displayName']?.toString() ?? _currentUser!.displayName,
+        );
+        await _persistCurrentUser();
+      } catch (e) {
+        // Keep the still-present session during a temporary backend outage.
+        debugPrint('Session validation temporarily unavailable: $e');
+      }
 
-    try {
-      await loadPayrollFromSupabase();
+      await _loadDataForCurrentUser();
     } catch (e) {
-      debugPrint(
-        'Restore payroll error: $e',
-      );
+      debugPrint('Session restore error: $e');
+      await _clearStoredUser();
+      _currentUser = null;
+      _accessToken = null;
+      _supabase.rest.setAuth(null);
     }
-
-    try {
-      await loadAttendanceFromSupabase();
-    } catch (e) {
-      debugPrint(
-        'Restore attendance error: $e',
-      );
-    }
-
     notifyListeners();
   }
 
   Future<void> _persistCurrentUser() async {
-    // Access tokens and login credentials are intentionally memory-only.
-    await _clearStoredUser();
+    final user = _currentUser;
+    final token = _accessToken;
+    if (user == null || token == null || token.isEmpty) {
+      await _clearStoredUser();
+      return;
+    }
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      _currentUserStorageKey,
+      jsonEncode({'access_token': token, 'user': user.toJson()}),
+    );
   }
 
   Future<void> _clearStoredUser() async {
