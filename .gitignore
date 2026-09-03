@@ -50,7 +50,8 @@ app.*.map.json
 # Environment/secrets
 .env
 .env.*
-!.env.examplehasani_payroll.dump
+!.env.example
+backend/.env
 .env
 .env.*
 !.env.example
