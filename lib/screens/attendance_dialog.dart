@@ -219,6 +219,15 @@ class _AttendanceDialogState
         ..clear()
         ..addEntries(rosterRows.map((row) => MapEntry(_intValue(row['week_number']), row)));
 
+      for (var day = 1; day <= daysInMonth; day++) {
+        final date = DateTime(widget.month.year, widget.month.month, day);
+        final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+        final offWeekday = _intValue(roster?['off_weekday']);
+        if (offWeekday > 0 && date.weekday == offWeekday) {
+          controllers[day - 1].status = 'OFF';
+        }
+      }
+
       final start = DateTime(widget.month.year, widget.month.month, 1);
       final end = DateTime(widget.month.year, widget.month.month + 1, 1);
 
@@ -304,8 +313,11 @@ class _AttendanceDialogState
         c.overtimeOut.text =
             (row['overtime_out'] ?? '').toString();
 
-        c.status =
-            (row['status'] ?? '').toString().trim();
+        final roster = _weeklyRoster[((date.day - 1) ~/ 7) + 1];
+        final isRosterOff = _intValue(roster?['off_weekday']) == date.weekday;
+        c.status = isRosterOff
+            ? 'OFF'
+            : (row['status'] ?? '').toString().trim();
         c.otRequested =
             _toBool(row['ot_requested']);
         c.otAuthorized =
@@ -668,6 +680,7 @@ class _AttendanceDialogState
         // OT is available only when the employee exceeds the required
         // working hours AND Admin has explicitly authorized OT.
         final dailyOtMinutes = _calculateDailyOtMinutes(
+          day: day,
           c: row,
           netWorkingMinutes: netWorkingMinutes,
         );
@@ -1015,6 +1028,7 @@ class _AttendanceDialogState
     final netWorkingMinutes =
         (total - breakMinutes).clamp(0, 24 * 60).toInt();
     final overtimeMinutes = _calculateDailyOtMinutes(
+      day: day,
       c: c,
       netWorkingMinutes: netWorkingMinutes,
     );
@@ -1095,10 +1109,22 @@ class _AttendanceDialogState
   }
 
   int _calculateDailyOtMinutes({
+    required int day,
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
-    final requiredMinutes = (_requiredWorkHours * 60).round();
+    var requiredMinutes = (_requiredWorkHours * 60).round();
+    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    if (roster != null) {
+      final start = _clockMinutes(roster['shift_start']?.toString() ?? '');
+      final end = _clockMinutes(roster['shift_end']?.toString() ?? '');
+      if (start != null && end != null) {
+        var gross = end - start;
+        if (gross <= 0) gross += 24 * 60;
+        final rosterRequired = gross - _intValue(roster['break_minutes']);
+        if (rosterRequired > 0) requiredMinutes = rosterRequired;
+      }
+    }
     final extra = netWorkingMinutes - requiredMinutes;
     return extra > 0 ? extra : 0;
   }
@@ -1124,15 +1150,20 @@ class _AttendanceDialogState
         c.workingOut.text.trim() != '-';
 
     final overtimeMinutes = _calculateDailyOtMinutes(
+      day: day,
       c: c,
       netWorkingMinutes: netWorkingMinutes,
     );
 
     String effectiveStatus = c.status.trim();
     final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    final date = DateTime(widget.month.year, widget.month.month, day);
+    final isRosterOff = _intValue(roster?['off_weekday']) == date.weekday;
     int lateMinutes = 0;
     var earlyOut = false;
-    if (hasWorkingTime && roster != null) {
+    if (isRosterOff) {
+      effectiveStatus = 'OFF';
+    } else if (hasWorkingTime && roster != null) {
       final actualIn = _clockMinutes(c.workingIn.text);
       final actualOut = _clockMinutes(c.workingOut.text);
       final shiftIn = _clockMinutes(roster['shift_start']?.toString() ?? '');
@@ -2057,6 +2088,7 @@ class _AttendanceDialogState
       final breaks = _calculateBreakMinutes(c);
       final net = (work - breaks).clamp(0, 24 * 60).toInt();
       final ot = _calculateDailyOtMinutes(
+        day: i + 1,
         c: c,
         netWorkingMinutes: net,
       );

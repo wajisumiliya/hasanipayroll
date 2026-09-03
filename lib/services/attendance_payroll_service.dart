@@ -21,7 +21,8 @@ import '../screens/supabase_service.dart';
 ///    Otherwise EIS uses the supplied EIS schedule.
 /// 8. Overtime is summed from submitted attendance where ot_authorized is
 ///    "true", "1", "yes", or a boolean true.
-/// 9. Approved OT is calculated from synchronized NET working minutes above 7h30.
+/// 9. Approved OT is calculated above the assigned roster's daily net target.
+///    When no roster exists, the employee salary-rule target is used.
 /// 10. bonus, commission, other_earnings remain 0.
 /// 11. Existing statutory values are overwritten when overwriteExisting=true.
 /// 12. Attendance rules: submitted attendance drives working-time shortage,
@@ -220,6 +221,19 @@ class AttendancePayrollService {
       month,
     );
 
+    final branchId = _text(employee['branch_id'] ?? employee['branch']).trim();
+    final rosterRows = branchId.isEmpty
+        ? <Map<String, dynamic>>[]
+        : await SupabaseService.getMonthlyRosters(
+            branchId: branchId,
+            year: month.year,
+            month: month.month,
+            employeeId: employeeId,
+          );
+    final rosterByWeek = <int, Map<String, dynamic>>{
+      for (final row in rosterRows) _intNumber(row['week_number']): row,
+    };
+
     final requiredWorkMinutes = _requiredWorkMinutes(
       epfCategory: epfCategory,
       eisApplicable: eisApplicable,
@@ -230,19 +244,26 @@ class AttendancePayrollService {
     final dailySalary = calendarDays > 0
         ? basicSalary / calendarDays
         : 0.0;
-    final hourlyShortageRate = requiredWorkHours > 0
-        ? dailySalary / requiredWorkHours
-        : 0.0;
-
     double totalShortageMinutes = 0.0;
     double totalLateDeduction = 0.0;
     double totalOvertimeHours = 0.0;
+    double totalOvertimeAmount = 0.0;
     double cutiUmum = 0.0;
     int unpaidDays = 0;
     //int publicHolidayWorkedDays = 0;
 
     for (final row in attendance) {
-      final workMinutes = _attendanceWorkMinutes(row);
+      final workMinutes = _attendanceNetMinutes(row);
+      final attendanceDate = DateTime.tryParse(_text(row['attendance_date']));
+      final weekNumber = attendanceDate == null ? 0 : ((attendanceDate.day - 1) ~/ 7) + 1;
+      final roster = rosterByWeek[weekNumber];
+      final isRosterOff = attendanceDate != null &&
+          _intNumber(roster?['off_weekday']) == attendanceDate.weekday;
+      final dailyRequiredMinutes = isRosterOff
+          ? 0
+          : (_rosterRequiredMinutes(roster) ?? requiredWorkMinutes);
+      final dailyRequiredHours = dailyRequiredMinutes / 60.0;
+      final dailyShortageRate = dailyRequiredHours > 0 ? dailySalary / dailyRequiredHours : 0.0;
       final isUnpaid = _toBool(row['is_unpaid']);
       final isPublicHoliday = _toBool(row['is_public_holiday']);
       final worked = workMinutes > 0;
@@ -273,12 +294,12 @@ class AttendancePayrollService {
       // shortage calculation. A normal worked day below the target creates
       // a deduction based on basic salary / calendar days / target hours.
       if (!isUnpaid && !isPublicHoliday && worked) {
-        final shortage = requiredWorkMinutes - workMinutes;
+        final shortage = dailyRequiredMinutes - workMinutes;
 
         if (shortage > 0) {
           totalShortageMinutes += shortage;
           totalLateDeduction +=
-              (shortage / 60.0) * hourlyShortageRate;
+              (shortage / 60.0) * dailyShortageRate;
         }
       }
 
@@ -289,9 +310,14 @@ class AttendancePayrollService {
       // Employees with eis_applicable=false have a 10h30 target and,
       // according to the rule, extra working time is never treated as OT.
       if (eisApplicable && _isOtAuthorized(row['ot_authorized'])) {
-        final otHours = _attendanceOvertimeHours(row);
+        final otHours = _attendanceOvertimeHours(row, dailyRequiredMinutes);
         if (otHours > 0) {
           totalOvertimeHours += otHours;
+          final rateHours = dailyRequiredHours > 0 ? dailyRequiredHours : requiredWorkHours;
+          final dailyOtRate = rateHours > 0
+              ? (basicSalary / 26.0 / rateHours) * 1.5
+              : 0.0;
+          totalOvertimeAmount += otHours * dailyOtRate;
         }
       }
     }
@@ -306,12 +332,8 @@ class AttendancePayrollService {
       dailySalary * unpaidDays,
     );
 
-    final overtimeRate = requiredWorkHours > 0
-        ? (basicSalary / 26.0 / requiredWorkHours) * 1.5
-        : 0.0;
-
     final overtimeAmount = _roundMoney(
-      totalOvertimeHours * overtimeRate,
+      totalOvertimeAmount,
     );
 
     cutiUmum = _roundMoney(cutiUmum);
@@ -448,7 +470,8 @@ class AttendancePayrollService {
           'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
           'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
           'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
-          'Required daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
+          'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
+          'Roster weeks used: ${rosterByWeek.length}. '
           'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
           'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
           'Unpaid days: $unpaidDays. '
@@ -730,7 +753,10 @@ class AttendancePayrollService {
     return _durationToMinutes(row['work_duration']);
   }
 
-  static double _attendanceOvertimeHours(Map<String, dynamic> row) {
+  static double _attendanceOvertimeHours(
+    Map<String, dynamic> row,
+    int requiredMinutes,
+  ) {
     // IMPORTANT:
     // Payroll must use the same NET working time shown/saved by Attendance
     // Dialog. Do NOT trust an old/stale overtime_minutes value, because that
@@ -740,7 +766,7 @@ class AttendancePayrollService {
     // OT = synchronized NET working minutes - 450.
     final netMinutes = _intNumber(row['net_working_minutes']);
     if (netMinutes > 0) {
-      final calculatedOtMinutes = netMinutes - 450;
+      final calculatedOtMinutes = netMinutes - requiredMinutes;
       return calculatedOtMinutes > 0
           ? calculatedOtMinutes / 60.0
           : 0.0;
@@ -752,7 +778,7 @@ class AttendancePayrollService {
     final breakMinutes = _intNumber(row['break_minutes']);
     if (workMinutes > 0) {
       final netMinutesFallback = workMinutes - breakMinutes;
-      final calculatedOtMinutes = netMinutesFallback - 450;
+      final calculatedOtMinutes = netMinutesFallback - requiredMinutes;
       return calculatedOtMinutes > 0
           ? calculatedOtMinutes / 60.0
           : 0.0;
@@ -765,6 +791,34 @@ class AttendancePayrollService {
     }
 
     return 0.0;
+  }
+
+  static int _attendanceNetMinutes(Map<String, dynamic> row) {
+    final savedNet = _intNumber(row['net_working_minutes']);
+    if (savedNet > 0) return savedNet;
+    final gross = _attendanceWorkMinutes(row);
+    final breaks = _intNumber(row['break_minutes']);
+    return (gross - breaks).clamp(0, 24 * 60);
+  }
+
+  static int? _rosterRequiredMinutes(Map<String, dynamic>? roster) {
+    if (roster == null) return null;
+    final start = _clockMinutes(roster['shift_start']);
+    final end = _clockMinutes(roster['shift_end']);
+    if (start == null || end == null) return null;
+    var gross = end - start;
+    if (gross <= 0) gross += 24 * 60;
+    final required = gross - _intNumber(roster['break_minutes']);
+    return required > 0 ? required : null;
+  }
+
+  static int? _clockMinutes(dynamic value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(_text(value).trim());
+    if (match == null) return null;
+    final hour = int.tryParse(match.group(1)!);
+    final minute = int.tryParse(match.group(2)!);
+    if (hour == null || minute == null || hour > 23 || minute > 59) return null;
+    return hour * 60 + minute;
   }
 
   static int _durationToMinutes(dynamic value) {

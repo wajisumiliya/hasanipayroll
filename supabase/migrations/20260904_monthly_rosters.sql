@@ -10,10 +10,15 @@ create table if not exists public.monthly_rosters (
   shift_start time not null,
   shift_end time not null,
   break_minutes integer not null default 60 check (break_minutes between 0 and 720),
+  off_weekday smallint check (off_weekday between 1 and 7),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (branch_id, employee_id, roster_year, roster_month, week_number)
 );
+
+alter table public.monthly_rosters
+  add column if not exists off_weekday smallint
+  check (off_weekday between 1 and 7);
 
 create index if not exists monthly_rosters_branch_period_idx
   on public.monthly_rosters (branch_id, roster_year, roster_month);
