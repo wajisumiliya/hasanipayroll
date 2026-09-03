@@ -205,7 +205,10 @@ class AttendancePayrollService {
     // ------------------------------------------------------------------------
     // 2. ATTENDANCE-BASED CALCULATIONS
     // ------------------------------------------------------------------------
-    // All attendance calculations are based only on submitted attendance.
+    // Normal attendance calculations use submitted attendance. Payroll-impact
+    // flags are also accepted for legacy rows because older saved attendance
+    // could receive Admin OT approval, PH or UNPAID without is_submitted being
+    // persisted correctly.
     //
     // Working-hour rules:
     //   epf_category = normal1 -> 7h30 net target (450 minutes)
@@ -307,8 +310,6 @@ class AttendancePayrollService {
       // OVERTIME
       // --------------------------------------------------------------
       // OT is only paid when Admin authorized it.
-      // Employees with eis_applicable=false have a 10h30 target and,
-      // according to the rule, extra working time is never treated as OT.
       if (_isOtAuthorized(row['ot_authorized'])) {
         final otHours = _attendanceOvertimeHours(row, dailyRequiredMinutes);
         if (otHours > 0) {
@@ -461,6 +462,7 @@ class AttendancePayrollService {
 
       // Debug / audit information
       'remarks': 'Generated payroll. '
+          'Attendance rows used: ${attendance.length}. '
           'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
           'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
           'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
@@ -663,7 +665,10 @@ class AttendancePayrollService {
           'is_public_holiday,is_unpaid,status',
         )
         .eq('employee_id', employeeId)
-        .eq('is_submitted', true)
+        .or(
+          'is_submitted.eq.true,ot_authorized.eq.true,'
+          'is_public_holiday.eq.true,is_unpaid.eq.true',
+        )
         .gte('attendance_date', _dateText(start))
         .lt('attendance_date', _dateText(end));
 

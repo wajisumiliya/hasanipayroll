@@ -5096,7 +5096,11 @@ Future<void> _showPayrollGenerationResult(
                           'Kedatangan RM ${item.elaunKedatangan.toStringAsFixed(2)} • '
                           'Perkhidmatan RM ${item.elaunPerkhidmatan.toStringAsFixed(2)} • '
                           'Kerajinan RM ${item.elaunKerajinan.toStringAsFixed(2)} • '
-                          'Approved OT ${item.overtimeDuration.toStringAsFixed(2)}',
+                          'Approved OT ${item.overtimeDuration.toStringAsFixed(2)} hours / '
+                          'RM ${item.overtimeAmount.toStringAsFixed(2)} • '
+                          'Cuti Umum RM ${item.cutiUmum.toStringAsFixed(2)} • '
+                          'Unpaid ${item.unpaidDays} day(s) / '
+                          'RM ${item.unpaidDeduction.toStringAsFixed(2)}',
                         ),
                       ),
                     ),
