@@ -310,7 +310,10 @@ class AttendancePayrollService {
       // OVERTIME
       // --------------------------------------------------------------
       // OT is only paid when Admin authorized it.
-      if (_isOtAuthorized(row['ot_authorized'])) {
+      // A non-null approved_ot_minutes value is itself an Admin approval.
+      // This also supports legacy rows where ot_authorized was not persisted.
+      if (_isOtAuthorized(row['ot_authorized']) ||
+          row['approved_ot_minutes'] != null) {
         final otHours = _attendanceOvertimeHours(row, dailyRequiredMinutes);
         if (otHours > 0) {
           approvedOtDays++;
@@ -667,7 +670,8 @@ class AttendancePayrollService {
         .eq('employee_id', employeeId)
         .or(
           'is_submitted.eq.true,ot_authorized.eq.true,'
-          'is_public_holiday.eq.true,is_unpaid.eq.true',
+          'approved_ot_minutes.not.is.null,is_public_holiday.eq.true,'
+          'is_unpaid.eq.true',
         )
         .gte('attendance_date', _dateText(start))
         .lt('attendance_date', _dateText(end));

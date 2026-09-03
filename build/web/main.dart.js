@@ -33762,7 +33762,7 @@ if(c2)++a9
 if(c3&&c4){++b0
 a8+=a3}if(!c2&&!c3&&c4){c5=b9-b3
 if(c5>0){a4+=c5
-a5+=c5/60*c1}}if(A.brP(b4.h(b2,"ot_authorized"))){c6=A.brL(b2,b9)
+a5+=c5/60*c1}}if(A.brP(b4.h(b2,"ot_authorized"))||b4.h(b2,"approved_ot_minutes")!=null){c6=A.brL(b2,b9)
 if(c6>0){++b1
 a6+=c6
 c7=b5?c0:a
@@ -33872,7 +33872,7 @@ o=A.bf(A.as(b),A.aC(b)+1,1,0,0,0,0)
 n=$.cc().b
 n===$&&A.a()
 n=n.cf("attendance").ku(0,"employee_id,attendance_date,work_minutes,break_minutes,net_working_minutes,net_working_duration,overtime_minutes,overtime_duration,approved_ot_minutes,ot_authorized,is_submitted,is_public_holiday,is_unpaid,status").d4("employee_id",a)
-n=A.hE(n.jY(n.k6("or","(is_submitted.eq.true,ot_authorized.eq.true,is_public_holiday.eq.true,is_unpaid.eq.true)")),n.$ti.c)
+n=A.hE(n.jY(n.k6("or","(is_submitted.eq.true,ot_authorized.eq.true,approved_ot_minutes.not.is.null,is_public_holiday.eq.true,is_unpaid.eq.true)")),n.$ti.c)
 n=A.hE(n.jY(n.k6("attendance_date","gte."+A.bei(p))),n.$ti.c)
 m=A
 s=3
