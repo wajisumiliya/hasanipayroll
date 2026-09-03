@@ -96,6 +96,22 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
           'updated_at': updatedAt,
         });
       }
+      final activityId = await SupabaseService.startBranchActivity(
+        branchId: widget.branchId,
+        action: 'ROSTER_ASSIGNED',
+        details: {
+          'month': DateFormat('yyyy-MM').format(month),
+          'week': week,
+          'shift': shift.label,
+          'shift_start': shift.start,
+          'shift_end': shift.end,
+          'break_minutes': shift.breakMinutes,
+          'off_day': offDay == null ? 'None' : weekdays[offDay],
+          'employee_count': selectedIds.length,
+          'employee_ids': selectedIds.toList()..sort(),
+        },
+      );
+      await SupabaseService.closeBranchActivity(activityId);
       if (!mounted) return;
       final count = selectedIds.length;
       setState(() {
