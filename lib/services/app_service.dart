@@ -27,14 +27,11 @@ class app_user {
     this.displayName,
   });
 
-  bool get isAdmin =>
-      role.trim().toLowerCase() == 'admin';
+  bool get isAdmin => role.trim().toLowerCase() == 'admin';
 
-  bool get isBranch =>
-      role.trim().toLowerCase() == 'branch';
+  bool get isBranch => role.trim().toLowerCase() == 'branch';
 
-  bool get isEmployee =>
-      role.trim().toLowerCase() == 'employee';
+  bool get isEmployee => role.trim().toLowerCase() == 'employee';
 
   Map<String, dynamic> toJson() {
     return {
@@ -50,19 +47,13 @@ class app_user {
     Map<String, dynamic> json,
   ) {
     return app_user(
-      username:
-          json['username']?.toString() ?? '',
-      role:
-          json['role']?.toString() ?? '',
-      branchId:
-          json['branch_id']?.toString() ??
-              json['branchId']?.toString(),
+      username: json['username']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
+      branchId: json['branch_id']?.toString() ?? json['branchId']?.toString(),
       employeeId:
-          json['employee_id']?.toString() ??
-              json['employeeId']?.toString(),
+          json['employee_id']?.toString() ?? json['employeeId']?.toString(),
       displayName:
-          json['display_name']?.toString() ??
-              json['displayName']?.toString(),
+          json['display_name']?.toString() ?? json['displayName']?.toString(),
     );
   }
 }
@@ -110,14 +101,11 @@ class FirstLoginOtpState {
 class AppService extends ChangeNotifier {
   AppService._();
 
-  static final AppService instance =
-      AppService._();
+  static final AppService instance = AppService._();
 
   static const String _currentUserStorageKey = 'hasani_current_user';
 
-  SupabaseClient get _supabase =>
-      Supabase.instance.client;
-
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   static const String _authApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -181,29 +169,21 @@ class AppService extends ChangeNotifier {
   String? _accessToken;
   String? _branchLoginActivityId;
 
-  app_user? get currentUser =>
-      _currentUser;
+  app_user? get currentUser => _currentUser;
 
-  bool get isLoggedIn =>
-      _currentUser != null;
+  bool get isLoggedIn => _currentUser != null;
 
-  bool get isAdmin =>
-      _currentUser?.isAdmin ?? false;
+  bool get isAdmin => _currentUser?.isAdmin ?? false;
 
-  bool get isBranch =>
-      _currentUser?.isBranch ?? false;
+  bool get isBranch => _currentUser?.isBranch ?? false;
 
-  bool get isEmployee =>
-      _currentUser?.isEmployee ?? false;
+  bool get isEmployee => _currentUser?.isEmployee ?? false;
 
-  String? get currentBranchId =>
-      _currentUser?.branchId;
+  String? get currentBranchId => _currentUser?.branchId;
 
-  String? get currentEmployeeId =>
-      _currentUser?.employeeId;
+  String? get currentEmployeeId => _currentUser?.employeeId;
 
-  Employee? get employee =>
-      currentEmployee;
+  Employee? get employee => currentEmployee;
 
   // ==========================================================================
   // PASSWORD
@@ -213,14 +193,11 @@ class AppService extends ChangeNotifier {
     required String currentPassword,
     required String newPassword,
   }) async {
-    final current =
-        currentPassword.trim();
+    final current = currentPassword.trim();
 
-    final newPass =
-        newPassword.trim();
+    final newPass = newPassword.trim();
 
-    if (current.isEmpty ||
-        newPass.isEmpty) {
+    if (current.isEmpty || newPass.isEmpty) {
       return false;
     }
 
@@ -233,8 +210,7 @@ class AppService extends ChangeNotifier {
     }
 
     try {
-      final user =
-          _currentUser;
+      final user = _currentUser;
 
       if (user == null) {
         return false;
@@ -414,28 +390,20 @@ class AppService extends ChangeNotifier {
   // LOAD USERS
   // ==========================================================================
 
-  Future<void>
-      loadUsersFromSupabase() async {
+  Future<void> loadUsersFromSupabase() async {
     try {
-      final response =
-          await _supabase
-              .from('app_user')
-              .select();
+      final response = await _supabase.from('app_user').select();
 
       users.clear();
 
       for (final row in response) {
-        final data =
-            Map<String, dynamic>.from(
+        final data = Map<String, dynamic>.from(
           row,
         );
 
-        final user =
-            app_user.fromJson(data);
+        final user = app_user.fromJson(data);
 
-        if (user.username
-            .trim()
-            .isNotEmpty) {
+        if (user.username.trim().isNotEmpty) {
           users.add(user);
         }
       }
@@ -462,28 +430,21 @@ class AppService extends ChangeNotifier {
   // LOAD EMPLOYEES
   // ==========================================================================
 
-  Future<void>
-      loadEmployeesFromSupabase() async {
+  Future<void> loadEmployeesFromSupabase() async {
     try {
-      final response =
-          await _supabase
-              .from('employees')
-              .select();
+      final response = await _supabase.from('employees').select();
 
       employees.clear();
 
       for (final row in response) {
         try {
-          final employee =
-              _employeeFromSupabase(
+          final employee = _employeeFromSupabase(
             Map<String, dynamic>.from(
               row,
             ),
           );
 
-          if (employee.employeeId
-              .trim()
-              .isNotEmpty) {
+          if (employee.employeeId.trim().isNotEmpty) {
             employees.add(employee);
           }
         } catch (e) {
@@ -519,66 +480,30 @@ class AppService extends ChangeNotifier {
     Map<String, dynamic> data,
   ) {
     return Employee(
-      employeeId:
-          data['employee_id']
-                  ?.toString() ??
-              data['employeeId']
-                  ?.toString() ??
-              '',
-      name:
-          data['name']?.toString() ??
-              '',
-      designation:
-          data['designation']
-                  ?.toString() ??
-              '',
-      department:
-          data['department']
-                  ?.toString() ??
-              '',
-      email:
-          data['email']?.toString() ??
-              '',
+      employeeId: data['employee_id']?.toString() ??
+          data['employeeId']?.toString() ??
+          '',
+      name: data['name']?.toString() ?? '',
+      designation: data['designation']?.toString() ?? '',
+      department: data['department']?.toString() ?? '',
+      email: data['email']?.toString() ?? '',
       newIcNo:
-          data['new_ic_no']
-                  ?.toString() ??
-              data['newIcNo']
-                  ?.toString() ??
-              '',
+          data['new_ic_no']?.toString() ?? data['newIcNo']?.toString() ?? '',
       bankCode:
-          data['bank_code']
-                  ?.toString() ??
-              data['bankCode']
-                  ?.toString() ??
-              '',
-      bankAccount:
-          data['bank_account']
-                  ?.toString() ??
-              data['bankAccount']
-                  ?.toString() ??
-              '',
-      phone:
-          data['phone']?.toString() ??
-              '',
-      address:
-          data['address']?.toString() ??
-              '',
-      joiningDate:
-          _supabaseDate(
-        data['joining_date'] ??
-            data['joiningDate'],
+          data['bank_code']?.toString() ?? data['bankCode']?.toString() ?? '',
+      bankAccount: data['bank_account']?.toString() ??
+          data['bankAccount']?.toString() ??
+          '',
+      phone: data['phone']?.toString() ?? '',
+      address: data['address']?.toString() ?? '',
+      joiningDate: _supabaseDate(
+        data['joining_date'] ?? data['joiningDate'],
       ),
-      isActive:
-          _supabaseBool(
-        data['is_active'] ??
-            data['isActive'],
+      isActive: _supabaseBool(
+        data['is_active'] ?? data['isActive'],
       ),
       branchId:
-          data['branch_id']
-                  ?.toString() ??
-              data['branchId']
-                  ?.toString() ??
-              '',
+          data['branch_id']?.toString() ?? data['branchId']?.toString() ?? '',
     );
   }
 
@@ -586,13 +511,9 @@ class AppService extends ChangeNotifier {
   // LOAD PAYROLL
   // ==========================================================================
 
-  Future<void>
-      loadPayrollFromSupabase() async {
+  Future<void> loadPayrollFromSupabase() async {
     try {
-      final response =
-          await _supabase
-              .from('payroll')
-              .select();
+      final response = await _supabase.from('payroll').select();
 
       payroll.clear();
 
@@ -638,66 +559,47 @@ class AppService extends ChangeNotifier {
     Map<String, dynamic> data,
   ) {
     final employeeId =
-        data['employee_id']
-                ?.toString() ??
-            data['employeeId']
-                ?.toString() ??
-            '';
+        data['employee_id']?.toString() ?? data['employeeId']?.toString() ?? '';
 
-    final period =
-        _supabaseDate(
-              data['period'],
-            ) ??
-            DateTime.now();
+    final period = _supabaseDate(
+          data['period'],
+        ) ??
+        DateTime.now();
 
     return PayrollRecord(
-      id:
-          data['id']?.toString() ??
-              'PAY-$employeeId-${period.year}-${period.month}',
-      employeeId:
-          employeeId,
-      period:
-          period,
-      basicSalary:
-          _doubleValue(
-        data['basic_salary'] ??
-            data['basicSalary'],
+      id: data['id']?.toString() ??
+          'PAY-$employeeId-${period.year}-${period.month}',
+      employeeId: employeeId,
+      period: period,
+      basicSalary: _doubleValue(
+        data['basic_salary'] ?? data['basicSalary'],
       ),
-      elaunKedatangan:
-          _doubleValue(
+      elaunKedatangan: _doubleValue(
         data['elaun_kedatangan'] ??
             data['elaunKedatangan'] ??
             data['food_allowance'] ??
             data['foodAllowance'],
       ),
-      elaunPerkhidmatan:
-          _doubleValue(
+      elaunPerkhidmatan: _doubleValue(
         data['elaun_perkhidmatan'] ??
             data['elaunPerkhidmatan'] ??
             data['other_allowance'] ??
             data['otherAllowance'],
       ),
-      elaunKerajinan:
-          _doubleValue(
-        data['elaun_kerajinan'] ??
-            data['elaunKerajinan'],
+      elaunKerajinan: _doubleValue(
+        data['elaun_kerajinan'] ?? data['elaunKerajinan'],
       ),
-      overtime:
-          _doubleValue(
+      overtime: _doubleValue(
         data['overtime'],
       ),
-      bonus:
-          _doubleValue(
+      bonus: _doubleValue(
         data['bonus'],
       ),
-      commission:
-          _doubleValue(
+      commission: _doubleValue(
         data['commission'],
       ),
-      otherEarnings:
-          _doubleValue(
-        data['other_earnings'] ??
-            data['otherEarnings'],
+      otherEarnings: _doubleValue(
+        data['other_earnings'] ?? data['otherEarnings'],
       ),
       housingAllowance: _doubleValue(
         data['housing_allowance'] ?? data['housingAllowance'],
@@ -705,32 +607,22 @@ class AppService extends ChangeNotifier {
       travelAllowance: _doubleValue(
         data['travel_allowance'] ?? data['travelAllowance'],
       ),
-      cutiUmum:
-          _doubleValue(
-        data['cuti_umum'] ??
-            data['cutiUmum'],
+      cutiUmum: _doubleValue(
+        data['cuti_umum'] ?? data['cutiUmum'],
       ),
-      epfEmployee:
-          _doubleValue(
-        data['epf_employee'] ??
-            data['epfEmployee'],
+      epfEmployee: _doubleValue(
+        data['epf_employee'] ?? data['epfEmployee'],
       ),
-      socsoEmployee:
-          _doubleValue(
-        data['socso_employee'] ??
-            data['socsoEmployee'],
+      socsoEmployee: _doubleValue(
+        data['socso_employee'] ?? data['socsoEmployee'],
       ),
-      eisEmployee:
-          _doubleValue(
-        data['eis_employee'] ??
-            data['eisEmployee'],
+      eisEmployee: _doubleValue(
+        data['eis_employee'] ?? data['eisEmployee'],
       ),
-      pcb:
-          _doubleValue(
+      pcb: _doubleValue(
         data['pcb'],
       ),
-      zakat:
-          _doubleValue(
+      zakat: _doubleValue(
         data['zakat'],
       ),
       advanceDeduction: _doubleValue(
@@ -745,43 +637,30 @@ class AppService extends ChangeNotifier {
             data['unpaid_deduction'] ??
             data['unpaidDeduction'],
       ),
+      lateDeduction: _doubleValue(
+        data['late_deduction'] ?? data['lateDeduction'],
+      ),
       otherDeductionAmount: _doubleValue(
         data['other_deduction'] ?? data['otherDeduction'],
       ),
-      epfEmployer:
-          _doubleValue(
-        data['epf_employer'] ??
-            data['epfEmployer'],
+      epfEmployer: _doubleValue(
+        data['epf_employer'] ?? data['epfEmployer'],
       ),
-      socsoEmployer:
-          _doubleValue(
-        data['socso_employer'] ??
-            data['socsoEmployer'],
+      socsoEmployer: _doubleValue(
+        data['socso_employer'] ?? data['socsoEmployer'],
       ),
-      eisEmployer:
-          _doubleValue(
-        data['eis_employer'] ??
-            data['eisEmployer'],
+      eisEmployer: _doubleValue(
+        data['eis_employer'] ?? data['eisEmployer'],
       ),
       newIcNo:
-          data['new_ic_no']
-                  ?.toString() ??
-              data['newIcNo']
-                  ?.toString() ??
-              '',
+          data['new_ic_no']?.toString() ?? data['newIcNo']?.toString() ?? '',
       bankCode:
-          data['bank_code']
-                  ?.toString() ??
-              data['bankCode']
-                  ?.toString() ??
-              '',
-      bankAccount:
-          data['bank_account']
-                  ?.toString() ??
-              data['bankAccount']
-                  ?.toString() ??
-              '',
-      bankName: data['bank_name']?.toString() ?? data['bankName']?.toString() ?? '',
+          data['bank_code']?.toString() ?? data['bankCode']?.toString() ?? '',
+      bankAccount: data['bank_account']?.toString() ??
+          data['bankAccount']?.toString() ??
+          '',
+      bankName:
+          data['bank_name']?.toString() ?? data['bankName']?.toString() ?? '',
       storedGrossSalary: _nullableDoubleValue(
         data['gross_salary'] ?? data['grossSalary'],
       ),
@@ -794,18 +673,14 @@ class AppService extends ChangeNotifier {
       isPaid: _supabaseBool(data['is_paid'] ?? data['isPaid']),
       paidAt: _supabaseDate(data['paid_at'] ?? data['paidAt']),
       paymentReference: data['payment_reference']?.toString() ??
-          data['paymentReference']?.toString() ?? '',
-      remarks:
-          data['remarks']?.toString(),
-      createdAt:
-          _supabaseDate(
-        data['created_at'] ??
-            data['createdAt'],
+          data['paymentReference']?.toString() ??
+          '',
+      remarks: data['remarks']?.toString(),
+      createdAt: _supabaseDate(
+        data['created_at'] ?? data['createdAt'],
       ),
-      updatedAt:
-          _supabaseDate(
-        data['updated_at'] ??
-            data['updatedAt'],
+      updatedAt: _supabaseDate(
+        data['updated_at'] ?? data['updatedAt'],
       ),
     );
   }
@@ -814,13 +689,9 @@ class AppService extends ChangeNotifier {
   // LOAD ATTENDANCE
   // ==========================================================================
 
-  Future<void>
-      loadAttendanceFromSupabase() async {
+  Future<void> loadAttendanceFromSupabase() async {
     try {
-      final response =
-          await _supabase
-              .from('attendance')
-              .select();
+      final response = await _supabase.from('attendance').select();
 
       attendance.clear();
 
@@ -866,41 +737,21 @@ class AppService extends ChangeNotifier {
     Map<String, dynamic> data,
   ) {
     return AttendanceRecord(
-      id:
-          data['id']?.toString() ??
-              '',
-      employeeId:
-          data['employee_id']
-                  ?.toString() ??
-              data['employeeId']
-                  ?.toString() ??
-              '',
+      id: data['id']?.toString() ?? '',
+      employeeId: data['employee_id']?.toString() ??
+          data['employeeId']?.toString() ??
+          '',
       branchId:
-          data['branch_id']
-                  ?.toString() ??
-              data['branchId']
-                  ?.toString() ??
-              '',
-      date:
-          _supabaseDate(
+          data['branch_id']?.toString() ?? data['branchId']?.toString() ?? '',
+      date: _supabaseDate(
             data['date'],
           ) ??
-              DateTime.now(),
+          DateTime.now(),
       checkIn:
-          data['check_in']
-                  ?.toString() ??
-              data['checkIn']
-                  ?.toString() ??
-              '-',
+          data['check_in']?.toString() ?? data['checkIn']?.toString() ?? '-',
       checkOut:
-          data['check_out']
-                  ?.toString() ??
-              data['checkOut']
-                  ?.toString() ??
-              '-',
-      status:
-          data['status']?.toString() ??
-              'Present',
+          data['check_out']?.toString() ?? data['checkOut']?.toString() ?? '-',
+      status: data['status']?.toString() ?? 'Present',
     );
   }
 
@@ -946,62 +797,53 @@ class AppService extends ChangeNotifier {
       );
 
       if (data['ok'] != true) {
-        return data['message']?.toString() ??
-            'Invalid username or password.';
+        return data['message']?.toString() ?? 'Invalid username or password.';
       }
 
       final userData = data['user'] is Map
           ? Map<String, dynamic>.from(data['user'])
           : <String, dynamic>{};
 
-      final firstLogin =
-          data['firstLogin'] == true ||
+      final firstLogin = data['firstLogin'] == true ||
           data['requiresOtp'] == true ||
           userData['firstLogin'] == true ||
           userData['requiresOtp'] == true;
 
-      final employeeId =
-          userData['employeeId']?.toString() ??
+      final employeeId = userData['employeeId']?.toString() ??
           data['employeeId']?.toString() ??
           enteredUsername.toUpperCase();
 
       final email =
-          userData['email']?.toString() ??
-              data['email']?.toString() ??
-              '';
+          userData['email']?.toString() ?? data['email']?.toString() ?? '';
 
-            final role =
-    userData['role']?.toString().trim().toLowerCase() ?? 'employee';
+      final role =
+          userData['role']?.toString().trim().toLowerCase() ?? 'employee';
 
-if (role == 'employee' && firstLogin) {
-  _firstLoginOtpState = FirstLoginOtpState(
-    employeeId: employeeId,
-    email: email,
-    username: userData['username']?.toString() ??
-        userData['email']?.toString() ??
-        enteredUsername,
-  );
+      if (role == 'employee' && firstLogin) {
+        _firstLoginOtpState = FirstLoginOtpState(
+          employeeId: employeeId,
+          email: email,
+          username: userData['username']?.toString() ??
+              userData['email']?.toString() ??
+              enteredUsername,
+        );
 
-  notifyListeners();
-  return 'FIRST_LOGIN_OTP_REQUIRED';
-}
+        notifyListeners();
+        return 'FIRST_LOGIN_OTP_REQUIRED';
+      }
 
       final backendEmployee = userData['employee'] is Map
           ? Map<String, dynamic>.from(userData['employee'])
           : <String, dynamic>{};
 
-      String? branchId =
-          userData['branchId']?.toString() ??
+      String? branchId = userData['branchId']?.toString() ??
           userData['branch_id']?.toString() ??
           backendEmployee['branchId']?.toString() ??
           backendEmployee['branch_id']?.toString();
 
-      if (role == 'branch' &&
-          (branchId == null || branchId.trim().isEmpty)) {
-        final backendUsername =
-            userData['username']?.toString().trim() ?? '';
-        final backendEmail =
-            userData['email']?.toString().trim() ?? '';
+      if (role == 'branch' && (branchId == null || branchId.trim().isEmpty)) {
+        final backendUsername = userData['username']?.toString().trim() ?? '';
+        final backendEmail = userData['email']?.toString().trim() ?? '';
 
         branchId = backendUsername.isNotEmpty
             ? backendUsername
@@ -1010,13 +852,10 @@ if (role == 'employee' && firstLogin) {
                 : enteredUsername;
       }
 
-      String? displayName =
-          backendEmployee['name']?.toString();
+      String? displayName = backendEmployee['name']?.toString();
 
-      final responseUsername =
-          userData['username']?.toString().trim() ?? '';
-      final responseEmail =
-          userData['email']?.toString().trim() ?? '';
+      final responseUsername = userData['username']?.toString().trim() ?? '';
+      final responseEmail = userData['email']?.toString().trim() ?? '';
       final accountUsername = responseUsername.isNotEmpty
           ? responseUsername
           : responseEmail.isNotEmpty
@@ -1037,13 +876,12 @@ if (role == 'employee' && firstLogin) {
       }
 
       _currentUser = app_user(
-  username:
-      accountUsername,
-  role: role,
-  branchId: branchId,
-  employeeId: employeeId,
-  displayName: displayName ?? email,
-);
+        username: accountUsername,
+        role: role,
+        branchId: branchId,
+        employeeId: employeeId,
+        displayName: displayName ?? email,
+      );
       _accessToken = data['accessToken']?.toString();
       if (_accessToken == null || _accessToken!.isEmpty) {
         _currentUser = null;
@@ -1088,91 +926,90 @@ if (role == 'employee' && firstLogin) {
     }
   }
 
-Future<String?> requestFirstLoginOtp() async {
-final state = _firstLoginOtpState;
+  Future<String?> requestFirstLoginOtp() async {
+    final state = _firstLoginOtpState;
 
-if (state == null) {
-return 'No first-login session found. Please login again.';
-}
+    if (state == null) {
+      return 'No first-login session found. Please login again.';
+    }
 
-final username = state.username?.trim();
+    final username = state.username?.trim();
 
-if (username == null || username.isEmpty) {
-return 'No username found. Please login again.';
-}
+    if (username == null || username.isEmpty) {
+      return 'No username found. Please login again.';
+    }
 
-try {
-final data = await _postAuth(
-'/api/auth/send-otp',
-{
-'username': username,
-},
-);
+    try {
+      final data = await _postAuth(
+        '/api/auth/send-otp',
+        {
+          'username': username,
+        },
+      );
 
-if (data['ok'] != true) {
-return data['message']?.toString() ??
-'Unable to generate OTP.';
-}
+      if (data['ok'] != true) {
+        return data['message']?.toString() ?? 'Unable to generate OTP.';
+      }
 
-_firstLoginOtpState = state.copyWith(
-otpId: data['otpId']?.toString(),
-);
+      _firstLoginOtpState = state.copyWith(
+        otpId: data['otpId']?.toString(),
+      );
 
-notifyListeners();
+      notifyListeners();
 
-return null;
-} catch (e) {
-debugPrint('REQUEST OTP ERROR: $e');
-return 'Unable to request OTP: $e';
-}
-}
+      return null;
+    } catch (e) {
+      debugPrint('REQUEST OTP ERROR: $e');
+      return 'Unable to request OTP: $e';
+    }
+  }
+
   Future<String?> requestOtp() => requestFirstLoginOtp();
 
-Future<String?> verifyFirstLoginOtp(String otp) async {
-final state = _firstLoginOtpState;
+  Future<String?> verifyFirstLoginOtp(String otp) async {
+    final state = _firstLoginOtpState;
 
-if (state == null) {
-return 'No first-login session found. Please login again.';
-}
+    if (state == null) {
+      return 'No first-login session found. Please login again.';
+    }
 
-final username = state.username?.trim();
+    final username = state.username?.trim();
 
-if (username == null || username.isEmpty) {
-return 'No username found. Please login again.';
-}
+    if (username == null || username.isEmpty) {
+      return 'No username found. Please login again.';
+    }
 
-final code = otp.trim();
+    final code = otp.trim();
 
-if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-return 'Please enter the 6-digit OTP.';
-}
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      return 'Please enter the 6-digit OTP.';
+    }
 
-try {
-final data = await _postAuth(
-'/api/auth/verify-otp',
-{
-'username': username,
-'otp': code,
-},
-);
+    try {
+      final data = await _postAuth(
+        '/api/auth/verify-otp',
+        {
+          'username': username,
+          'otp': code,
+        },
+      );
 
-if (data['ok'] != true) {
-return data['message']?.toString() ??
-'OTP verification failed.';
-}
+      if (data['ok'] != true) {
+        return data['message']?.toString() ?? 'OTP verification failed.';
+      }
 
-_firstLoginOtpState = state.copyWith(
-verificationId: data['verificationId']?.toString(),
-);
+      _firstLoginOtpState = state.copyWith(
+        verificationId: data['verificationId']?.toString(),
+      );
 
-notifyListeners();
+      notifyListeners();
 
-return null;
-} catch (e) {
-debugPrint('VERIFY OTP ERROR: $e');
-return 'OTP verification failed: $e';
-}
-}
+      return null;
+    } catch (e) {
+      debugPrint('VERIFY OTP ERROR: $e');
+      return 'OTP verification failed: $e';
+    }
+  }
 
   Future<String?> verifyOtp(String otp) => verifyFirstLoginOtp(otp);
 
@@ -1207,16 +1044,14 @@ return 'OTP verification failed: $e';
           ? Map<String, dynamic>.from(data['user'])
           : <String, dynamic>{};
 
-      final employeeId =
-          userData['employeeId']?.toString() ?? state.employeeId;
+      final employeeId = userData['employeeId']?.toString() ?? state.employeeId;
 
       final employee = userData['employee'] is Map
           ? Map<String, dynamic>.from(userData['employee'])
           : <String, dynamic>{};
 
       String? branchId =
-          employee['branchId']?.toString() ??
-          employee['branch_id']?.toString();
+          employee['branchId']?.toString() ?? employee['branch_id']?.toString();
 
       String? displayName = employee['name']?.toString();
 
@@ -1234,15 +1069,14 @@ return 'OTP verification failed: $e';
       }
 
       _currentUser = app_user(
-  username:
-      userData['username']?.toString() ??
-      userData['email']?.toString() ??
-      employeeId,
-  role: userData['role']?.toString() ?? 'employee',
-  branchId: branchId,
-  employeeId: employeeId,
-  displayName: displayName ?? userData['email']?.toString(),
-);
+        username: userData['username']?.toString() ??
+            userData['email']?.toString() ??
+            employeeId,
+        role: userData['role']?.toString() ?? 'employee',
+        branchId: branchId,
+        employeeId: employeeId,
+        displayName: displayName ?? userData['email']?.toString(),
+      );
       _accessToken = data['accessToken']?.toString();
       if (_accessToken == null || _accessToken!.isEmpty) {
         _currentUser = null;
@@ -1273,8 +1107,7 @@ return 'OTP verification failed: $e';
   // LOAD CURRENT USER DATA
   // ==========================================================================
 
-  Future<void>
-      _loadDataForCurrentUser() async {
+  Future<void> _loadDataForCurrentUser() async {
     try {
       await loadEmployeesFromSupabase();
       await loadPayrollFromSupabase();
@@ -1300,8 +1133,8 @@ return 'OTP verification failed: $e';
       try {
         await _supabase
             .from('branch_activity_logs')
-            .update({'closed_at': DateTime.now().toUtc().toIso8601String()})
-            .eq('id', activityId);
+            .update({'closed_at': DateTime.now().toUtc().toIso8601String()}).eq(
+                'id', activityId);
       } catch (e) {
         debugPrint('Branch logout activity error: $e');
       }
@@ -1322,9 +1155,7 @@ return 'OTP verification failed: $e';
   String _normalise(
     String value,
   ) {
-    return value
-        .trim()
-        .toUpperCase();
+    return value.trim().toUpperCase();
   }
 
   // ==========================================================================
@@ -1334,8 +1165,7 @@ return 'OTP verification failed: $e';
   Branch? getBranch(
     String branchId,
   ) {
-    var id =
-        _normalise(branchId);
+    var id = _normalise(branchId);
 
     const branchLoginAliases = <String, String>{
       'HBSP': 'SUNGAI PETANI',
@@ -1368,8 +1198,7 @@ return 'OTP verification failed: $e';
     for (final branch in branches) {
       if (_normalise(branch.id) == id ||
           _normalise(branch.name) == id ||
-          _normalise(branch.username) ==
-              id) {
+          _normalise(branch.username) == id) {
         return branch;
       }
     }
@@ -1390,8 +1219,7 @@ return 'OTP verification failed: $e';
   Employee? findEmployee(
     String employeeId,
   ) {
-    final id =
-        _normalise(employeeId);
+    final id = _normalise(employeeId);
 
     if (id.isEmpty) {
       return null;
@@ -1422,14 +1250,12 @@ return 'OTP verification failed: $e';
   app_user? _findEmployeeUser(
     String employeeId,
   ) {
-    final id =
-        _normalise(employeeId);
+    final id = _normalise(employeeId);
 
     for (final user in users) {
       if (user.isEmployee &&
           _normalise(
-                user.employeeId ??
-                    user.username,
+                user.employeeId ?? user.username,
               ) ==
               id) {
         return user;
@@ -1446,32 +1272,23 @@ return 'OTP verification failed: $e';
   String? branchIdForEmployee(
     String employeeId,
   ) {
-    final employee =
-        findEmployee(employeeId);
+    final employee = findEmployee(employeeId);
 
-    if (employee != null &&
-        employee.branchId
-            .trim()
-            .isNotEmpty) {
-      final branch =
-          getBranch(
+    if (employee != null && employee.branchId.trim().isNotEmpty) {
+      final branch = getBranch(
         employee.branchId,
       );
 
-      return branch?.id ??
-          employee.branchId.trim();
+      return branch?.id ?? employee.branchId.trim();
     }
 
-    final user =
-        _findEmployeeUser(
+    final user = _findEmployeeUser(
       employeeId,
     );
 
     if (user != null &&
         user.branchId != null &&
-        user.branchId!
-            .trim()
-            .isNotEmpty) {
+        user.branchId!.trim().isNotEmpty) {
       return user.branchId;
     }
 
@@ -1495,31 +1312,26 @@ return 'OTP verification failed: $e';
   List<Employee> branchEmployees(
     String branchId,
   ) {
-    final branch =
-        getBranch(branchId);
+    final branch = getBranch(branchId);
 
     if (branch == null) {
       return [];
     }
 
-    final id =
-        _normalise(branch.id);
+    final id = _normalise(branch.id);
 
-    final result =
-        employees
-            .where(
-              (employee) =>
-                  _normalise(
-                    employee.branchId,
-                  ) ==
-                  id,
-            )
-            .toList();
+    final result = employees
+        .where(
+          (employee) =>
+              _normalise(
+                employee.branchId,
+              ) ==
+              id,
+        )
+        .toList();
 
     result.sort(
-      (a, b) => a.name
-          .toLowerCase()
-          .compareTo(
+      (a, b) => a.name.toLowerCase().compareTo(
             b.name.toLowerCase(),
           ),
     );
@@ -1527,13 +1339,10 @@ return 'OTP verification failed: $e';
     return result;
   }
 
-  List<Employee>
-      get currentBranchEmployees {
-    final branchId =
-        currentBranchId;
+  List<Employee> get currentBranchEmployees {
+    final branchId = currentBranchId;
 
-    if (branchId == null ||
-        branchId.trim().isEmpty) {
+    if (branchId == null || branchId.trim().isEmpty) {
       return [];
     }
 
@@ -1543,8 +1352,7 @@ return 'OTP verification failed: $e';
   }
 
   Branch? get currentBranch {
-    final id =
-        currentBranchId;
+    final id = currentBranchId;
 
     if (id == null) {
       return null;
@@ -1561,34 +1369,28 @@ return 'OTP verification failed: $e';
     Employee employee, {
     required String branchId,
   }) async {
-    final cleanId =
-        employee.employeeId.trim();
+    final cleanId = employee.employeeId.trim();
 
     if (cleanId.isEmpty) {
       return 'Employee ID is required.';
     }
 
-    if (findEmployee(cleanId) !=
-        null) {
+    if (findEmployee(cleanId) != null) {
       return 'Employee ID $cleanId already exists.';
     }
 
-    final branch =
-        getBranch(branchId);
+    final branch = getBranch(branchId);
 
     if (branch == null) {
       return 'Invalid branch ID: $branchId';
     }
 
-    final employeeWithBranch =
-        employee.copyWith(
+    final employeeWithBranch = employee.copyWith(
       branchId: branch.id,
     );
 
     try {
-      await _supabase
-          .from('employees')
-          .insert(
+      await _supabase.from('employees').insert(
             _employeeToSupabase(
               employeeWithBranch,
             ),
@@ -1613,8 +1415,7 @@ return 'OTP verification failed: $e';
   Future<String> updateEmployee(
     Employee updatedEmployee,
   ) async {
-    final branch =
-        getBranch(
+    final branch = getBranch(
       updatedEmployee.branchId,
     );
 
@@ -1637,13 +1438,9 @@ return 'OTP verification failed: $e';
             updatedEmployee.employeeId,
           );
 
-      await _supabase
-          .from('app_user')
-          .update({
-        'branch_id':
-            branch.id,
-        'display_name':
-            updatedEmployee.name,
+      await _supabase.from('app_user').update({
+        'branch_id': branch.id,
+        'display_name': updatedEmployee.name,
       }).eq(
         'employee_id',
         updatedEmployee.employeeId,
@@ -1669,42 +1466,29 @@ return 'OTP verification failed: $e';
   Future<String> deleteEmployee(
     String employeeId,
   ) async {
-    final employee =
-        findEmployee(employeeId);
+    final employee = findEmployee(employeeId);
 
     if (employee == null) {
       return 'Employee not found.';
     }
 
     try {
-      await _supabase
-          .from('attendance')
-          .delete()
-          .eq(
+      await _supabase.from('attendance').delete().eq(
             'employee_id',
             employee.employeeId,
           );
 
-      await _supabase
-          .from('payroll')
-          .delete()
-          .eq(
+      await _supabase.from('payroll').delete().eq(
             'employee_id',
             employee.employeeId,
           );
 
-      await _supabase
-          .from('app_user')
-          .delete()
-          .eq(
+      await _supabase.from('app_user').delete().eq(
             'employee_id',
             employee.employeeId,
           );
 
-      await _supabase
-          .from('employees')
-          .delete()
-          .eq(
+      await _supabase.from('employees').delete().eq(
             'employee_id',
             employee.employeeId,
           );
@@ -1728,45 +1512,32 @@ return 'OTP verification failed: $e';
   // CREATE / UPDATE EMPLOYEE LOGIN
   // ==========================================================================
 
-  Future<void>
-      _createOrUpdateEmployeeUser(
+  Future<void> _createOrUpdateEmployeeUser(
     Employee employee,
     String branchId,
   ) async {
     try {
-      final existing =
-          await _supabase
-              .from('app_user')
-              .select()
-              .eq(
-                'employee_id',
-                employee.employeeId,
-              )
-              .maybeSingle();
+      final existing = await _supabase
+          .from('app_user')
+          .select()
+          .eq(
+            'employee_id',
+            employee.employeeId,
+          )
+          .maybeSingle();
 
-      final data =
-          <String, dynamic>{
-        'username':
-            employee.employeeId,
-        'role':
-            'employee',
-        'employee_id':
-            employee.employeeId,
-        'branch_id':
-            branchId,
-        'display_name':
-            employee.name,
+      final data = <String, dynamic>{
+        'username': employee.employeeId,
+        'role': 'employee',
+        'employee_id': employee.employeeId,
+        'branch_id': branchId,
+        'display_name': employee.name,
       };
 
       if (existing == null) {
-        await _supabase
-            .from('app_user')
-            .insert(data);
+        await _supabase.from('app_user').insert(data);
       } else {
-        await _supabase
-            .from('app_user')
-            .update(data)
-            .eq(
+        await _supabase.from('app_user').update(data).eq(
               'employee_id',
               employee.employeeId,
             );
@@ -1784,33 +1555,25 @@ return 'OTP verification failed: $e';
   // IMPORT EMPLOYEE CSV
   // ==========================================================================
 
-  Future<String>
-      importEmployeesCsv() async {
+  Future<String> importEmployeesCsv() async {
     try {
-      final result =
-          await FilePicker.platform
-              .pickFiles(
-        type:
-            FileType.custom,
-        allowedExtensions:
-            ['csv'],
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
         withData: true,
       );
 
-      if (result == null ||
-          result.files.isEmpty) {
+      if (result == null || result.files.isEmpty) {
         return 'No employee CSV file selected.';
       }
 
-      final file =
-          result.files.first;
+      final file = result.files.first;
 
       if (file.bytes == null) {
         return 'Unable to read the employee CSV file.';
       }
 
-      final csvText =
-          utf8.decode(
+      final csvText = utf8.decode(
         file.bytes!,
         allowMalformed: true,
       );
@@ -1827,39 +1590,35 @@ return 'OTP verification failed: $e';
   // IMPORT EMPLOYEE CSV TEXT
   // ==========================================================================
 
-  Future<String>
-      importEmployeesCsvText(
+  Future<String> importEmployeesCsvText(
     String csvText,
   ) async {
-    final lines =
-        csvText
-            .replaceAll(
-              '\r\n',
-              '\n',
-            )
-            .replaceAll(
-              '\r',
-              '\n',
-            )
-            .split('\n')
-            .where(
-              (line) =>
-                  line.trim().isNotEmpty,
-            )
-            .toList();
+    final lines = csvText
+        .replaceAll(
+          '\r\n',
+          '\n',
+        )
+        .replaceAll(
+          '\r',
+          '\n',
+        )
+        .split('\n')
+        .where(
+          (line) => line.trim().isNotEmpty,
+        )
+        .toList();
 
     if (lines.isEmpty) {
       return 'Employee CSV file is empty.';
     }
 
-    final headers =
-        _parseCsvLine(
-          lines.first,
+    final headers = _parseCsvLine(
+      lines.first,
+    )
+        .map(
+          _normaliseHeader,
         )
-            .map(
-              _normaliseHeader,
-            )
-            .toList();
+        .toList();
 
     if (!_hasRequiredEmployeeColumns(
       headers,
@@ -1877,36 +1636,21 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
     int updated = 0;
     int skipped = 0;
 
-    final errors =
-        <String>[];
+    final errors = <String>[];
 
-    for (
-      int lineIndex = 1;
-      lineIndex < lines.length;
-      lineIndex++
-    ) {
+    for (int lineIndex = 1; lineIndex < lines.length; lineIndex++) {
       try {
-        final values =
-            _parseCsvLine(
+        final values = _parseCsvLine(
           lines[lineIndex],
         );
 
-        final row =
-            <String, String>{};
+        final row = <String, String>{};
 
-        for (
-          int i = 0;
-          i < headers.length;
-          i++
-        ) {
-          row[headers[i]] =
-              i < values.length
-                  ? values[i].trim()
-                  : '';
+        for (int i = 0; i < headers.length; i++) {
+          row[headers[i]] = i < values.length ? values[i].trim() : '';
         }
 
-        final employeeId =
-            _csvValue(
+        final employeeId = _csvValue(
           row,
           [
             'employeeid',
@@ -1915,8 +1659,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
           ],
         );
 
-        final name =
-            _csvValue(
+        final name = _csvValue(
           row,
           [
             'name',
@@ -1925,8 +1668,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
           ],
         );
 
-        final branchId =
-            _csvValue(
+        final branchId = _csvValue(
           row,
           [
             'branchid',
@@ -1965,8 +1707,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
           continue;
         }
 
-        final branch =
-            getBranch(branchId);
+        final branch = getBranch(branchId);
 
         if (branch == null) {
           skipped++;
@@ -1978,8 +1719,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
           continue;
         }
 
-        final joiningDate =
-            _parseDate(
+        final joiningDate = _parseDate(
           _csvValue(
             row,
             [
@@ -2001,14 +1741,10 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
           continue;
         }
 
-        final employee =
-            Employee(
-          employeeId:
-              employeeId,
-          name:
-              name,
-          designation:
-              _csvValue(
+        final employee = Employee(
+          employeeId: employeeId,
+          name: name,
+          designation: _csvValue(
             row,
             [
               'designation',
@@ -2017,16 +1753,14 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               'job_title',
             ],
           ),
-          department:
-              _csvValue(
+          department: _csvValue(
             row,
             [
               'department',
               'dept',
             ],
           ),
-          email:
-              _csvValue(
+          email: _csvValue(
             row,
             [
               'email',
@@ -2034,8 +1768,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               'email_address',
             ],
           ),
-          newIcNo:
-              _csvValue(
+          newIcNo: _csvValue(
             row,
             [
               'newicno',
@@ -2045,8 +1778,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               'ic',
             ],
           ),
-          bankCode:
-              _csvValue(
+          bankCode: _csvValue(
             row,
             [
               'bankcode',
@@ -2054,8 +1786,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               'bank',
             ],
           ),
-          bankAccount:
-              _csvValue(
+          bankAccount: _csvValue(
             row,
             [
               'bankaccount',
@@ -2064,8 +1795,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               'account_number',
             ],
           ),
-          phone:
-              _csvValue(
+          phone: _csvValue(
             row,
             [
               'phone',
@@ -2074,8 +1804,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               'contact',
             ],
           ),
-          address:
-              _csvValue(
+          address: _csvValue(
             row,
             [
               'address',
@@ -2083,10 +1812,8 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               'home_address',
             ],
           ),
-          joiningDate:
-              joiningDate,
-          isActive:
-              _parseBool(
+          joiningDate: joiningDate,
+          isActive: _parseBool(
             _csvValue(
               row,
               [
@@ -2097,12 +1824,10 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
               ],
             ),
           ),
-          branchId:
-              branch.id,
+          branchId: branch.id,
         );
 
-        final existing =
-            findEmployee(
+        final existing = findEmployee(
           employeeId,
         );
 
@@ -2126,9 +1851,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
 
           updated++;
         } else {
-          await _supabase
-              .from('employees')
-              .insert(
+          await _supabase.from('employees').insert(
                 _employeeToSupabase(
                   employee,
                 ),
@@ -2153,8 +1876,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
     await loadEmployeesFromSupabase();
     await loadUsersFromSupabase();
 
-    final message =
-        StringBuffer();
+    final message = StringBuffer();
 
     message.writeln(
       'Employee CSV import completed.',
@@ -2178,10 +1900,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
         'Errors:',
       );
 
-      for (
-        final error
-        in errors.take(10)
-      ) {
+      for (final error in errors.take(10)) {
         message.writeln(
           '• $error',
         );
@@ -2201,33 +1920,25 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
   // PAYROLL CSV IMPORT
   // ==========================================================================
 
-  Future<String>
-      importPayrollCsv() async {
+  Future<String> importPayrollCsv() async {
     try {
-      final result =
-          await FilePicker.platform
-              .pickFiles(
-        type:
-            FileType.custom,
-        allowedExtensions:
-            ['csv'],
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
         withData: true,
       );
 
-      if (result == null ||
-          result.files.isEmpty) {
+      if (result == null || result.files.isEmpty) {
         return 'No payroll CSV file selected.';
       }
 
-      final file =
-          result.files.first;
+      final file = result.files.first;
 
       if (file.bytes == null) {
         return 'Unable to read the payroll CSV file.';
       }
 
-      final csvText =
-          utf8.decode(
+      final csvText = utf8.decode(
         file.bytes!,
         allowMalformed: true,
       );
@@ -2244,39 +1955,35 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
   // PAYROLL CSV TEXT
   // ==========================================================================
 
-  Future<String>
-      importPayrollCsvText(
+  Future<String> importPayrollCsvText(
     String csvText,
   ) async {
-    final lines =
-        csvText
-            .replaceAll(
-              '\r\n',
-              '\n',
-            )
-            .replaceAll(
-              '\r',
-              '\n',
-            )
-            .split('\n')
-            .where(
-              (line) =>
-                  line.trim().isNotEmpty,
-            )
-            .toList();
+    final lines = csvText
+        .replaceAll(
+          '\r\n',
+          '\n',
+        )
+        .replaceAll(
+          '\r',
+          '\n',
+        )
+        .split('\n')
+        .where(
+          (line) => line.trim().isNotEmpty,
+        )
+        .toList();
 
     if (lines.isEmpty) {
       return 'Payroll CSV file is empty.';
     }
 
-    final headers =
-        _parseCsvLine(
-          lines.first,
+    final headers = _parseCsvLine(
+      lines.first,
+    )
+        .map(
+          _normalisePayrollHeader,
         )
-            .map(
-              _normalisePayrollHeader,
-            )
-            .toList();
+        .toList();
 
     if (!_hasRequiredPayrollColumns(
       headers,
@@ -2294,36 +2001,21 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     int updated = 0;
     int skipped = 0;
 
-    final errors =
-        <String>[];
+    final errors = <String>[];
 
-    for (
-      int lineIndex = 1;
-      lineIndex < lines.length;
-      lineIndex++
-    ) {
+    for (int lineIndex = 1; lineIndex < lines.length; lineIndex++) {
       try {
-        final values =
-            _parseCsvLine(
+        final values = _parseCsvLine(
           lines[lineIndex],
         );
 
-        final row =
-            <String, String>{};
+        final row = <String, String>{};
 
-        for (
-          int i = 0;
-          i < headers.length;
-          i++
-        ) {
-          row[headers[i]] =
-              i < values.length
-                  ? values[i].trim()
-                  : '';
+        for (int i = 0; i < headers.length; i++) {
+          row[headers[i]] = i < values.length ? values[i].trim() : '';
         }
 
-        final employeeId =
-            _csvValue(
+        final employeeId = _csvValue(
           row,
           [
             'employeeid',
@@ -2342,8 +2034,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           continue;
         }
 
-        final employee =
-            findEmployee(
+        final employee = findEmployee(
           employeeId,
         );
 
@@ -2357,8 +2048,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           continue;
         }
 
-        final period =
-            _parsePayrollPeriod(
+        final period = _parsePayrollPeriod(
           _csvValue(
             row,
             [
@@ -2383,182 +2073,148 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
         final payrollId =
             'PAY-${employee.employeeId}-${period.year}-${period.month.toString().padLeft(2, '0')}';
 
-        final record =
-            PayrollRecord(
-          id:
-              payrollId,
-          employeeId:
-              employee.employeeId,
-          period:
-              period,
-          basicSalary:
-              _csvMoney(
+        final record = PayrollRecord(
+          id: payrollId,
+          employeeId: employee.employeeId,
+          period: period,
+          basicSalary: _csvMoney(
             row,
             [
               'basicsalary',
               'basic_salary',
             ],
           ),
-          elaunKedatangan:
-              _csvMoney(
+          elaunKedatangan: _csvMoney(
             row,
             [
               'elaunkedatangan',
             ],
           ),
-          elaunPerkhidmatan:
-              _csvMoney(
+          elaunPerkhidmatan: _csvMoney(
             row,
             [
               'elaunperkhidmatan',
               'elauanperkhidmatan',
             ],
           ),
-          elaunKerajinan:
-              _csvMoney(
+          elaunKerajinan: _csvMoney(
             row,
             [
               'elaunkerajinan',
             ],
           ),
-          overtime:
-              _csvMoney(
+          overtime: _csvMoney(
             row,
             [
               'overtime',
               'ot',
             ],
           ),
-          bonus:
-              _csvMoney(
+          bonus: _csvMoney(
             row,
             [
               'bonus',
             ],
           ),
-          commission:
-              _csvMoney(
+          commission: _csvMoney(
             row,
             [
               'commission',
             ],
           ),
-          otherEarnings:
-              _csvMoney(
+          otherEarnings: _csvMoney(
             row,
             [
               'otherearnings',
               'other_earnings',
             ],
           ),
-          cutiUmum:
-              _csvMoney(
+          cutiUmum: _csvMoney(
             row,
             [
               'cutiumum',
             ],
           ),
-          epfEmployee:
-              _csvMoney(
+          epfEmployee: _csvMoney(
             row,
             [
               'epfemployee',
               'epf_employee',
             ],
           ),
-          socsoEmployee:
-              _csvMoney(
+          socsoEmployee: _csvMoney(
             row,
             [
               'socsoemployee',
               'socso_employee',
             ],
           ),
-          eisEmployee:
-              _csvMoney(
+          eisEmployee: _csvMoney(
             row,
             [
               'eisemployee',
               'eis_employee',
             ],
           ),
-          pcb:
-              _csvMoney(
+          pcb: _csvMoney(
             row,
             [
               'pcb',
             ],
           ),
-          zakat:
-              _csvMoney(
+          zakat: _csvMoney(
             row,
             [
               'zakat',
             ],
           ),
-          epfEmployer:
-              _csvMoney(
+          epfEmployer: _csvMoney(
             row,
             [
               'epfemployer',
               'epf_employer',
             ],
           ),
-          socsoEmployer:
-              _csvMoney(
+          socsoEmployer: _csvMoney(
             row,
             [
               'socsoemployer',
               'socso_employer',
             ],
           ),
-          eisEmployer:
-              _csvMoney(
+          eisEmployer: _csvMoney(
             row,
             [
               'eisemployer',
               'eis_employer',
             ],
           ),
-          newIcNo:
-              employee.newIcNo,
-          bankCode:
-              employee.bankCode,
-          bankAccount:
-              employee.bankAccount,
-          remarks:
-              null,
-          createdAt:
-              DateTime.now(),
-          updatedAt:
-              DateTime.now(),
+          newIcNo: employee.newIcNo,
+          bankCode: employee.bankCode,
+          bankAccount: employee.bankAccount,
+          remarks: null,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
 
-        final existing =
-            findPayroll(
+        final existing = findPayroll(
           employee.employeeId,
           period,
         );
 
-        final data =
-            _payrollToSupabase(
+        final data = _payrollToSupabase(
           record,
         );
 
         if (existing != null) {
-          await _supabase
-              .from('payroll')
-              .update(data)
-              .eq(
+          await _supabase.from('payroll').update(data).eq(
                 'id',
                 existing.id,
               );
 
           updated++;
         } else {
-          await _supabase
-              .from('payroll')
-              .upsert(data);
+          await _supabase.from('payroll').upsert(data);
 
           imported++;
         }
@@ -2573,8 +2229,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
 
     await loadPayrollFromSupabase();
 
-    final message =
-        StringBuffer();
+    final message = StringBuffer();
 
     message.writeln(
       'Payroll CSV import completed.',
@@ -2598,10 +2253,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
         'Errors:',
       );
 
-      for (
-        final error
-        in errors.take(10)
-      ) {
+      for (final error in errors.take(10)) {
         message.writeln(
           '• $error',
         );
@@ -2624,8 +2276,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   bool _hasRequiredPayrollColumns(
     List<String> headers,
   ) {
-    const required =
-        <String>[
+    const required = <String>[
       'employeeid',
       'period',
       'basicsalary',
@@ -2680,8 +2331,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     Map<String, String> row,
     List<String> keys,
   ) {
-    final value =
-        _csvValue(
+    final value = _csvValue(
       row,
       keys,
     );
@@ -2690,13 +2340,11 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       return 0;
     }
 
-    var text =
-        value.trim();
+    var text = value.trim();
 
     bool negative = false;
 
-    if (text.startsWith('(') &&
-        text.endsWith(')')) {
+    if (text.startsWith('(') && text.endsWith(')')) {
       negative = true;
 
       text = text.substring(
@@ -2716,16 +2364,13 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
         )
         .trim();
 
-    final parsed =
-        double.tryParse(text);
+    final parsed = double.tryParse(text);
 
     if (parsed == null) {
       return 0;
     }
 
-    return negative
-        ? -parsed
-        : parsed;
+    return negative ? -parsed : parsed;
   }
 
   // ==========================================================================
@@ -2735,33 +2380,26 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   DateTime? _parsePayrollPeriod(
     String value,
   ) {
-    final text =
-        value.trim();
+    final text = value.trim();
 
     if (text.isEmpty) {
       return null;
     }
 
-    final yearMonth =
-        RegExp(
+    final yearMonth = RegExp(
       r'^(\d{4})[-/](\d{1,2})$',
     ).firstMatch(text);
 
     if (yearMonth != null) {
-      final year =
-          int.tryParse(
+      final year = int.tryParse(
         yearMonth.group(1)!,
       );
 
-      final month =
-          int.tryParse(
+      final month = int.tryParse(
         yearMonth.group(2)!,
       );
 
-      if (year != null &&
-          month != null &&
-          month >= 1 &&
-          month <= 12) {
+      if (year != null && month != null && month >= 1 && month <= 12) {
         return DateTime(
           year,
           month,
@@ -2770,26 +2408,20 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       }
     }
 
-    final monthYear =
-        RegExp(
+    final monthYear = RegExp(
       r'^(\d{1,2})[-/](\d{4})$',
     ).firstMatch(text);
 
     if (monthYear != null) {
-      final month =
-          int.tryParse(
+      final month = int.tryParse(
         monthYear.group(1)!,
       );
 
-      final year =
-          int.tryParse(
+      final year = int.tryParse(
         monthYear.group(2)!,
       );
 
-      if (year != null &&
-          month != null &&
-          month >= 1 &&
-          month <= 12) {
+      if (year != null && month != null && month >= 1 && month <= 12) {
         return DateTime(
           year,
           month,
@@ -2798,47 +2430,37 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       }
     }
 
-    final fullDate =
-        RegExp(
+    final fullDate = RegExp(
       r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$',
     ).firstMatch(text);
 
     if (fullDate != null) {
-      final year =
-          int.tryParse(
+      final year = int.tryParse(
         fullDate.group(1)!,
       );
 
-      final month =
-          int.tryParse(
+      final month = int.tryParse(
         fullDate.group(2)!,
       );
 
-      final day =
-          int.tryParse(
+      final day = int.tryParse(
         fullDate.group(3)!,
       );
 
-      if (year != null &&
-          month != null &&
-          day != null) {
-        final result =
-            DateTime(
+      if (year != null && month != null && day != null) {
+        final result = DateTime(
           year,
           month,
           day,
         );
 
-        if (result.year == year &&
-            result.month == month &&
-            result.day == day) {
+        if (result.year == year && result.month == month && result.day == day) {
           return result;
         }
       }
     }
 
-    final parsed =
-        DateTime.tryParse(text);
+    final parsed = DateTime.tryParse(text);
 
     if (parsed != null) {
       return DateTime(
@@ -2877,8 +2499,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     return null;
   }
 
-  PayrollRecord?
-      payrollByEmployeeAndPeriod(
+  PayrollRecord? payrollByEmployeeAndPeriod(
     String employeeId,
     DateTime period,
   ) {
@@ -2895,47 +2516,41 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   List<PayrollRecord> branchPayroll(
     String branchId,
   ) {
-    final branch =
-        getBranch(branchId);
+    final branch = getBranch(branchId);
 
     if (branch == null) {
       return [];
     }
 
-    final ids =
-        employees
-            .where(
-              (employee) =>
-                  _normalise(
-                    employee.branchId,
-                  ) ==
-                  _normalise(
-                    branch.id,
-                  ),
-            )
-            .map(
-              (employee) =>
-                  _normalise(
-                employee.employeeId,
+    final ids = employees
+        .where(
+          (employee) =>
+              _normalise(
+                employee.branchId,
+              ) ==
+              _normalise(
+                branch.id,
               ),
-            )
-            .toSet();
+        )
+        .map(
+          (employee) => _normalise(
+            employee.employeeId,
+          ),
+        )
+        .toSet();
 
-    final result =
-        payroll
-            .where(
-              (record) =>
-                  ids.contains(
-                _normalise(
-                  record.employeeId,
-                ),
-              ),
-            )
-            .toList();
+    final result = payroll
+        .where(
+          (record) => ids.contains(
+            _normalise(
+              record.employeeId,
+            ),
+          ),
+        )
+        .toList();
 
     result.sort(
-      (a, b) =>
-          b.period.compareTo(
+      (a, b) => b.period.compareTo(
         a.period,
       ),
     );
@@ -2943,10 +2558,8 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     return result;
   }
 
-  List<PayrollRecord>
-      get currentBranchPayroll {
-    final branchId =
-        currentBranchId;
+  List<PayrollRecord> get currentBranchPayroll {
+    final branchId = currentBranchId;
 
     if (branchId == null) {
       return [];
@@ -2961,26 +2574,23 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // EMPLOYEE PAYROLL
   // ==========================================================================
 
-  List<PayrollRecord>
-      employeePayroll(
+  List<PayrollRecord> employeePayroll(
     String employeeId,
   ) {
-    final result =
-        payroll
-            .where(
-              (record) =>
-                  _normalise(
-                    record.employeeId,
-                  ) ==
-                  _normalise(
-                    employeeId,
-                  ),
-            )
-            .toList();
+    final result = payroll
+        .where(
+          (record) =>
+              _normalise(
+                record.employeeId,
+              ) ==
+              _normalise(
+                employeeId,
+              ),
+        )
+        .toList();
 
     result.sort(
-      (a, b) =>
-          b.period.compareTo(
+      (a, b) => b.period.compareTo(
         a.period,
       ),
     );
@@ -2988,10 +2598,8 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     return result;
   }
 
-  List<PayrollRecord>
-      get currentEmployeePayroll {
-    final employeeId =
-        currentEmployeeId;
+  List<PayrollRecord> get currentEmployeePayroll {
+    final employeeId = currentEmployeeId;
 
     if (employeeId == null) {
       return [];
@@ -3007,11 +2615,9 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // ==========================================================================
 
   Employee? get currentEmployee {
-    final id =
-        currentEmployeeId;
+    final id = currentEmployeeId;
 
-    if (id == null ||
-        id.trim().isEmpty) {
+    if (id == null || id.trim().isEmpty) {
       return null;
     }
 
@@ -3026,9 +2632,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     PayrollRecord record,
   ) async {
     try {
-      await _supabase
-          .from('payroll')
-          .upsert(
+      await _supabase.from('payroll').upsert(
             _payrollToSupabase(
               record,
             ),
@@ -3052,10 +2656,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     String payrollId,
   ) async {
     try {
-      await _supabase
-          .from('payroll')
-          .delete()
-          .eq(
+      await _supabase.from('payroll').delete().eq(
             'id',
             payrollId,
           );
@@ -3084,34 +2685,29 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // BRANCH ATTENDANCE
   // ==========================================================================
 
-  List<AttendanceRecord>
-      branchAttendance(
+  List<AttendanceRecord> branchAttendance(
     String branchId,
   ) {
-    final branch =
-        getBranch(branchId);
+    final branch = getBranch(branchId);
 
     if (branch == null) {
       return [];
     }
 
-    final id =
-        _normalise(branch.id);
+    final id = _normalise(branch.id);
 
-    final result =
-        attendance
-            .where(
-              (record) =>
-                  _normalise(
-                    record.branchId,
-                  ) ==
-                  id,
-            )
-            .toList();
+    final result = attendance
+        .where(
+          (record) =>
+              _normalise(
+                record.branchId,
+              ) ==
+              id,
+        )
+        .toList();
 
     result.sort(
-      (a, b) =>
-          b.date.compareTo(
+      (a, b) => b.date.compareTo(
         a.date,
       ),
     );
@@ -3119,10 +2715,8 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     return result;
   }
 
-  List<AttendanceRecord>
-      get currentBranchAttendance {
-    final branchId =
-        currentBranchId;
+  List<AttendanceRecord> get currentBranchAttendance {
+    final branchId = currentBranchId;
 
     if (branchId == null) {
       return [];
@@ -3137,26 +2731,23 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // EMPLOYEE ATTENDANCE
   // ==========================================================================
 
-  List<AttendanceRecord>
-      employeeAttendance(
+  List<AttendanceRecord> employeeAttendance(
     String employeeId,
   ) {
-    final result =
-        attendance
-            .where(
-              (record) =>
-                  _normalise(
-                    record.employeeId,
-                  ) ==
-                  _normalise(
-                    employeeId,
-                  ),
-            )
-            .toList();
+    final result = attendance
+        .where(
+          (record) =>
+              _normalise(
+                record.employeeId,
+              ) ==
+              _normalise(
+                employeeId,
+              ),
+        )
+        .toList();
 
     result.sort(
-      (a, b) =>
-          b.date.compareTo(
+      (a, b) => b.date.compareTo(
         a.date,
       ),
     );
@@ -3164,10 +2755,8 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     return result;
   }
 
-  List<AttendanceRecord>
-      get currentEmployeeAttendance {
-    final employeeId =
-        currentEmployeeId;
+  List<AttendanceRecord> get currentEmployeeAttendance {
+    final employeeId = currentEmployeeId;
 
     if (employeeId == null) {
       return [];
@@ -3182,8 +2771,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // ATTENDANCE BY DATE
   // ==========================================================================
 
-  AttendanceRecord?
-      attendanceForDate(
+  AttendanceRecord? attendanceForDate(
     String employeeId,
     DateTime date,
   ) {
@@ -3209,8 +2797,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // SAVE ATTENDANCE
   // ==========================================================================
 
-  Future<AttendanceRecord>
-      saveAttendance({
+  Future<AttendanceRecord> saveAttendance({
     required String employeeId,
     required String branchId,
     required DateTime date,
@@ -3218,45 +2805,26 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     required String checkOut,
     required String status,
   }) async {
-    final normalizedDate =
-        DateTime(
+    final normalizedDate = DateTime(
       date.year,
       date.month,
       date.day,
     );
 
-    final actualBranch =
-        getBranch(branchId)?.id ??
-            branchId.trim();
+    final actualBranch = getBranch(branchId)?.id ?? branchId.trim();
 
-    final newRecord =
-        AttendanceRecord(
-      id:
-          'ATT-$employeeId-${normalizedDate.year}-${normalizedDate.month}-${normalizedDate.day}',
-      employeeId:
-          employeeId.trim(),
-      branchId:
-          actualBranch,
-      date:
-          normalizedDate,
-      checkIn:
-          checkIn.trim().isEmpty
-              ? '-'
-              : checkIn.trim(),
-      checkOut:
-          checkOut.trim().isEmpty
-              ? '-'
-              : checkOut.trim(),
-      status:
-          status.trim().isEmpty
-              ? 'Present'
-              : status.trim(),
+    final newRecord = AttendanceRecord(
+      id: 'ATT-$employeeId-${normalizedDate.year}-${normalizedDate.month}-${normalizedDate.day}',
+      employeeId: employeeId.trim(),
+      branchId: actualBranch,
+      date: normalizedDate,
+      checkIn: checkIn.trim().isEmpty ? '-' : checkIn.trim(),
+      checkOut: checkOut.trim().isEmpty ? '-' : checkOut.trim(),
+      status: status.trim().isEmpty ? 'Present' : status.trim(),
     );
 
     try {
-      await _supabase
-          .from('attendance')
-          .upsert(
+      await _supabase.from('attendance').upsert(
             _attendanceToSupabase(
               newRecord,
             ),
@@ -3282,18 +2850,12 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     AttendanceRecord record,
   ) async {
     await saveAttendance(
-      employeeId:
-          record.employeeId,
-      branchId:
-          record.branchId,
-      date:
-          record.date,
-      checkIn:
-          record.checkIn,
-      checkOut:
-          record.checkOut,
-      status:
-          record.status,
+      employeeId: record.employeeId,
+      branchId: record.branchId,
+      date: record.date,
+      checkIn: record.checkIn,
+      checkOut: record.checkOut,
+      status: record.status,
     );
   }
 
@@ -3334,43 +2896,30 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // CHECK IN
   // ==========================================================================
 
-  Future<AttendanceRecord>
-      checkInEmployee(
+  Future<AttendanceRecord> checkInEmployee(
     String employeeId, {
     String? branchId,
   }) async {
-    final now =
-        DateTime.now();
+    final now = DateTime.now();
 
-    final actualBranchId =
-        branchId ??
-            branchIdForEmployee(
-              employeeId,
-            ) ??
-            '';
+    final actualBranchId = branchId ??
+        branchIdForEmployee(
+          employeeId,
+        ) ??
+        '';
 
-    final existing =
-        attendanceForDate(
+    final existing = attendanceForDate(
       employeeId,
       now,
     );
 
     return saveAttendance(
-      employeeId:
-          employeeId,
-      branchId:
-          actualBranchId,
-      date:
-          now,
-      checkIn:
-          _formatTime(now),
-      checkOut:
-          existing?.checkOut ??
-              '-',
-      status:
-          _isLate(now)
-              ? 'Late'
-              : 'Present',
+      employeeId: employeeId,
+      branchId: actualBranchId,
+      date: now,
+      checkIn: _formatTime(now),
+      checkOut: existing?.checkOut ?? '-',
+      status: _isLate(now) ? 'Late' : 'Present',
     );
   }
 
@@ -3378,15 +2927,12 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // CHECK OUT
   // ==========================================================================
 
-  Future<AttendanceRecord?>
-      checkOutEmployee(
+  Future<AttendanceRecord?> checkOutEmployee(
     String employeeId,
   ) async {
-    final now =
-        DateTime.now();
+    final now = DateTime.now();
 
-    final existing =
-        attendanceForDate(
+    final existing = attendanceForDate(
       employeeId,
       now,
     );
@@ -3396,18 +2942,12 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     }
 
     return saveAttendance(
-      employeeId:
-          employeeId,
-      branchId:
-          existing.branchId,
-      date:
-          existing.date,
-      checkIn:
-          existing.checkIn,
-      checkOut:
-          _formatTime(now),
-      status:
-          existing.status,
+      employeeId: employeeId,
+      branchId: existing.branchId,
+      date: existing.date,
+      checkIn: existing.checkIn,
+      checkOut: _formatTime(now),
+      status: existing.status,
     );
   }
 
@@ -3415,19 +2955,16 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // TODAY ATTENDANCE
   // ==========================================================================
 
-  List<AttendanceRecord>
-      branchTodayAttendance(
+  List<AttendanceRecord> branchTodayAttendance(
     String branchId,
   ) {
-    final today =
-        DateTime.now();
+    final today = DateTime.now();
 
     return branchAttendance(
       branchId,
     )
         .where(
-          (record) =>
-              _sameDate(
+          (record) => _sameDate(
             record.date,
             today,
           ),
@@ -3446,11 +2983,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       branchId,
     )
         .where(
-          (record) =>
-              record.status
-                  .trim()
-                  .toLowerCase() ==
-              'present',
+          (record) => record.status.trim().toLowerCase() == 'present',
         )
         .length;
   }
@@ -3462,11 +2995,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       branchId,
     )
         .where(
-          (record) =>
-              record.status
-                  .trim()
-                  .toLowerCase() ==
-              'late',
+          (record) => record.status.trim().toLowerCase() == 'late',
         )
         .length;
   }
@@ -3478,11 +3007,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       branchId,
     )
         .where(
-          (record) =>
-              record.status
-                  .trim()
-                  .toLowerCase() ==
-              'absent',
+          (record) => record.status.trim().toLowerCase() == 'absent',
         )
         .length;
   }
@@ -3494,57 +3019,50 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   bool _hasRequiredEmployeeColumns(
     List<String> headers,
   ) {
-    final hasId =
+    final hasId = headers.contains(
+          'employeeid',
+        ) ||
         headers.contains(
-              'employeeid',
-            ) ||
-            headers.contains(
-              'employee_id',
-            ) ||
-            headers.contains(
-              'id',
-            );
-
-    final hasName =
+          'employee_id',
+        ) ||
         headers.contains(
-              'name',
-            ) ||
-            headers.contains(
-              'employee_name',
-            ) ||
-            headers.contains(
-              'employeename',
-            );
+          'id',
+        );
 
-    final hasBranch =
+    final hasName = headers.contains(
+          'name',
+        ) ||
         headers.contains(
-              'branchid',
-            ) ||
-            headers.contains(
-              'branch_id',
-            ) ||
-            headers.contains(
-              'branch',
-            );
-
-    final hasJoiningDate =
+          'employee_name',
+        ) ||
         headers.contains(
-              'joiningdate',
-            ) ||
-            headers.contains(
-              'joining_date',
-            ) ||
-            headers.contains(
-              'datejoined',
-            ) ||
-            headers.contains(
-              'date_joined',
-            );
+          'employeename',
+        );
 
-    return hasId &&
-        hasName &&
-        hasBranch &&
-        hasJoiningDate;
+    final hasBranch = headers.contains(
+          'branchid',
+        ) ||
+        headers.contains(
+          'branch_id',
+        ) ||
+        headers.contains(
+          'branch',
+        );
+
+    final hasJoiningDate = headers.contains(
+          'joiningdate',
+        ) ||
+        headers.contains(
+          'joining_date',
+        ) ||
+        headers.contains(
+          'datejoined',
+        ) ||
+        headers.contains(
+          'date_joined',
+        );
+
+    return hasId && hasName && hasBranch && hasJoiningDate;
   }
 
   String _normaliseHeader(
@@ -3568,22 +3086,17 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     List<String> keys,
   ) {
     for (final key in keys) {
-      final normalisedKey =
-          _normaliseHeader(key);
+      final normalisedKey = _normaliseHeader(key);
 
-      final value =
-          row[normalisedKey];
+      final value = row[normalisedKey];
 
-      if (value != null &&
-          value.trim().isNotEmpty) {
+      if (value != null && value.trim().isNotEmpty) {
         return value.trim();
       }
 
-      final directValue =
-          row[key];
+      final directValue = row[key];
 
-      if (directValue != null &&
-          directValue.trim().isNotEmpty) {
+      if (directValue != null && directValue.trim().isNotEmpty) {
         return directValue.trim();
       }
     }
@@ -3598,42 +3111,25 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   List<String> _parseCsvLine(
     String line,
   ) {
-    final values =
-        <String>[];
+    final values = <String>[];
 
-    final buffer =
-        StringBuffer();
+    final buffer = StringBuffer();
 
-    bool insideQuotes =
-        false;
+    bool insideQuotes = false;
 
-    for (
-      int i = 0;
-      i < line.length;
-      i++
-    ) {
-      final char =
-          line[i];
+    for (int i = 0; i < line.length; i++) {
+      final char = line[i];
 
       if (char == '"') {
-        if (insideQuotes &&
-            i + 1 <
-                line.length &&
-            line[i + 1] ==
-                '"') {
+        if (insideQuotes && i + 1 < line.length && line[i + 1] == '"') {
           buffer.write('"');
           i++;
         } else {
-          insideQuotes =
-              !insideQuotes;
+          insideQuotes = !insideQuotes;
         }
-      } else if (
-          char == ',' &&
-          !insideQuotes) {
+      } else if (char == ',' && !insideQuotes) {
         values.add(
-          buffer
-              .toString()
-              .trim(),
+          buffer.toString().trim(),
         );
 
         buffer.clear();
@@ -3643,9 +3139,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     }
 
     values.add(
-      buffer
-          .toString()
-          .trim(),
+      buffer.toString().trim(),
     );
 
     return values;
@@ -3658,15 +3152,13 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   DateTime? _parseDate(
     String value,
   ) {
-    final text =
-        value.trim();
+    final text = value.trim();
 
     if (text.isEmpty) {
       return null;
     }
 
-    final parsed =
-        DateTime.tryParse(text);
+    final parsed = DateTime.tryParse(text);
 
     if (parsed != null) {
       return DateTime(
@@ -3676,79 +3168,61 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       );
     }
 
-    final slash =
-        RegExp(
+    final slash = RegExp(
       r'^(\d{1,2})/(\d{1,2})/(\d{4})$',
     ).firstMatch(text);
 
     if (slash != null) {
-      final day =
-          int.tryParse(
+      final day = int.tryParse(
         slash.group(1)!,
       );
 
-      final month =
-          int.tryParse(
+      final month = int.tryParse(
         slash.group(2)!,
       );
 
-      final year =
-          int.tryParse(
+      final year = int.tryParse(
         slash.group(3)!,
       );
 
-      if (day != null &&
-          month != null &&
-          year != null) {
-        final result =
-            DateTime(
+      if (day != null && month != null && year != null) {
+        final result = DateTime(
           year,
           month,
           day,
         );
 
-        if (result.year == year &&
-            result.month == month &&
-            result.day == day) {
+        if (result.year == year && result.month == month && result.day == day) {
           return result;
         }
       }
     }
 
-    final dash =
-        RegExp(
+    final dash = RegExp(
       r'^(\d{1,2})-(\d{1,2})-(\d{4})$',
     ).firstMatch(text);
 
     if (dash != null) {
-      final day =
-          int.tryParse(
+      final day = int.tryParse(
         dash.group(1)!,
       );
 
-      final month =
-          int.tryParse(
+      final month = int.tryParse(
         dash.group(2)!,
       );
 
-      final year =
-          int.tryParse(
+      final year = int.tryParse(
         dash.group(3)!,
       );
 
-      if (day != null &&
-          month != null &&
-          year != null) {
-        final result =
-            DateTime(
+      if (day != null && month != null && year != null) {
+        final result = DateTime(
           year,
           month,
           day,
         );
 
-        if (result.year == year &&
-            result.month == month &&
-            result.day == day) {
+        if (result.year == year && result.month == month && result.day == day) {
           return result;
         }
       }
@@ -3764,10 +3238,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   bool _parseBool(
     String value,
   ) {
-    final text =
-        value
-            .trim()
-            .toLowerCase();
+    final text = value.trim().toLowerCase();
 
     if (text.isEmpty) {
       return true;
@@ -3788,22 +3259,14 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     DateTime a,
     DateTime b,
   ) {
-    return a.year ==
-            b.year &&
-        a.month ==
-            b.month &&
-        a.day ==
-            b.day;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   bool _sameMonth(
     DateTime a,
     DateTime b,
   ) {
-    return a.year ==
-            b.year &&
-        a.month ==
-            b.month;
+    return a.year == b.year && a.month == b.month;
   }
 
   // ==========================================================================
@@ -3813,25 +3276,18 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   String _formatTime(
     DateTime date,
   ) {
-    final hour =
-        date.hour == 0
-            ? 12
-            : date.hour > 12
-                ? date.hour - 12
-                : date.hour;
+    final hour = date.hour == 0
+        ? 12
+        : date.hour > 12
+            ? date.hour - 12
+            : date.hour;
 
-    final minute =
-        date.minute
-            .toString()
-            .padLeft(
-              2,
-              '0',
-            );
+    final minute = date.minute.toString().padLeft(
+          2,
+          '0',
+        );
 
-    final suffix =
-        date.hour >= 12
-            ? 'PM'
-            : 'AM';
+    final suffix = date.hour >= 12 ? 'PM' : 'AM';
 
     return '$hour:$minute $suffix';
   }
@@ -3843,8 +3299,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   bool _isLate(
     DateTime date,
   ) {
-    final nineAm =
-        DateTime(
+    final nineAm = DateTime(
       date.year,
       date.month,
       date.day,
@@ -3885,9 +3340,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     DateTime? value, {
     DateTime? fallback,
   }) {
-    return value ??
-        fallback ??
-        DateTime.now();
+    return value ?? fallback ?? DateTime.now();
   }
 
   // ==========================================================================
@@ -3905,16 +3358,9 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       return value;
     }
 
-    final text =
-        value
-            .toString()
-            .trim()
-            .toLowerCase();
+    final text = value.toString().trim().toLowerCase();
 
-    return text == 'true' ||
-        text == '1' ||
-        text == 'yes' ||
-        text == 'active';
+    return text == 'true' || text == '1' || text == 'yes' || text == 'active';
   }
 
   // ==========================================================================
@@ -3959,44 +3405,29 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // EMPLOYEE -> SUPABASE
   // ==========================================================================
 
-  Map<String, dynamic>
-      _employeeToSupabase(
+  Map<String, dynamic> _employeeToSupabase(
     Employee employee,
   ) {
-    final joiningDate =
-        _requiredDate(
+    final joiningDate = _requiredDate(
       employee.joiningDate,
     );
 
     return {
-      'employee_id':
-          employee.employeeId,
-      'name':
-          employee.name,
-      'designation':
-          employee.designation,
-      'department':
-          employee.department,
-      'email':
-          employee.email,
-      'new_ic_no':
-          employee.newIcNo,
-      'bank_code':
-          employee.bankCode,
-      'bank_account':
-          employee.bankAccount,
-      'phone':
-          employee.phone,
-      'address':
-          employee.address,
-      'joining_date':
-          _dateOnlyString(
+      'employee_id': employee.employeeId,
+      'name': employee.name,
+      'designation': employee.designation,
+      'department': employee.department,
+      'email': employee.email,
+      'new_ic_no': employee.newIcNo,
+      'bank_code': employee.bankCode,
+      'bank_account': employee.bankAccount,
+      'phone': employee.phone,
+      'address': employee.address,
+      'joining_date': _dateOnlyString(
         joiningDate,
       ),
-      'is_active':
-          employee.isActive,
-      'branch_id':
-          employee.branchId,
+      'is_active': employee.isActive,
+      'branch_id': employee.branchId,
     };
   }
 
@@ -4004,75 +3435,48 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // PAYROLL -> SUPABASE
   // ==========================================================================
 
-  Map<String, dynamic>
-      _payrollToSupabase(
+  Map<String, dynamic> _payrollToSupabase(
     PayrollRecord record,
   ) {
-    final createdAt =
-        _requiredDate(
+    final createdAt = _requiredDate(
       record.createdAt,
     );
 
-    final updatedAt =
-        _requiredDate(
+    final updatedAt = _requiredDate(
       record.updatedAt,
     );
 
     return {
-      'id':
-          record.id,
-      'employee_id':
-          record.employeeId,
-      'period':
-          _dateOnlyString(
+      'id': record.id,
+      'employee_id': record.employeeId,
+      'period': _dateOnlyString(
         record.period,
       ),
-      'basic_salary':
-          record.basicSalary,
-      'elaun_kedatangan':
-          record.elaunKedatangan,
-      'elaun_perkhidmatan':
-          record.elaunPerkhidmatan,
-      'elaun_kerajinan':
-          record.elaunKerajinan,
-      'overtime':
-          record.overtime,
-      'bonus':
-          record.bonus,
-      'commission':
-          record.commission,
-      'other_earnings':
-          record.otherEarnings,
-      'cuti_umum':
-          record.cutiUmum,
-      'epf_employee':
-          record.epfEmployee,
-      'socso_employee':
-          record.socsoEmployee,
-      'eis_employee':
-          record.eisEmployee,
-      'pcb':
-          record.pcb,
-      'zakat':
-          record.zakat,
-      'epf_employer':
-          record.epfEmployer,
-      'socso_employer':
-          record.socsoEmployer,
-      'eis_employer':
-          record.eisEmployer,
-      'new_ic_no':
-          record.newIcNo,
-      'bank_code':
-          record.bankCode,
-      'bank_account':
-          record.bankAccount,
-      'remarks':
-          record.remarks,
-      'created_at':
-          createdAt.toIso8601String(),
-      'updated_at':
-          updatedAt.toIso8601String(),
+      'basic_salary': record.basicSalary,
+      'elaun_kedatangan': record.elaunKedatangan,
+      'elaun_perkhidmatan': record.elaunPerkhidmatan,
+      'elaun_kerajinan': record.elaunKerajinan,
+      'overtime': record.overtime,
+      'bonus': record.bonus,
+      'commission': record.commission,
+      'other_earnings': record.otherEarnings,
+      'cuti_umum': record.cutiUmum,
+      'late_deduction': record.lateDeduction,
+      'unpaid_deduction': record.unpaidLeave,
+      'epf_employee': record.epfEmployee,
+      'socso_employee': record.socsoEmployee,
+      'eis_employee': record.eisEmployee,
+      'pcb': record.pcb,
+      'zakat': record.zakat,
+      'epf_employer': record.epfEmployer,
+      'socso_employer': record.socsoEmployer,
+      'eis_employer': record.eisEmployer,
+      'new_ic_no': record.newIcNo,
+      'bank_code': record.bankCode,
+      'bank_account': record.bankAccount,
+      'remarks': record.remarks,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
@@ -4080,28 +3484,19 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // ATTENDANCE -> SUPABASE
   // ==========================================================================
 
-  Map<String, dynamic>
-      _attendanceToSupabase(
+  Map<String, dynamic> _attendanceToSupabase(
     AttendanceRecord record,
   ) {
     return {
-      'id':
-          record.id,
-      'employee_id':
-          record.employeeId,
-      'branch_id':
-          record.branchId,
-      'date':
-          _dateOnlyString(
+      'id': record.id,
+      'employee_id': record.employeeId,
+      'branch_id': record.branchId,
+      'date': _dateOnlyString(
         record.date,
       ),
-      'check_in':
-          record.checkIn,
-      'check_out':
-          record.checkOut,
-      'status':
-          record.status,
+      'check_in': record.checkIn,
+      'check_out': record.checkOut,
+      'status': record.status,
     };
   }
 }
-

@@ -49,6 +49,7 @@ class PayrollRecord {
   final double advanceDeduction;
   final double loanDeduction;
   final double unpaidLeave;
+  final double lateDeduction;
   final double otherDeductionAmount;
 
   // --------------------------------------------------------------------------
@@ -106,6 +107,7 @@ class PayrollRecord {
     this.advanceDeduction = 0,
     this.loanDeduction = 0,
     this.unpaidLeave = 0,
+    this.lateDeduction = 0,
     this.otherDeductionAmount = 0,
 
     // Employer contributions
@@ -124,7 +126,6 @@ class PayrollRecord {
     this.isPaid = false,
     this.paidAt,
     this.paymentReference = '',
-
     this.remarks,
     this.createdAt,
     this.updatedAt,
@@ -141,8 +142,12 @@ class PayrollRecord {
   }
 
   double get otherDeduction {
-    return cutiUmum + zakat + advanceDeduction + loanDeduction +
-        unpaidLeave + otherDeductionAmount;
+    return cutiUmum +
+        zakat +
+        advanceDeduction +
+        loanDeduction +
+        unpaidLeave +
+        otherDeductionAmount;
   }
 
   // ==========================================================================
@@ -150,10 +155,7 @@ class PayrollRecord {
   // ==========================================================================
 
   double get totalAllowance {
-    return fwSalary +
-        elaunKedatangan +
-        elaunPerkhidmatan +
-        elaunKerajinan;
+    return fwSalary + elaunKedatangan + elaunPerkhidmatan + elaunKerajinan;
   }
 
   double get additionalEarnings {
@@ -175,11 +177,7 @@ class PayrollRecord {
   }
 
   double get statutoryDeductions {
-    return epfEmployee +
-        socsoEmployee +
-        eisEmployee +
-        pcb +
-        zakat;
+    return epfEmployee + socsoEmployee + eisEmployee + pcb + zakat;
   }
 
   double get totalDeductions {
@@ -187,6 +185,7 @@ class PayrollRecord {
         advanceDeduction +
         loanDeduction +
         unpaidLeave +
+        lateDeduction +
         otherDeductionAmount;
   }
 
@@ -195,9 +194,7 @@ class PayrollRecord {
   }
 
   double get totalEmployerContribution {
-    return epfEmployer +
-        socsoEmployer +
-        eisEmployer;
+    return epfEmployer + socsoEmployer + eisEmployer;
   }
 
   double get totalEmployerCost {
@@ -212,7 +209,6 @@ class PayrollRecord {
     String? id,
     String? employeeId,
     DateTime? period,
-
     double? basicSalary,
     double? fwSalary,
     double? elaunKedatangan,
@@ -222,22 +218,19 @@ class PayrollRecord {
     double? bonus,
     double? commission,
     double? otherEarnings,
-
     double? cutiUmum,
     double? epfEmployee,
     double? socsoEmployee,
     double? eisEmployee,
     double? pcb,
     double? zakat,
-
+    double? lateDeduction,
     double? epfEmployer,
     double? socsoEmployer,
     double? eisEmployer,
-
     String? newIcNo,
     String? bankCode,
     String? bankAccount,
-
     String? remarks,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -246,44 +239,28 @@ class PayrollRecord {
       id: id ?? this.id,
       employeeId: employeeId ?? this.employeeId,
       period: period ?? this.period,
-
       basicSalary: basicSalary ?? this.basicSalary,
       fwSalary: fwSalary ?? this.fwSalary,
-      elaunKedatangan:
-      elaunKedatangan ?? this.elaunKedatangan,
-      elaunPerkhidmatan:
-      elaunPerkhidmatan ?? this.elaunPerkhidmatan,
-      elaunKerajinan:
-      elaunKerajinan ?? this.elaunKerajinan,
-
+      elaunKedatangan: elaunKedatangan ?? this.elaunKedatangan,
+      elaunPerkhidmatan: elaunPerkhidmatan ?? this.elaunPerkhidmatan,
+      elaunKerajinan: elaunKerajinan ?? this.elaunKerajinan,
       overtime: overtime ?? this.overtime,
       bonus: bonus ?? this.bonus,
       commission: commission ?? this.commission,
-      otherEarnings:
-      otherEarnings ?? this.otherEarnings,
-
+      otherEarnings: otherEarnings ?? this.otherEarnings,
       cutiUmum: cutiUmum ?? this.cutiUmum,
-      epfEmployee:
-      epfEmployee ?? this.epfEmployee,
-      socsoEmployee:
-      socsoEmployee ?? this.socsoEmployee,
-      eisEmployee:
-      eisEmployee ?? this.eisEmployee,
+      epfEmployee: epfEmployee ?? this.epfEmployee,
+      socsoEmployee: socsoEmployee ?? this.socsoEmployee,
+      eisEmployee: eisEmployee ?? this.eisEmployee,
       pcb: pcb ?? this.pcb,
       zakat: zakat ?? this.zakat,
-
-      epfEmployer:
-      epfEmployer ?? this.epfEmployer,
-      socsoEmployer:
-      socsoEmployer ?? this.socsoEmployer,
-      eisEmployer:
-      eisEmployer ?? this.eisEmployer,
-
+      lateDeduction: lateDeduction ?? this.lateDeduction,
+      epfEmployer: epfEmployer ?? this.epfEmployer,
+      socsoEmployer: socsoEmployer ?? this.socsoEmployer,
+      eisEmployer: eisEmployer ?? this.eisEmployer,
       newIcNo: newIcNo ?? this.newIcNo,
       bankCode: bankCode ?? this.bankCode,
-      bankAccount:
-      bankAccount ?? this.bankAccount,
-
+      bankAccount: bankAccount ?? this.bankAccount,
       remarks: remarks ?? this.remarks,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -299,7 +276,6 @@ class PayrollRecord {
       'id': id,
       'employeeId': employeeId,
       'period': period.toIso8601String(),
-
       'basicSalary': basicSalary,
       'fwSalary': fwSalary,
       'elaunKedatangan': elaunKedatangan,
@@ -309,22 +285,19 @@ class PayrollRecord {
       'bonus': bonus,
       'commission': commission,
       'otherEarnings': otherEarnings,
-
       'cutiUmum': cutiUmum,
       'epfEmployee': epfEmployee,
       'socsoEmployee': socsoEmployee,
       'eisEmployee': eisEmployee,
       'pcb': pcb,
       'zakat': zakat,
-
+      'lateDeduction': lateDeduction,
       'epfEmployer': epfEmployer,
       'socsoEmployer': socsoEmployer,
       'eisEmployer': eisEmployer,
-
       'newIcNo': newIcNo,
       'bankCode': bankCode,
       'bankAccount': bankAccount,
-
       'remarks': remarks,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -336,59 +309,44 @@ class PayrollRecord {
   // ==========================================================================
 
   factory PayrollRecord.fromJson(
-      Map<String, dynamic> json,
-      ) {
+    Map<String, dynamic> json,
+  ) {
     return PayrollRecord(
       id: _stringValue(json['id']),
       employeeId: _stringValue(json['employeeId']),
       period: _parseDate(json['period']),
-
       basicSalary: _doubleValue(json['basicSalary']),
-
       fwSalary: _doubleValue(
         json['fwSalary'] ??
             json['fw_salary'] ??
             json['FW_salary'] ??
             json['FW SALARY'],
       ),
-
       elaunKedatangan: _doubleValue(
-        json['elaunKedatangan'] ??
-            json['ELAUN KEDATANGAN'],
+        json['elaunKedatangan'] ?? json['ELAUN KEDATANGAN'],
       ),
-
       elaunPerkhidmatan: _doubleValue(
         json['elaunPerkhidmatan'] ??
             json['ELAUAN PERKHIDMATAN'] ??
             json['ELAUN PERKHIDMATAN'],
       ),
-
       elaunKerajinan: _doubleValue(
-        json['elaunKerajinan'] ??
-            json['ELAUN KERAJINAN'],
+        json['elaunKerajinan'] ?? json['ELAUN KERAJINAN'],
       ),
-
       overtime: _doubleValue(json['overtime']),
       bonus: _doubleValue(json['bonus']),
       commission: _doubleValue(json['commission']),
-      otherEarnings:
-      _doubleValue(json['otherEarnings']),
+      otherEarnings: _doubleValue(json['otherEarnings']),
       housingAllowance:
-      _doubleValue(json['housingAllowance'] ?? json['housing_allowance']),
+          _doubleValue(json['housingAllowance'] ?? json['housing_allowance']),
       travelAllowance:
-      _doubleValue(json['travelAllowance'] ?? json['travel_allowance']),
-
+          _doubleValue(json['travelAllowance'] ?? json['travel_allowance']),
       cutiUmum: _doubleValue(
-        json['cutiUmum'] ??
-            json['CUTI UMUM'],
+        json['cutiUmum'] ?? json['CUTI UMUM'],
       ),
-
-      epfEmployee:
-      _doubleValue(json['epfEmployee']),
-      socsoEmployee:
-      _doubleValue(json['socsoEmployee']),
-      eisEmployee:
-      _doubleValue(json['eisEmployee']),
+      epfEmployee: _doubleValue(json['epfEmployee']),
+      socsoEmployee: _doubleValue(json['socsoEmployee']),
+      eisEmployee: _doubleValue(json['eisEmployee']),
       pcb: _doubleValue(json['pcb']),
       zakat: _doubleValue(json['zakat']),
       advanceDeduction: _doubleValue(
@@ -403,23 +361,18 @@ class PayrollRecord {
             json['unpaidDeduction'] ??
             json['unpaid_deduction'],
       ),
+      lateDeduction: _doubleValue(
+        json['lateDeduction'] ?? json['late_deduction'],
+      ),
       otherDeductionAmount: _doubleValue(
         json['otherDeduction'] ?? json['other_deduction'],
       ),
-
-      epfEmployer:
-      _doubleValue(json['epfEmployer']),
-      socsoEmployer:
-      _doubleValue(json['socsoEmployer']),
-      eisEmployer:
-      _doubleValue(json['eisEmployer']),
-
-      newIcNo:
-      _stringValue(json['newIcNo']),
-      bankCode:
-      _stringValue(json['bankCode']),
-      bankAccount:
-      _stringValue(json['bankAccount']),
+      epfEmployer: _doubleValue(json['epfEmployer']),
+      socsoEmployer: _doubleValue(json['socsoEmployer']),
+      eisEmployer: _doubleValue(json['eisEmployer']),
+      newIcNo: _stringValue(json['newIcNo']),
+      bankCode: _stringValue(json['bankCode']),
+      bankAccount: _stringValue(json['bankAccount']),
       bankName: _stringValue(json['bankName'] ?? json['bank_name']),
       storedGrossSalary: _nullableDouble(
         json['grossSalary'] ?? json['gross_salary'],
@@ -435,13 +388,9 @@ class PayrollRecord {
       paymentReference: _stringValue(
         json['paymentReference'] ?? json['payment_reference'],
       ),
-
-      remarks:
-      _nullableString(json['remarks']),
-      createdAt:
-      _parseNullableDate(json['createdAt']),
-      updatedAt:
-      _parseNullableDate(json['updatedAt']),
+      remarks: _nullableString(json['remarks']),
+      createdAt: _parseNullableDate(json['createdAt']),
+      updatedAt: _parseNullableDate(json['updatedAt']),
     );
   }
 }
@@ -514,12 +463,9 @@ class Employee {
       bankAccount: bankAccount ?? this.bankAccount,
       phone: phone ?? this.phone,
       address: address ?? this.address,
-      joiningDate:
-      joiningDate ?? this.joiningDate,
-      isActive:
-      isActive ?? this.isActive,
-      branchId:
-      branchId ?? this.branchId,
+      joiningDate: joiningDate ?? this.joiningDate,
+      isActive: isActive ?? this.isActive,
+      branchId: branchId ?? this.branchId,
     );
   }
 
@@ -539,48 +485,34 @@ class Employee {
       'bankAccount': bankAccount,
       'phone': phone,
       'address': address,
-      'joiningDate':
-      joiningDate?.toIso8601String(),
+      'joiningDate': joiningDate?.toIso8601String(),
       'isActive': isActive,
       'branchId': branchId,
     };
   }
 
   factory Employee.fromJson(
-      Map<String, dynamic> json,
-      ) {
+    Map<String, dynamic> json,
+  ) {
     return Employee(
-      employeeId:
-      _stringValue(json['employeeId']),
-      name:
-      _stringValue(json['name']),
-      designation:
-      _stringValue(json['designation']),
-      department:
-      _stringValue(json['department']),
-      email:
-      _stringValue(json['email']),
-      newIcNo:
-      _stringValue(json['newIcNo']),
-      bankCode:
-      _stringValue(json['bankCode']),
-      bankAccount:
-      _stringValue(json['bankAccount']),
-      phone:
-      _stringValue(json['phone']),
-      address:
-      _stringValue(json['address']),
-      joiningDate:
-      _parseNullableDate(
+      employeeId: _stringValue(json['employeeId']),
+      name: _stringValue(json['name']),
+      designation: _stringValue(json['designation']),
+      department: _stringValue(json['department']),
+      email: _stringValue(json['email']),
+      newIcNo: _stringValue(json['newIcNo']),
+      bankCode: _stringValue(json['bankCode']),
+      bankAccount: _stringValue(json['bankAccount']),
+      phone: _stringValue(json['phone']),
+      address: _stringValue(json['address']),
+      joiningDate: _parseNullableDate(
         json['joiningDate'],
       ),
-      isActive:
-      _boolValue(
+      isActive: _boolValue(
         json['isActive'],
         defaultValue: true,
       ),
-      branchId:
-      _stringValue(json['branchId']),
+      branchId: _stringValue(json['branchId']),
     );
   }
 }
@@ -623,22 +555,16 @@ class AttendanceRecord {
     required this.id,
     required this.employeeId,
     required this.date,
-
     this.checkIn = '',
     this.checkOut = '',
     this.status = 'Absent',
-
     this.morningIn = '',
     this.morningOut = '',
-
     this.afternoonIn = '',
     this.afternoonOut = '',
-
     this.overtimeIn = '',
     this.overtimeOut = '',
-
     this.otAuthorized = false,
-
     this.branchId = '',
   });
 
@@ -678,44 +604,32 @@ class AttendanceRecord {
     String? id,
     String? employeeId,
     DateTime? date,
-
     String? checkIn,
     String? checkOut,
     String? status,
-
     String? morningIn,
     String? morningOut,
-
     String? afternoonIn,
     String? afternoonOut,
-
     String? overtimeIn,
     String? overtimeOut,
-
     bool? otAuthorized,
-
     String? branchId,
   }) {
     return AttendanceRecord(
       id: id ?? this.id,
       employeeId: employeeId ?? this.employeeId,
       date: date ?? this.date,
-
       checkIn: checkIn ?? this.checkIn,
       checkOut: checkOut ?? this.checkOut,
       status: status ?? this.status,
-
       morningIn: morningIn ?? this.morningIn,
       morningOut: morningOut ?? this.morningOut,
-
       afternoonIn: afternoonIn ?? this.afternoonIn,
       afternoonOut: afternoonOut ?? this.afternoonOut,
-
       overtimeIn: overtimeIn ?? this.overtimeIn,
       overtimeOut: overtimeOut ?? this.overtimeOut,
-
       otAuthorized: otAuthorized ?? this.otAuthorized,
-
       branchId: branchId ?? this.branchId,
     );
   }
@@ -753,82 +667,56 @@ class AttendanceRecord {
   // ==========================================================================
 
   factory AttendanceRecord.fromJson(
-      Map<String, dynamic> json,
-      ) {
+    Map<String, dynamic> json,
+  ) {
     final checkInValue = _stringValue(
-      json['checkIn'] ??
-          json['check_in'],
+      json['checkIn'] ?? json['check_in'],
       defaultValue: '',
     );
 
     final checkOutValue = _stringValue(
-      json['checkOut'] ??
-          json['check_out'],
+      json['checkOut'] ?? json['check_out'],
       defaultValue: '',
     );
 
     return AttendanceRecord(
       id: _stringValue(json['id']),
       employeeId: _stringValue(
-        json['employeeId'] ??
-            json['employee_id'],
+        json['employeeId'] ?? json['employee_id'],
       ),
-
       date: _parseDate(
-        json['date'] ??
-            json['attendance_date'],
+        json['date'] ?? json['attendance_date'],
       ),
-
       checkIn: checkInValue,
-
       checkOut: checkOutValue,
-
       status: _stringValue(
         json['status'],
         defaultValue: 'Absent',
       ),
-
       morningIn: _stringValue(
-        json['morningIn'] ??
-            json['morning_in'] ??
-            checkInValue,
+        json['morningIn'] ?? json['morning_in'] ?? checkInValue,
       ),
-
       morningOut: _stringValue(
-        json['morningOut'] ??
-            json['morning_out'],
+        json['morningOut'] ?? json['morning_out'],
       ),
-
       afternoonIn: _stringValue(
-        json['afternoonIn'] ??
-            json['afternoon_in'],
+        json['afternoonIn'] ?? json['afternoon_in'],
       ),
-
       afternoonOut: _stringValue(
-        json['afternoonOut'] ??
-            json['afternoon_out'] ??
-            checkOutValue,
+        json['afternoonOut'] ?? json['afternoon_out'] ?? checkOutValue,
       ),
-
       overtimeIn: _stringValue(
-        json['overtimeIn'] ??
-            json['overtime_in'],
+        json['overtimeIn'] ?? json['overtime_in'],
       ),
-
       overtimeOut: _stringValue(
-        json['overtimeOut'] ??
-            json['overtime_out'],
+        json['overtimeOut'] ?? json['overtime_out'],
       ),
-
       otAuthorized: _boolValue(
-        json['otAuthorized'] ??
-            json['ot_authorized'],
+        json['otAuthorized'] ?? json['ot_authorized'],
         defaultValue: false,
       ),
-
       branchId: _stringValue(
-        json['branchId'] ??
-            json['branch_id'],
+        json['branchId'] ?? json['branch_id'],
       ),
     );
   }
@@ -889,16 +777,11 @@ class Branch {
     return Branch(
       id: id ?? branchId ?? this.id,
       name: name ?? branchName ?? this.name,
-      location:
-      location ?? this.location,
-      username:
-      username ?? this.username,
-      address:
-      address ?? this.address,
-      phone:
-      phone ?? this.phone,
-      isActive:
-      isActive ?? this.isActive,
+      location: location ?? this.location,
+      username: username ?? this.username,
+      address: address ?? this.address,
+      phone: phone ?? this.phone,
+      isActive: isActive ?? this.isActive,
     );
   }
 
@@ -911,10 +794,8 @@ class Branch {
       'id': id,
       'name': name,
       'location': location,
-
       'branchId': id,
       'branchName': name,
-
       'username': username,
       'address': address,
       'phone': phone,
@@ -923,25 +804,19 @@ class Branch {
   }
 
   factory Branch.fromJson(
-      Map<String, dynamic> json,
-      ) {
+    Map<String, dynamic> json,
+  ) {
     return Branch(
       id: _stringValue(
-        json['branchId'] ??
-            json['id'],
+        json['branchId'] ?? json['id'],
       ),
       name: _stringValue(
-        json['branchName'] ??
-            json['name'],
+        json['branchName'] ?? json['name'],
       ),
-      location:
-      _stringValue(json['location']),
-      username:
-      _stringValue(json['username']),
-      address:
-      _stringValue(json['address']),
-      phone:
-      _stringValue(json['phone']),
+      location: _stringValue(json['location']),
+      username: _stringValue(json['username']),
+      address: _stringValue(json['address']),
+      phone: _stringValue(json['phone']),
       isActive: _boolValue(
         json['isActive'],
         defaultValue: true,
@@ -955,9 +830,9 @@ class Branch {
 // ============================================================================
 
 String _stringValue(
-    dynamic value, {
-      String defaultValue = '',
-    }) {
+  dynamic value, {
+  String defaultValue = '',
+}) {
   if (value == null) {
     return defaultValue;
   }
@@ -974,8 +849,8 @@ String _stringValue(
 // ----------------------------------------------------------------------------
 
 String? _nullableString(
-    dynamic value,
-    ) {
+  dynamic value,
+) {
   if (value == null) {
     return null;
   }
@@ -992,8 +867,8 @@ String? _nullableString(
 // ----------------------------------------------------------------------------
 
 double _doubleValue(
-    dynamic value,
-    ) {
+  dynamic value,
+) {
   if (value == null) {
     return 0.0;
   }
@@ -1016,16 +891,11 @@ double _doubleValue(
     return 0.0;
   }
 
-  text = text
-      .replaceAll(',', '')
-      .replaceAll('RM', '')
-      .replaceAll('rm', '')
-      .trim();
+  text =
+      text.replaceAll(',', '').replaceAll('RM', '').replaceAll('rm', '').trim();
 
-  if (text.startsWith('(') &&
-      text.endsWith(')')) {
-    text =
-    '-${text.substring(1, text.length - 1)}';
+  if (text.startsWith('(') && text.endsWith(')')) {
+    text = '-${text.substring(1, text.length - 1)}';
   }
 
   text = text.replaceAll(' ', '');
@@ -1036,8 +906,8 @@ double _doubleValue(
 // ----------------------------------------------------------------------------
 
 DateTime _parseDate(
-    dynamic value,
-    ) {
+  dynamic value,
+) {
   if (value == null) {
     return DateTime.now();
   }
@@ -1057,12 +927,9 @@ DateTime _parseDate(
   final parts = text.split('-');
 
   if (parts.length == 3) {
-    final year =
-    int.tryParse(parts[0]);
-    final month =
-    int.tryParse(parts[1]);
-    final day =
-    int.tryParse(parts[2]);
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day = int.tryParse(parts[2]);
 
     if (year != null &&
         month != null &&
@@ -1085,8 +952,8 @@ DateTime _parseDate(
 // ----------------------------------------------------------------------------
 
 DateTime? _parseNullableDate(
-    dynamic value,
-    ) {
+  dynamic value,
+) {
   if (value == null) {
     return null;
   }
@@ -1103,9 +970,9 @@ DateTime? _parseNullableDate(
 // ----------------------------------------------------------------------------
 
 bool _boolValue(
-    dynamic value, {
-      bool defaultValue = false,
-    }) {
+  dynamic value, {
+  bool defaultValue = false,
+}) {
   if (value == null) {
     return defaultValue;
   }
@@ -1118,8 +985,7 @@ bool _boolValue(
     return value != 0;
   }
 
-  final text =
-  value.toString().trim().toLowerCase();
+  final text = value.toString().trim().toLowerCase();
 
   switch (text) {
     case 'true':
