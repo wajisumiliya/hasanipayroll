@@ -51,6 +51,10 @@ declare
   created_employee public.employees;
   clean_employee_id text := upper(trim(new_employee_id));
 begin
+  if lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'app_role', '')) <> 'admin' then
+    raise exception 'Administrator access required.';
+  end if;
+
   if clean_employee_id = '' then
     raise exception 'Employee ID is required.';
   end if;

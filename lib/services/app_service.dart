@@ -14,7 +14,6 @@ import '../models/payroll.dart';
 
 class app_user {
   final String username;
-  final String password;
   final String role;
   final String? branchId;
   final String? employeeId;
@@ -22,7 +21,6 @@ class app_user {
 
   const app_user({
     required this.username,
-    required this.password,
     required this.role,
     this.branchId,
     this.employeeId,
@@ -41,7 +39,6 @@ class app_user {
   Map<String, dynamic> toJson() {
     return {
       'username': username,
-      'password': password,
       'role': role,
       'branch_id': branchId,
       'employee_id': employeeId,
@@ -55,8 +52,6 @@ class app_user {
     return app_user(
       username:
           json['username']?.toString() ?? '',
-      password:
-          json['password']?.toString() ?? '',
       role:
           json['role']?.toString() ?? '',
       branchId:
@@ -75,19 +70,6 @@ class app_user {
 // ============================================================================
 // APP USER COMPATIBILITY MODEL
 // ============================================================================
-
-class AppUser {
-  final String id;
-  final String name;
-  String password;
-
-  AppUser({
-    required this.id,
-    required this.name,
-    required this.password,
-  });
-}
-
 
 class FirstLoginOtpState {
   final String employeeId;
@@ -157,15 +139,21 @@ class AppService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> _postAuth(
     String path,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    bool authenticated = false,
+  }) async {
+    final token = _accessToken;
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (authenticated && token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
     final response = await http
         .post(
           _authUri(path),
-          headers: const {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
+          headers: headers,
           body: jsonEncode(body),
         )
         .timeout(const Duration(seconds: 45));
@@ -190,6 +178,7 @@ class AppService extends ChangeNotifier {
   // ==========================================================================
 
   app_user? _currentUser;
+  String? _accessToken;
   String? _branchLoginActivityId;
 
   app_user? get currentUser =>
@@ -235,7 +224,7 @@ class AppService extends ChangeNotifier {
       return false;
     }
 
-    if (newPass.length < 6) {
+    if (newPass.length < 8) {
       return false;
     }
 
@@ -251,47 +240,12 @@ class AppService extends ChangeNotifier {
         return false;
       }
 
-      if (user.password != current) {
-        return false;
-      }
-
-      final response =
-          await _supabase
-              .from('app_user')
-              .update({
-        'password': newPass,
-      })
-              .eq(
-                'username',
-                user.username,
-              )
-              .select()
-              .maybeSingle();
-
-      if (response == null) {
-        return false;
-      }
-
-      _currentUser = app_user(
-        username:
-            user.username,
-        password:
-            newPass,
-        role:
-            user.role,
-        branchId:
-            user.branchId,
-        employeeId:
-            user.employeeId,
-        displayName:
-            user.displayName,
+      final response = await _postAuth(
+        '/api/auth/change-password',
+        {'currentPassword': current, 'newPassword': newPass},
+        authenticated: true,
       );
-
-      await loadUsersFromSupabase();
-
-      notifyListeners();
-
-      return true;
+      return response['ok'] == true;
     } catch (e) {
       debugPrint(
         'Password update failed: $e',
@@ -311,63 +265,54 @@ class AppService extends ChangeNotifier {
       name: 'ALOR SETAR',
       location: 'ALOR SETAR',
       username: 'ALOR SETAR',
-      password: '',
     ),
     Branch(
       id: 'AMANJAYA',
       name: 'AMANJAYA',
       location: 'AMANJAYA',
       username: 'AMANJAYA',
-      password: '',
     ),
     Branch(
       id: 'ASTANA',
       name: 'ASTANA',
       location: 'ASTANA',
       username: 'ASTANA',
-      password: '',
     ),
     Branch(
       id: 'GURUN',
       name: 'GURUN',
       location: 'GURUN',
       username: 'GURUN',
-      password: '',
     ),
     Branch(
       id: 'JITRA',
       name: 'JITRA',
       location: 'JITRA',
       username: 'JITRA',
-      password: '',
     ),
     Branch(
       id: 'KULIM',
       name: 'KULIM',
       location: 'KULIM',
       username: 'KULIM',
-      password: '',
     ),
     Branch(
       id: 'LANGKAWI',
       name: 'LANGKAWI',
       location: 'LANGKAWI',
       username: 'LANGKAWI',
-      password: '',
     ),
     Branch(
       id: 'PRAI',
       name: 'PRAI',
       location: 'PRAI',
       username: 'PRAI',
-      password: '',
     ),
     Branch(
       id: 'SUNGAI PETANI',
       name: 'SUNGAI PETANI',
       location: 'SUNGAI PETANI',
       username: 'SUNGAI PETANI',
-      password: '',
     ),
   ];
 
@@ -414,19 +359,11 @@ class AppService extends ChangeNotifier {
   // ==========================================================================
 
   Future<void> restore() async {
-    try {
-      final preferences = await SharedPreferences.getInstance();
-      final storedUser = preferences.getString(_currentUserStorageKey);
-
-      if (storedUser != null && storedUser.isNotEmpty) {
-        _currentUser = app_user.fromJson(
-          Map<String, dynamic>.from(jsonDecode(storedUser) as Map),
-        );
-      }
-    } catch (e) {
-      debugPrint('Restore current user error: $e');
-      await _clearStoredUser();
-    }
+    // Remove sessions written by older builds. A user is authenticated only
+    // after the backend issues a token during this application session.
+    await _clearStoredUser();
+    _currentUser = null;
+    _accessToken = null;
 
     try {
       await loadUsersFromSupabase();
@@ -464,14 +401,8 @@ class AppService extends ChangeNotifier {
   }
 
   Future<void> _persistCurrentUser() async {
-    final user = _currentUser;
-    if (user == null) return;
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(
-      _currentUserStorageKey,
-      jsonEncode(user.toJson()),
-    );
+    // Access tokens and login credentials are intentionally memory-only.
+    await _clearStoredUser();
   }
 
   Future<void> _clearStoredUser() async {
@@ -1108,12 +1039,17 @@ if (role == 'employee' && firstLogin) {
       _currentUser = app_user(
   username:
       accountUsername,
-  password: enteredPassword,
   role: role,
   branchId: branchId,
   employeeId: employeeId,
   displayName: displayName ?? email,
 );
+      _accessToken = data['accessToken']?.toString();
+      if (_accessToken == null || _accessToken!.isEmpty) {
+        _currentUser = null;
+        return 'The server did not issue a valid session.';
+      }
+      _supabase.rest.setAuth(_accessToken);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -1249,8 +1185,8 @@ return 'OTP verification failed: $e';
     }
 
     final password = newPassword.trim();
-    if (password.length < 6) {
-      return 'Password must contain at least 6 characters.';
+    if (password.length < 8) {
+      return 'Password must contain at least 8 characters.';
     }
 
     try {
@@ -1302,12 +1238,17 @@ return 'OTP verification failed: $e';
       userData['username']?.toString() ??
       userData['email']?.toString() ??
       employeeId,
-  password: password,
   role: userData['role']?.toString() ?? 'employee',
   branchId: branchId,
   employeeId: employeeId,
   displayName: displayName ?? userData['email']?.toString(),
 );
+      _accessToken = data['accessToken']?.toString();
+      if (_accessToken == null || _accessToken!.isEmpty) {
+        _currentUser = null;
+        return 'The server did not issue a valid session.';
+      }
+      _supabase.rest.setAuth(_accessToken);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -1367,6 +1308,8 @@ return 'OTP verification failed: $e';
     }
 
     _currentUser = null;
+    _accessToken = null;
+    _supabase.rest.setAuth(null);
     await _clearStoredUser();
 
     notifyListeners();
@@ -1617,8 +1560,6 @@ return 'OTP verification failed: $e';
   Future<String> addEmployee(
     Employee employee, {
     required String branchId,
-    String password =
-        'employee123',
   }) async {
     final cleanId =
         employee.employeeId.trim();
@@ -1653,27 +1594,7 @@ return 'OTP verification failed: $e';
             ),
           );
 
-      await _supabase
-          .from('app_user')
-          .insert({
-        'username':
-            employeeWithBranch
-                .employeeId,
-        'password':
-            password,
-        'role':
-            'employee',
-        'employee_id':
-            employeeWithBranch
-                .employeeId,
-        'branch_id':
-            branch.id,
-        'display_name':
-            employeeWithBranch.name,
-      });
-
       await loadEmployeesFromSupabase();
-      await loadUsersFromSupabase();
 
       return 'Employee $cleanId added successfully.';
     } catch (e) {
@@ -1810,10 +1731,8 @@ return 'OTP verification failed: $e';
   Future<void>
       _createOrUpdateEmployeeUser(
     Employee employee,
-    String branchId, {
-    String password =
-        'employee123',
-  }) async {
+    String branchId,
+  ) async {
     try {
       final existing =
           await _supabase
@@ -1840,9 +1759,6 @@ return 'OTP verification failed: $e';
       };
 
       if (existing == null) {
-        data['password'] =
-            password;
-
         await _supabase
             .from('app_user')
             .insert(data);

@@ -844,7 +844,6 @@ class Branch {
   final String location;
 
   final String username;
-  final String password;
 
   final String address;
   final String phone;
@@ -857,7 +856,6 @@ class Branch {
     String? branchId,
     String? branchName,
     this.username = '',
-    this.password = '',
     this.address = '',
     this.phone = '',
     this.isActive = true,
@@ -884,7 +882,6 @@ class Branch {
     String? branchId,
     String? branchName,
     String? username,
-    String? password,
     String? address,
     String? phone,
     bool? isActive,
@@ -896,8 +893,6 @@ class Branch {
       location ?? this.location,
       username:
       username ?? this.username,
-      password:
-      password ?? this.password,
       address:
       address ?? this.address,
       phone:
@@ -921,7 +916,6 @@ class Branch {
       'branchName': name,
 
       'username': username,
-      'password': password,
       'address': address,
       'phone': phone,
       'isActive': isActive,
@@ -944,8 +938,6 @@ class Branch {
       _stringValue(json['location']),
       username:
       _stringValue(json['username']),
-      password:
-      _stringValue(json['password']),
       address:
       _stringValue(json['address']),
       phone:

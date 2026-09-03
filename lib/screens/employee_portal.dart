@@ -1493,14 +1493,6 @@ class _ChangePasswordPageState
       return;
     }
 
-    // Check current password.
-    if (user.password != current) {
-      _message(
-        'Current password is incorrect.',
-      );
-      return;
-    }
-
     setState(() {
       isUpdating = true;
     });

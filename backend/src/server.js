@@ -406,13 +406,26 @@ function generateRandomToken(
 function createAccessToken(
   user,
 ) {
+  const login = String(user.username || user.email || "").trim().toUpperCase();
+  const baseLogin = login.endsWith("FRN") ? login.slice(0, -3) : login;
+  const branchByLogin = {
+    HBSP: "SUNGAI PETANI", HPSP: "SUNGAI PETANI", HBAMJ: "AMANJAYA",
+    HBAS: "ALOR SETAR", HBASTANA: "ASTANA", HBGURUN: "GURUN",
+    HBJITRA: "JITRA", HBPERAI: "PRAI", HBKULIM: "KULIM", HBLKW: "LANGKAWI",
+  };
+  const appRole = String(user.role || "employee").trim().toLowerCase();
+  const branchId = branchByLogin[baseLogin] || null;
   return jwt.sign(
     {
       sub: String(user.id),
 
-      role: String(
-        user.role,
-      ),
+      role: "authenticated",
+      app_metadata: {
+        app_role: appRole,
+        branch_id: branchId,
+        employee_id: user.employeeId || null,
+        is_frn: login.endsWith("FRN"),
+      },
 
       employeeId:
         user.employeeId ||
@@ -431,7 +444,7 @@ function createAccessToken(
         "hasani-payroll",
 
       audience:
-        "hasani-payroll-app",
+        "authenticated",
     },
   );
 }
@@ -532,7 +545,7 @@ async function authenticate(
             "hasani-payroll",
 
           audience:
-            "hasani-payroll-app",
+            "authenticated",
         },
       );
 
@@ -1061,6 +1074,63 @@ app.post(
       return genericError(
         res,
       );
+    }
+  },
+);
+
+// ============================================================
+// CHANGE PASSWORD (AUTHENTICATED)
+// ============================================================
+
+app.post(
+  "/api/auth/change-password",
+  passwordLimiter,
+  authenticate,
+  async (req, res) => {
+    try {
+      const currentPassword = String(req.body?.currentPassword ?? "");
+      const newPassword = String(req.body?.newPassword ?? "");
+
+      if (newPassword.length < 8 || newPassword.length > 128) {
+        return res.status(400).json({
+          ok: false,
+          message: "Password must contain between 8 and 128 characters.",
+        });
+      }
+
+      if (currentPassword === newPassword) {
+        return res.status(400).json({
+          ok: false,
+          message: "New password must be different.",
+        });
+      }
+
+      const matches = await verifyPassword(
+        currentPassword,
+        req.user.passwordHash,
+      );
+
+      if (!matches) {
+        return res.status(401).json({
+          ok: false,
+          message: "Current password is incorrect.",
+        });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await pool.query(
+        `UPDATE public."app_user"
+         SET "passwordHash" = $1,
+             "passwordChangedAt" = NOW(),
+             "updatedAt" = NOW()
+         WHERE "id" = $2`,
+        [passwordHash, req.user.id],
+      );
+
+      return res.json({ok: true, message: "Password updated successfully."});
+    } catch (error) {
+      console.error("CHANGE PASSWORD ERROR:", error.message);
+      return genericError(res);
     }
   },
 );
@@ -3225,9 +3295,14 @@ async function ensureFrnBranchAccounts() {
     "HBKULIMFRN",
     "HBLKWFRN",
   ];
-  const password =
-    process.env.FRN_BRANCH_PASSWORD ||
-    "Hasanifrn123";
+  const password = process.env.FRN_BRANCH_PASSWORD;
+  if (!password) {
+    console.warn("FRN branch account bootstrap skipped: FRN_BRANCH_PASSWORD is not set.");
+    return;
+  }
+  if (password.length < 12) {
+    throw new Error("FRN_BRANCH_PASSWORD must contain at least 12 characters.");
+  }
   const passwordHash =
     await bcrypt.hash(password, 12);
 

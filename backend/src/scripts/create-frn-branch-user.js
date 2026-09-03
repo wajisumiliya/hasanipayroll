@@ -16,7 +16,11 @@ const usernames = [
   "HBKULIMFRN",
   "HBLKWFRN",
 ];
-const password = process.env.FRN_BRANCH_PASSWORD || "Hasanifrn123";
+const password = process.env.FRN_BRANCH_PASSWORD;
+
+if (!password || password.length < 12) {
+  throw new Error("FRN_BRANCH_PASSWORD must be supplied and contain at least 12 characters.");
+}
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

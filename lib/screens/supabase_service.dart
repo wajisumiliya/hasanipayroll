@@ -2058,45 +2058,6 @@ class SupabaseService {
   }
 
   // ============================================================
-  // LOGIN TABLE
-  // ============================================================
-
-  static Future<Map<String, dynamic>?>
-  loginApplicationUser({
-    required String username,
-    required String password,
-  }) async {
-    try {
-      final response = await client
-          .from('users')
-          .select()
-          .eq(
-        'username',
-        username.trim(),
-      )
-          .eq(
-        'password',
-        password,
-      )
-          .eq(
-        'is_active',
-        true,
-      )
-          .maybeSingle();
-
-      if (response == null) {
-        return null;
-      }
-
-      return _map(response);
-    } catch (e, stackTrace) {
-      debugPrint('APPLICATION LOGIN ERROR: $e');
-      debugPrint('$stackTrace');
-      rethrow;
-    }
-  }
-
-  // ============================================================
   // GET APPLICATION USER
   // ============================================================
 
