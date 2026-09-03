@@ -2707,7 +2707,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
 
     text = text
         .replaceAll(
-          RegExp(r'(?i)rm'),
+          RegExp('rm', caseSensitive: false),
           '',
         )
         .replaceAll(

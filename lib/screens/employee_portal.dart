@@ -4,7 +4,6 @@ import 'package:printing/printing.dart';
 
 import '../models/payroll.dart';
 import '../services/app_service.dart';
-import '../screens/supabase_service.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
 import 'login_screen.dart';

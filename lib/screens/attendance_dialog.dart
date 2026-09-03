@@ -152,7 +152,7 @@ class _AttendanceDialogState
             .select('eis_applicable,epf_catagory')
             .eq('employee_id', employeeId)
             .limit(1);
-        if (rows is List && rows.isNotEmpty) {
+        if (rows.isNotEmpty) {
           salary = Map<String, dynamic>.from(rows.first);
         }
       } catch (_) {
@@ -161,7 +161,7 @@ class _AttendanceDialogState
             .select('eis_applicable,epf_category')
             .eq('employee_id', employeeId)
             .limit(1);
-        if (rows is List && rows.isNotEmpty) {
+        if (rows.isNotEmpty) {
           salary = Map<String, dynamic>.from(rows.first);
         }
       }
