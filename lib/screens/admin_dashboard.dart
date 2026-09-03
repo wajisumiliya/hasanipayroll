@@ -43,6 +43,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String? selectedAttendanceBranchId;
   DateTime selectedAttendanceMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime selectedPayrollMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime selectedReportMonth = DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
   String? selectedLogBranchId;
   DateTime? selectedLogDate = DateTime.now();
@@ -374,16 +375,6 @@ Widget _statusChip(String status) {
                       11,
                     ),
                     _drawerItem(
-                      'Import CSV',
-                      Icons.upload_file_outlined,
-                      4,
-                    ),
-                    _drawerItem(
-                        'Import Payroll',
-                        Icons.upload_file_outlined,
-                        5
-                    ),
-                    _drawerItem(
                       'Reports',
                       Icons.bar_chart_outlined,
                       6,
@@ -484,16 +475,6 @@ Widget _statusChip(String status) {
                   'OT Requests',
                   Icons.more_time_outlined,
                   11,
-                ),
-                _sidebarItem(
-                  'Import CSV',
-                  Icons.upload_file_outlined,
-                  4,
-                ),
-                _sidebarItem(
-                  'Import Payroll',
-                  Icons.upload_file_outlined,
-                  5,
                 ),
                 _sidebarItem(
                   'Reports',
@@ -3710,6 +3691,53 @@ Widget _statusChip(String status) {
 // ATTENDANCE
 // ===========================================================================
 
+Widget _monthYearSelector({
+  required DateTime value,
+  required ValueChanged<DateTime> onChanged,
+}) {
+  final currentYear = DateTime.now().year;
+  final years = List<int>.generate(currentYear - 2019 + 2, (index) => 2020 + index);
+  if (!years.contains(value.year)) years.add(value.year);
+  years.sort((a, b) => b.compareTo(a));
+
+  return Wrap(
+    spacing: 10,
+    runSpacing: 8,
+    children: [
+      SizedBox(
+        width: 145,
+        child: DropdownButtonFormField<int>(
+          initialValue: value.month,
+          isDense: true,
+          decoration: const InputDecoration(labelText: 'Month', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+          items: List.generate(12, (index) => DropdownMenuItem(value: index + 1, child: Text(DateFormat.MMMM().format(DateTime(2000, index + 1))))),
+          onChanged: (month) {
+            if (month != null) onChanged(DateTime(value.year, month));
+          },
+        ),
+      ),
+      SizedBox(
+        width: 115,
+        child: DropdownButtonFormField<int>(
+          initialValue: value.year,
+          isDense: true,
+          decoration: const InputDecoration(labelText: 'Year', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+          items: years.map((year) => DropdownMenuItem(value: year, child: Text('$year'))).toList(),
+          onChanged: (year) {
+            if (year != null) onChanged(DateTime(year, value.month));
+          },
+        ),
+      ),
+    ],
+  );
+}
+
+bool _mapRecordMatchesMonth(Map<String, dynamic> record, DateTime month) {
+  final raw = record['date'] ?? record['attendance_date'] ?? record['period'];
+  final date = raw is DateTime ? raw : DateTime.tryParse(raw?.toString() ?? '');
+  return date != null && date.year == month.year && date.month == month.month;
+}
+
 Widget _attendancePage() {
   if (selectedAttendanceBranchId != null) {
     return _branchAttendanceEmployeesPage(selectedAttendanceBranchId!);
@@ -3748,7 +3776,12 @@ Widget _attendancePage() {
                 'Select a branch to view submitted employee attendance. Admin can edit submitted attendance.',
                 style: TextStyle(color: Colors.black54),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
+              _monthYearSelector(
+                value: selectedAttendanceMonth,
+                onChanged: (value) => setState(() => selectedAttendanceMonth = value),
+              ),
+              const SizedBox(height: 16),
               if (branches.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(40),
@@ -3759,10 +3792,10 @@ Widget _attendancePage() {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 280,
-                    mainAxisExtent: 175,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
+                    maxCrossAxisExtent: 240,
+                    mainAxisExtent: 132,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
                   ),
                   itemCount: branches.length,
                   itemBuilder: (context, index) {
@@ -3779,20 +3812,20 @@ Widget _attendancePage() {
                           side: BorderSide(color: Colors.blueGrey.withOpacity(.20)),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(14),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const CircleAvatar(
-                                radius: 26,
-                                child: Icon(Icons.store_outlined, size: 28),
+                                radius: 20,
+                                child: Icon(Icons.store_outlined, size: 21),
                               ),
                               const Spacer(),
                               Text(
                                 name,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: 6),
                               const Row(
@@ -3840,7 +3873,9 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
       final data = snapshot.data ?? const [[], [], []];
       final branches = List<Map<String, dynamic>>.from(data[0] as List);
       final employees = List<Map<String, dynamic>>.from(data[1] as List);
-      final attendance = List<Map<String, dynamic>>.from(data[2] as List);
+      final attendance = List<Map<String, dynamic>>.from(data[2] as List)
+          .where((record) => _mapRecordMatchesMonth(record, selectedAttendanceMonth))
+          .toList();
 
       final branch = branches.firstWhere(
         (item) => (item['id'] ?? item['branch_id'] ?? '').toString() == branchId,
@@ -3878,7 +3913,12 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
               Text(branchName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
               Text('${employees.length} employee(s)', style: const TextStyle(color: Colors.black54)),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
+              _monthYearSelector(
+                value: selectedAttendanceMonth,
+                onChanged: (value) => setState(() => selectedAttendanceMonth = value),
+              ),
+              const SizedBox(height: 16),
               if (employees.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(40),
@@ -3889,10 +3929,10 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 340,
-                    mainAxisExtent: 180,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
+                    maxCrossAxisExtent: 300,
+                    mainAxisExtent: 150,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
                   ),
                   itemCount: employees.length,
                   itemBuilder: (context, index) {
@@ -3918,14 +3958,14 @@ Widget _branchAttendanceEmployeesPage(String branchId) {
       ),
     ),
     child: Padding(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(
-                radius: 25,
+                radius: 20,
                 backgroundColor: const Color(0xFFE7F7EF),
                 child: Text(
                   name.isEmpty
@@ -6262,8 +6302,23 @@ Widget _importPayrollPage() {
 // ============================================================================
 
 Widget _reportsPage() {
+  final reportPayroll = service.payroll
+      .where((record) => record.period.year == selectedReportMonth.year && record.period.month == selectedReportMonth.month)
+      .toList();
+  final reportAttendance = service.attendance
+      .where((record) => record.date.year == selectedReportMonth.year && record.date.month == selectedReportMonth.month)
+      .toList();
+  final reportNewJoiners = service.employeesDemo.where((employee) {
+    final date = employee.joiningDate;
+    return date != null && date.year == selectedReportMonth.year && date.month == selectedReportMonth.month;
+  }).length;
+  final vacationEmployees = reportAttendance
+      .where((record) => record.status.trim().toLowerCase() == 'leave')
+      .map((record) => record.employeeId)
+      .toSet()
+      .length;
   final double gross =
-      service.payroll.fold<double>(
+      reportPayroll.fold<double>(
     0,
     (
       sum,
@@ -6273,7 +6328,7 @@ Widget _reportsPage() {
   );
 
   final double net =
-      service.payroll.fold<double>(
+      reportPayroll.fold<double>(
     0,
     (
       sum,
@@ -6283,7 +6338,7 @@ Widget _reportsPage() {
   );
 
   final double deductions =
-      service.payroll.fold<double>(
+      reportPayroll.fold<double>(
     0,
     (
       sum,
@@ -6315,9 +6370,18 @@ Widget _reportsPage() {
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
 
-        _panel(
+        _monthYearSelector(
+          value: selectedReportMonth,
+          onChanged: (value) => setState(() => selectedReportMonth = value),
+        ),
+
+        const SizedBox(height: 14),
+
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: _panel(
           'Payroll Report',
           Column(
             children: [
@@ -6340,13 +6404,13 @@ Widget _reportsPage() {
 
               _reportRow(
                 'Payroll Records',
-                service.payroll.length
+                reportPayroll.length
                     .toString(),
               ),
 
               _reportRow(
                 'Attendance Records',
-                service.attendance.length
+                reportAttendance.length
                     .toString(),
               ),
 
@@ -6364,16 +6428,12 @@ Widget _reportsPage() {
 
               _reportRow(
                 'Vacation Employees',
-                _vacationEmployeeIds()
-                    .length
-                    .toString(),
+                vacationEmployees.toString(),
               ),
 
               _reportRow(
                 'New Joiners',
-                _newJoiners()
-                    .length
-                    .toString(),
+                reportNewJoiners.toString(),
               ),
 
               _reportRow(
@@ -6392,6 +6452,7 @@ Widget _reportsPage() {
               ),
             ],
           ),
+        ),
         ),
       ],
     ),
@@ -8628,7 +8689,7 @@ Widget _reportRow(
   return Padding(
     padding:
         const EdgeInsets.symmetric(
-      vertical: 10,
+      vertical: 6,
     ),
     child: Row(
       children: [
@@ -8639,6 +8700,7 @@ Widget _reportRow(
                 const TextStyle(
               color:
                   Colors.black54,
+              fontSize: 13,
             ),
           ),
         ),
@@ -8649,6 +8711,7 @@ Widget _reportRow(
               const TextStyle(
             fontWeight:
                 FontWeight.bold,
+            fontSize: 13,
           ),
         ),
       ],
