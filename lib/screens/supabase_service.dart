@@ -105,6 +105,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getBranchActivityLogs({
     String? branchId,
+    DateTime? date,
     int limit = 500,
   }) async {
     try {
@@ -112,6 +113,14 @@ class SupabaseService {
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
+      }
+
+      if (date != null) {
+        final start = DateTime(date.year, date.month, date.day).toUtc();
+        final end = DateTime(date.year, date.month, date.day + 1).toUtc();
+        query = query
+            .gte('opened_at', start.toIso8601String())
+            .lt('opened_at', end.toIso8601String());
       }
 
       final response = await query
@@ -1146,6 +1155,67 @@ class SupabaseService {
       return _mapList(response);
     } catch (e, stackTrace) {
       debugPrint('GET BRANCH ATTENDANCE ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getAttendanceByBranchDate({
+    required String branchId,
+    required DateTime date,
+  }) async {
+    try {
+      final dateText =
+          '${date.year.toString().padLeft(4, '0')}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+      final response = await client
+          .from('attendance')
+          .select()
+          .eq('branch_id', branchId.trim())
+          .eq('attendance_date', dateText);
+      return _mapList(response);
+    } catch (e, stackTrace) {
+      debugPrint('GET BRANCH DATE ATTENDANCE ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getPendingOtRequests() async {
+    try {
+      final response = await client
+          .from('attendance')
+          .select()
+          .eq('ot_requested', true)
+          .eq('ot_authorized', false)
+          .order('attendance_date', ascending: false);
+      return _mapList(response);
+    } catch (e, stackTrace) {
+      debugPrint('GET OT REQUESTS ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<void> reviewOtRequest({
+    required String employeeId,
+    required String branchId,
+    required String attendanceDate,
+    required bool approve,
+  }) async {
+    try {
+      await client
+          .from('attendance')
+          .update({
+            'ot_requested': approve,
+            'ot_authorized': approve,
+          })
+          .eq('employee_id', employeeId)
+          .eq('branch_id', branchId)
+          .eq('attendance_date', attendanceDate);
+    } catch (e, stackTrace) {
+      debugPrint('REVIEW OT REQUEST ERROR: $e');
       debugPrint('$stackTrace');
       rethrow;
     }

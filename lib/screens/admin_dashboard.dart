@@ -45,9 +45,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   DateTime selectedPayrollMonth = DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
   String? selectedLogBranchId;
+  DateTime? selectedLogDate = DateTime.now();
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
   Future<List<Map<String, dynamic>>>? _adminEmployeesFuture;
   Future<List<Map<String, dynamic>>>? _employeeRequestsFuture;
+  Future<List<Map<String, dynamic>>>? _otRequestsFuture;
   final TextEditingController _adminEmployeeSearchController =
       TextEditingController();
   String _adminEmployeeSearch = '';
@@ -132,6 +134,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return 'Branch Logs';
       case 10:
         return 'Employee Requests';
+      case 11:
+        return 'OT Requests';
       default:
         return 'Dashboard';
     }
@@ -225,6 +229,9 @@ Widget _statusChip(String status) {
 
       case 10:
         return _employeeRequestsPage();
+
+      case 11:
+        return _otRequestsPage();
 
       default:
         return _dashboardPage();
@@ -362,6 +369,11 @@ Widget _statusChip(String status) {
                       10,
                     ),
                     _drawerItem(
+                      'OT Requests',
+                      Icons.more_time_outlined,
+                      11,
+                    ),
+                    _drawerItem(
                       'Import CSV',
                       Icons.upload_file_outlined,
                       4,
@@ -467,6 +479,11 @@ Widget _statusChip(String status) {
                   'Employee Requests',
                   Icons.how_to_reg_outlined,
                   10,
+                ),
+                _sidebarItem(
+                  'OT Requests',
+                  Icons.more_time_outlined,
+                  11,
                 ),
                 _sidebarItem(
                   'Import CSV',
@@ -3151,6 +3168,127 @@ Widget _statusChip(String status) {
   }
 
   // ===========================================================================
+  // OT REQUEST APPROVAL
+  // ===========================================================================
+
+  Future<List<Map<String, dynamic>>> _loadOtRequests() {
+    return _otRequestsFuture ??= SupabaseService.getPendingOtRequests();
+  }
+
+  void _refreshOtRequests() {
+    setState(() => _otRequestsFuture = null);
+  }
+
+  Widget _otRequestsPage() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('OT Requests', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 4),
+                    Text('Review overtime requests separately from employee requests.', style: TextStyle(color: Colors.black54)),
+                  ],
+                ),
+              ),
+              IconButton(onPressed: _refreshOtRequests, tooltip: 'Refresh OT requests', icon: const Icon(Icons.refresh)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadOtRequests(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Unable to load OT requests:\n${snapshot.error}', textAlign: TextAlign.center));
+                }
+                final requests = snapshot.data ?? const <Map<String, dynamic>>[];
+                if (requests.isEmpty) {
+                  return const Center(child: Text('No pending OT requests.'));
+                }
+                return ListView.separated(
+                  itemCount: requests.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final request = requests[index];
+                    final employeeId = request['employee_id']?.toString() ?? '-';
+                    final employee = service.employeeById(employeeId);
+                    final employeeName = employee?.name ?? employeeId;
+                    final branchId = request['branch_id']?.toString() ?? '-';
+                    final date = request['attendance_date']?.toString() ?? '-';
+                    final duration = request['overtime_duration']?.toString().trim();
+                    final minutes = request['overtime_minutes']?.toString() ?? '0';
+                    return Card(
+                      elevation: 0,
+                      child: ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.more_time)),
+                        title: Text(employeeName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text('$employeeId • $branchId • $date'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(16)),
+                              child: Text(duration?.isNotEmpty == true ? duration! : '$minutes min', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w700)),
+                            ),
+                            const SizedBox(width: 10),
+                            OutlinedButton(
+                              onPressed: () => _reviewOtRequest(request, false),
+                              child: const Text('Reject'),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              onPressed: () => _reviewOtRequest(request, true),
+                              child: const Text('Approve'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _reviewOtRequest(
+    Map<String, dynamic> request,
+    bool approve,
+  ) async {
+    try {
+      await SupabaseService.reviewOtRequest(
+        employeeId: request['employee_id'].toString(),
+        branchId: request['branch_id'].toString(),
+        attendanceDate: request['attendance_date'].toString(),
+        approve: approve,
+      );
+      _refreshOtRequests();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(approve ? 'OT request approved.' : 'OT request rejected.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to review OT request: $e')));
+      }
+    }
+  }
+
   // EMPLOYEE REQUEST APPROVAL
   // ===========================================================================
 
@@ -3390,6 +3528,7 @@ Widget _statusChip(String status) {
   Future<List<Map<String, dynamic>>> _loadBranchLogs() {
     return _branchLogsFuture ??= SupabaseService.getBranchActivityLogs(
       branchId: selectedLogBranchId,
+      date: selectedLogDate,
     );
   }
 
@@ -3451,6 +3590,36 @@ Widget _statusChip(String status) {
                   ],
                 ),
               ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedLogDate ?? DateTime.now(),
+                    firstDate: DateTime(2022),
+                    lastDate: DateTime(DateTime.now().year + 2),
+                  );
+                  if (picked != null && mounted) {
+                    setState(() {
+                      selectedLogDate = picked;
+                      _branchLogsFuture = null;
+                    });
+                  }
+                },
+                icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                label: Text(selectedLogDate == null
+                    ? 'All dates'
+                    : DateFormat('dd MMM yyyy').format(selectedLogDate!)),
+              ),
+              if (selectedLogDate != null)
+                IconButton(
+                  tooltip: 'Show all dates',
+                  onPressed: () => setState(() {
+                    selectedLogDate = null;
+                    _branchLogsFuture = null;
+                  }),
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+              const SizedBox(width: 10),
               SizedBox(
                 width: 220,
                 child: DropdownButtonFormField<String>(

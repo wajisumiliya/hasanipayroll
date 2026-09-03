@@ -27,6 +27,7 @@ class _BranchPortalState extends State<BranchPortal> {
     DateTime.now().year,
     DateTime.now().month,
   );
+  DateTime selectedAttendanceDate = DateTime.now();
 
   Future<List<Map<String, dynamic>>>? _employeesFuture;
   String? _employeesFutureBranchId;
@@ -809,6 +810,32 @@ class _BranchPortalState extends State<BranchPortal> {
                 ],
               ),
               const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text(
+                    'Daily Summary: ',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedAttendanceDate,
+                        firstDate: DateTime(2022),
+                        lastDate: DateTime(DateTime.now().year + 2),
+                      );
+                      if (picked != null && mounted) {
+                        setState(() => selectedAttendanceDate = picked);
+                      }
+                    },
+                    icon: const Icon(Icons.today_outlined),
+                    label: Text(DateFormat('dd MMM yyyy').format(selectedAttendanceDate)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _dailyAttendanceSummary(liveEmployees),
+              const SizedBox(height: 12),
               _panel(
                 'Select Employee',
                 liveEmployees.isEmpty
@@ -925,6 +952,77 @@ class _BranchPortalState extends State<BranchPortal> {
           ),
         );
       },
+    );
+  }
+
+  Widget _dailyAttendanceSummary(List<Map<String, dynamic>> employees) {
+    final resolvedBranchId = branch?.branchId ?? branchId;
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: SupabaseService.getAttendanceByBranchDate(
+        branchId: resolvedBranchId,
+        date: selectedAttendanceDate,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 64,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+        final visibleIds = employees
+            .where(_liveIsActive)
+            .map(_liveEmployeeId)
+            .map((id) => id.trim().toUpperCase())
+            .toSet();
+        final rows = (snapshot.data ?? const <Map<String, dynamic>>[])
+            .where((row) => visibleIds.contains(
+                  row['employee_id']?.toString().trim().toUpperCase(),
+                ))
+            .toList();
+        final presentIds = <String>{};
+        final lateIds = <String>{};
+        for (final row in rows) {
+          final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
+          final status = row['status']?.toString().trim().toLowerCase() ?? '';
+          final hasWork = row['working_in']?.toString().trim().isNotEmpty == true &&
+              row['working_out']?.toString().trim().isNotEmpty == true;
+          if (status == 'late') {
+            lateIds.add(id);
+          } else if (status == 'present' || (status.isEmpty && hasWork)) {
+            presentIds.add(id);
+          }
+        }
+        final activeCount = employees.where(_liveIsActive).length;
+        final absent = (activeCount - presentIds.length - lateIds.length)
+            .clamp(0, activeCount);
+        return Row(
+          children: [
+            Expanded(child: _summaryCard('Present', presentIds.length, const Color(0xFF15965D))),
+            const SizedBox(width: 10),
+            Expanded(child: _summaryCard('Absent', absent, Colors.red)),
+            const SizedBox(width: 10),
+            Expanded(child: _summaryCard('Late', lateIds.length, Colors.orange)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _summaryCard(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(.25)),
+      ),
+      child: Row(
+        children: [
+          Text('$count', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
     );
   }
 
