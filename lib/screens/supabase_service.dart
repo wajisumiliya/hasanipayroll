@@ -750,6 +750,15 @@ class SupabaseService {
     }
   }
 
+  static Future<Map<String, dynamic>> addEmployeeForBranch({
+    required String branchId,
+    required Map<String, dynamic> employee,
+  }) async {
+    final payload = Map<String, dynamic>.from(employee)
+      ..['branch_id'] = branchId.trim();
+    return addEmployee(payload);
+  }
+
   // ============================================================
   // UPDATE EMPLOYEE
   // ============================================================
@@ -769,6 +778,31 @@ class SupabaseService {
       return _map(response);
     } catch (e, stackTrace) {
       debugPrint('UPDATE EMPLOYEE ERROR [$employeeId]: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateEmployeeForBranch({
+    required String employeeId,
+    required String branchId,
+    required Map<String, dynamic> changes,
+  }) async {
+    try {
+      final response = await client
+          .from('employees')
+          .update(changes)
+          .eq('employee_id', employeeId.trim())
+          .eq('branch_id', branchId.trim())
+          .select()
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('Employee does not belong to this branch.');
+      }
+      return _map(response);
+    } catch (e, stackTrace) {
+      debugPrint('BRANCH UPDATE EMPLOYEE ERROR [$employeeId]: $e');
       debugPrint('$stackTrace');
       rethrow;
     }

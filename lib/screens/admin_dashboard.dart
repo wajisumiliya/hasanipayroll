@@ -46,6 +46,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String? selectedPayrollBranchId;
   String? selectedLogBranchId;
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
+  Future<List<Map<String, dynamic>>>? _adminEmployeesFuture;
+  final TextEditingController _adminEmployeeSearchController =
+      TextEditingController();
+  String _adminEmployeeSearch = '';
 
   final List<String> months = const [
     'Jan',
@@ -71,13 +75,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void dispose() {
     service.removeListener(_refresh);
+    _adminEmployeeSearchController.dispose();
     super.dispose();
   }
 
   void _refresh() {
     if (!mounted) return;
 
-    setState(() {});
+    setState(() {
+      _adminEmployeesFuture = null;
+    });
   }
 
   // ===========================================================================
@@ -1880,7 +1887,7 @@ Widget _statusChip(String status) {
 
   Widget _employeesPage() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: SupabaseService.getEmployees(),
+      future: _adminEmployeesFuture ??= SupabaseService.getEmployees(),
       builder: (context, snapshot) {
         // ----------------------------------------------------------
         // LOADING
@@ -2003,7 +2010,22 @@ Widget _statusChip(String status) {
         // ----------------------------------------------------------
         // DATA
         // ----------------------------------------------------------
-        final employees = snapshot.data ?? [];
+        final allEmployees = snapshot.data ?? [];
+        final search = _adminEmployeeSearch.trim().toLowerCase();
+        final employees = search.isEmpty
+            ? allEmployees
+            : allEmployees.where((employee) {
+                return [
+                  employee['employee_id'],
+                  employee['name'],
+                  employee['department'],
+                  employee['designation'],
+                  employee['email'],
+                  employee['branch_id'],
+                  employee['branch_name'],
+                ].any((value) =>
+                    value?.toString().toLowerCase().contains(search) == true);
+              }).toList();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -2041,6 +2063,30 @@ Widget _statusChip(String status) {
 
               const SizedBox(height: 20),
 
+              TextField(
+                controller: _adminEmployeeSearchController,
+                onChanged: (value) => setState(() => _adminEmployeeSearch = value),
+                decoration: InputDecoration(
+                  hintText: 'Search employee, department or branch',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _adminEmployeeSearch.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            _adminEmployeeSearchController.clear();
+                            setState(() => _adminEmployeeSearch = '');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
               _panel(
                 'Employee List',
                 employees.isEmpty
@@ -2048,7 +2094,7 @@ Widget _statusChip(String status) {
                   padding: EdgeInsets.all(30),
                   child: Center(
                     child: Text(
-                      'No employees found.',
+                      'No employees match your search.',
                     ),
                   ),
                 )
@@ -3140,7 +3186,7 @@ Widget _statusChip(String status) {
 
   Widget _branchLogsPage() {
     return Padding(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3150,8 +3196,8 @@ Widget _statusChip(String status) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Branch Activity Logs', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 5),
+                    Text('Branch Activity Logs', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 2),
                     Text('Monitor branch login and employee attendance access.', style: TextStyle(color: Colors.black54)),
                   ],
                 ),
@@ -3181,7 +3227,7 @@ Widget _statusChip(String status) {
               IconButton(onPressed: _refreshBranchLogs, tooltip: 'Refresh logs', icon: const Icon(Icons.refresh)),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _loadBranchLogs(),
@@ -3198,27 +3244,33 @@ Widget _statusChip(String status) {
                 }
                 return ListView.separated(
                   itemCount: logs.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, __) => const SizedBox(height: 4),
                   itemBuilder: (context, index) {
                     final log = logs[index];
                     final employeeName = log['employee_name']?.toString().trim() ?? '';
                     final employeeId = log['employee_id']?.toString().trim() ?? '';
                     final isOpen = log['closed_at'] == null;
+                    final employeeText = employeeName.isEmpty
+                        ? employeeId
+                        : '$employeeName${employeeId.isEmpty ? '' : ' ($employeeId)'}';
                     return Card(
                       elevation: 0,
+                      margin: EdgeInsets.zero,
                       child: ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
                         leading: CircleAvatar(
+                          radius: 16,
                           backgroundColor: isOpen ? Colors.orange.shade50 : Colors.green.shade50,
                           child: Icon(isOpen ? Icons.visibility_outlined : Icons.history, color: isOpen ? Colors.orange : Colors.green),
                         ),
                         title: Text('${log['branch_id'] ?? '-'} • ${_logAction(log['action'])}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 7),
-                          child: Text([
-                            if (employeeName.isNotEmpty || employeeId.isNotEmpty) 'Employee: ${employeeName.isEmpty ? employeeId : employeeName}${employeeId.isEmpty ? '' : ' ($employeeId)'}',
-                            'Opened: ${_logDateText(log['opened_at'])}',
-                            'Closed: ${_logDateText(log['closed_at'])}',
-                          ].join('\n')),
+                        subtitle: Text(
+                          '${employeeText.isEmpty ? '' : '$employeeText • '}'
+                          '${_logDateText(log['opened_at'])} → ${_logDateText(log['closed_at'])}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11),
                         ),
                         trailing: Text(_logDuration(log), style: const TextStyle(fontWeight: FontWeight.w600)),
                       ),

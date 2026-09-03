@@ -30,6 +30,15 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Future<List<Map<String, dynamic>>>? _employeesFuture;
   String? _employeesFutureBranchId;
+  final TextEditingController _employeeSearchController =
+      TextEditingController();
+  String _employeeSearch = '';
+
+  @override
+  void dispose() {
+    _employeeSearchController.dispose();
+    super.dispose();
+  }
 
   String get branchId {
     final user = service.currentUser;
@@ -1058,8 +1067,20 @@ class _BranchPortalState extends State<BranchPortal> {
           );
         }
 
-        final liveEmployees =
-            snapshot.data ?? [];
+        final allEmployees = snapshot.data ?? [];
+        final search = _employeeSearch.trim().toLowerCase();
+        final liveEmployees = search.isEmpty
+            ? allEmployees
+            : allEmployees.where((employee) {
+                return [
+                  employee['employee_id'],
+                  employee['name'],
+                  employee['department'],
+                  employee['designation'],
+                  employee['email'],
+                ].any((value) =>
+                    value?.toString().toLowerCase().contains(search) == true);
+              }).toList();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -1067,19 +1088,52 @@ class _BranchPortalState extends State<BranchPortal> {
             crossAxisAlignment:
             CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Branch Employees',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Branch Employees',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _showAddBranchEmployee,
+                    icon: const Icon(Icons.person_add_alt_1),
+                    label: const Text('Add Employee'),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
-                '${liveEmployees.length} employees assigned to '
+                '${allEmployees.length} employees assigned to '
                     '${branch?.branchName ?? branchId}',
                 style: const TextStyle(
                   color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _employeeSearchController,
+                onChanged: (value) => setState(() => _employeeSearch = value),
+                decoration: InputDecoration(
+                  hintText: 'Search employee by name, ID, department or designation',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _employeeSearch.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            _employeeSearchController.clear();
+                            setState(() => _employeeSearch = '');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -1090,7 +1144,7 @@ class _BranchPortalState extends State<BranchPortal> {
                   padding: EdgeInsets.all(24),
                   child: Center(
                     child: Text(
-                      'No employees found.',
+                      'No employees match your search.',
                     ),
                   ),
                 )
@@ -1159,18 +1213,21 @@ class _BranchPortalState extends State<BranchPortal> {
                           )
                               .join(' • '),
                         ),
-                        trailing: Chip(
-                          label: Text(
-                            active
-                                ? 'Active'
-                                : 'Inactive',
-                          ),
-                          backgroundColor:
-                          active
-                              ? const Color(
-                            0xFFE7F7EF,
-                          )
-                              : Colors.black12,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Chip(
+                              label: Text(active ? 'Active' : 'Inactive'),
+                              backgroundColor: active
+                                  ? const Color(0xFFE7F7EF)
+                                  : Colors.black12,
+                            ),
+                            IconButton(
+                              tooltip: 'Edit employee',
+                              onPressed: () => _showEditBranchEmployee(employee),
+                              icon: const Icon(Icons.edit_outlined),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -1181,6 +1238,194 @@ class _BranchPortalState extends State<BranchPortal> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showAddBranchEmployee() async {
+    await _showBranchEmployeeEditor();
+  }
+
+  Future<void> _showEditBranchEmployee(
+    Map<String, dynamic> employee,
+  ) async {
+    await _showBranchEmployeeEditor(employee: employee);
+  }
+
+  Future<void> _showBranchEmployeeEditor({
+    Map<String, dynamic>? employee,
+  }) async {
+    final editing = employee != null;
+    final employeeId = TextEditingController(
+      text: employee?['employee_id']?.toString() ?? '',
+    );
+    final name = TextEditingController(
+      text: employee?['name']?.toString() ?? '',
+    );
+    final designation = TextEditingController(
+      text: employee?['designation']?.toString() ?? '',
+    );
+    final department = TextEditingController(
+      text: employee?['department']?.toString() ?? '',
+    );
+    final email = TextEditingController(
+      text: employee?['email']?.toString() ?? '',
+    );
+    final phone = TextEditingController(
+      text: employee?['phone']?.toString() ?? '',
+    );
+    var active = employee == null || _liveIsActive(employee);
+    var saving = false;
+    String? error;
+    final resolvedBranchId = branch?.branchId ?? branchId;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(editing ? 'Edit Employee' : 'Add Employee'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: employeeId,
+                    enabled: !editing && !saving,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(labelText: 'Employee ID *'),
+                  ),
+                  const SizedBox(height: 12),
+                  _branchEmployeeField(name, 'Full Name *', enabled: !saving),
+                  _branchEmployeeField(designation, 'Designation', enabled: !saving),
+                  _branchEmployeeField(department, 'Department', enabled: !saving),
+                  _branchEmployeeField(email, 'Email', enabled: !saving),
+                  _branchEmployeeField(phone, 'Phone', enabled: !saving),
+                  const SizedBox(height: 6),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Active employee'),
+                    subtitle: Text(active
+                        ? 'Employee is visible as active'
+                        : 'Employee is marked inactive'),
+                    value: active,
+                    onChanged: saving
+                        ? null
+                        : (value) => setDialogState(() => active = value),
+                  ),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(error!, style: const TextStyle(color: Colors.red)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final id = employeeId.text.trim().toUpperCase();
+                      final employeeName = name.text.trim();
+                      if (id.isEmpty || employeeName.isEmpty) {
+                        setDialogState(() {
+                          error = 'Employee ID and full name are required.';
+                        });
+                        return;
+                      }
+
+                      setDialogState(() {
+                        saving = true;
+                        error = null;
+                      });
+
+                      final values = <String, dynamic>{
+                        'name': employeeName,
+                        'designation': designation.text.trim(),
+                        'department': department.text.trim(),
+                        'email': email.text.trim(),
+                        'phone': phone.text.trim(),
+                        'is_active': active,
+                      };
+
+                      try {
+                        if (editing) {
+                          await SupabaseService.updateEmployeeForBranch(
+                            employeeId: id,
+                            branchId: resolvedBranchId,
+                            changes: values,
+                          );
+                        } else {
+                          await SupabaseService.addEmployeeForBranch(
+                            branchId: resolvedBranchId,
+                            employee: {
+                              ...values,
+                              'employee_id': id,
+                              'joining_date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                            },
+                          );
+                        }
+
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
+                        _refreshEmployees();
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text(editing
+                                  ? 'Employee updated successfully.'
+                                  : 'Employee added successfully.'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (dialogContext.mounted) {
+                          setDialogState(() {
+                            saving = false;
+                            error = 'Unable to save employee: $e';
+                          });
+                        }
+                      }
+                    },
+              child: Text(saving
+                  ? 'Saving...'
+                  : editing
+                      ? 'Update Employee'
+                      : 'Add Employee'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    employeeId.dispose();
+    name.dispose();
+    designation.dispose();
+    department.dispose();
+    email.dispose();
+    phone.dispose();
+  }
+
+  Widget _branchEmployeeField(
+    TextEditingController controller,
+    String label, {
+    required bool enabled,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: TextFormField(
+        controller: controller,
+        enabled: enabled,
+        decoration: InputDecoration(labelText: label),
+      ),
     );
   }
 
