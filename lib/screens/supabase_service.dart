@@ -264,6 +264,15 @@ class SupabaseService {
       'hbkulim': 'kulim',
       'hblkw': 'langkawi',
       'hpspfrn': 'sungaipetani',
+      'hbspfrn': 'sungaipetani',
+      'hbamjfrn': 'amanjaya',
+      'hbasfrn': 'alorsetar',
+      'hbastanafrn': 'astana',
+      'hbgurunfrn': 'gurun',
+      'hbjitrafrn': 'jitra',
+      'hbperaifrn': 'prai',
+      'hbkulimfrn': 'kulim',
+      'hblkwfrn': 'langkawi',
     };
 
     return branchLoginAliases[normalized] ?? normalized;

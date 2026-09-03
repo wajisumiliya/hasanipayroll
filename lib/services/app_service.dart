@@ -1405,6 +1405,15 @@ return 'OTP verification failed: $e';
       'HBKULIM': 'KULIM',
       'HBLKW': 'LANGKAWI',
       'HPSPFRN': 'SUNGAI PETANI',
+      'HBSPFRN': 'SUNGAI PETANI',
+      'HBAMJFRN': 'AMANJAYA',
+      'HBASFRN': 'ALOR SETAR',
+      'HBASTANAFRN': 'ASTANA',
+      'HBGURUNFRN': 'GURUN',
+      'HBJITRAFRN': 'JITRA',
+      'HBPERAIFRN': 'PRAI',
+      'HBKULIMFRN': 'KULIM',
+      'HBLKWFRN': 'LANGKAWI',
     };
 
     id = branchLoginAliases[id] ?? id;

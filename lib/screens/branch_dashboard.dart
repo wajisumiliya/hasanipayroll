@@ -56,7 +56,7 @@ class _BranchPortalState extends State<BranchPortal> {
   bool get isFrnSession {
     final user = service.currentUser;
     return [user?.branchId, user?.username].any(
-      (value) => value?.trim().toUpperCase() == 'HPSPFRN',
+      (value) => value?.trim().toUpperCase().endsWith('FRN') == true,
     );
   }
 
@@ -939,7 +939,11 @@ class _BranchPortalState extends State<BranchPortal> {
     final employeeName = employee['name']?.toString() ?? 'Employee';
     final resolvedBranchId = branch?.branchId ?? branchId;
     final activityId = await SupabaseService.startBranchActivity(
-      branchId: isFrnSession ? 'HPSPFRN' : resolvedBranchId,
+      branchId: isFrnSession
+          ? service.currentUser?.branchId ??
+              service.currentUser?.username ??
+              '$resolvedBranchId FRN'
+          : resolvedBranchId,
       action: 'ATTENDANCE_OPENED',
       employeeId: employeeId,
       employeeName: employeeName,
