@@ -27,6 +27,10 @@ const SUPABASE_JWT_SECRET = String(
   process.env.SUPABASE_JWT_SECRET || "",
 ).trim();
 
+const SUPABASE_JWT_KEY_ID = String(
+  process.env.SUPABASE_JWT_KEY_ID || "",
+).trim();
+
 const JWT_EXPIRES_IN =
   process.env.JWT_EXPIRES_IN || "8h";
 
@@ -81,6 +85,13 @@ if (JWT_SECRET.length < 32) {
 if (SUPABASE_JWT_SECRET.length < 32) {
   console.error(
     "FATAL: SUPABASE_JWT_SECRET must be a signing secret trusted by Supabase.",
+  );
+  process.exit(1);
+}
+
+if (!SUPABASE_JWT_KEY_ID) {
+  console.error(
+    "FATAL: SUPABASE_JWT_KEY_ID is not configured.",
   );
   process.exit(1);
 }
@@ -448,6 +459,9 @@ function createAccessToken(
     SUPABASE_JWT_SECRET,
 
     {
+      keyid:
+        SUPABASE_JWT_KEY_ID,
+
       expiresIn:
         JWT_EXPIRES_IN,
 
