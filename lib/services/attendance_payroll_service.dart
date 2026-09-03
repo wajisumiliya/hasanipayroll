@@ -309,7 +309,7 @@ class AttendancePayrollService {
       // OT is only paid when Admin authorized it.
       // Employees with eis_applicable=false have a 10h30 target and,
       // according to the rule, extra working time is never treated as OT.
-      if (eisApplicable && _isOtAuthorized(row['ot_authorized'])) {
+      if (_isOtAuthorized(row['ot_authorized'])) {
         final otHours = _attendanceOvertimeHours(row, dailyRequiredMinutes);
         if (otHours > 0) {
           totalOvertimeHours += otHours;
@@ -660,7 +660,7 @@ class AttendancePayrollService {
         .select(
           'employee_id,attendance_date,work_minutes,break_minutes,'
           'net_working_minutes,net_working_duration,overtime_minutes,'
-          'overtime_duration,ot_authorized,is_submitted,'
+          'overtime_duration,approved_ot_minutes,ot_authorized,is_submitted,'
           'is_public_holiday,is_unpaid,status',
         )
         .eq('employee_id', employeeId)
@@ -757,6 +757,10 @@ class AttendancePayrollService {
     Map<String, dynamic> row,
     int requiredMinutes,
   ) {
+    final approvedMinutes = _intNumber(row['approved_ot_minutes']);
+    if (approvedMinutes >= 0 && row['approved_ot_minutes'] != null) {
+      return approvedMinutes / 60.0;
+    }
     // IMPORTANT:
     // Payroll must use the same NET working time shown/saved by Attendance
     // Dialog. Do NOT trust an old/stale overtime_minutes value, because that

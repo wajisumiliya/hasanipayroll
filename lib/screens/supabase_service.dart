@@ -1207,7 +1207,22 @@ class SupabaseService {
           .eq('ot_requested', true)
           .eq('ot_authorized', false)
           .order('attendance_date', ascending: false);
-      return _mapList(response);
+      final requests = _mapList(response);
+      for (final request in requests) {
+        final date = DateTime.tryParse(request['attendance_date']?.toString() ?? '');
+        if (date == null) continue;
+        final roster = await getMonthlyRosters(
+          branchId: request['branch_id']?.toString() ?? '',
+          employeeId: request['employee_id']?.toString(),
+          year: date.year,
+          month: date.month,
+        );
+        final week = ((date.day - 1) ~/ 7) + 1;
+        final match = roster.where((row) => row['week_number'] == week).firstOrNull;
+        request['_shift_start'] = match?['shift_start'];
+        request['_shift_end'] = match?['shift_end'];
+      }
+      return requests;
     } catch (e, stackTrace) {
       debugPrint('GET OT REQUESTS ERROR: $e');
       debugPrint('$stackTrace');
@@ -1220,6 +1235,7 @@ class SupabaseService {
     required String branchId,
     required String attendanceDate,
     required bool approve,
+    int? approvedOtMinutes,
   }) async {
     try {
       await client
@@ -1227,6 +1243,7 @@ class SupabaseService {
           .update({
             'ot_requested': approve,
             'ot_authorized': approve,
+            'approved_ot_minutes': approve ? approvedOtMinutes : null,
           })
           .eq('employee_id', employeeId)
           .eq('branch_id', branchId)

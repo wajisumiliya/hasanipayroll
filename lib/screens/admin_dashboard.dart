@@ -57,6 +57,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       TextEditingController();
   String _adminEmployeeSearch = '';
   String _attendanceEmployeeSearch = '';
+  final Map<String, String> _approvedOtInputs = {};
 
   final List<String> months = const [
     'Jan',
@@ -3212,6 +3213,14 @@ Widget _statusChip(String status) {
                     final date = request['attendance_date']?.toString() ?? '-';
                     final duration = request['overtime_duration']?.toString().trim();
                     final minutes = request['overtime_minutes']?.toString() ?? '0';
+                    final requestKey = '$employeeId|$date';
+                    _approvedOtInputs.putIfAbsent(requestKey, () =>
+                        duration?.isNotEmpty == true ? duration! : _otMinutesText(int.tryParse(minutes) ?? 0));
+                    final shiftStart = _shortTime(request['_shift_start']);
+                    final shiftEnd = _shortTime(request['_shift_end']);
+                    final actualStart = (request['working_in'] ?? request['check_in'] ?? '-').toString();
+                    final actualEnd = (request['working_out'] ?? request['check_out'] ?? '-').toString();
+                    final breakText = request['break_minutes']?.toString() ?? '0';
                     return Card(
                       elevation: 0,
                       child: ListTile(
@@ -3221,11 +3230,19 @@ Widget _statusChip(String status) {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(16)),
-                              child: Text(duration?.isNotEmpty == true ? duration! : '$minutes min', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.w700)),
-                            ),
+                            _otInfo('Shift', '$shiftStart–$shiftEnd'),
+                            const SizedBox(width: 12),
+                            _otInfo('Actual', '$actualStart–$actualEnd'),
+                            const SizedBox(width: 12),
+                            _otInfo('Total break', _otMinutesText(int.tryParse(breakText) ?? 0)),
+                            const SizedBox(width: 12),
+                            _otInfo('Requested', duration?.isNotEmpty == true ? duration! : '$minutes min'),
+                            const SizedBox(width: 12),
+                            SizedBox(width: 135, child: TextFormField(
+                              initialValue: _approvedOtInputs[requestKey],
+                              decoration: const InputDecoration(labelText: 'Approved HH:MM', isDense: true),
+                              onChanged: (value) => _approvedOtInputs[requestKey] = value,
+                            )),
                             const SizedBox(width: 10),
                             OutlinedButton(
                               onPressed: () => _reviewOtRequest(request, false),
@@ -3233,7 +3250,7 @@ Widget _statusChip(String status) {
                             ),
                             const SizedBox(width: 8),
                             FilledButton(
-                              onPressed: () => _reviewOtRequest(request, true),
+                              onPressed: () => _reviewOtRequest(request, true, approvedText: _approvedOtInputs[requestKey]),
                               child: const Text('Approve'),
                             ),
                           ],
@@ -3252,14 +3269,21 @@ Widget _statusChip(String status) {
 
   Future<void> _reviewOtRequest(
     Map<String, dynamic> request,
-    bool approve,
+    bool approve, {
+    String? approvedText,
+  }
   ) async {
     try {
+      final approvedMinutes = approve ? _parseOtMinutes(approvedText ?? '') : null;
+      if (approve && approvedMinutes == null) {
+        throw Exception('Enter approved OT as HH:MM, for example 01:30.');
+      }
       await SupabaseService.reviewOtRequest(
         employeeId: request['employee_id'].toString(),
         branchId: request['branch_id'].toString(),
         attendanceDate: request['attendance_date'].toString(),
         approve: approve,
+        approvedOtMinutes: approvedMinutes,
       );
       _refreshOtRequests();
       if (mounted) {
@@ -3272,6 +3296,30 @@ Widget _statusChip(String status) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to review OT request: $e')));
       }
     }
+  }
+
+  Widget _otInfo(String label, String value) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [Text(label, style: const TextStyle(fontSize: 10, color: Colors.black54)), Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))],
+  );
+
+  String _shortTime(dynamic value) {
+    final text = value?.toString() ?? '';
+    return text.length >= 5 ? text.substring(0, 5) : 'Not assigned';
+  }
+
+  String _otMinutesText(int minutes) =>
+      '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
+
+  int? _parseOtMinutes(String value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(value.trim());
+    if (match == null) return null;
+    final hours = int.tryParse(match.group(1)!);
+    final minutes = int.tryParse(match.group(2)!);
+    if (hours == null || minutes == null || minutes > 59) return null;
+    final total = hours * 60 + minutes;
+    return total <= 1440 ? total : null;
   }
 
   // EMPLOYEE REQUEST APPROVAL
