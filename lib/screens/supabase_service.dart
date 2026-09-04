@@ -1727,20 +1727,9 @@ class SupabaseService {
       // 7:30 = 450 minutes
       // ==========================================================
 
-      final extraMinutes = calculatedNetWorkingMinutes > normalWorkingMinutes
-          ? calculatedNetWorkingMinutes - normalWorkingMinutes
-          : 0;
+      // OT is populated only by the approved overtime-request workflow.
 
-      // OT requires ALL conditions:
-      // 1) allocated break fulfilled (60 minutes),
-      // 2) more than 10 minutes above the normal 7:30 net target,
-      // 3) Branch requested OT,
-      // 4) Admin approved OT.
-      final bool breakFulfilled = calculatedBreakMinutes >= 60;
-      final bool otEligible = breakFulfilled && extraMinutes > 10;
-
-      final int calculatedOvertimeMinutes =
-          (otEligible && otRequested && otAuthorized) ? extraMinutes : 0;
+      final int calculatedOvertimeMinutes = 0;
 
       final String otStatus = otAuthorized ? 'true' : 'false';
 
@@ -1784,6 +1773,8 @@ class SupabaseService {
       const allowedStatuses = {
         'Present',
         'Late',
+        'Early Out',
+        'Late + Early Out',
         'Absent',
         'OFF',
         'MC',

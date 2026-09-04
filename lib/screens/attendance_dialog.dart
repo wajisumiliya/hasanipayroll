@@ -288,6 +288,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
         c.savedNetWorkingMinutes = _intValue(row['net_working_minutes']);
         c.savedOvertimeMinutes = _intValue(row['overtime_minutes']);
+        c.approvedOtMinutes = _intValue(row['approved_ot_minutes']);
       }
     } catch (e) {
       loadError = e.toString();
@@ -739,7 +740,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           overtimeIn: row.overtimeIn.text.trim(),
           overtimeOut: row.overtimeOut.text.trim(),
 
-          status: row.status.trim(),
+          status: _calculatedAttendanceStatus(day, row),
           otRequested: row.otRequested,
           otAuthorized: widget.adminOnlyAfterSubmit ? row.otAuthorized : false,
 
@@ -1115,20 +1116,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
-    var requiredMinutes = (_requiredWorkHours * 60).round();
-    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
-    if (roster != null) {
-      final start = _clockMinutes(roster['shift_start']?.toString() ?? '');
-      final end = _clockMinutes(roster['shift_end']?.toString() ?? '');
-      if (start != null && end != null) {
-        var gross = end - start;
-        if (gross <= 0) gross += 24 * 60;
-        final rosterRequired = gross - _intValue(roster['break_minutes']);
-        if (rosterRequired > 0) requiredMinutes = rosterRequired;
-      }
-    }
-    final extra = netWorkingMinutes - requiredMinutes;
-    return extra > 0 ? extra : 0;
+    // Overtime is never inferred from long working hours. It appears only
+    // after the employee request has been approved by Admin for this date.
+    return c.otAuthorized ? c.approvedOtMinutes : 0;
   }
 
   int? _clockMinutes(String value) {
@@ -1140,88 +1130,64 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return hour * 60 + minute;
   }
 
+  String _calculatedAttendanceStatus(
+    int day,
+    AttendanceDayControllers c,
+  ) {
+    const manualStatuses = {'OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'UNPAID'};
+    final manual = c.status.trim();
+    if (manualStatuses.contains(manual)) return manual;
+
+    final actualIn = _clockMinutes(c.workingIn.text);
+    if (actualIn == null) return '';
+
+    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    if (roster == null) return 'Present';
+
+    final shiftIn = _clockMinutes(roster['shift_start']?.toString() ?? '');
+    final shiftOut = _clockMinutes(roster['shift_end']?.toString() ?? '');
+    final actualOut = _clockMinutes(c.workingOut.text);
+    final isLate = shiftIn != null && actualIn > shiftIn;
+    final isEarlyOut =
+        actualOut != null && shiftOut != null && actualOut < shiftOut;
+
+    if (isLate && isEarlyOut) return 'Late + Early Out';
+    if (isLate) return 'Late';
+    if (isEarlyOut) return 'Early Out';
+    return 'Present';
+  }
+
   Widget _statusCell(
     int day,
     AttendanceDayControllers c,
     int netWorkingMinutes,
   ) {
-    final hasWorkingTime = c.workingIn.text.trim().isNotEmpty &&
-        c.workingOut.text.trim().isNotEmpty &&
-        c.workingIn.text.trim() != '-' &&
-        c.workingOut.text.trim() != '-';
-
-    final overtimeMinutes = _calculateDailyOtMinutes(
-      day: day,
-      c: c,
-      netWorkingMinutes: netWorkingMinutes,
-    );
-
-    String effectiveStatus = c.status.trim();
+    final effectiveStatus = _calculatedAttendanceStatus(day, c);
+    final hasWorkingTime = _clockMinutes(c.workingIn.text) != null;
     final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
-    int lateMinutes = 0;
-    var earlyOut = false;
-    if (hasWorkingTime && roster != null) {
-      final actualIn = _clockMinutes(c.workingIn.text);
-      final actualOut = _clockMinutes(c.workingOut.text);
-      final shiftIn = _clockMinutes(roster['shift_start']?.toString() ?? '');
-      final shiftOut = _clockMinutes(roster['shift_end']?.toString() ?? '');
-      if (actualIn != null && shiftIn != null)
-        lateMinutes = (actualIn - shiftIn).clamp(0, 1440);
-      if (actualOut != null && shiftOut != null)
-        earlyOut = actualOut < shiftOut;
-      if (lateMinutes > 0 && earlyOut) {
-        effectiveStatus = 'Late + Early Out';
-      } else if (lateMinutes > 0) {
-        effectiveStatus = 'Late';
-      } else if (earlyOut) {
-        effectiveStatus = 'Early Out';
-      }
-    } else if (hasWorkingTime && roster == null && effectiveStatus.isEmpty) {
-      effectiveStatus = 'Roster Not Assigned';
-    }
-    if (effectiveStatus.isEmpty) {
-      if (c.isPublicHoliday) {
-        effectiveStatus = 'PH';
-      } else if (c.isUnpaid) {
-        effectiveStatus = 'UNPAID';
-      } else if (hasWorkingTime) {
-        effectiveStatus = 'Present';
-      } else {
-        effectiveStatus = 'OFF';
-      }
-    }
+    final actualIn = _clockMinutes(c.workingIn.text);
+    final shiftIn = _clockMinutes(roster?['shift_start']?.toString() ?? '');
+    final lateMinutes = actualIn != null && shiftIn != null
+        ? (actualIn - shiftIn).clamp(0, 1440)
+        : 0;
 
     Color background;
     Color foreground;
     switch (effectiveStatus) {
       case 'Late':
       case 'Late + Early Out':
-        background = lateMinutes > 5
-            ? const Color(0xFFFFCDD2)
-            : lateMinutes == 5
-                ? const Color(0xFFFFCC80)
-                : const Color(0xFFFFF59D);
-        foreground =
-            lateMinutes > 5 ? const Color(0xFFC62828) : const Color(0xFFE65100);
-        break;
       case 'Early Out':
         background = const Color(0xFFFFCDD2);
         foreground = const Color(0xFFC62828);
         break;
-      case 'Roster Not Assigned':
-        background = const Color(0xFFECEFF1);
-        foreground = const Color(0xFF455A64);
-        break;
-      case 'OFF':
-        background = const Color(0xFFECEFF1);
-        foreground = const Color(0xFF455A64);
-        break;
       case 'MC':
+      case 'PH':
         background = const Color(0xFFFFCDD2);
-        foreground = const Color(0xFFC62828);
+        foreground = const Color(0xFFB71C1C);
         break;
       case 'PL':
       case 'AL':
+      case 'UNPAID':
         background = const Color(0xFFE1BEE7);
         foreground = const Color(0xFF6A1B9A);
         break;
@@ -1229,45 +1195,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         background = const Color(0xFFBBDEFB);
         foreground = const Color(0xFF1565C0);
         break;
-      case 'PH':
-        background = const Color(0xFFFFCDD2);
-        foreground = const Color(0xFFB71C1C);
-        break;
-      case 'UNPAID':
-        background = const Color(0xFFD1C4E9);
-        foreground = const Color(0xFF4527A0);
+      case 'OFF':
+      case '':
+        background = const Color(0xFFECEFF1);
+        foreground = const Color(0xFF455A64);
         break;
       default:
         background = const Color(0xFFE8F5E9);
         foreground = const Color(0xFF2E7D32);
     }
 
-    String otLabel = '';
-    if (c.otAuthorized) {
-      otLabel = 'OT APPROVED';
-    } else if (c.otRequested) {
-      otLabel = 'OT REQUESTED';
-    } else if (overtimeMinutes > 0) {
-      otLabel = 'OT AVAILABLE';
-    }
-
-    final labels = <String>[
-      lateMinutes > 0 ? '$effectiveStatus ($lateMinutes min)' : effectiveStatus
-    ];
-    if (roster != null) {
-      final start = (roster['shift_start'] ?? '').toString().substring(0, 5);
-      final end = (roster['shift_end'] ?? '').toString().substring(0, 5);
-      final startMinutes = _clockMinutes(start);
-      final endMinutes = _clockMinutes(end);
-      final breakMinutes = _intValue(roster['break_minutes']);
-      if (startMinutes != null && endMinutes != null) {
-        final scheduledNet =
-            (endMinutes - startMinutes - breakMinutes).clamp(0, 1440);
-        labels.add('SHIFT $start-$end • NET ${formatMinutes(scheduledNet)}');
-      }
-    }
-    if (otLabel.isNotEmpty) labels.add(otLabel);
-
+    final displayStatus = lateMinutes > 0 && effectiveStatus.contains('Late')
+        ? '$effectiveStatus ($lateMinutes min)'
+        : effectiveStatus;
     final child = Container(
       width: double.infinity,
       height: double.infinity,
@@ -1275,15 +1215,13 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 3),
       color: background,
       child: Text(
-        labels.join(' • '),
+        displayStatus,
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: 8.5,
-          fontWeight: FontWeight.w800,
-          color: foreground,
-        ),
+            fontSize: 8.5, fontWeight: FontWeight.w800, color: foreground),
       ),
     );
+    if (!_canEdit) return child;
 
     if (!_canEdit) return child;
 
@@ -2293,6 +2231,7 @@ class AttendanceDayControllers {
 
   int savedNetWorkingMinutes = 0;
   int savedOvertimeMinutes = 0;
+  int approvedOtMinutes = 0;
 
   bool get hasData {
     return workingIn.text.trim().isNotEmpty ||

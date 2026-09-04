@@ -324,11 +324,8 @@ class AttendancePayrollService {
       }
     }
 
-    // Your rule: if the monthly late/short-working deduction is below RM5,
-    // do not deduct it.
-    totalLateDeduction = _roundMoney(
-      totalLateDeduction < 5.0 ? 0.0 : totalLateDeduction,
-    );
+    // Every normal-day net-working shortfall is deductible.
+    totalLateDeduction = _roundMoney(totalLateDeduction);
 
     final unpaidDeduction = _roundMoney(
       dailySalary * unpaidDays,
@@ -762,40 +759,11 @@ class AttendancePayrollService {
     Map<String, dynamic> row,
     int requiredMinutes,
   ) {
+    // The approved request is the only source of payable overtime. Never
+    // derive OT from long attendance hours or legacy overtime totals.
+    if (row['approved_ot_minutes'] == null) return 0.0;
     final approvedMinutes = _intNumber(row['approved_ot_minutes']);
-    if (approvedMinutes >= 0 && row['approved_ot_minutes'] != null) {
-      return approvedMinutes / 60.0;
-    }
-    // IMPORTANT:
-    // Payroll must use the same NET working time shown/saved by Attendance
-    // Dialog. Do NOT trust an old/stale overtime_minutes value, because that
-    // can turn a real 01:23 OT into an old 02:00 value.
-    //
-    // reduced/reduced1 required NET = 7:30 = 450 minutes.
-    // OT = synchronized NET working minutes - 450.
-    final netMinutes = _intNumber(row['net_working_minutes']);
-    if (netMinutes > 0) {
-      final calculatedOtMinutes = netMinutes - requiredMinutes;
-      return calculatedOtMinutes > 0 ? calculatedOtMinutes / 60.0 : 0.0;
-    }
-
-    // Fallback for older rows without net_working_minutes:
-    // derive NET from work_minutes - break_minutes.
-    final workMinutes = _intNumber(row['work_minutes']);
-    final breakMinutes = _intNumber(row['break_minutes']);
-    if (workMinutes > 0) {
-      final netMinutesFallback = workMinutes - breakMinutes;
-      final calculatedOtMinutes = netMinutesFallback - requiredMinutes;
-      return calculatedOtMinutes > 0 ? calculatedOtMinutes / 60.0 : 0.0;
-    }
-
-    // Last-resort compatibility fallback for legacy rows.
-    final overtimeMinutes = _intNumber(row['overtime_minutes']);
-    if (overtimeMinutes > 0) {
-      return overtimeMinutes / 60.0;
-    }
-
-    return 0.0;
+    return approvedMinutes > 0 ? approvedMinutes / 60.0 : 0.0;
   }
 
   static int _attendanceNetMinutes(Map<String, dynamic> row) {
