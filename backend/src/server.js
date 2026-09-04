@@ -116,11 +116,7 @@ app.set(
 // SECURITY HEADERS
 // ============================================================
 
-app.use(
-  helmet({
-    contentSecurityPolicy: false,
-  }),
-);
+app.use(helmet());
 
 // ============================================================
 // CORS
@@ -183,8 +179,7 @@ app.use(
         uniqueOrigins,
       );
 
-      // Still allow the request, just log it
-      return callback(null, true);
+      return callback(new Error('Origin not allowed by CORS.'));
     },
 
     credentials: true,

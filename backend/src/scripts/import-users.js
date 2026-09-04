@@ -17,8 +17,8 @@ const { Pool } = pg;
 | JSON source:
 |   backend/data/users.json
 |
-| Temporary password for every imported user:
-|   112233
+| Temporary password supplied through IMPORT_TEMP_PASSWORD:
+|   Minimum 12 characters; never committed or printed
 |
 | Database table:
 |   public."app_user"
@@ -50,7 +50,11 @@ const USERS_FILE = path.resolve(
   "users.json"
 );
 
-const COMMON_PASSWORD = "112233";
+const IMPORT_TEMP_PASSWORD = String(process.env.IMPORT_TEMP_PASSWORD || '').trim();
+
+if (IMPORT_TEMP_PASSWORD.length < 12) {
+  throw new Error('IMPORT_TEMP_PASSWORD must be supplied and contain at least 12 characters.');
+}
 
 const ROLE_MAP = {
   employee: "EMPLOYEE",
@@ -446,16 +450,13 @@ async function importUsers() {
      * We store ONLY the bcrypt hash in the database.
      */
     const passwordHash = await bcrypt.hash(
-      COMMON_PASSWORD,
+      IMPORT_TEMP_PASSWORD,
       12
     );
 
     console.log("Password hash generated.");
 
     console.log("");
-    console.log(
-      `Common temporary password: ${COMMON_PASSWORD}`
-    );
 
     console.log("");
     console.log("Role mapping:");
@@ -632,7 +633,7 @@ async function importUsers() {
           /*
            * UPDATE existing account.
            *
-           * We intentionally reset the password to 112233
+           * We intentionally reset the password to the configured temporary password
            * and mark the account as needing a password change.
            */
           await client.query(
@@ -766,8 +767,7 @@ async function importUsers() {
   console.log(`Updated       : ${updated}`);
   console.log(`Skipped       : ${skipped}`);
   console.log("");
-  console.log("Temporary password for imported users:");
-  console.log(`  ${COMMON_PASSWORD}`);
+  console.log('Temporary password was loaded securely from the environment.');
   console.log("");
   console.log(
     "Users marked with mustChangePassword=true will be required"
