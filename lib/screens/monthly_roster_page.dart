@@ -17,6 +17,18 @@ class _Shift {
   final String end;
   final int breakMinutes;
   const _Shift(this.label, this.start, this.end, this.breakMinutes);
+
+  String get netDuration {
+    int minutes(String value) {
+      final parts = value.split(':');
+      return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    }
+
+    final total = minutes(end) - minutes(start) - breakMinutes;
+    final hours = total ~/ 60;
+    final remainder = total % 60;
+    return remainder == 0 ? '$hours hours' : '$hours hours $remainder minutes';
+  }
 }
 
 class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
@@ -27,21 +39,12 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
     _Shift('11:00 AM – 8:00 PM', '11:00', '20:00', 90),
     _Shift('12:00 PM – 9:00 PM', '12:00', '21:00', 90),
     _Shift('1:00 PM – 10:00 PM', '13:00', '22:00', 90),
+    _Shift('9:00 AM - 9:00 PM', '09:00', '21:00', 90),
+    _Shift('10:00 AM - 10:00 PM', '10:00', '22:00', 90),
   ];
-  static const weekdays = <int, String>{
-    1: 'Monday',
-    2: 'Tuesday',
-    3: 'Wednesday',
-    4: 'Thursday',
-    5: 'Friday',
-    6: 'Saturday',
-    7: 'Sunday',
-  };
-
   DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
   int week = 1;
   _Shift shift = shifts.first;
-  int? offDay;
   String search = '';
   final selectedIds = <String>{};
   bool saving = false;
@@ -92,7 +95,6 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
           'shift_start': shift.start,
           'shift_end': shift.end,
           'break_minutes': shift.breakMinutes,
-          'off_weekday': offDay,
           'updated_at': updatedAt,
         });
       }
@@ -106,7 +108,6 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
           'shift_start': shift.start,
           'shift_end': shift.end,
           'break_minutes': shift.breakMinutes,
-          'off_day': offDay == null ? 'None' : weekdays[offDay],
           'employee_count': selectedIds.length,
           'employee_ids': selectedIds.toList()..sort(),
         },
@@ -208,27 +209,11 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
                           onChanged: (value) =>
                               setState(() => shift = value ?? shift),
                         )),
-                    SizedBox(
-                        width: 180,
-                        child: DropdownButtonFormField<int?>(
-                          initialValue: offDay,
-                          decoration: const InputDecoration(
-                              labelText: 'Weekly OFF day', isDense: true),
-                          items: [
-                            const DropdownMenuItem<int?>(
-                                value: null, child: Text('No OFF day')),
-                            ...weekdays.entries.map((entry) =>
-                                DropdownMenuItem<int?>(
-                                    value: entry.key,
-                                    child: Text(entry.value))),
-                          ],
-                          onChanged: (value) => setState(() => offDay = value),
-                        )),
                   ]),
             )),
             const SizedBox(height: 8),
             Text(
-                '${shift.label} • ${shift.breakMinutes} minutes break • Net 7 hours 30 minutes',
+                '${shift.label} • ${shift.breakMinutes} minutes break • Net ${shift.netDuration}',
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 14),
             Row(children: [
@@ -273,7 +258,7 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
               final assignment = current == null
                   ? 'Not assigned for Week $week'
                   : '${_time(current['shift_start'])}–${_time(current['shift_end'])} • '
-                      '${current['break_minutes']} min break${current['off_weekday'] == null ? '' : ' • OFF ${weekdays[int.tryParse(current['off_weekday'].toString())]}'}';
+                      '${current['break_minutes']} min break';
               final name = (employee['name'] ?? employeeId).toString();
               return Card(
                   child: CheckboxListTile(

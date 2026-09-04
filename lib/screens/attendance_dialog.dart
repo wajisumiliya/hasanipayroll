@@ -38,14 +38,11 @@ class AttendanceDialog extends StatefulWidget {
   final bool adminOnlyAfterSubmit;
 
   @override
-  State<AttendanceDialog> createState() =>
-      _AttendanceDialogState();
+  State<AttendanceDialog> createState() => _AttendanceDialogState();
 }
 
-class _AttendanceDialogState
-    extends State<AttendanceDialog> {
-  late final List<AttendanceDayControllers>
-  controllers;
+class _AttendanceDialogState extends State<AttendanceDialog> {
+  late final List<AttendanceDayControllers> controllers;
 
   late final int daysInMonth;
 
@@ -74,7 +71,7 @@ class _AttendanceDialogState
 
     controllers = List.generate(
       daysInMonth,
-          (_) => AttendanceDayControllers(),
+      (_) => AttendanceDayControllers(),
     );
 
     _loadAttendance();
@@ -104,27 +101,20 @@ class _AttendanceDialogState
   // ==========================================================================
 
   String _employeeId() {
-    return (
-        widget.employee['employee_id'] ??
-            widget.employee['id'] ??
-            ''
-    ).toString();
+    return (widget.employee['employee_id'] ?? widget.employee['id'] ?? '')
+        .toString();
   }
 
   String _employeeName() {
-    return widget.employee['name']?.toString() ??
-        'Employee';
+    return widget.employee['name']?.toString() ?? 'Employee';
   }
 
   String _department() {
-    return widget.employee['department']
-        ?.toString() ??
-        '';
+    return widget.employee['department']?.toString() ?? '';
   }
 
   String _section() {
-    return widget.employee['section']?.toString() ??
-        '';
+    return widget.employee['section']?.toString() ?? '';
   }
 
   bool _toBool(dynamic value) {
@@ -132,8 +122,7 @@ class _AttendanceDialogState
       return value;
     }
 
-    return value?.toString().toLowerCase() ==
-        'true';
+    return value?.toString().toLowerCase() == 'true';
   }
 
   int _intValue(dynamic value) {
@@ -168,11 +157,11 @@ class _AttendanceDialogState
       }
 
       if (salary != null) {
-        final epfCategory = (salary['epf_catagory'] ??
-                salary['epf_category'] ?? '')
-            .toString()
-            .trim()
-            .toLowerCase();
+        final epfCategory =
+            (salary['epf_catagory'] ?? salary['epf_category'] ?? '')
+                .toString()
+                .trim()
+                .toLowerCase();
         final eisApplicable = _toBool(salary['eis_applicable']);
 
         // normal1 has 7:30 target and can receive approved OT.
@@ -217,16 +206,8 @@ class _AttendanceDialogState
       );
       _weeklyRoster
         ..clear()
-        ..addEntries(rosterRows.map((row) => MapEntry(_intValue(row['week_number']), row)));
-
-      for (var day = 1; day <= daysInMonth; day++) {
-        final date = DateTime(widget.month.year, widget.month.month, day);
-        final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
-        final offWeekday = _intValue(roster?['off_weekday']);
-        if (offWeekday > 0 && date.weekday == offWeekday) {
-          controllers[day - 1].status = 'OFF';
-        }
-      }
+        ..addEntries(rosterRows
+            .map((row) => MapEntry(_intValue(row['week_number']), row)));
 
       final start = DateTime(widget.month.year, widget.month.month, 1);
       final end = DateTime(widget.month.year, widget.month.month + 1, 1);
@@ -245,15 +226,14 @@ class _AttendanceDialogState
                   .select()
                   .eq('employee_id', employeeId)
                   .eq('is_submitted', true)
-                  .gte('attendance_date', start.toIso8601String().substring(0, 10))
+                  .gte('attendance_date',
+                      start.toIso8601String().substring(0, 10))
                   .lt('attendance_date', end.toIso8601String().substring(0, 10))
                   .order('attendance_date'),
             );
 
       // Only submitted rows are visible outside the Branch Portal.
-      final rows = widget.editable
-          ? allRows
-          : allRows;
+      final rows = widget.editable ? allRows : allRows;
 
       submitted = allRows.any((row) => _toBool(row['is_submitted']));
 
@@ -262,8 +242,7 @@ class _AttendanceDialogState
 
       for (final row in rows) {
         final date = DateTime.tryParse(
-          (row['attendance_date'] ?? '')
-              .toString(),
+          (row['attendance_date'] ?? '').toString(),
         );
 
         if (date == null) continue;
@@ -273,64 +252,41 @@ class _AttendanceDialogState
           continue;
         }
 
-        if (date.day < 1 ||
-            date.day > daysInMonth) {
+        if (date.day < 1 || date.day > daysInMonth) {
           continue;
         }
 
         final c = controllers[date.day - 1];
 
-        c.workingIn.text = (
-            row['check_in'] ??
-                row['working_in'] ??
-                ''
-        ).toString();
+        c.workingIn.text =
+            (row['check_in'] ?? row['working_in'] ?? '').toString();
 
-        c.workingOut.text = (
-            row['check_out'] ??
-                row['working_out'] ??
-                ''
-        ).toString();
+        c.workingOut.text =
+            (row['check_out'] ?? row['working_out'] ?? '').toString();
 
-        c.morningIn.text =
-            (row['morning_in'] ?? '').toString();
+        c.morningIn.text = (row['morning_in'] ?? '').toString();
 
-        c.morningOut.text =
-            (row['morning_out'] ?? '').toString();
+        c.morningOut.text = (row['morning_out'] ?? '').toString();
 
-        c.afternoonIn.text =
-            (row['afternoon_in'] ?? '').toString();
+        c.afternoonIn.text = (row['afternoon_in'] ?? '').toString();
 
-        c.afternoonOut.text =
-            (row['afternoon_out'] ?? '').toString();
+        c.afternoonOut.text = (row['afternoon_out'] ?? '').toString();
 
         // IMPORTANT:
         // These database columns are kept for compatibility,
         // but the UI treats them as EVENING BREAK.
-        c.overtimeIn.text =
-            (row['overtime_in'] ?? '').toString();
+        c.overtimeIn.text = (row['overtime_in'] ?? '').toString();
 
-        c.overtimeOut.text =
-            (row['overtime_out'] ?? '').toString();
+        c.overtimeOut.text = (row['overtime_out'] ?? '').toString();
 
-        final roster = _weeklyRoster[((date.day - 1) ~/ 7) + 1];
-        final isRosterOff = _intValue(roster?['off_weekday']) == date.weekday;
-        c.status = isRosterOff
-            ? 'OFF'
-            : (row['status'] ?? '').toString().trim();
-        c.otRequested =
-            _toBool(row['ot_requested']);
-        c.otAuthorized =
-            _toBool(row['ot_authorized']);
-        c.isUnpaid =
-            _toBool(row['is_unpaid']);
-        c.isPublicHoliday =
-            _toBool(row['is_public_holiday']);
+        c.status = (row['status'] ?? '').toString().trim();
+        c.otRequested = _toBool(row['ot_requested']);
+        c.otAuthorized = _toBool(row['ot_authorized']);
+        c.isUnpaid = _toBool(row['is_unpaid']);
+        c.isPublicHoliday = _toBool(row['is_public_holiday']);
 
-        c.savedNetWorkingMinutes =
-            _intValue(row['net_working_minutes']);
-        c.savedOvertimeMinutes =
-            _intValue(row['overtime_minutes']);
+        c.savedNetWorkingMinutes = _intValue(row['net_working_minutes']);
+        c.savedOvertimeMinutes = _intValue(row['overtime_minutes']);
       }
     } catch (e) {
       loadError = e.toString();
@@ -397,17 +353,16 @@ class _AttendanceDialogState
                 ),
                 const SizedBox(height: 25),
                 Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     OutlinedButton(
                       onPressed: saving
                           ? null
                           : () {
-                        Navigator.of(
-                          context,
-                        ).pop();
-                      },
+                              Navigator.of(
+                                context,
+                              ).pop();
+                            },
                       child: const Text('Close'),
                     ),
                     const SizedBox(width: 12),
@@ -415,13 +370,13 @@ class _AttendanceDialogState
                       onPressed: saving
                           ? null
                           : () {
-                        setState(() {
-                          loading = true;
-                          loadError = null;
-                        });
+                              setState(() {
+                                loading = true;
+                                loadError = null;
+                              });
 
-                        _loadAttendance();
-                      },
+                              _loadAttendance();
+                            },
                       icon: const Icon(
                         Icons.refresh,
                       ),
@@ -440,9 +395,7 @@ class _AttendanceDialogState
       insetPadding: const EdgeInsets.all(10),
       child: SizedBox(
         width: 1250,
-        height:
-        MediaQuery.of(context).size.height *
-            .94,
+        height: MediaQuery.of(context).size.height * .94,
         child: Column(
           children: [
             _attendanceDialogHeader(),
@@ -451,17 +404,14 @@ class _AttendanceDialogState
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
-                      child:
-                      _workingAttendanceCard(),
+                      child: _workingAttendanceCard(),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child:
-                      _breakAttendanceCard(),
+                      child: _breakAttendanceCard(),
                     ),
                   ],
                 ),
@@ -473,13 +423,11 @@ class _AttendanceDialogState
             _attendanceSummary(),
 
             Container(
-              padding:
-              const EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 12,
               ),
-              decoration:
-              const BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
@@ -495,23 +443,25 @@ class _AttendanceDialogState
                     onPressed: saving
                         ? null
                         : () {
-                      Navigator.of(
-                        context,
-                      ).pop();
-                    },
+                            Navigator.of(
+                              context,
+                            ).pop();
+                          },
                     child: const Text('Close'),
                   ),
                   const Spacer(),
                   if (_canEdit) ...[
                     OutlinedButton.icon(
-                      onPressed: saving ? null : () => _saveAttendance(submit: false),
+                      onPressed:
+                          saving ? null : () => _saveAttendance(submit: false),
                       icon: const Icon(Icons.save_outlined),
                       label: const Text('Save Draft'),
                     ),
                     const SizedBox(width: 10),
                     if (widget.showSubmitButton)
                       FilledButton.icon(
-                        onPressed: saving ? null : () => _saveAttendance(submit: true),
+                        onPressed:
+                            saving ? null : () => _saveAttendance(submit: true),
                         icon: saving
                             ? const SizedBox(
                                 width: 18,
@@ -522,25 +472,33 @@ class _AttendanceDialogState
                                 ),
                               )
                             : const Icon(Icons.send),
-                        label: Text(saving ? 'Submitting...' : 'Submit Attendance'),
+                        label: Text(
+                            saving ? 'Submitting...' : 'Submit Attendance'),
                       )
                     else
                       FilledButton.icon(
-                        onPressed: saving ? null : () => _saveAttendance(submit: false),
+                        onPressed: saving
+                            ? null
+                            : () => _saveAttendance(submit: false),
                         icon: const Icon(Icons.save),
                         label: const Text('Save Changes'),
                       ),
                   ] else
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: submitted ? Colors.green.shade50 : Colors.orange.shade50,
+                        color: submitted
+                            ? Colors.green.shade50
+                            : Colors.orange.shade50,
                         borderRadius: BorderRadius.zero,
                       ),
                       child: Text(
                         submitted ? 'Submitted by Branch' : 'Not Submitted',
                         style: TextStyle(
-                          color: submitted ? Colors.green.shade700 : Colors.orange.shade700,
+                          color: submitted
+                              ? Colors.green.shade700
+                              : Colors.orange.shade700,
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
@@ -571,11 +529,10 @@ class _AttendanceDialogState
       return;
     }
 
-    final employeeBranchId = (
-        widget.employee['branch_id'] ??
+    final employeeBranchId = (widget.employee['branch_id'] ??
             widget.employee['branchId'] ??
-            widget.branchId
-    ).toString();
+            widget.branchId)
+        .toString();
 
     setState(() {
       saving = true;
@@ -584,9 +541,7 @@ class _AttendanceDialogState
     var savedRows = 0;
 
     try {
-      for (var day = 1;
-      day <= daysInMonth;
-      day++) {
+      for (var day = 1; day <= daysInMonth; day++) {
         final row = controllers[day - 1];
 
         if (!row.hasData &&
@@ -604,10 +559,8 @@ class _AttendanceDialogState
           'Working Out': row.workingOut.text,
           'Morning In': row.morningIn.text,
           'Morning Out': row.morningOut.text,
-          'Afternoon In':
-          row.afternoonIn.text,
-          'Afternoon Out':
-          row.afternoonOut.text,
+          'Afternoon In': row.afternoonIn.text,
+          'Afternoon Out': row.afternoonOut.text,
 
           // Kept as overtime_in/out in database,
           // but used as EVENING BREAK.
@@ -615,23 +568,20 @@ class _AttendanceDialogState
           'Evening Out': row.overtimeOut.text,
         };
 
-        for (final entry
-        in timeFields.entries) {
+        for (final entry in timeFields.entries) {
           final value = entry.value.trim();
 
-          if (value.isNotEmpty &&
-              parseTimeToMinutes(value) ==
-                  null) {
+          if (value.isNotEmpty && parseTimeToMinutes(value) == null) {
             throw Exception(
               'Invalid ${entry.key} time on '
-                  '${DateFormat('dd MMM yyyy').format(
+              '${DateFormat('dd MMM yyyy').format(
                 DateTime(
                   widget.month.year,
                   widget.month.month,
                   day,
                 ),
               )}. '
-                  'Use HH:MM, e.g. 08:30.',
+              'Use HH:MM, e.g. 08:30.',
             );
           }
         }
@@ -640,21 +590,18 @@ class _AttendanceDialogState
         // CALCULATE WORK
         // ================================================================
 
-        final workMinutes =
-        calculateWorkMinutes(row);
+        final workMinutes = calculateWorkMinutes(row);
 
         // ================================================================
         // CALCULATE BREAKS
         // ================================================================
 
-        final morningMinutes =
-        calculateMinutes(
+        final morningMinutes = calculateMinutes(
           row.morningIn.text,
           row.morningOut.text,
         );
 
-        final afternoonMinutes =
-        calculateMinutes(
+        final afternoonMinutes = calculateMinutes(
           row.afternoonIn.text,
           row.afternoonOut.text,
         );
@@ -662,16 +609,13 @@ class _AttendanceDialogState
         // IMPORTANT:
         // EVENING / OT COLUMN IS A BREAK.
         // It is NOT overtime.
-        final eveningBreakMinutes =
-        calculateMinutes(
+        final eveningBreakMinutes = calculateMinutes(
           row.overtimeIn.text,
           row.overtimeOut.text,
         );
 
         final breakMinutes =
-            morningMinutes +
-                afternoonMinutes +
-                eveningBreakMinutes;
+            morningMinutes + afternoonMinutes + eveningBreakMinutes;
 
         // NET WORKING = WORKING PERIOD - ALL BREAKS.
         final netWorkingMinutes =
@@ -689,8 +633,7 @@ class _AttendanceDialogState
         // SAVE
         // ================================================================
 
-        await SupabaseService
-            .saveMonthlyAttendanceRow(
+        await SupabaseService.saveMonthlyAttendanceRow(
           employeeId: employeeId,
           branchId: employeeBranchId,
           date: DateTime(
@@ -700,43 +643,31 @@ class _AttendanceDialogState
           ),
 
           // WORK
-          workingIn:
-          row.workingIn.text.trim(),
-          workingOut:
-          row.workingOut.text.trim(),
+          workingIn: row.workingIn.text.trim(),
+          workingOut: row.workingOut.text.trim(),
 
           // MORNING BREAK
-          morningIn:
-          row.morningIn.text.trim(),
-          morningOut:
-          row.morningOut.text.trim(),
+          morningIn: row.morningIn.text.trim(),
+          morningOut: row.morningOut.text.trim(),
 
           // AFTERNOON BREAK
-          afternoonIn:
-          row.afternoonIn.text.trim(),
-          afternoonOut:
-          row.afternoonOut.text.trim(),
+          afternoonIn: row.afternoonIn.text.trim(),
+          afternoonOut: row.afternoonOut.text.trim(),
 
           // EVENING BREAK
           //
           // Database column names remain overtime_in/out
           // for compatibility with the existing schema.
-          overtimeIn:
-          row.overtimeIn.text.trim(),
-          overtimeOut:
-          row.overtimeOut.text.trim(),
+          overtimeIn: row.overtimeIn.text.trim(),
+          overtimeOut: row.overtimeOut.text.trim(),
 
           status: row.status.trim(),
           otRequested: row.otRequested,
-          otAuthorized: widget.adminOnlyAfterSubmit
-              ? row.otAuthorized
-              : false,
+          otAuthorized: widget.adminOnlyAfterSubmit ? row.otAuthorized : false,
 
           // CALCULATED
-          workMinutes:
-          workMinutes,
-          breakMinutes:
-          breakMinutes,
+          workMinutes: workMinutes,
+          breakMinutes: breakMinutes,
         );
 
         // Keep the attendance table synchronized with the exact values shown
@@ -751,9 +682,8 @@ class _AttendanceDialogState
               'overtime_minutes': dailyOtMinutes,
               'overtime_duration': formatMinutes(dailyOtMinutes),
               'ot_requested': row.otRequested,
-              'ot_authorized': widget.adminOnlyAfterSubmit
-                  ? row.otAuthorized
-                  : false,
+              'ot_authorized':
+                  widget.adminOnlyAfterSubmit ? row.otAuthorized : false,
               'is_unpaid': row.isUnpaid,
               'is_public_holiday': row.isPublicHoliday,
             })
@@ -762,8 +692,8 @@ class _AttendanceDialogState
             .eq(
               'attendance_date',
               '${widget.month.year.toString().padLeft(4, '0')}-'
-              '${widget.month.month.toString().padLeft(2, '0')}-'
-              '${day.toString().padLeft(2, '0')}',
+                  '${widget.month.month.toString().padLeft(2, '0')}-'
+                  '${day.toString().padLeft(2, '0')}',
             );
 
         // Admin-only payroll flags are saved directly because the existing
@@ -862,8 +792,7 @@ class _AttendanceDialogState
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   name,
@@ -882,7 +811,7 @@ class _AttendanceDialogState
                   ]
                       .where(
                         (v) => v.isNotEmpty,
-                  )
+                      )
                       .join(' • '),
                   style: const TextStyle(
                     color: Colors.white70,
@@ -939,9 +868,9 @@ class _AttendanceDialogState
                 padding: EdgeInsets.zero,
                 itemCount: daysInMonth,
                 itemBuilder: (
-                    context,
-                    index,
-                    ) {
+                  context,
+                  index,
+                ) {
                   final day = index + 1;
                   final c = controllers[index];
 
@@ -1020,13 +949,12 @@ class _AttendanceDialogState
   }
 
   Widget _workRow(
-      int day,
-      AttendanceDayControllers c,
-      ) {
+    int day,
+    AttendanceDayControllers c,
+  ) {
     final total = calculateWorkMinutes(c);
     final breakMinutes = _calculateBreakMinutes(c);
-    final netWorkingMinutes =
-        (total - breakMinutes).clamp(0, 24 * 60).toInt();
+    final netWorkingMinutes = (total - breakMinutes).clamp(0, 24 * 60).toInt();
     final overtimeMinutes = _calculateDailyOtMinutes(
       day: day,
       c: c,
@@ -1050,17 +978,14 @@ class _AttendanceDialogState
             95,
             focusNode: c.workingOutFocus,
             prevFocus: c.workingInFocus,
-            nextFocus: day < daysInMonth
-                ? controllers[day].workingInFocus
-                : null,
+            nextFocus:
+                day < daysInMonth ? controllers[day].workingInFocus : null,
           ),
           _tableCell(
             formatMinutes(total),
             75,
             bold: true,
-            color: total > 0
-                ? const Color(0xFF315AD9)
-                : Colors.black54,
+            color: total > 0 ? const Color(0xFF315AD9) : Colors.black54,
           ),
           _tableCell(
             formatMinutes(netWorkingMinutes),
@@ -1074,9 +999,8 @@ class _AttendanceDialogState
             formatMinutes(overtimeMinutes),
             75,
             bold: true,
-            color: overtimeMinutes > 0
-                ? Colors.orange.shade800
-                : Colors.black38,
+            color:
+                overtimeMinutes > 0 ? Colors.orange.shade800 : Colors.black38,
           ),
           Expanded(
             child: Container(
@@ -1143,8 +1067,7 @@ class _AttendanceDialogState
     AttendanceDayControllers c,
     int netWorkingMinutes,
   ) {
-    final hasWorkingTime =
-        c.workingIn.text.trim().isNotEmpty &&
+    final hasWorkingTime = c.workingIn.text.trim().isNotEmpty &&
         c.workingOut.text.trim().isNotEmpty &&
         c.workingIn.text.trim() != '-' &&
         c.workingOut.text.trim() != '-';
@@ -1157,19 +1080,17 @@ class _AttendanceDialogState
 
     String effectiveStatus = c.status.trim();
     final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
-    final date = DateTime(widget.month.year, widget.month.month, day);
-    final isRosterOff = _intValue(roster?['off_weekday']) == date.weekday;
     int lateMinutes = 0;
     var earlyOut = false;
-    if (isRosterOff) {
-      effectiveStatus = 'OFF';
-    } else if (hasWorkingTime && roster != null) {
+    if (hasWorkingTime && roster != null) {
       final actualIn = _clockMinutes(c.workingIn.text);
       final actualOut = _clockMinutes(c.workingOut.text);
       final shiftIn = _clockMinutes(roster['shift_start']?.toString() ?? '');
       final shiftOut = _clockMinutes(roster['shift_end']?.toString() ?? '');
-      if (actualIn != null && shiftIn != null) lateMinutes = (actualIn - shiftIn).clamp(0, 1440);
-      if (actualOut != null && shiftOut != null) earlyOut = actualOut < shiftOut;
+      if (actualIn != null && shiftIn != null)
+        lateMinutes = (actualIn - shiftIn).clamp(0, 1440);
+      if (actualOut != null && shiftOut != null)
+        earlyOut = actualOut < shiftOut;
       if (lateMinutes > 0 && earlyOut) {
         effectiveStatus = 'Late + Early Out';
       } else if (lateMinutes > 0) {
@@ -1197,8 +1118,13 @@ class _AttendanceDialogState
     switch (effectiveStatus) {
       case 'Late':
       case 'Late + Early Out':
-        background = lateMinutes > 5 ? const Color(0xFFFFCDD2) : lateMinutes == 5 ? const Color(0xFFFFCC80) : const Color(0xFFFFF59D);
-        foreground = lateMinutes > 5 ? const Color(0xFFC62828) : const Color(0xFFE65100);
+        background = lateMinutes > 5
+            ? const Color(0xFFFFCDD2)
+            : lateMinutes == 5
+                ? const Color(0xFFFFCC80)
+                : const Color(0xFFFFF59D);
+        foreground =
+            lateMinutes > 5 ? const Color(0xFFC62828) : const Color(0xFFE65100);
         break;
       case 'Early Out':
         background = const Color(0xFFFFCDD2);
@@ -1247,7 +1173,9 @@ class _AttendanceDialogState
       otLabel = 'OT AVAILABLE';
     }
 
-    final labels = <String>[lateMinutes > 0 ? '$effectiveStatus ($lateMinutes min)' : effectiveStatus];
+    final labels = <String>[
+      lateMinutes > 0 ? '$effectiveStatus ($lateMinutes min)' : effectiveStatus
+    ];
     if (roster != null) {
       final start = (roster['shift_start'] ?? '').toString().substring(0, 5);
       final end = (roster['shift_end'] ?? '').toString().substring(0, 5);
@@ -1255,7 +1183,8 @@ class _AttendanceDialogState
       final endMinutes = _clockMinutes(end);
       final breakMinutes = _intValue(roster['break_minutes']);
       if (startMinutes != null && endMinutes != null) {
-        final scheduledNet = (endMinutes - startMinutes - breakMinutes).clamp(0, 1440);
+        final scheduledNet =
+            (endMinutes - startMinutes - breakMinutes).clamp(0, 1440);
         labels.add('SHIFT $start-$end • NET ${formatMinutes(scheduledNet)}');
       }
     }
@@ -1419,9 +1348,9 @@ class _AttendanceDialogState
                 padding: EdgeInsets.zero,
                 itemCount: daysInMonth,
                 itemBuilder: (
-                    context,
-                    index,
-                    ) {
+                  context,
+                  index,
+                ) {
                   final day = index + 1;
                   final c = controllers[index];
 
@@ -1540,9 +1469,9 @@ class _AttendanceDialogState
   // ==========================================================================
 
   Widget _breakRow(
-      int day,
-      AttendanceDayControllers c,
-      ) {
+    int day,
+    AttendanceDayControllers c,
+  ) {
     final morning = calculateMinutes(
       c.morningIn.text,
       c.morningOut.text,
@@ -1561,10 +1490,7 @@ class _AttendanceDialogState
       c.overtimeOut.text,
     );
 
-    final breakTotal =
-        morning +
-            afternoon +
-            evening;
+    final breakTotal = morning + afternoon + evening;
 
     return SizedBox(
       height: 42,
@@ -1643,9 +1569,8 @@ class _AttendanceDialogState
               c.overtimeOut,
               focusNode: c.overtimeOutFocus,
               prevFocus: c.overtimeInFocus,
-              nextFocus: day < daysInMonth
-                  ? controllers[day].morningInFocus
-                  : null,
+              nextFocus:
+                  day < daysInMonth ? controllers[day].morningInFocus : null,
             ),
           ),
 
@@ -1729,10 +1654,10 @@ class _AttendanceDialogState
   // ==========================================================================
 
   Widget _headerCell(
-      String text,
-      double width,
-      Color color,
-      ) {
+    String text,
+    double width,
+    Color color,
+  ) {
     return Container(
       width: width,
       height: double.infinity,
@@ -1759,9 +1684,9 @@ class _AttendanceDialogState
   }
 
   Widget _groupHeader(
-      String text,
-      Color color,
-      ) {
+    String text,
+    Color color,
+  ) {
     return Container(
       height: double.infinity,
       alignment: Alignment.center,
@@ -1787,9 +1712,9 @@ class _AttendanceDialogState
   }
 
   Widget _subHeader(
-      String text,
-      Color color,
-      ) {
+    String text,
+    Color color,
+  ) {
     return Container(
       height: double.infinity,
       alignment: Alignment.center,
@@ -1814,17 +1739,16 @@ class _AttendanceDialogState
   }
 
   Widget _tableCell(
-      String text,
-      double width, {
-        bool bold = false,
-        Color? color,
-      }) {
+    String text,
+    double width, {
+    bool bold = false,
+    Color? color,
+  }) {
     return Container(
       width: width,
       height: double.infinity,
       alignment: Alignment.center,
-      decoration:
-      const BoxDecoration(
+      decoration: const BoxDecoration(
         border: Border(
           right: BorderSide(
             color: Color(0xFF15965D),
@@ -1839,9 +1763,7 @@ class _AttendanceDialogState
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: bold
-              ? FontWeight.w800
-              : FontWeight.normal,
+          fontWeight: bold ? FontWeight.w800 : FontWeight.normal,
           color: color,
         ),
       ),
@@ -1849,19 +1771,16 @@ class _AttendanceDialogState
   }
 
   Widget _timeInput(
-      TextEditingController controller,
-      double width,
-      {
-        required FocusNode focusNode,
-        FocusNode? nextFocus,
-        FocusNode? prevFocus,
-      }
-      ) {
+    TextEditingController controller,
+    double width, {
+    required FocusNode focusNode,
+    FocusNode? nextFocus,
+    FocusNode? prevFocus,
+  }) {
     return Container(
       width: width,
       height: double.infinity,
-      decoration:
-      const BoxDecoration(
+      decoration: const BoxDecoration(
         border: Border(
           right: BorderSide(
             color: Color(0xFF15965D),
@@ -1875,7 +1794,7 @@ class _AttendanceDialogState
         focusNode: FocusNode(),
         onKey: (event) {
           if (!_canEdit) return;
-          
+
           // Arrow Down or Right: Move to next focus
           if (event.isKeyPressed(LogicalKeyboardKey.arrowDown) ||
               event.isKeyPressed(LogicalKeyboardKey.arrowRight)) {
@@ -1896,9 +1815,8 @@ class _AttendanceDialogState
           focusNode: focusNode,
           readOnly: !_canEdit,
           enabled: _canEdit,
-          textInputAction: nextFocus == null
-              ? TextInputAction.done
-              : TextInputAction.next,
+          textInputAction:
+              nextFocus == null ? TextInputAction.done : TextInputAction.next,
           onChanged: (value) {
             _formatTimeInput(controller, value, nextFocus);
             if (mounted) {
@@ -1912,12 +1830,10 @@ class _AttendanceDialogState
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
-          decoration:
-          const InputDecoration(
+          decoration: const InputDecoration(
             border: InputBorder.none,
             isDense: true,
-            contentPadding:
-            EdgeInsets.symmetric(
+            contentPadding: EdgeInsets.symmetric(
               horizontal: 2,
               vertical: 10,
             ),
@@ -1942,12 +1858,11 @@ class _AttendanceDialogState
   // ==========================================================================
 
   Widget _smallTimeInput(
-      TextEditingController controller, {
-        required FocusNode focusNode,
-        FocusNode? nextFocus,
-        FocusNode? prevFocus,
-      }
-      ) {
+    TextEditingController controller, {
+    required FocusNode focusNode,
+    FocusNode? nextFocus,
+    FocusNode? prevFocus,
+  }) {
     return Container(
       height: double.infinity,
       decoration: const BoxDecoration(
@@ -1964,7 +1879,7 @@ class _AttendanceDialogState
         focusNode: FocusNode(),
         onKey: (event) {
           if (!_canEdit) return;
-          
+
           // Arrow Down or Right: Move to next focus
           if (event.isKeyPressed(LogicalKeyboardKey.arrowDown) ||
               event.isKeyPressed(LogicalKeyboardKey.arrowRight)) {
@@ -1985,9 +1900,8 @@ class _AttendanceDialogState
           focusNode: focusNode,
           readOnly: !_canEdit,
           enabled: _canEdit,
-          textInputAction: nextFocus == null
-              ? TextInputAction.done
-              : TextInputAction.next,
+          textInputAction:
+              nextFocus == null ? TextInputAction.done : TextInputAction.next,
           onChanged: (value) {
             _formatTimeInput(controller, value, nextFocus);
             if (mounted) {
@@ -2004,8 +1918,7 @@ class _AttendanceDialogState
           decoration: const InputDecoration(
             border: InputBorder.none,
             isDense: true,
-            contentPadding:
-            EdgeInsets.symmetric(
+            contentPadding: EdgeInsets.symmetric(
               horizontal: 1,
               vertical: 11,
             ),
@@ -2027,10 +1940,10 @@ class _AttendanceDialogState
   ) {
     // Remove all non-digit characters
     final digits = value.replaceAll(RegExp(r'\D'), '');
-    
+
     // Limit to 4 digits max (HHMM)
     final limited = digits.length > 4 ? digits.substring(0, 4) : digits;
-    
+
     // Format as HH:MM
     String formatted;
     if (limited.isEmpty) {
@@ -2112,11 +2025,14 @@ class _AttendanceDialogState
         child: Row(
           children: [
             const SizedBox(width: 20),
-            _summaryChip('WORK', formatMinutes(workTotal), const Color(0xFF315AD9)),
+            _summaryChip(
+                'WORK', formatMinutes(workTotal), const Color(0xFF315AD9)),
             const SizedBox(width: 10),
-            _summaryChip('BREAK', formatMinutes(breakTotal), const Color(0xFFD32F2F)),
+            _summaryChip(
+                'BREAK', formatMinutes(breakTotal), const Color(0xFFD32F2F)),
             const SizedBox(width: 10),
-            _summaryChip('NET WORK', formatMinutes(netTotal), const Color(0xFF315AD9)),
+            _summaryChip(
+                'NET WORK', formatMinutes(netTotal), const Color(0xFF315AD9)),
             const SizedBox(width: 10),
             _summaryChip('OT', formatMinutes(overtimeTotal), Colors.orange),
           ],
@@ -2126,10 +2042,10 @@ class _AttendanceDialogState
   }
 
   Widget _summaryChip(
-      String title,
-      String value,
-      Color color,
-      ) {
+    String title,
+    String value,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 12,
@@ -2168,8 +2084,8 @@ class _AttendanceDialogState
   // ==========================================================================
 
   int calculateWorkMinutes(
-      AttendanceDayControllers c,
-      ) {
+    AttendanceDayControllers c,
+  ) {
     return calculateMinutes(
       c.workingIn.text,
       c.workingOut.text,
@@ -2177,22 +2093,18 @@ class _AttendanceDialogState
   }
 
   int calculateMinutes(
-      String start,
-      String end,
-      ) {
-    final startMinutes =
-    parseTimeToMinutes(start);
+    String start,
+    String end,
+  ) {
+    final startMinutes = parseTimeToMinutes(start);
 
-    final endMinutes =
-    parseTimeToMinutes(end);
+    final endMinutes = parseTimeToMinutes(end);
 
-    if (startMinutes == null ||
-        endMinutes == null) {
+    if (startMinutes == null || endMinutes == null) {
       return 0;
     }
 
-    var difference =
-        endMinutes - startMinutes;
+    var difference = endMinutes - startMinutes;
 
     // Overnight shift.
     if (difference < 0) {
@@ -2203,8 +2115,8 @@ class _AttendanceDialogState
   }
 
   int? parseTimeToMinutes(
-      String value,
-      ) {
+    String value,
+  ) {
     final text = value.trim();
 
     if (text.isEmpty) {
@@ -2227,15 +2139,11 @@ class _AttendanceDialogState
       match.group(2)!,
     );
 
-    if (hour == null ||
-        minute == null) {
+    if (hour == null || minute == null) {
       return null;
     }
 
-    if (hour < 0 ||
-        hour > 23 ||
-        minute < 0 ||
-        minute > 59) {
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
       return null;
     }
 
@@ -2243,8 +2151,8 @@ class _AttendanceDialogState
   }
 
   String formatMinutes(
-      int minutes,
-      ) {
+    int minutes,
+  ) {
     if (minutes <= 0) {
       return '00:00';
     }
@@ -2262,27 +2170,21 @@ class _AttendanceDialogState
 // ============================================================================
 
 class AttendanceDayControllers {
-  final TextEditingController workingIn =
-  TextEditingController();
+  final TextEditingController workingIn = TextEditingController();
 
-  final TextEditingController workingOut =
-  TextEditingController();
+  final TextEditingController workingOut = TextEditingController();
   final FocusNode workingInFocus = FocusNode();
   final FocusNode workingOutFocus = FocusNode();
 
-  final TextEditingController morningIn =
-  TextEditingController();
+  final TextEditingController morningIn = TextEditingController();
 
-  final TextEditingController morningOut =
-  TextEditingController();
+  final TextEditingController morningOut = TextEditingController();
   final FocusNode morningInFocus = FocusNode();
   final FocusNode morningOutFocus = FocusNode();
 
-  final TextEditingController afternoonIn =
-  TextEditingController();
+  final TextEditingController afternoonIn = TextEditingController();
 
-  final TextEditingController afternoonOut =
-  TextEditingController();
+  final TextEditingController afternoonOut = TextEditingController();
   final FocusNode afternoonInFocus = FocusNode();
   final FocusNode afternoonOutFocus = FocusNode();
 
@@ -2299,11 +2201,9 @@ class AttendanceDayControllers {
   // They are NOT calculated as overtime.
   // ==========================================================================
 
-  final TextEditingController overtimeIn =
-  TextEditingController();
+  final TextEditingController overtimeIn = TextEditingController();
 
-  final TextEditingController overtimeOut =
-  TextEditingController();
+  final TextEditingController overtimeOut = TextEditingController();
   final FocusNode overtimeInFocus = FocusNode();
   final FocusNode overtimeOutFocus = FocusNode();
 

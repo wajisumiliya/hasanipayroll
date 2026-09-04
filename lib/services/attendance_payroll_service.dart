@@ -260,11 +260,8 @@ class AttendancePayrollService {
       final weekNumber =
           attendanceDate == null ? 0 : ((attendanceDate.day - 1) ~/ 7) + 1;
       final roster = rosterByWeek[weekNumber];
-      final isRosterOff = attendanceDate != null &&
-          _intNumber(roster?['off_weekday']) == attendanceDate.weekday;
-      final dailyRequiredMinutes = isRosterOff
-          ? 0
-          : (_rosterRequiredMinutes(roster) ?? requiredWorkMinutes);
+      final dailyRequiredMinutes =
+          _rosterRequiredMinutes(roster) ?? requiredWorkMinutes;
       final dailyRequiredHours = dailyRequiredMinutes / 60.0;
       final dailyShortageRate =
           dailyRequiredHours > 0 ? dailySalary / dailyRequiredHours : 0.0;
