@@ -2208,8 +2208,7 @@ async function sendOtpEmail({
       console.log(`✅ OTP sent via Resend to ${email}`);
       return;
     } catch (error) {
-      console.error("❌ Resend failed:", error.message);
-      throw error;
+      console.error("Resend failed; trying SMTP fallback:", error.message);
     }
   }
 
@@ -2253,23 +2252,14 @@ async function sendOtpEmail({
     }
   }
 
-  // ========================================================================
-  // FALLBACK: Console logging (for development/testing)
-  // ========================================================================
-  console.log("\n" + "=".repeat(70));
-  console.log("📧 OTP CODE (Email service not available - showing code for testing)");
-  console.log("=".repeat(70));
-  console.log(`To: ${email}`);
-  console.log(`User: ${name}`);
-  console.log(`OTP Code: ${otp}`);
-  console.log(`Expires in: ${OTP_EXPIRES_MINUTES} minutes`);
-  console.log("=".repeat(70));
-  console.log("⚠️  For production, configure RESEND_API_KEY or working SMTP credentials.");
-  console.log("=".repeat(70) + "\n");
+  // Never disclose OTPs in production logs. Console delivery is available only
+  // for an explicitly non-production local development environment.
+  if (process.env.NODE_ENV !== "production") {
+    console.warn("Email provider unavailable; local development OTP:", otp);
+    return;
+  }
 
-  // IMPORTANT: Don't throw - allow OTP to proceed for testing
-  // In production, this should be fixed to use Resend
-}
+  throw new Error("OTP email delivery is unavailable. Configure a valid email provider.");}
 
 app.post(
   "/api/auth/send-otp",
