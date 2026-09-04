@@ -240,14 +240,14 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
                     border: TableBorder.all(
                         color: const Color(0xFF3155A4), width: 1.1),
                     columnWidths: const {
-                      0: FixedColumnWidth(42),
-                      1: FixedColumnWidth(125),
-                      2: FixedColumnWidth(105),
-                      3: FixedColumnWidth(125),
-                      4: FixedColumnWidth(125),
-                      5: FixedColumnWidth(125),
-                      6: FlexColumnWidth(),
-                      7: FixedColumnWidth(130),
+                      0: FlexColumnWidth(.45),
+                      1: FlexColumnWidth(1),
+                      2: FlexColumnWidth(.85),
+                      3: FlexColumnWidth(1),
+                      4: FlexColumnWidth(1),
+                      5: FlexColumnWidth(1.15),
+                      6: FlexColumnWidth(2.4),
+                      7: FlexColumnWidth(1.05),
                     },
                     children: [
                       TableRow(children: [

@@ -49,6 +49,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   bool loading = true;
   bool saving = false;
   bool submitted = false;
+  bool _showBreakAttendanceOnMobile = false;
   String? loadError;
   Timer? _liveRefreshTimer;
 
@@ -403,17 +404,94 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: _workingAttendanceCard(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _breakAttendanceCard(),
-                    ),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth >= 720) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: _workingAttendanceCard()),
+                          const SizedBox(width: 12),
+                          Expanded(child: _breakAttendanceCard()),
+                        ],
+                      );
+                    }
+                    return Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black12, blurRadius: 8)
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => setState(() =>
+                                      _showBreakAttendanceOnMobile = false),
+                                  icon: const Icon(Icons.schedule_outlined),
+                                  label: const Text('Work'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor:
+                                        !_showBreakAttendanceOnMobile
+                                            ? const Color(0xFF3155D9)
+                                            : Colors.transparent,
+                                    foregroundColor:
+                                        !_showBreakAttendanceOnMobile
+                                            ? Colors.white
+                                            : const Color(0xFF3155D9),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => setState(() =>
+                                      _showBreakAttendanceOnMobile = true),
+                                  icon:
+                                      const Icon(Icons.free_breakfast_outlined),
+                                  label: const Text('Break'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor:
+                                        _showBreakAttendanceOnMobile
+                                            ? const Color(0xFFD92F2F)
+                                            : Colors.transparent,
+                                    foregroundColor:
+                                        _showBreakAttendanceOnMobile
+                                            ? Colors.white
+                                            : const Color(0xFFD92F2F),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 280),
+                            transitionBuilder: (child, animation) =>
+                                ScaleTransition(
+                              scale: Tween<double>(begin: .92, end: 1)
+                                  .animate(animation),
+                              child: FadeTransition(
+                                  opacity: animation, child: child),
+                            ),
+                            child: KeyedSubtree(
+                              key: ValueKey(_showBreakAttendanceOnMobile),
+                              child: _showBreakAttendanceOnMobile
+                                  ? _breakAttendanceCard()
+                                  : _workingAttendanceCard(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),

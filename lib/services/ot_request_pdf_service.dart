@@ -37,7 +37,7 @@ class OtRequestPdfService {
         );
     final document = pw.Document();
     document.addPage(pw.Page(
-        pageFormat: PdfPageFormat.a4.landscape,
+        pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(24),
         build: (_) => pw.Container(
               color: PdfColor.fromHex('#FFFCED'),
