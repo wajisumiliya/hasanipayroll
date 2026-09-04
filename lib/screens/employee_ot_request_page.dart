@@ -178,151 +178,141 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
           ),
           child: Form(
             key: _formKey,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 1120),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            color: const Color(0xFF3155A4),
-                            child: const Text(
-                              'BORANG TUNTUTAN\nKERJA LEBIH MASA',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  height: 1.15),
-                            ),
-                          ),
-                          const SizedBox(width: 18),
-                          const Text('hasani ',
-                              style: TextStyle(
-                                  color: Color(0xFF3155A4),
-                                  fontSize: 35,
-                                  fontWeight: FontWeight.w900)),
-                          const Text('BOOKS',
-                              style: TextStyle(
-                                  color: Color(0xFFE51D2A),
-                                  fontSize: 35,
-                                  fontWeight: FontWeight.w900)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Table(
-                        border: TableBorder.all(
-                            color: const Color(0xFF3155A4), width: 1.1),
-                        columnWidths: const {
-                          0: FixedColumnWidth(90),
-                          1: FlexColumnWidth(),
-                          2: FixedColumnWidth(105),
-                          3: FlexColumnWidth(),
-                        },
-                        children: [
-                          TableRow(children: [
-                            _paperLabel('NAMA'),
-                            _paperValue(widget.employee.name),
-                            _paperLabel('CAWANGAN'),
-                            _paperValue(widget.employee.branchId),
-                          ]),
-                          TableRow(children: [
-                            _paperLabel('BAHAGIAN'),
-                            _paperValue(widget.employee.department),
-                            _paperLabel('NO. PEKERJA'),
-                            _paperValue(widget.employee.employeeId),
-                          ]),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Table(
-                        border: TableBorder.all(
-                            color: const Color(0xFF3155A4), width: 1.1),
-                        columnWidths: const {
-                          0: FixedColumnWidth(42),
-                          1: FixedColumnWidth(125),
-                          2: FixedColumnWidth(105),
-                          3: FixedColumnWidth(125),
-                          4: FixedColumnWidth(125),
-                          5: FixedColumnWidth(125),
-                          6: FlexColumnWidth(),
-                          7: FixedColumnWidth(130),
-                        },
-                        children: [
-                          TableRow(children: [
-                            _paperHeader('NO'),
-                            _paperHeader('TARIKH'),
-                            _paperHeader('MASA\nMASUK'),
-                            _paperHeader('KELUAR\nSEBENAR'),
-                            _paperHeader('KELUAR'),
-                            _paperHeader('JUMLAH LEBIH MASA\n(JAM:MINIT)'),
-                            _paperHeader('SEBAB\nLEBIH MASA'),
-                            _paperHeader('DISAHKAN\nOLEH'),
-                          ]),
-                          TableRow(children: [
-                            _paperCell('1'),
-                            _paperDateButton(),
-                            _paperCell(_shiftStart.isEmpty ? '-' : _shiftStart),
-                            _paperTimeField(_otStart, 'HH:MM'),
-                            _paperTimeField(_otEnd, 'HH:MM'),
-                            _paperCell(_duration(_requestedMinutes)),
-                            _paperReasonField(),
-                            _paperCell('MENUNGGU'),
-                          ]),
-                          for (var row = 2; row <= 8; row++)
-                            TableRow(children: [
-                              _paperCell('$row'),
-                              _paperCell(''),
-                              _paperCell(''),
-                              _paperCell(''),
-                              _paperCell(''),
-                              _paperCell(''),
-                              _paperCell(''),
-                              _paperCell(''),
-                            ]),
-                        ],
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 7),
-                        child: Text(
-                          'Tuntutan kerja lebih masa tidak sah sekiranya tiada kelulusan oleh pengurus cawangan dengan sebab yang munasabah.',
-                          style:
-                              TextStyle(color: Color(0xFF3155A4), fontSize: 11),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        color: const Color(0xFF3155A4),
+                        child: const Text(
+                          'BORANG TUNTUTAN\nKERJA LEBIH MASA',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              height: 1.15),
                         ),
                       ),
-                      Table(
-                        border: TableBorder.all(
-                            color: const Color(0xFF3155A4), width: 1.1),
-                        children: [
-                          TableRow(children: [
-                            _approvalCell(
-                                'DIMOHON OLEH',
-                                widget.employee.name,
-                                DateFormat('dd/MM/yyyy')
-                                    .format(DateTime.now())),
-                            _approvalCell('DISEMAK OLEH', '', ''),
-                            _approvalCell('DISAHKAN OLEH', '', ''),
-                          ]),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FilledButton.icon(
-                          onPressed: _saving ? null : _submit,
-                          icon: const Icon(Icons.send),
-                          label: Text(
-                              _saving ? 'Submitting...' : 'Submit to Branch'),
-                        ),
-                      ),
+                      const SizedBox(width: 18),
+                      const Text('hasani ',
+                          style: TextStyle(
+                              color: Color(0xFF3155A4),
+                              fontSize: 35,
+                              fontWeight: FontWeight.w900)),
+                      const Text('BOOKS',
+                          style: TextStyle(
+                              color: Color(0xFFE51D2A),
+                              fontSize: 35,
+                              fontWeight: FontWeight.w900)),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Table(
+                    border: TableBorder.all(
+                        color: const Color(0xFF3155A4), width: 1.1),
+                    columnWidths: const {
+                      0: FixedColumnWidth(90),
+                      1: FlexColumnWidth(),
+                      2: FixedColumnWidth(105),
+                      3: FlexColumnWidth(),
+                    },
+                    children: [
+                      TableRow(children: [
+                        _paperLabel('NAMA'),
+                        _paperValue(widget.employee.name),
+                        _paperLabel('CAWANGAN'),
+                        _paperValue(widget.employee.branchId),
+                      ]),
+                      TableRow(children: [
+                        _paperLabel('BAHAGIAN'),
+                        _paperValue(widget.employee.department),
+                        _paperLabel('NO. PEKERJA'),
+                        _paperValue(widget.employee.employeeId),
+                      ]),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Table(
+                    border: TableBorder.all(
+                        color: const Color(0xFF3155A4), width: 1.1),
+                    columnWidths: const {
+                      0: FixedColumnWidth(42),
+                      1: FixedColumnWidth(125),
+                      2: FixedColumnWidth(105),
+                      3: FixedColumnWidth(125),
+                      4: FixedColumnWidth(125),
+                      5: FixedColumnWidth(125),
+                      6: FlexColumnWidth(),
+                      7: FixedColumnWidth(130),
+                    },
+                    children: [
+                      TableRow(children: [
+                        _paperHeader('NO'),
+                        _paperHeader('TARIKH'),
+                        _paperHeader('MASA\nMASUK'),
+                        _paperHeader('KELUAR\nSEBENAR'),
+                        _paperHeader('KELUAR'),
+                        _paperHeader('JUMLAH LEBIH MASA\n(JAM:MINIT)'),
+                        _paperHeader('SEBAB\nLEBIH MASA'),
+                        _paperHeader('DISAHKAN\nOLEH'),
+                      ]),
+                      TableRow(children: [
+                        _paperCell('1'),
+                        _paperDateButton(),
+                        _paperCell(_shiftStart.isEmpty ? '-' : _shiftStart),
+                        _paperTimeField(_otStart, 'HH:MM'),
+                        _paperTimeField(_otEnd, 'HH:MM'),
+                        _paperCell(_duration(_requestedMinutes)),
+                        _paperReasonField(),
+                        _paperCell('MENUNGGU'),
+                      ]),
+                      for (var row = 2; row <= 8; row++)
+                        TableRow(children: [
+                          _paperCell('$row'),
+                          _paperCell(''),
+                          _paperCell(''),
+                          _paperCell(''),
+                          _paperCell(''),
+                          _paperCell(''),
+                          _paperCell(''),
+                          _paperCell(''),
+                        ]),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 7),
+                    child: Text(
+                      'Tuntutan kerja lebih masa tidak sah sekiranya tiada kelulusan oleh pengurus cawangan dengan sebab yang munasabah.',
+                      style: TextStyle(color: Color(0xFF3155A4), fontSize: 11),
+                    ),
+                  ),
+                  Table(
+                    border: TableBorder.all(
+                        color: const Color(0xFF3155A4), width: 1.1),
+                    children: [
+                      TableRow(children: [
+                        _approvalCell('DIMOHON OLEH', widget.employee.name,
+                            DateFormat('dd/MM/yyyy').format(DateTime.now())),
+                        _approvalCell('DISEMAK OLEH', '', ''),
+                        _approvalCell('DISAHKAN OLEH', '', ''),
+                      ]),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      onPressed: _saving ? null : _submit,
+                      icon: const Icon(Icons.send),
+                      label:
+                          Text(_saving ? 'Submitting...' : 'Submit to Branch'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

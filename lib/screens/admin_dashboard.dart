@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import '../models/payroll.dart';
 import '../services/app_service.dart';
+import '../services/ot_request_pdf_service.dart';
 import '../services/attendance_payroll_service.dart';
 import 'login_screen.dart';
 import 'dart:convert';
@@ -3231,7 +3233,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Widget cell(String text,
             {bool header = false,
             Alignment alignment = Alignment.center,
-            double height = 52}) =>
+            double height = 40}) =>
         Container(
           height: height,
           alignment: alignment,
@@ -3248,9 +3250,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
         child: Container(
           width: 1120,
-          height: 720,
+          height: MediaQuery.sizeOf(dialogContext).height * .92,
           color: const Color(0xFFFFFCED),
           padding: const EdgeInsets.all(18),
           child: SingleChildScrollView(
@@ -3376,6 +3379,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ]),
                 const SizedBox(height: 14),
                 Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final bytes = await OtRequestPdfService.build(request);
+                        await Printing.layoutPdf(onLayout: (_) async => bytes);
+                      } catch (error) {
+                        if (!dialogContext.mounted) return;
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(
+                          SnackBar(
+                              content: Text('Unable to print OT form: $error')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.print_outlined),
+                    label: const Text('Print'),
+                  ),
+                  const SizedBox(width: 10),
                   SizedBox(
                     width: 160,
                     child: TextField(
