@@ -3204,6 +3204,222 @@ class _AdminDashboardState extends State<AdminDashboard> {
     setState(() => _otRequestsFuture = null);
   }
 
+  Future<void> _showOtRequestForm(Map<String, dynamic> request) async {
+    final employeeId = request['employee_id']?.toString() ?? '-';
+    final name = request['employee_name']?.toString() ?? employeeId;
+    final branch = request['branch_id']?.toString() ?? '-';
+    final department = request['department']?.toString() ?? '-';
+    final date = request['overtime_date']?.toString() ?? '-';
+    final status = request['status']?.toString() ?? 'pending_branch';
+    String stamp(dynamic value) {
+      final parsed = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+      return parsed == null
+          ? 'Waiting'
+          : DateFormat('dd/MM/yyyy hh:mm a').format(parsed);
+    }
+
+    final requested =
+        int.tryParse(request['requested_minutes'].toString()) ?? 0;
+    final key = '$employeeId|$date';
+    final approved = TextEditingController(
+      text: _approvedOtInputs[key] ??
+          _otMinutesText(
+              int.tryParse(request['approved_minutes']?.toString() ?? '') ??
+                  requested),
+    );
+
+    Widget cell(String text,
+            {bool header = false,
+            Alignment alignment = Alignment.center,
+            double height = 52}) =>
+        Container(
+          height: height,
+          alignment: alignment,
+          padding: const EdgeInsets.all(6),
+          color: header ? const Color(0xFF3155A4) : null,
+          child: Text(text,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: header ? Colors.white : const Color(0xFF263B73),
+                  fontSize: header ? 10 : 12,
+                  fontWeight: header ? FontWeight.w800 : FontWeight.w600)),
+        );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: Container(
+          width: 1120,
+          height: 720,
+          color: const Color(0xFFFFFCED),
+          padding: const EdgeInsets.all(18),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  Container(
+                    color: const Color(0xFF3155A4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    child: const Text('BORANG TUNTUTAN\nKERJA LEBIH MASA',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(width: 16),
+                  const Text('hasani BOOKS',
+                      style: TextStyle(
+                          color: Color(0xFF3155A4),
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900)),
+                  const Spacer(),
+                  IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close)),
+                ]),
+                const SizedBox(height: 12),
+                Table(
+                  border: TableBorder.all(
+                      color: const Color(0xFF3155A4), width: 1.1),
+                  columnWidths: const {
+                    0: FixedColumnWidth(90),
+                    1: FlexColumnWidth(),
+                    2: FixedColumnWidth(105),
+                    3: FlexColumnWidth(),
+                  },
+                  children: [
+                    TableRow(children: [
+                      cell('NAMA'),
+                      cell(name, alignment: Alignment.centerLeft),
+                      cell('CAWANGAN'),
+                      cell(branch, alignment: Alignment.centerLeft),
+                    ]),
+                    TableRow(children: [
+                      cell('BAHAGIAN'),
+                      cell(department, alignment: Alignment.centerLeft),
+                      cell('NO. PEKERJA'),
+                      cell(employeeId, alignment: Alignment.centerLeft),
+                    ]),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Table(
+                  border: TableBorder.all(
+                      color: const Color(0xFF3155A4), width: 1.1),
+                  columnWidths: const {
+                    0: FixedColumnWidth(42),
+                    1: FixedColumnWidth(110),
+                    2: FixedColumnWidth(105),
+                    3: FixedColumnWidth(115),
+                    4: FixedColumnWidth(105),
+                    5: FixedColumnWidth(130),
+                    6: FlexColumnWidth(),
+                    7: FixedColumnWidth(130),
+                  },
+                  children: [
+                    TableRow(children: [
+                      cell('NO', header: true),
+                      cell('TARIKH', header: true),
+                      cell('MASA\nMASUK', header: true),
+                      cell('KELUAR\nSEBENAR', header: true),
+                      cell('KELUAR', header: true),
+                      cell('JUMLAH LEBIH MASA\n(JAM:MINIT)', header: true),
+                      cell('SEBAB\nLEBIH MASA', header: true),
+                      cell('DISAHKAN\nOLEH', header: true),
+                    ]),
+                    TableRow(children: [
+                      cell('1'),
+                      cell(date),
+                      cell(_shortTime(request['shift_start'])),
+                      cell(_shortTime(request['overtime_start'])),
+                      cell(_shortTime(request['overtime_end'])),
+                      cell(_otMinutesText(requested)),
+                      cell(request['reason']?.toString() ?? '-'),
+                      cell(status.toUpperCase()),
+                    ]),
+                    for (var row = 2; row <= 8; row++)
+                      TableRow(children: [
+                        cell('$row'),
+                        cell(''),
+                        cell(''),
+                        cell(''),
+                        cell(''),
+                        cell(''),
+                        cell(''),
+                        cell(''),
+                      ]),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 7),
+                  child: Text(
+                    'Tuntutan kerja lebih masa tidak sah sekiranya tiada kelulusan oleh pengurus cawangan dengan sebab yang munasabah.',
+                    style: TextStyle(color: Color(0xFF3155A4), fontSize: 11),
+                  ),
+                ),
+                Row(children: [
+                  Expanded(
+                      child: cell(
+                          'DIMOHON OLEH\n$name\n${stamp(request['submitted_at'])}',
+                          header: true,
+                          height: 80)),
+                  Expanded(
+                      child: cell(
+                          'DISEMAK OLEH\n$branch\n${stamp(request['branch_approved_at'])}',
+                          header: true,
+                          height: 80)),
+                  Expanded(
+                      child: cell(
+                          'DISAHKAN OLEH\nADMIN\n${stamp(request['admin_approved_at'])}',
+                          header: true,
+                          height: 80)),
+                ]),
+                const SizedBox(height: 14),
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  SizedBox(
+                    width: 160,
+                    child: TextField(
+                      controller: approved,
+                      enabled:
+                          status == 'pending_admin' || status == 'approved',
+                      decoration: const InputDecoration(
+                          labelText: 'Approved HH:MM',
+                          border: OutlineInputBorder(),
+                          isDense: true),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  if (status == 'pending_admin') ...[
+                    OutlinedButton(
+                      onPressed: () async {
+                        Navigator.pop(dialogContext);
+                        await _reviewOtRequest(request, false);
+                      },
+                      child: const Text('Reject'),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (status == 'pending_admin' || status == 'approved')
+                    FilledButton(
+                      onPressed: () async {
+                        _approvedOtInputs[key] = approved.text;
+                        Navigator.pop(dialogContext);
+                        await _reviewOtRequest(request, true,
+                            approvedText: approved.text);
+                      },
+                      child: Text(
+                          status == 'approved' ? 'Update Approval' : 'Approve'),
+                    ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    approved.dispose();
+  }
+
   Widget _otRequestsPage() {
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -3267,7 +3483,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     final approvedMinutes =
                         request['approved_minutes']?.toString();
                     final requestKey = '$employeeId|$date';
-                    _approvedOtInputs.putIfAbsent(requestKey,
+                    _approvedOtInputs.putIfAbsent(
+                        requestKey,
                         () => _otMinutesText(
                             int.tryParse(approvedMinutes ?? minutes) ?? 0));
                     final shiftStart = _shortTime(request['shift_start']);
@@ -3278,10 +3495,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         (request['overtime_end'] ?? '-').toString();
                     final reason = request['reason']?.toString() ?? '-';
                     final status = request['status']?.toString() ?? 'pending';
-                    final isPending = status == 'pending';
+                    final canAdminApprove = status == 'pending_admin';
                     return Card(
                       elevation: 0,
                       child: ListTile(
+                        onTap: () => _showOtRequestForm(request),
                         leading:
                             const CircleAvatar(child: Icon(Icons.more_time)),
                         title: Text(employeeName,
@@ -3304,6 +3522,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 width: 135,
                                 child: TextFormField(
                                   initialValue: _approvedOtInputs[requestKey],
+                                  enabled:
+                                      canAdminApprove || status == 'approved',
                                   decoration: const InputDecoration(
                                       labelText: 'Approved HH:MM',
                                       isDense: true),
@@ -3311,7 +3531,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       _approvedOtInputs[requestKey] = value,
                                 )),
                             const SizedBox(width: 10),
-                            if (isPending) ...[
+                            if (canAdminApprove) ...[
                               OutlinedButton(
                                 onPressed: () =>
                                     _reviewOtRequest(request, false),
@@ -3329,7 +3549,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               const SizedBox(width: 8),
                               FilledButton.tonal(
                                 onPressed: () => _reviewOtRequest(request, true,
-                                    approvedText: _approvedOtInputs[requestKey]),
+                                    approvedText:
+                                        _approvedOtInputs[requestKey]),
                                 child: const Text('Update approval'),
                               ),
                             ] else
@@ -3354,6 +3575,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String? approvedText,
   }) async {
     try {
+      if (approve && request['status']?.toString() == 'pending_branch') {
+        throw Exception('Branch approval is required before admin approval.');
+      }
       final approvedMinutes =
           approve ? _parseOtMinutes(approvedText ?? '') : null;
       if (approve && approvedMinutes == null) {

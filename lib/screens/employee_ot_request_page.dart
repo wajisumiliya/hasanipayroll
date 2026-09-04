@@ -91,6 +91,19 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
       : '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
           '${(minutes % 60).toString().padLeft(2, '0')}';
 
+  String _stamp(dynamic value) {
+    final parsed = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    return parsed == null
+        ? 'Waiting'
+        : DateFormat('dd/MM/yyyy hh:mm a').format(parsed);
+  }
+
+  String _statusText(String status) {
+    if (status == 'pending_branch') return 'WAITING FOR BRANCH';
+    if (status == 'pending_admin') return 'WAITING FOR ADMIN';
+    return status.replaceAll('_', ' ').toUpperCase();
+  }
+
   Future<void> _chooseDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -145,12 +158,6 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
-  InputDecoration _decoration(String label) => InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        isDense: true,
-      );
-
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -164,95 +171,158 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
         const SizedBox(height: 16),
         Card(
           elevation: 0,
+          color: const Color(0xFFFFFCED),
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: Color(0xFF3155A4), width: 1.2),
+            borderRadius: BorderRadius.circular(2),
+          ),
           child: Form(
             key: _formKey,
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    color: const Color(0xFF2D55D8),
-                    child: const Text('HASANI BOOKS - OVERTIME REQUEST',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16)),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 1120),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _info('Name', widget.employee.name),
-                      _info('Employee ID', widget.employee.employeeId),
-                      _info('Department', widget.employee.department),
-                      _info('Branch', widget.employee.branchId),
-                    ],
-                  ),
-                  const Divider(height: 30),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _chooseDate,
-                        icon: const Icon(Icons.calendar_month),
-                        label: Text(DateFormat('dd MMM yyyy').format(_date)),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            color: const Color(0xFF3155A4),
+                            child: const Text(
+                              'BORANG TUNTUTAN\nKERJA LEBIH MASA',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.15),
+                            ),
+                          ),
+                          const SizedBox(width: 18),
+                          const Text('hasani ',
+                              style: TextStyle(
+                                  color: Color(0xFF3155A4),
+                                  fontSize: 35,
+                                  fontWeight: FontWeight.w900)),
+                          const Text('BOOKS',
+                              style: TextStyle(
+                                  color: Color(0xFFE51D2A),
+                                  fontSize: 35,
+                                  fontWeight: FontWeight.w900)),
+                        ],
                       ),
-                      _info(
-                          'Scheduled shift',
-                          _shiftStart.isEmpty
-                              ? 'Not assigned'
-                              : '$_shiftStart - $_shiftEnd'),
-                      SizedBox(
-                        width: 150,
-                        child: TextFormField(
-                          controller: _otStart,
-                          decoration: _decoration('OT start (HH:MM)'),
-                          onChanged: (_) => setState(() {}),
-                          validator: (value) => _minutes(value ?? '') == null
-                              ? 'Use HH:MM'
-                              : null,
+                      const SizedBox(height: 12),
+                      Table(
+                        border: TableBorder.all(
+                            color: const Color(0xFF3155A4), width: 1.1),
+                        columnWidths: const {
+                          0: FixedColumnWidth(90),
+                          1: FlexColumnWidth(),
+                          2: FixedColumnWidth(105),
+                          3: FlexColumnWidth(),
+                        },
+                        children: [
+                          TableRow(children: [
+                            _paperLabel('NAMA'),
+                            _paperValue(widget.employee.name),
+                            _paperLabel('CAWANGAN'),
+                            _paperValue(widget.employee.branchId),
+                          ]),
+                          TableRow(children: [
+                            _paperLabel('BAHAGIAN'),
+                            _paperValue(widget.employee.department),
+                            _paperLabel('NO. PEKERJA'),
+                            _paperValue(widget.employee.employeeId),
+                          ]),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Table(
+                        border: TableBorder.all(
+                            color: const Color(0xFF3155A4), width: 1.1),
+                        columnWidths: const {
+                          0: FixedColumnWidth(42),
+                          1: FixedColumnWidth(125),
+                          2: FixedColumnWidth(105),
+                          3: FixedColumnWidth(125),
+                          4: FixedColumnWidth(125),
+                          5: FixedColumnWidth(125),
+                          6: FlexColumnWidth(),
+                          7: FixedColumnWidth(130),
+                        },
+                        children: [
+                          TableRow(children: [
+                            _paperHeader('NO'),
+                            _paperHeader('TARIKH'),
+                            _paperHeader('MASA\nMASUK'),
+                            _paperHeader('KELUAR\nSEBENAR'),
+                            _paperHeader('KELUAR'),
+                            _paperHeader('JUMLAH LEBIH MASA\n(JAM:MINIT)'),
+                            _paperHeader('SEBAB\nLEBIH MASA'),
+                            _paperHeader('DISAHKAN\nOLEH'),
+                          ]),
+                          TableRow(children: [
+                            _paperCell('1'),
+                            _paperDateButton(),
+                            _paperCell(_shiftStart.isEmpty ? '-' : _shiftStart),
+                            _paperTimeField(_otStart, 'HH:MM'),
+                            _paperTimeField(_otEnd, 'HH:MM'),
+                            _paperCell(_duration(_requestedMinutes)),
+                            _paperReasonField(),
+                            _paperCell('MENUNGGU'),
+                          ]),
+                          for (var row = 2; row <= 8; row++)
+                            TableRow(children: [
+                              _paperCell('$row'),
+                              _paperCell(''),
+                              _paperCell(''),
+                              _paperCell(''),
+                              _paperCell(''),
+                              _paperCell(''),
+                              _paperCell(''),
+                              _paperCell(''),
+                            ]),
+                        ],
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 7),
+                        child: Text(
+                          'Tuntutan kerja lebih masa tidak sah sekiranya tiada kelulusan oleh pengurus cawangan dengan sebab yang munasabah.',
+                          style:
+                              TextStyle(color: Color(0xFF3155A4), fontSize: 11),
                         ),
                       ),
-                      SizedBox(
-                        width: 150,
-                        child: TextFormField(
-                          controller: _otEnd,
-                          decoration: _decoration('OT end (HH:MM)'),
-                          onChanged: (_) => setState(() {}),
-                          validator: (value) => _minutes(value ?? '') == null
-                              ? 'Use HH:MM'
-                              : null,
+                      Table(
+                        border: TableBorder.all(
+                            color: const Color(0xFF3155A4), width: 1.1),
+                        children: [
+                          TableRow(children: [
+                            _approvalCell(
+                                'DIMOHON OLEH',
+                                widget.employee.name,
+                                DateFormat('dd/MM/yyyy')
+                                    .format(DateTime.now())),
+                            _approvalCell('DISEMAK OLEH', '', ''),
+                            _approvalCell('DISAHKAN OLEH', '', ''),
+                          ]),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          onPressed: _saving ? null : _submit,
+                          icon: const Icon(Icons.send),
+                          label: Text(
+                              _saving ? 'Submitting...' : 'Submit to Admin'),
                         ),
                       ),
-                      _info('Requested OT', _duration(_requestedMinutes)),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _reason,
-                    minLines: 2,
-                    maxLines: 4,
-                    decoration: _decoration('Reason for overtime'),
-                    validator: (value) => value?.trim().isEmpty == true
-                        ? 'Reason is required'
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton.icon(
-                      onPressed: _saving ? null : _submit,
-                      icon: const Icon(Icons.send),
-                      label:
-                          Text(_saving ? 'Submitting...' : 'Submit to Admin'),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -274,7 +344,7 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
             if (rows.isEmpty) return const Text('No OT requests submitted.');
             return Column(
               children: rows.map((row) {
-                final status = row['status']?.toString() ?? 'pending';
+                final status = row['status']?.toString() ?? 'pending_branch';
                 final color = status == 'approved'
                     ? Colors.green
                     : status == 'rejected'
@@ -285,13 +355,27 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
                   child: ListTile(
                     leading: Icon(Icons.more_time, color: color),
                     title: Text('${row['overtime_date']} - ${row['reason']}'),
-                    subtitle: Text(
-                      '${_shortTime(row['overtime_start'])}-${_shortTime(row['overtime_end'])}  '
-                      'Requested ${_duration(row['requested_minutes'] as int?)}'
-                      '${row['approved_minutes'] == null ? '' : '  Approved ${_duration(row['approved_minutes'] as int?)}'}',
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${_shortTime(row['overtime_start'])}-${_shortTime(row['overtime_end'])}  '
+                          'Requested ${_duration(row['requested_minutes'] as int?)}'
+                          '${row['approved_minutes'] == null ? '' : '  Approved ${_duration(row['approved_minutes'] as int?)}'}',
+                        ),
+                        const SizedBox(height: 5),
+                        Wrap(spacing: 16, runSpacing: 4, children: [
+                          Text('Submitted: ${_stamp(row['submitted_at'])}',
+                              style: const TextStyle(fontSize: 11)),
+                          Text('Branch: ${_stamp(row['branch_approved_at'])}',
+                              style: const TextStyle(fontSize: 11)),
+                          Text('Admin: ${_stamp(row['admin_approved_at'])}',
+                              style: const TextStyle(fontSize: 11)),
+                        ]),
+                      ],
                     ),
                     trailing: Chip(
-                      label: Text(status.toUpperCase()),
+                      label: Text(_statusText(status)),
                       side: BorderSide(color: color),
                     ),
                   ),
@@ -304,15 +388,108 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
     );
   }
 
-  Widget _info(String label, String value) => SizedBox(
-        width: 210,
+  Widget _paperLabel(String text) => Container(
+        height: 38,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Text(text,
+            style: const TextStyle(
+                color: Color(0xFF3155A4),
+                fontSize: 11,
+                fontWeight: FontWeight.w800)),
+      );
+
+  Widget _paperValue(String text) => Container(
+        height: 38,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Text(text.isEmpty ? '-' : text,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+      );
+
+  Widget _paperHeader(String text) => Container(
+        height: 58,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(4),
+        child: Text(text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: Color(0xFF3155A4),
+                fontSize: 10,
+                fontWeight: FontWeight.w800)),
+      );
+
+  Widget _paperCell(String text) => Container(
+        height: 50,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(5),
+        child: Text(text, textAlign: TextAlign.center),
+      );
+
+  Widget _paperDateButton() => SizedBox(
+        height: 50,
+        child: TextButton(
+          onPressed: _chooseDate,
+          child: Text(DateFormat('dd/MM/yyyy').format(_date)),
+        ),
+      );
+
+  Widget _paperTimeField(TextEditingController controller, String hint) =>
+      SizedBox(
+        height: 50,
+        child: TextFormField(
+          controller: controller,
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+              hintText: hint,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 5)),
+          onChanged: (_) => setState(() {}),
+          validator: (value) => _minutes(value ?? '') == null ? 'HH:MM' : null,
+        ),
+      );
+
+  Widget _paperReasonField() => SizedBox(
+        height: 50,
+        child: TextFormField(
+          controller: _reason,
+          decoration: const InputDecoration(
+              hintText: 'Sebab',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 7)),
+          validator: (value) =>
+              value?.trim().isEmpty == true ? 'Required' : null,
+        ),
+      );
+
+  Widget _approvalCell(String title, String name, String date) => Container(
+        height: 92,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(label,
-                style: const TextStyle(fontSize: 11, color: Colors.black54)),
-            Text(value.isEmpty ? '-' : value,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+            Container(
+              color: const Color(0xFF3155A4),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800)),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(7),
+                child: Text(name,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(7, 0, 7, 5),
+              child: Text('TARIKH: $date',
+                  style:
+                      const TextStyle(color: Color(0xFF3155A4), fontSize: 9)),
+            ),
           ],
         ),
       );

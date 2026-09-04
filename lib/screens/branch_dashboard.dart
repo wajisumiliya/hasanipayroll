@@ -7,6 +7,7 @@ import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
 import 'monthly_roster_page.dart';
+import 'branch_ot_requests_page.dart';
 
 // ============================================================================
 // BRANCH PORTAL
@@ -66,7 +67,8 @@ class _BranchPortalState extends State<BranchPortal> {
       ? '${branch?.branchName ?? 'SUNGAI PETANI'} FRN'
       : branch?.branchName ?? branchId;
 
-  List<Employee> get employees => service.branchEmployees(branchId).where((employee) {
+  List<Employee> get employees =>
+      service.branchEmployees(branchId).where((employee) {
         final isFrn = employee.address.toUpperCase().contains('FRN');
         return isFrnSession ? isFrn : !isFrn;
       }).toList();
@@ -134,7 +136,7 @@ class _BranchPortalState extends State<BranchPortal> {
       MaterialPageRoute(
         builder: (_) => const LoginScreen(),
       ),
-          (route) => false,
+      (route) => false,
     );
   }
 
@@ -226,6 +228,7 @@ class _BranchPortalState extends State<BranchPortal> {
                       2,
                     ),
                     _drawerItem('Monthly Roster', Icons.calendar_view_month, 3),
+                    _drawerItem('OT Requests', Icons.more_time_outlined, 4),
                   ],
                 ),
               ),
@@ -289,6 +292,7 @@ class _BranchPortalState extends State<BranchPortal> {
                   2,
                 ),
                 _sidebarItem('Monthly Roster', Icons.calendar_view_month, 3),
+                _sidebarItem('OT Requests', Icons.more_time_outlined, 4),
               ],
             ),
           ),
@@ -333,10 +337,10 @@ class _BranchPortalState extends State<BranchPortal> {
             'assets/hasani_books_logo.jpg',
             width: 160,
             errorBuilder: (
-                context,
-                error,
-                stackTrace,
-                ) {
+              context,
+              error,
+              stackTrace,
+            ) {
               return const Text(
                 'HASANI BOOKS',
                 style: TextStyle(
@@ -404,10 +408,10 @@ class _BranchPortalState extends State<BranchPortal> {
   }
 
   Widget _sidebarItem(
-      String title,
-      IconData icon,
-      int page,
-      ) {
+    String title,
+    IconData icon,
+    int page,
+  ) {
     final selected = selectedPage == page;
 
     return Padding(
@@ -423,19 +427,13 @@ class _BranchPortalState extends State<BranchPortal> {
         ),
         leading: Icon(
           icon,
-          color: selected
-              ? const Color(0xFF15965D)
-              : Colors.black54,
+          color: selected ? const Color(0xFF15965D) : Colors.black54,
         ),
         title: Text(
           title,
           style: TextStyle(
-            fontWeight: selected
-                ? FontWeight.bold
-                : FontWeight.normal,
-            color: selected
-                ? const Color(0xFF15965D)
-                : Colors.black87,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            color: selected ? const Color(0xFF15965D) : Colors.black87,
           ),
         ),
         onTap: () {
@@ -448,10 +446,10 @@ class _BranchPortalState extends State<BranchPortal> {
   }
 
   Widget _drawerItem(
-      String title,
-      IconData icon,
-      int page,
-      ) {
+    String title,
+    IconData icon,
+    int page,
+  ) {
     return ListTile(
       selected: selectedPage == page,
       selectedTileColor: const Color(0xFFE7F7EF),
@@ -538,6 +536,8 @@ class _BranchPortalState extends State<BranchPortal> {
         return 'Employees';
       case 3:
         return 'Monthly Roster';
+      case 4:
+        return 'OT Requests';
       default:
         return 'Dashboard';
     }
@@ -551,6 +551,8 @@ class _BranchPortalState extends State<BranchPortal> {
         return _employeesPage();
       case 3:
         return MonthlyRosterPage(branchId: branchId);
+      case 4:
+        return BranchOtRequestsPage(branchId: branchId);
       default:
         return _dashboardPage();
     }
@@ -632,7 +634,7 @@ class _BranchPortalState extends State<BranchPortal> {
                 _actionButton(
                   'Record Attendance',
                   Icons.fact_check,
-                      () {
+                  () {
                     setState(() {
                       selectedPage = 1;
                     });
@@ -641,7 +643,7 @@ class _BranchPortalState extends State<BranchPortal> {
                 _actionButton(
                   'Employees',
                   Icons.people,
-                      () {
+                  () {
                     setState(() {
                       selectedPage = 2;
                     });
@@ -676,7 +678,7 @@ class _BranchPortalState extends State<BranchPortal> {
       children: todayAttendance
           .map(
             (record) => _attendanceTile(record),
-      )
+          )
           .toList(),
     );
   }
@@ -686,18 +688,14 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   String _liveEmployeeId(
-      Map<String, dynamic> employee,
-      ) {
-    return (
-        employee['employee_id'] ??
-            employee['id'] ??
-            ''
-    ).toString();
+    Map<String, dynamic> employee,
+  ) {
+    return (employee['employee_id'] ?? employee['id'] ?? '').toString();
   }
 
   bool _liveIsActive(
-      Map<String, dynamic> employee,
-      ) {
+    Map<String, dynamic> employee,
+  ) {
     final value = employee['is_active'];
 
     if (value is bool) {
@@ -715,8 +713,7 @@ class _BranchPortalState extends State<BranchPortal> {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _liveBranchEmployees(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(),
           );
@@ -756,8 +753,7 @@ class _BranchPortalState extends State<BranchPortal> {
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Attendance',
@@ -784,16 +780,14 @@ class _BranchPortalState extends State<BranchPortal> {
                   ),
                   OutlinedButton.icon(
                     onPressed: () async {
-                      final picked =
-                      await showDatePicker(
+                      final picked = await showDatePicker(
                         context: context,
                         initialDate: attendanceMonth,
                         firstDate: DateTime(2022),
                         lastDate: DateTime(
                           DateTime.now().year + 2,
                         ),
-                        helpText:
-                        'Select any date in the attendance month',
+                        helpText: 'Select any date in the attendance month',
                       );
 
                       if (picked != null && mounted) {
@@ -836,7 +830,8 @@ class _BranchPortalState extends State<BranchPortal> {
                       }
                     },
                     icon: const Icon(Icons.today_outlined),
-                    label: Text(DateFormat('dd MMM yyyy').format(selectedAttendanceDate)),
+                    label: Text(DateFormat('dd MMM yyyy')
+                        .format(selectedAttendanceDate)),
                   ),
                 ],
               ),
@@ -847,113 +842,88 @@ class _BranchPortalState extends State<BranchPortal> {
                 'Select Employee',
                 liveEmployees.isEmpty
                     ? Padding(
-                  padding:
-                  const EdgeInsets.all(24),
-                  child: Text(
-                    'No employees matched branch: '
-                        '$branchId',
-                  ),
-                )
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'No employees matched branch: '
+                          '$branchId',
+                        ),
+                      )
                     : Column(
-                  children:
-                  liveEmployees.map(
-                        (employee) {
-                      final name =
-                          employee['name']
-                              ?.toString() ??
-                              'Employee';
+                        children: liveEmployees.map(
+                          (employee) {
+                            final name =
+                                employee['name']?.toString() ?? 'Employee';
 
-                      final id =
-                      _liveEmployeeId(
-                        employee,
-                      );
-
-                      final department =
-                          employee['department']
-                              ?.toString() ??
-                              '';
-
-                      final active =
-                      _liveIsActive(
-                        employee,
-                      );
-
-                      return ListTile(
-                        leading:
-                        CircleAvatar(
-                          backgroundColor:
-                          const Color(
-                            0xFFE7F7EF,
-                          ),
-                          child: Text(
-                            name.isEmpty
-                                ? '?'
-                                : name[0]
-                                .toUpperCase(),
-                            style:
-                            const TextStyle(
-                              color: Color(
-                                0xFF15965D,
-                              ),
-                              fontWeight:
-                              FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          name,
-                          style:
-                          const TextStyle(
-                            fontWeight:
-                            FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          [
-                            id,
-                            department,
-                          ]
-                              .where(
-                                (v) =>
-                            v.isNotEmpty,
-                          )
-                              .join(' • '),
-                        ),
-                        trailing: Row(
-                          mainAxisSize:
-                          MainAxisSize.min,
-                          children: [
-                            Chip(
-                              label: Text(
-                                active
-                                    ? 'Active'
-                                    : 'Inactive',
-                              ),
-                              backgroundColor:
-                              active
-                                  ? const Color(
-                                0xFFE7F7EF,
-                              )
-                                  : Colors
-                                  .black12,
-                            ),
-                            const SizedBox(
-                              width: 8,
-                            ),
-                            const Icon(
-                              Icons
-                                  .edit_calendar_outlined,
-                            ),
-                          ],
-                        ),
-                        onTap: () =>
-                            _openAttendanceSheet(
+                            final id = _liveEmployeeId(
                               employee,
-                            ),
-                      );
-                    },
-                  ).toList(),
-                ),
+                            );
+
+                            final department =
+                                employee['department']?.toString() ?? '';
+
+                            final active = _liveIsActive(
+                              employee,
+                            );
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: const Color(
+                                  0xFFE7F7EF,
+                                ),
+                                child: Text(
+                                  name.isEmpty ? '?' : name[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Color(
+                                      0xFF15965D,
+                                    ),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                [
+                                  id,
+                                  department,
+                                ]
+                                    .where(
+                                      (v) => v.isNotEmpty,
+                                    )
+                                    .join(' • '),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Chip(
+                                    label: Text(
+                                      active ? 'Active' : 'Inactive',
+                                    ),
+                                    backgroundColor: active
+                                        ? const Color(
+                                            0xFFE7F7EF,
+                                          )
+                                        : Colors.black12,
+                                  ),
+                                  const SizedBox(
+                                    width: 8,
+                                  ),
+                                  const Icon(
+                                    Icons.edit_calendar_outlined,
+                                  ),
+                                ],
+                              ),
+                              onTap: () => _openAttendanceSheet(
+                                employee,
+                              ),
+                            );
+                          },
+                        ).toList(),
+                      ),
               ),
             ],
           ),
@@ -991,8 +961,9 @@ class _BranchPortalState extends State<BranchPortal> {
         for (final row in rows) {
           final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
           final status = row['status']?.toString().trim().toLowerCase() ?? '';
-          final hasWork = row['working_in']?.toString().trim().isNotEmpty == true &&
-              row['working_out']?.toString().trim().isNotEmpty == true;
+          final hasWork =
+              row['working_in']?.toString().trim().isNotEmpty == true &&
+                  row['working_out']?.toString().trim().isNotEmpty == true;
           if (status == 'late') {
             lateIds.add(id);
           } else if (status == 'present' || (status.isEmpty && hasWork)) {
@@ -1004,11 +975,14 @@ class _BranchPortalState extends State<BranchPortal> {
             .clamp(0, activeCount);
         return Row(
           children: [
-            Expanded(child: _summaryCard('Present', presentIds.length, const Color(0xFF15965D))),
+            Expanded(
+                child: _summaryCard(
+                    'Present', presentIds.length, const Color(0xFF15965D))),
             const SizedBox(width: 10),
             Expanded(child: _summaryCard('Absent', absent, Colors.red)),
             const SizedBox(width: 10),
-            Expanded(child: _summaryCard('Late', lateIds.length, Colors.orange)),
+            Expanded(
+                child: _summaryCard('Late', lateIds.length, Colors.orange)),
           ],
         );
       },
@@ -1025,7 +999,9 @@ class _BranchPortalState extends State<BranchPortal> {
       ),
       child: Row(
         children: [
-          Text('$count', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+          Text('$count',
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w800, color: color)),
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
@@ -1038,8 +1014,8 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Future<void> _openAttendanceSheet(
-      Map<String, dynamic> employee,
-      ) async {
+    Map<String, dynamic> employee,
+  ) async {
     final employeeId = _liveEmployeeId(employee);
     final employeeName = employee['name']?.toString() ?? 'Employee';
     final resolvedBranchId = branch?.branchId ?? branchId;
@@ -1085,8 +1061,8 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _attendanceTile(
-      AttendanceRecord record,
-      ) {
+    AttendanceRecord record,
+  ) {
     final employee = service.employeeById(
       record.employeeId,
     );
@@ -1119,8 +1095,8 @@ class _BranchPortalState extends State<BranchPortal> {
             record.status == 'Present'
                 ? Icons.check
                 : record.status == 'Late'
-                ? Icons.schedule
-                : Icons.close,
+                    ? Icons.schedule
+                    : Icons.close,
             color: color,
           ),
         ),
@@ -1132,8 +1108,8 @@ class _BranchPortalState extends State<BranchPortal> {
         ),
         subtitle: Text(
           '${record.employeeId}\n'
-              '${DateFormat('dd MMM yyyy').format(record.date)} • '
-              '${record.checkIn} - ${record.checkOut}',
+          '${DateFormat('dd MMM yyyy').format(record.date)} • '
+          '${record.checkIn} - ${record.checkOut}',
         ),
         isThreeLine: true,
         trailing: Container(
@@ -1165,12 +1141,10 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _employeesPage() {
-    return FutureBuilder<
-        List<Map<String, dynamic>>>(
+    return FutureBuilder<List<Map<String, dynamic>>>(
       future: _liveBranchEmployees(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(),
           );
@@ -1191,7 +1165,7 @@ class _BranchPortalState extends State<BranchPortal> {
                   const SizedBox(height: 12),
                   Text(
                     'Unable to load employees:\n'
-                        '${snapshot.error}',
+                    '${snapshot.error}',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 15),
@@ -1224,8 +1198,7 @@ class _BranchPortalState extends State<BranchPortal> {
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -1263,7 +1236,8 @@ class _BranchPortalState extends State<BranchPortal> {
                 controller: _employeeSearchController,
                 onChanged: (value) => setState(() => _employeeSearch = value),
                 decoration: InputDecoration(
-                  hintText: 'Search employee by name, ID, department or designation',
+                  hintText:
+                      'Search employee by name, ID, department or designation',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _employeeSearch.isEmpty
                       ? null
@@ -1285,98 +1259,82 @@ class _BranchPortalState extends State<BranchPortal> {
                 'Employee List',
                 liveEmployees.isEmpty
                     ? const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(
-                    child: Text(
-                      'No employees match your search.',
-                    ),
-                  ),
-                )
-                    : Column(
-                  children:
-                  liveEmployees.map(
-                        (employee) {
-                      final name =
-                          employee['name']
-                              ?.toString() ??
-                              'Employee';
-
-                      final id =
-                      _liveEmployeeId(
-                        employee,
-                      );
-
-                      final department =
-                          employee['department']
-                              ?.toString() ??
-                              '';
-
-                      final active =
-                      _liveIsActive(
-                        employee,
-                      );
-
-                      return ListTile(
-                        leading:
-                        CircleAvatar(
-                          backgroundColor:
-                          const Color(
-                            0xFFE7F7EF,
-                          ),
+                        padding: EdgeInsets.all(24),
+                        child: Center(
                           child: Text(
-                            name.isEmpty
-                                ? '?'
-                                : name[0]
-                                .toUpperCase(),
-                            style:
-                            const TextStyle(
-                              color: Color(
-                                0xFF15965D,
+                            'No employees match your search.',
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: liveEmployees.map(
+                          (employee) {
+                            final name =
+                                employee['name']?.toString() ?? 'Employee';
+
+                            final id = _liveEmployeeId(
+                              employee,
+                            );
+
+                            final department =
+                                employee['department']?.toString() ?? '';
+
+                            final active = _liveIsActive(
+                              employee,
+                            );
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: const Color(
+                                  0xFFE7F7EF,
+                                ),
+                                child: Text(
+                                  name.isEmpty ? '?' : name[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Color(
+                                      0xFF15965D,
+                                    ),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                              fontWeight:
-                              FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          name,
-                          style:
-                          const TextStyle(
-                            fontWeight:
-                            FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          [
-                            id,
-                            department,
-                          ]
-                              .where(
-                                (v) =>
-                            v.isNotEmpty,
-                          )
-                              .join(' • '),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Chip(
-                              label: Text(active ? 'Active' : 'Inactive'),
-                              backgroundColor: active
-                                  ? const Color(0xFFE7F7EF)
-                                  : Colors.black12,
-                            ),
-                            IconButton(
-                              tooltip: 'Edit employee',
-                              onPressed: () => _showEditBranchEmployee(employee),
-                              icon: const Icon(Icons.edit_outlined),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ).toList(),
-                ),
+                              title: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                [
+                                  id,
+                                  department,
+                                ]
+                                    .where(
+                                      (v) => v.isNotEmpty,
+                                    )
+                                    .join(' • '),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Chip(
+                                    label: Text(active ? 'Active' : 'Inactive'),
+                                    backgroundColor: active
+                                        ? const Color(0xFFE7F7EF)
+                                        : Colors.black12,
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Edit employee',
+                                    onPressed: () =>
+                                        _showEditBranchEmployee(employee),
+                                    icon: const Icon(Icons.edit_outlined),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ).toList(),
+                      ),
               ),
             ],
           ),
@@ -1454,7 +1412,8 @@ class _BranchPortalState extends State<BranchPortal> {
                     TextFormField(
                       controller: employeeId,
                       enabled: false,
-                      decoration: const InputDecoration(labelText: 'Employee ID'),
+                      decoration:
+                          const InputDecoration(labelText: 'Employee ID'),
                     ),
                     const SizedBox(height: 12),
                   ] else ...[
@@ -1465,19 +1424,23 @@ class _BranchPortalState extends State<BranchPortal> {
                     const SizedBox(height: 8),
                   ],
                   _branchEmployeeField(name, 'Full Name *', enabled: !saving),
-                  _branchEmployeeField(designation, 'Designation', enabled: !saving),
-                  _branchEmployeeField(department, 'Department', enabled: !saving),
+                  _branchEmployeeField(designation, 'Designation',
+                      enabled: !saving),
+                  _branchEmployeeField(department, 'Department',
+                      enabled: !saving),
                   _branchEmployeeField(email, 'Email', enabled: !saving),
                   _branchEmployeeField(newIcNo, 'New IC No.', enabled: !saving),
                   _branchEmployeeField(bankCode, 'Bank Code', enabled: !saving),
-                  _branchEmployeeField(bankAccount, 'Bank Account', enabled: !saving),
+                  _branchEmployeeField(bankAccount, 'Bank Account',
+                      enabled: !saving),
                   _branchEmployeeField(phone, 'Phone', enabled: !saving),
                   _branchEmployeeField(address, 'Address', enabled: !saving),
                   const SizedBox(height: 6),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Joining Date'),
-                    subtitle: Text(DateFormat('dd MMM yyyy').format(joiningDate)),
+                    subtitle:
+                        Text(DateFormat('dd MMM yyyy').format(joiningDate)),
                     trailing: const Icon(Icons.calendar_month_outlined),
                     onTap: saving
                         ? null
@@ -1508,7 +1471,8 @@ class _BranchPortalState extends State<BranchPortal> {
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text(error!, style: const TextStyle(color: Colors.red)),
+                      child: Text(error!,
+                          style: const TextStyle(color: Colors.red)),
                     ),
                 ],
               ),
@@ -1549,7 +1513,8 @@ class _BranchPortalState extends State<BranchPortal> {
                         'bank_account': bankAccount.text.trim(),
                         'phone': phone.text.trim(),
                         'address': address.text.trim(),
-                        'joining_date': DateFormat('yyyy-MM-dd').format(joiningDate),
+                        'joining_date':
+                            DateFormat('yyyy-MM-dd').format(joiningDate),
                         'is_active': active,
                       };
 
@@ -1632,8 +1597,8 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _employeeTile(
-      Employee employee,
-      ) {
+    Employee employee,
+  ) {
     final records = service.employeeAttendance(
       employee.employeeId,
     );
@@ -1641,19 +1606,19 @@ class _BranchPortalState extends State<BranchPortal> {
     final present = records
         .where(
           (r) => r.status == 'Present',
-    )
+        )
         .length;
 
     final late = records
         .where(
           (r) => r.status == 'Late',
-    )
+        )
         .length;
 
     final absent = records
         .where(
           (r) => r.status == 'Absent',
-    )
+        )
         .length;
 
     return Card(
@@ -1666,10 +1631,7 @@ class _BranchPortalState extends State<BranchPortal> {
           child: Text(
             employee.name.trim().isEmpty
                 ? '?'
-                : employee.name
-                .trim()
-                .substring(0, 1)
-                .toUpperCase(),
+                : employee.name.trim().substring(0, 1).toUpperCase(),
           ),
         ),
         title: Text(
@@ -1680,10 +1642,10 @@ class _BranchPortalState extends State<BranchPortal> {
         ),
         subtitle: Text(
           '${employee.employeeId} • '
-              '${employee.designation}\n'
-              'Present: $present • '
-              'Late: $late • '
-              'Absent: $absent',
+          '${employee.designation}\n'
+          'Present: $present • '
+          'Late: $late • '
+          'Absent: $absent',
         ),
         isThreeLine: true,
         trailing: IconButton(
@@ -1710,8 +1672,8 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   void _showEmployeeAttendance(
-      Employee employee,
-      ) {
+    Employee employee,
+  ) {
     final records = service.employeeAttendance(
       employee.employeeId,
     );
@@ -1726,81 +1688,70 @@ class _BranchPortalState extends State<BranchPortal> {
             height: 500,
             child: records.isEmpty
                 ? const Center(
-              child: Text(
-                'No attendance records.',
-              ),
-            )
+                    child: Text(
+                      'No attendance records.',
+                    ),
+                  )
                 : ListView.builder(
-              itemCount: records.length,
-              itemBuilder:
-                  (context, index) {
-                final record =
-                records[index];
+                    itemCount: records.length,
+                    itemBuilder: (context, index) {
+                      final record = records[index];
 
-                return Card(
-                  margin:
-                  const EdgeInsets.only(
-                    bottom: 10,
+                      return Card(
+                        margin: const EdgeInsets.only(
+                          bottom: 10,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(
+                            12,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    DateFormat(
+                                      'dd MMM yyyy',
+                                    ).format(
+                                      record.date,
+                                    ),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    record.status,
+                                    style: TextStyle(
+                                      color: record.status == 'Present'
+                                          ? Colors.blue
+                                          : record.status == 'Late'
+                                              ? Colors.orange
+                                              : Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Divider(),
+                              _attendanceInfoRow(
+                                'Work Check In',
+                                record.checkIn,
+                                Icons.login,
+                              ),
+                              _attendanceInfoRow(
+                                'Work Check Out',
+                                record.checkOut,
+                                Icons.logout,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  child: Padding(
-                    padding:
-                    const EdgeInsets.all(
-                      12,
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              DateFormat(
-                                'dd MMM yyyy',
-                              ).format(
-                                record.date,
-                              ),
-                              style:
-                              const TextStyle(
-                                fontWeight:
-                                FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              record.status,
-                              style: TextStyle(
-                                color:
-                                record.status ==
-                                    'Present'
-                                    ? Colors.blue
-                                    : record.status ==
-                                    'Late'
-                                    ? Colors.orange
-                                    : Colors.red,
-                                fontWeight:
-                                FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(),
-                        _attendanceInfoRow(
-                          'Work Check In',
-                          record.checkIn,
-                          Icons.login,
-                        ),
-                        _attendanceInfoRow(
-                          'Work Check Out',
-                          record.checkOut,
-                          Icons.logout,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
           actions: [
             TextButton(
@@ -1818,10 +1769,10 @@ class _BranchPortalState extends State<BranchPortal> {
   }
 
   Widget _attendanceInfoRow(
-      String label,
-      String value,
-      IconData icon,
-      ) {
+    String label,
+    String value,
+    IconData icon,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: 3,
@@ -1861,11 +1812,11 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _statCard(
-      String title,
-      String value,
-      IconData icon,
-      Color color,
-      ) {
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return SizedBox(
       width: 220,
       child: Container(
@@ -1875,8 +1826,7 @@ class _BranchPortalState extends State<BranchPortal> {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               icon,
@@ -1910,9 +1860,9 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _panel(
-      String title,
-      Widget child,
-      ) {
+    String title,
+    Widget child,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1921,8 +1871,7 @@ class _BranchPortalState extends State<BranchPortal> {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
@@ -1943,10 +1892,10 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _actionButton(
-      String title,
-      IconData icon,
-      VoidCallback onTap,
-      ) {
+    String title,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
