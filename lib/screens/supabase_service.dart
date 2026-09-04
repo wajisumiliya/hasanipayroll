@@ -1198,7 +1198,7 @@ class SupabaseService {
     final response = await client
         .from('overtime_requests')
         .select()
-        .eq('branch_id', branchId.trim())
+        .ilike('branch_id', branchId.trim())
         .order('submitted_at', ascending: false);
     return _mapList(response);
   }

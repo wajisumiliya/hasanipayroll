@@ -40,18 +40,22 @@ create policy overtime_requests_employee_insert on public.overtime_requests
     )
   );
 
+drop policy if exists overtime_requests_branch_read
+  on public.overtime_requests;
 create policy overtime_requests_branch_read on public.overtime_requests
   for select to authenticated
   using (public.current_app_role() = 'branch'
-    and branch_id = public.current_branch_id());
+    and lower(trim(branch_id)) = lower(trim(public.current_branch_id())));
 
+drop policy if exists overtime_requests_branch_update
+  on public.overtime_requests;
 create policy overtime_requests_branch_update on public.overtime_requests
   for update to authenticated
   using (public.current_app_role() = 'branch'
-    and branch_id = public.current_branch_id()
+    and lower(trim(branch_id)) = lower(trim(public.current_branch_id()))
     and status = 'pending_branch')
   with check (
-    branch_id = public.current_branch_id()
+    lower(trim(branch_id)) = lower(trim(public.current_branch_id()))
     and status in ('pending_admin', 'rejected')
     and approved_minutes is null
     and admin_approved_at is null

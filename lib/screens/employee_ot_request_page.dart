@@ -145,7 +145,7 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
       _otEnd.clear();
       _reason.clear();
       setState(_refresh);
-      _message('Overtime request submitted to admin.');
+      _message('Overtime request submitted to your branch for approval.');
     } catch (error) {
       _message('Unable to submit overtime request: $error');
     } finally {
@@ -312,12 +312,12 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
                       ),
                       const SizedBox(height: 14),
                       Align(
-                        alignment: Alignment.centerRight,
+                        alignment: Alignment.centerLeft,
                         child: FilledButton.icon(
                           onPressed: _saving ? null : _submit,
                           icon: const Icon(Icons.send),
                           label: Text(
-                              _saving ? 'Submitting...' : 'Submit to Admin'),
+                              _saving ? 'Submitting...' : 'Submit to Branch'),
                         ),
                       ),
                     ],
