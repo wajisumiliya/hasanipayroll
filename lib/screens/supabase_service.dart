@@ -10,8 +10,12 @@ class SupabaseService {
     required int month,
     String? employeeId,
   }) async {
-    var query = client.from('monthly_rosters').select()
-        .eq('branch_id', branchId).eq('roster_year', year).eq('roster_month', month);
+    var query = client
+        .from('monthly_rosters')
+        .select()
+        .eq('branch_id', branchId)
+        .eq('roster_year', year)
+        .eq('roster_month', month);
     if (employeeId != null) query = query.eq('employee_id', employeeId);
     final response = await query.order('employee_id').order('week_number');
     return _mapList(response);
@@ -19,14 +23,14 @@ class SupabaseService {
 
   static Future<void> saveMonthlyRoster(Map<String, dynamic> roster) async {
     await client.from('monthly_rosters').upsert(roster,
-      onConflict: 'branch_id,employee_id,roster_year,roster_month,week_number');
+        onConflict:
+            'branch_id,employee_id,roster_year,roster_month,week_number');
   }
   // ============================================================
   // SUPABASE CONFIGURATION
   // ============================================================
 
-  static const String supabaseUrl =
-      'https://qychfoxygqzmtsqtxihp.supabase.co';
+  static const String supabaseUrl = 'https://qychfoxygqzmtsqtxihp.supabase.co';
 
   static const String supabaseAnonKey =
       'sb_publishable_zZk97NP7edFidJ0HBCUKtQ_SAQ69tId';
@@ -113,8 +117,8 @@ class SupabaseService {
     try {
       await client
           .from('branch_activity_logs')
-          .update({'closed_at': DateTime.now().toUtc().toIso8601String()})
-          .eq('id', activityId);
+          .update({'closed_at': DateTime.now().toUtc().toIso8601String()}).eq(
+              'id', activityId);
     } catch (e) {
       debugPrint('CLOSE BRANCH ACTIVITY ERROR: $e');
     }
@@ -140,9 +144,8 @@ class SupabaseService {
             .lt('opened_at', end.toIso8601String());
       }
 
-      final response = await query
-          .order('opened_at', ascending: false)
-          .limit(limit);
+      final response =
+          await query.order('opened_at', ascending: false).limit(limit);
       return _mapList(response);
     } catch (e, stackTrace) {
       debugPrint('GET BRANCH ACTIVITY LOGS ERROR: $e');
@@ -192,10 +195,7 @@ class SupabaseService {
 
   static Future<bool> testConnection() async {
     try {
-      await client
-          .from('employees')
-          .select('employee_id')
-          .limit(1);
+      await client.from('employees').select('employee_id').limit(1);
 
       debugPrint('SUPABASE CONNECTION: OK');
       return true;
@@ -208,10 +208,7 @@ class SupabaseService {
 
   static Future<bool> testEmployeesTable() async {
     try {
-      final response = await client
-          .from('employees')
-          .select()
-          .limit(1);
+      final response = await client.from('employees').select().limit(1);
 
       debugPrint('EMPLOYEES TABLE OK: $response');
       return true;
@@ -224,10 +221,7 @@ class SupabaseService {
 
   static Future<bool> testPayrollTable() async {
     try {
-      final response = await client
-          .from('payroll')
-          .select()
-          .limit(1);
+      final response = await client.from('payroll').select().limit(1);
 
       debugPrint('PAYROLL TABLE OK: $response');
       return true;
@@ -250,7 +244,7 @@ class SupabaseService {
     return response
         .map<Map<String, dynamic>>(
           (item) => Map<String, dynamic>.from(item as Map),
-    )
+        )
         .toList();
   }
 
@@ -356,8 +350,8 @@ class SupabaseService {
   }
 
   static Future<Map<String, dynamic>?> getEmployee(
-      dynamic employeeId,
-      ) async {
+    dynamic employeeId,
+  ) async {
     try {
       final response = await client
           .from('employees')
@@ -378,10 +372,10 @@ class SupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getEmployeesByBranch(
-      String? branchId, {
-        Iterable<String?> aliases = const [],
-        bool? frnOnly,
-      }) async {
+    String? branchId, {
+    Iterable<String?> aliases = const [],
+    bool? frnOnly,
+  }) async {
     try {
       final wanted = <String>{
         if (branchId != null && branchId.trim().isNotEmpty)
@@ -402,11 +396,9 @@ class SupabaseService {
           .order('name', ascending: true);
 
       return _mapList(response).where((employee) {
-        final isFrn = employee['address']
-                ?.toString()
-                .toUpperCase()
-                .contains('FRN') ==
-            true;
+        final isFrn =
+            employee['address']?.toString().toUpperCase().contains('FRN') ==
+                true;
         if (frnOnly == true && !isFrn) return false;
         if (frnOnly == false && isFrn) return false;
 
@@ -427,8 +419,8 @@ class SupabaseService {
           }
 
           return wanted.any(
-                (target) =>
-            actual == target ||
+            (target) =>
+                actual == target ||
                 actual.contains(target) ||
                 target.contains(actual),
           );
@@ -442,8 +434,8 @@ class SupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getActiveEmployeesByBranch(
-      String? branchId,
-      ) async {
+    String? branchId,
+  ) async {
     try {
       if (branchId == null || branchId.trim().isEmpty) {
         return getActiveEmployees();
@@ -465,8 +457,8 @@ class SupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getEmployeesByDepartment(
-      String department,
-      ) async {
+    String department,
+  ) async {
     try {
       final response = await client
           .from('employees')
@@ -482,10 +474,9 @@ class SupabaseService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>>
-  getActiveEmployeesByDepartment(
-      String department,
-      ) async {
+  static Future<List<Map<String, dynamic>>> getActiveEmployeesByDepartment(
+    String department,
+  ) async {
     try {
       final response = await client
           .from('employees')
@@ -502,8 +493,7 @@ class SupabaseService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>>
-  getEmployeesByBranchAndDepartment({
+  static Future<List<Map<String, dynamic>>> getEmployeesByBranchAndDepartment({
     String? branchId,
     String? department,
     bool? activeOnly,
@@ -619,9 +609,7 @@ class SupabaseService {
     String? branchId,
   }) async {
     try {
-      var query = client
-          .from('employees')
-          .select('employee_id');
+      var query = client.from('employees').select('employee_id');
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -641,10 +629,8 @@ class SupabaseService {
     String? branchId,
   }) async {
     try {
-      var query = client
-          .from('employees')
-          .select('employee_id')
-          .eq('is_active', true);
+      var query =
+          client.from('employees').select('employee_id').eq('is_active', true);
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -678,9 +664,7 @@ class SupabaseService {
     String? branchId,
   }) async {
     try {
-      var query = client
-          .from('employees')
-          .select('department');
+      var query = client.from('employees').select('department');
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -715,10 +699,8 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getBranches() async {
     try {
-      final response = await client
-          .from('branches')
-          .select()
-          .order('name', ascending: true);
+      final response =
+          await client.from('branches').select().order('name', ascending: true);
 
       return _mapList(response);
     } catch (e, stackTrace) {
@@ -730,9 +712,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getAllBranches() async {
     try {
-      final response = await client
-          .from('employees')
-          .select();
+      final response = await client.from('employees').select();
 
       final seen = <String>{};
       final result = <Map<String, dynamic>>[];
@@ -757,12 +737,9 @@ class SupabaseService {
       }
 
       result.sort(
-            (a, b) => a['value']
-            .toString()
-            .toLowerCase()
-            .compareTo(
-          b['value'].toString().toLowerCase(),
-        ),
+        (a, b) => a['value'].toString().toLowerCase().compareTo(
+              b['value'].toString().toLowerCase(),
+            ),
       );
 
       return result;
@@ -778,14 +755,11 @@ class SupabaseService {
   // ============================================================
 
   static Future<Map<String, dynamic>> addEmployee(
-      Map<String, dynamic> employee,
-      ) async {
+    Map<String, dynamic> employee,
+  ) async {
     try {
-      final response = await client
-          .from('employees')
-          .insert(employee)
-          .select()
-          .single();
+      final response =
+          await client.from('employees').insert(employee).select().single();
 
       return _map(response);
     } catch (e, stackTrace) {
@@ -893,9 +867,9 @@ class SupabaseService {
   // ============================================================
 
   static Future<Map<String, dynamic>> updateEmployee(
-      dynamic employeeId,
-      Map<String, dynamic> employee,
-      ) async {
+    dynamic employeeId,
+    Map<String, dynamic> employee,
+  ) async {
     try {
       final response = await client
           .from('employees')
@@ -949,12 +923,12 @@ class SupabaseService {
       await client
           .from('employees')
           .update({
-        'is_active': isActive,
-      })
+            'is_active': isActive,
+          })
           .eq(
-        'employee_id',
-        employeeId.toString(),
-      )
+            'employee_id',
+            employeeId.toString(),
+          )
           .select('employee_id');
     } catch (e, stackTrace) {
       debugPrint('UPDATE EMPLOYEE STATUS ERROR: $e');
@@ -968,16 +942,13 @@ class SupabaseService {
   // ============================================================
 
   static Future<void> deleteEmployee(
-      dynamic employeeId,
-      ) async {
+    dynamic employeeId,
+  ) async {
     try {
-      await client
-          .from('employees')
-          .delete()
-          .eq(
-        'employee_id',
-        employeeId.toString(),
-      );
+      await client.from('employees').delete().eq(
+            'employee_id',
+            employeeId.toString(),
+          );
     } catch (e, stackTrace) {
       debugPrint('DELETE EMPLOYEE ERROR: $e');
       debugPrint('$stackTrace');
@@ -1005,20 +976,20 @@ class SupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getPayrollByEmployee(
-      dynamic employeeId,
-      ) async {
+    dynamic employeeId,
+  ) async {
     try {
       final response = await client
           .from('payroll')
           .select()
           .eq(
-        'employee_id',
-        employeeId.toString(),
-      )
+            'employee_id',
+            employeeId.toString(),
+          )
           .order(
-        'period',
-        ascending: false,
-      );
+            'period',
+            ascending: false,
+          );
 
       return _mapList(response);
     } catch (e, stackTrace) {
@@ -1029,8 +1000,8 @@ class SupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getPayrollByBranch(
-      String? branchId,
-      ) async {
+    String? branchId,
+  ) async {
     try {
       if (branchId == null || branchId.trim().isEmpty) {
         return getPayroll();
@@ -1050,11 +1021,9 @@ class SupabaseService {
       final payroll = await getPayroll();
 
       return payroll.where((record) {
-        final employeeId =
-        record['employee_id']?.toString();
+        final employeeId = record['employee_id']?.toString();
 
-        return employeeId != null &&
-            employeeIds.contains(employeeId);
+        return employeeId != null && employeeIds.contains(employeeId);
       }).toList();
     } catch (e, stackTrace) {
       debugPrint('GET PAYROLL BY BRANCH ERROR: $e');
@@ -1064,14 +1033,11 @@ class SupabaseService {
   }
 
   static Future<Map<String, dynamic>> addPayroll(
-      Map<String, dynamic> payroll,
-      ) async {
+    Map<String, dynamic> payroll,
+  ) async {
     try {
-      final response = await client
-          .from('payroll')
-          .insert(payroll)
-          .select()
-          .single();
+      final response =
+          await client.from('payroll').insert(payroll).select().single();
 
       return _map(response);
     } catch (e, stackTrace) {
@@ -1082,17 +1048,17 @@ class SupabaseService {
   }
 
   static Future<Map<String, dynamic>> updatePayroll(
-      dynamic payrollId,
-      Map<String, dynamic> payroll,
-      ) async {
+    dynamic payrollId,
+    Map<String, dynamic> payroll,
+  ) async {
     try {
       final response = await client
           .from('payroll')
           .update(payroll)
           .eq(
-        'id',
-        payrollId.toString(),
-      )
+            'id',
+            payrollId.toString(),
+          )
           .select()
           .single();
 
@@ -1105,16 +1071,13 @@ class SupabaseService {
   }
 
   static Future<void> deletePayroll(
-      dynamic payrollId,
-      ) async {
+    dynamic payrollId,
+  ) async {
     try {
-      await client
-          .from('payroll')
-          .delete()
-          .eq(
-        'id',
-        payrollId.toString(),
-      );
+      await client.from('payroll').delete().eq(
+            'id',
+            payrollId.toString(),
+          );
     } catch (e, stackTrace) {
       debugPrint('DELETE PAYROLL ERROR: $e');
       debugPrint('$stackTrace');
@@ -1128,13 +1091,10 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getAttendance() async {
     try {
-      final response = await client
-          .from('attendance')
-          .select()
-          .order(
-        'attendance_date',
-        ascending: false,
-      );
+      final response = await client.from('attendance').select().order(
+            'attendance_date',
+            ascending: false,
+          );
 
       return _mapList(response);
     } catch (e, stackTrace) {
@@ -1148,10 +1108,9 @@ class SupabaseService {
   // ATTENDANCE BY BRANCH
   // ============================================================
 
-  static Future<List<Map<String, dynamic>>>
-  getAttendanceByBranch(
-      String? branchId,
-      ) async {
+  static Future<List<Map<String, dynamic>>> getAttendanceByBranch(
+    String? branchId,
+  ) async {
     try {
       if (branchId == null || branchId.trim().isEmpty) {
         return getAttendance();
@@ -1161,13 +1120,13 @@ class SupabaseService {
           .from('attendance')
           .select()
           .eq(
-        'branch_id',
-        branchId.trim(),
-      )
+            'branch_id',
+            branchId.trim(),
+          )
           .order(
-        'attendance_date',
-        ascending: false,
-      );
+            'attendance_date',
+            ascending: false,
+          );
 
       return _mapList(response);
     } catch (e, stackTrace) {
@@ -1182,8 +1141,7 @@ class SupabaseService {
     required DateTime date,
   }) async {
     try {
-      final dateText =
-          '${date.year.toString().padLeft(4, '0')}-'
+      final dateText = '${date.year.toString().padLeft(4, '0')}-'
           '${date.month.toString().padLeft(2, '0')}-'
           '${date.day.toString().padLeft(2, '0')}';
       final response = await client
@@ -1202,27 +1160,10 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getPendingOtRequests() async {
     try {
       final response = await client
-          .from('attendance')
+          .from('overtime_requests')
           .select()
-          .eq('ot_requested', true)
-          .eq('ot_authorized', false)
-          .order('attendance_date', ascending: false);
-      final requests = _mapList(response);
-      for (final request in requests) {
-        final date = DateTime.tryParse(request['attendance_date']?.toString() ?? '');
-        if (date == null) continue;
-        final roster = await getMonthlyRosters(
-          branchId: request['branch_id']?.toString() ?? '',
-          employeeId: request['employee_id']?.toString(),
-          year: date.year,
-          month: date.month,
-        );
-        final week = ((date.day - 1) ~/ 7) + 1;
-        final match = roster.where((row) => row['week_number'] == week).firstOrNull;
-        request['_shift_start'] = match?['shift_start'];
-        request['_shift_end'] = match?['shift_end'];
-      }
-      return requests;
+          .order('submitted_at', ascending: false);
+      return _mapList(response);
     } catch (e, stackTrace) {
       debugPrint('GET OT REQUESTS ERROR: $e');
       debugPrint('$stackTrace');
@@ -1231,23 +1172,17 @@ class SupabaseService {
   }
 
   static Future<void> reviewOtRequest({
-    required String employeeId,
-    required String branchId,
-    required String attendanceDate,
+    required String requestId,
     required bool approve,
     int? approvedOtMinutes,
   }) async {
     try {
-      await client
-          .from('attendance')
-          .update({
-            'ot_requested': approve,
-            'ot_authorized': approve,
-            'approved_ot_minutes': approve ? approvedOtMinutes : null,
-          })
-          .eq('employee_id', employeeId)
-          .eq('branch_id', branchId)
-          .eq('attendance_date', attendanceDate);
+      await client.from('overtime_requests').update({
+        'status': approve ? 'approved' : 'rejected',
+        'approved_minutes': approve ? approvedOtMinutes : null,
+        'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+        'reviewed_by': currentUser?.id,
+      }).eq('id', requestId);
     } catch (e, stackTrace) {
       debugPrint('REVIEW OT REQUEST ERROR: $e');
       debugPrint('$stackTrace');
@@ -1255,26 +1190,39 @@ class SupabaseService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getEmployeeOtRequests(
+      String employeeId) async {
+    final response = await client
+        .from('overtime_requests')
+        .select()
+        .eq('employee_id', employeeId.trim())
+        .order('overtime_date', ascending: false);
+    return _mapList(response);
+  }
+
+  static Future<void> submitOtRequest(Map<String, dynamic> request) async {
+    await client.from('overtime_requests').insert(request);
+  }
+
   // ============================================================
   // ATTENDANCE BY EMPLOYEE
   // ============================================================
 
-  static Future<List<Map<String, dynamic>>>
-  getAttendanceByEmployee(
-      dynamic employeeId,
-      ) async {
+  static Future<List<Map<String, dynamic>>> getAttendanceByEmployee(
+    dynamic employeeId,
+  ) async {
     try {
       final response = await client
           .from('attendance')
           .select()
           .eq(
-        'employee_id',
-        employeeId.toString(),
-      )
+            'employee_id',
+            employeeId.toString(),
+          )
           .order(
-        'attendance_date',
-        ascending: false,
-      );
+            'attendance_date',
+            ascending: false,
+          );
 
       return _mapList(response);
     } catch (e, stackTrace) {
@@ -1288,15 +1236,13 @@ class SupabaseService {
   // ATTENDANCE BY EMPLOYEE + MONTH
   // ============================================================
 
-  static Future<List<Map<String, dynamic>>>
-  getAttendanceByEmployeeMonth(
-      dynamic employeeId,
-      int year,
-      int month,
-      ) async {
+  static Future<List<Map<String, dynamic>>> getAttendanceByEmployeeMonth(
+    dynamic employeeId,
+    int year,
+    int month,
+  ) async {
     try {
-      final startDate =
-          '${year.toString().padLeft(4, '0')}-'
+      final startDate = '${year.toString().padLeft(4, '0')}-'
           '${month.toString().padLeft(2, '0')}-01';
 
       final nextMonth = DateTime(
@@ -1311,21 +1257,21 @@ class SupabaseService {
           .from('attendance')
           .select()
           .eq(
-        'employee_id',
-        employeeId.toString(),
-      )
+            'employee_id',
+            employeeId.toString(),
+          )
           .gte(
-        'attendance_date',
-        startDate,
-      )
+            'attendance_date',
+            startDate,
+          )
           .lt(
-        'attendance_date',
-        endDate,
-      )
+            'attendance_date',
+            endDate,
+          )
           .order(
-        'attendance_date',
-        ascending: true,
-      );
+            'attendance_date',
+            ascending: true,
+          );
 
       return _mapList(response);
     } catch (e, stackTrace) {
@@ -1341,19 +1287,15 @@ class SupabaseService {
   // ATTENDANCE BY DATE
   // ============================================================
 
-  static Future<List<Map<String, dynamic>>>
-  getAttendanceByDate(
-      String date, {
-        String? branchId,
-      }) async {
+  static Future<List<Map<String, dynamic>>> getAttendanceByDate(
+    String date, {
+    String? branchId,
+  }) async {
     try {
-      var query = client
-          .from('attendance')
-          .select()
-          .eq(
-        'attendance_date',
-        date,
-      );
+      var query = client.from('attendance').select().eq(
+            'attendance_date',
+            date,
+          );
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq(
@@ -1380,14 +1322,11 @@ class SupabaseService {
   // ============================================================
 
   static Future<Map<String, dynamic>> addAttendance(
-      Map<String, dynamic> attendance,
-      ) async {
+    Map<String, dynamic> attendance,
+  ) async {
     try {
-      final response = await client
-          .from('attendance')
-          .insert(attendance)
-          .select()
-          .single();
+      final response =
+          await client.from('attendance').insert(attendance).select().single();
 
       return _map(response);
     } catch (e, stackTrace) {
@@ -1402,17 +1341,17 @@ class SupabaseService {
   // ============================================================
 
   static Future<Map<String, dynamic>> updateAttendance(
-      dynamic id,
-      Map<String, dynamic> attendance,
-      ) async {
+    dynamic id,
+    Map<String, dynamic> attendance,
+  ) async {
     try {
       final response = await client
           .from('attendance')
           .update(attendance)
           .eq(
-        'id',
-        id.toString(),
-      )
+            'id',
+            id.toString(),
+          )
           .select()
           .single();
 
@@ -1437,16 +1376,16 @@ class SupabaseService {
       await client
           .from('attendance')
           .update({
-        'ot_authorized': otAuthorized,
-      })
+            'ot_authorized': otAuthorized,
+          })
           .eq(
-        'employee_id',
-        employeeId.trim(),
-      )
+            'employee_id',
+            employeeId.trim(),
+          )
           .eq(
-        'attendance_date',
-        _dateOnlyText(date),
-      );
+            'attendance_date',
+            _dateOnlyText(date),
+          );
     } catch (e, stackTrace) {
       debugPrint(
         'UPDATE ATTENDANCE OT AUTHORIZATION ERROR: $e',
@@ -1569,16 +1508,12 @@ class SupabaseService {
     required String employeeId,
     required String branchId,
     required DateTime date,
-
     String workingIn = '',
     String workingOut = '',
-
     String morningIn = '',
     String morningOut = '',
-
     String afternoonIn = '',
     String afternoonOut = '',
-
     String eveningIn = '',
     String eveningOut = '',
 
@@ -1651,9 +1586,9 @@ class SupabaseService {
       // ==========================================================
 
       int difference(
-          String start,
-          String end,
-          ) {
+        String start,
+        String end,
+      ) {
         final startMinutes = parseTime(start);
         final endMinutes = parseTime(end);
 
@@ -1742,9 +1677,7 @@ class SupabaseService {
       // ==========================================================
 
       final calculatedBreakMinutes =
-          morningBreakMinutes +
-              afternoonBreakMinutes +
-              eveningBreakMinutes;
+          morningBreakMinutes + afternoonBreakMinutes + eveningBreakMinutes;
 
       // ==========================================================
       // 4. NET WORKING TIME
@@ -1753,8 +1686,7 @@ class SupabaseService {
       // ==========================================================
 
       var calculatedNetWorkingMinutes =
-          calculatedWorkMinutes -
-              calculatedBreakMinutes;
+          calculatedWorkMinutes - calculatedBreakMinutes;
 
       if (calculatedNetWorkingMinutes < 0) {
         calculatedNetWorkingMinutes = 0;
@@ -1781,12 +1713,9 @@ class SupabaseService {
       final bool otEligible = breakFulfilled && extraMinutes > 10;
 
       final int calculatedOvertimeMinutes =
-          (otEligible && otRequested && otAuthorized)
-              ? extraMinutes
-              : 0;
+          (otEligible && otRequested && otAuthorized) ? extraMinutes : 0;
 
-      final String otStatus =
-          otAuthorized ? 'true' : 'false';
+      final String otStatus = otAuthorized ? 'true' : 'false';
 
       // ==========================================================
       // 7. DATE
@@ -1800,18 +1729,16 @@ class SupabaseService {
       // employee + date is unique.
       // ==========================================================
 
-      final attendanceId =
-          '${employeeId.trim()}_$dateString';
+      final attendanceId = '${employeeId.trim()}_$dateString';
 
       // ==========================================================
       // 9. STATUS
       // ==========================================================
 
-      final bool hasWorkingTime =
-          workingIn.trim().isNotEmpty &&
-              workingIn.trim() != '-' &&
-              workingOut.trim().isNotEmpty &&
-              workingOut.trim() != '-';
+      final bool hasWorkingTime = workingIn.trim().isNotEmpty &&
+          workingIn.trim() != '-' &&
+          workingOut.trim().isNotEmpty &&
+          workingOut.trim() != '-';
 
       // Never send an empty/unsupported status. The attendance table uses
       // these business statuses: Present, Late, OFF, MC, PL, AL, EL, PH, UNPAID.
@@ -1883,13 +1810,9 @@ class SupabaseService {
         // Therefore NEVER send null.
         // --------------------------------------------------------
 
-        'check_in': workingIn.trim().isEmpty
-            ? '-'
-            : workingIn.trim(),
+        'check_in': workingIn.trim().isEmpty ? '-' : workingIn.trim(),
 
-        'check_out': workingOut.trim().isEmpty
-            ? '-'
-            : workingOut.trim(),
+        'check_out': workingOut.trim().isEmpty ? '-' : workingOut.trim(),
 
         // --------------------------------------------------------
         // STATUS
@@ -1945,24 +1868,19 @@ class SupabaseService {
 
         'overtime_minutes': calculatedOvertimeMinutes,
 
-        'net_working_minutes':
-        calculatedNetWorkingMinutes,
+        'net_working_minutes': calculatedNetWorkingMinutes,
 
         // --------------------------------------------------------
         // DISPLAY DURATIONS
         // --------------------------------------------------------
 
-        'work_duration':
-        duration(calculatedWorkMinutes),
+        'work_duration': duration(calculatedWorkMinutes),
 
-        'break_duration':
-        duration(calculatedBreakMinutes),
+        'break_duration': duration(calculatedBreakMinutes),
 
-        'overtime_duration':
-        duration(calculatedOvertimeMinutes),
+        'overtime_duration': duration(calculatedOvertimeMinutes),
 
-        'net_working_duration':
-        duration(calculatedNetWorkingMinutes),
+        'net_working_duration': duration(calculatedNetWorkingMinutes),
       };
 
       // ==========================================================
@@ -1999,20 +1917,20 @@ class SupabaseService {
 
       debugPrint(
         'Morning break: '
-            '$morningIn -> $morningOut '
-            '= $morningBreakMinutes',
+        '$morningIn -> $morningOut '
+        '= $morningBreakMinutes',
       );
 
       debugPrint(
         'Afternoon break: '
-            '$afternoonIn -> $afternoonOut '
-            '= $afternoonBreakMinutes',
+        '$afternoonIn -> $afternoonOut '
+        '= $afternoonBreakMinutes',
       );
 
       debugPrint(
         'Evening break: '
-            '$eveningIn -> $eveningOut '
-            '= $eveningBreakMinutes',
+        '$eveningIn -> $eveningOut '
+        '= $eveningBreakMinutes',
       );
 
       debugPrint(
@@ -2021,19 +1939,19 @@ class SupabaseService {
 
       debugPrint(
         'NET WORKING: '
-            '$calculatedNetWorkingMinutes '
-            '(${duration(calculatedNetWorkingMinutes)})',
+        '$calculatedNetWorkingMinutes '
+        '(${duration(calculatedNetWorkingMinutes)})',
       );
 
       debugPrint(
         'NORMAL TARGET: '
-            '$normalWorkingMinutes (7:30)',
+        '$normalWorkingMinutes (7:30)',
       );
 
       debugPrint(
         'AUTOMATIC OT: '
-            '$calculatedOvertimeMinutes '
-            '(${duration(calculatedOvertimeMinutes)})',
+        '$calculatedOvertimeMinutes '
+        '(${duration(calculatedOvertimeMinutes)})',
       );
 
       debugPrint(
@@ -2051,9 +1969,9 @@ class SupabaseService {
       final response = await client
           .from('attendance')
           .upsert(
-        data,
-        onConflict: 'employee_id,attendance_date',
-      )
+            data,
+            onConflict: 'employee_id,attendance_date',
+          )
           .select()
           .single();
 
@@ -2074,16 +1992,13 @@ class SupabaseService {
   // ============================================================
 
   static Future<void> deleteAttendance(
-      dynamic id,
-      ) async {
+    dynamic id,
+  ) async {
     try {
-      await client
-          .from('attendance')
-          .delete()
-          .eq(
-        'id',
-        id.toString(),
-      );
+      await client.from('attendance').delete().eq(
+            'id',
+            id.toString(),
+          );
     } catch (e, stackTrace) {
       debugPrint('DELETE ATTENDANCE ERROR: $e');
       debugPrint('$stackTrace');
@@ -2095,18 +2010,17 @@ class SupabaseService {
   // GET APPLICATION USER
   // ============================================================
 
-  static Future<Map<String, dynamic>?>
-  getApplicationUser(
-      String username,
-      ) async {
+  static Future<Map<String, dynamic>?> getApplicationUser(
+    String username,
+  ) async {
     try {
       final response = await client
           .from('users')
           .select()
           .eq(
-        'username',
-        username.trim(),
-      )
+            'username',
+            username.trim(),
+          )
           .maybeSingle();
 
       if (response == null) {
@@ -2125,15 +2039,12 @@ class SupabaseService {
   // DASHBOARD EMPLOYEES
   // ============================================================
 
-  static Future<List<Map<String, dynamic>>>
-  getDashboardEmployees({
+  static Future<List<Map<String, dynamic>>> getDashboardEmployees({
     String? branchId,
     bool activeOnly = false,
   }) async {
     try {
-      var query = client
-          .from('employees')
-          .select();
+      var query = client.from('employees').select();
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq(
@@ -2168,20 +2079,18 @@ class SupabaseService {
   // DASHBOARD SUMMARY
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-  getDashboardSummary({
+  static Future<Map<String, dynamic>> getDashboardSummary({
     String? branchId,
   }) async {
     try {
-      final employees =
-      await getDashboardEmployees(
+      final employees = await getDashboardEmployees(
         branchId: branchId,
       );
 
       final activeEmployees = employees
           .where(
             (e) => e['is_active'] == true,
-      )
+          )
           .toList();
 
       final now = DateTime.now();
@@ -2193,9 +2102,8 @@ class SupabaseService {
       );
 
       final newJoiners = employees.where(
-            (employee) {
-          final raw =
-          employee['joining_date'];
+        (employee) {
+          final raw = employee['joining_date'];
 
           if (raw == null) {
             return false;
@@ -2210,8 +2118,8 @@ class SupabaseService {
           }
 
           return !date.isBefore(
-            sixMonthsAgo,
-          ) &&
+                sixMonthsAgo,
+              ) &&
               !date.isAfter(now);
         },
       ).toList();
@@ -2219,13 +2127,9 @@ class SupabaseService {
       final departments = <String>{};
 
       for (final employee in employees) {
-        final department =
-        employee['department']
-            ?.toString()
-            .trim();
+        final department = employee['department']?.toString().trim();
 
-        if (department != null &&
-            department.isNotEmpty) {
+        if (department != null && department.isNotEmpty) {
           departments.add(department);
         }
       }
@@ -2233,13 +2137,9 @@ class SupabaseService {
       final branches = <String>{};
 
       for (final employee in employees) {
-        final branch =
-        employee['branch_id']
-            ?.toString()
-            .trim();
+        final branch = employee['branch_id']?.toString().trim();
 
-        if (branch != null &&
-            branch.isNotEmpty) {
+        if (branch != null && branch.isNotEmpty) {
           branches.add(branch);
         }
       }
@@ -2265,11 +2165,10 @@ class SupabaseService {
   // SEARCH EMPLOYEES
   // ============================================================
 
-  static Future<List<Map<String, dynamic>>>
-  searchEmployees(
-      String search, {
-        String? branchId,
-      }) async {
+  static Future<List<Map<String, dynamic>>> searchEmployees(
+    String search, {
+    String? branchId,
+  }) async {
     try {
       final value = search.trim();
 
@@ -2279,12 +2178,9 @@ class SupabaseService {
         );
       }
 
-      var query = client
-          .from('employees')
-          .select();
+      var query = client.from('employees').select();
 
-      if (branchId != null &&
-          branchId.trim().isNotEmpty) {
+      if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq(
           'branch_id',
           branchId.trim(),
@@ -2293,13 +2189,13 @@ class SupabaseService {
 
       final responseById = await query
           .ilike(
-        'employee_id',
-        '%$value%',
-      )
+            'employee_id',
+            '%$value%',
+          )
           .order(
-        'name',
-        ascending: true,
-      );
+            'name',
+            ascending: true,
+          );
 
       final results = _mapList(
         responseById,
@@ -2309,12 +2205,9 @@ class SupabaseService {
         return results;
       }
 
-      var nameQuery = client
-          .from('employees')
-          .select();
+      var nameQuery = client.from('employees').select();
 
-      if (branchId != null &&
-          branchId.trim().isNotEmpty) {
+      if (branchId != null && branchId.trim().isNotEmpty) {
         nameQuery = nameQuery.eq(
           'branch_id',
           branchId.trim(),
@@ -2323,13 +2216,13 @@ class SupabaseService {
 
       final responseByName = await nameQuery
           .ilike(
-        'name',
-        '%$value%',
-      )
+            'name',
+            '%$value%',
+          )
           .order(
-        'name',
-        ascending: true,
-      );
+            'name',
+            ascending: true,
+          );
 
       return _mapList(
         responseByName,

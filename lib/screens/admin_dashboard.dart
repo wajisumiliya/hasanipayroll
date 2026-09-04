@@ -14,6 +14,7 @@ import 'package:file_saver/file_saver.dart';
 import 'dart:typed_data';
 import '../screens/supabase_service.dart';
 import '../screens/attendance_dialog.dart';
+import 'monthly_roster_page.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -46,7 +47,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
   String? selectedLogBranchId;
-  DateTime? selectedLogDate = DateTime.now();
+  DateTime? selectedLogDate;
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
   Future<List<Map<String, dynamic>>>? _adminEmployeesFuture;
   Future<List<Map<String, dynamic>>>? _employeeRequestsFuture;
@@ -3260,27 +3261,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     final employee = service.employeeById(employeeId);
                     final employeeName = employee?.name ?? employeeId;
                     final branchId = request['branch_id']?.toString() ?? '-';
-                    final date = request['attendance_date']?.toString() ?? '-';
-                    final duration =
-                        request['overtime_duration']?.toString().trim();
+                    final date = request['overtime_date']?.toString() ?? '-';
                     final minutes =
-                        request['overtime_minutes']?.toString() ?? '0';
+                        request['requested_minutes']?.toString() ?? '0';
+                    final approvedMinutes =
+                        request['approved_minutes']?.toString();
                     final requestKey = '$employeeId|$date';
-                    _approvedOtInputs.putIfAbsent(
-                        requestKey,
-                        () => duration?.isNotEmpty == true
-                            ? duration!
-                            : _otMinutesText(int.tryParse(minutes) ?? 0));
-                    final shiftStart = _shortTime(request['_shift_start']);
-                    final shiftEnd = _shortTime(request['_shift_end']);
+                    _approvedOtInputs.putIfAbsent(requestKey,
+                        () => _otMinutesText(
+                            int.tryParse(approvedMinutes ?? minutes) ?? 0));
+                    final shiftStart = _shortTime(request['shift_start']);
+                    final shiftEnd = _shortTime(request['shift_end']);
                     final actualStart =
-                        (request['working_in'] ?? request['check_in'] ?? '-')
-                            .toString();
+                        (request['overtime_start'] ?? '-').toString();
                     final actualEnd =
-                        (request['working_out'] ?? request['check_out'] ?? '-')
-                            .toString();
-                    final breakText =
-                        request['break_minutes']?.toString() ?? '0';
+                        (request['overtime_end'] ?? '-').toString();
+                    final reason = request['reason']?.toString() ?? '-';
+                    final status = request['status']?.toString() ?? 'pending';
+                    final isPending = status == 'pending';
                     return Card(
                       elevation: 0,
                       child: ListTile(
@@ -3297,14 +3295,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             const SizedBox(width: 12),
                             _otInfo('Actual', '$actualStart–$actualEnd'),
                             const SizedBox(width: 12),
-                            _otInfo('Total break',
-                                _otMinutesText(int.tryParse(breakText) ?? 0)),
+                            _otInfo('Reason', reason),
                             const SizedBox(width: 12),
-                            _otInfo(
-                                'Requested',
-                                duration?.isNotEmpty == true
-                                    ? duration!
-                                    : '$minutes min'),
+                            _otInfo('Requested',
+                                _otMinutesText(int.tryParse(minutes) ?? 0)),
                             const SizedBox(width: 12),
                             SizedBox(
                                 width: 135,
@@ -3317,16 +3311,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       _approvedOtInputs[requestKey] = value,
                                 )),
                             const SizedBox(width: 10),
-                            OutlinedButton(
-                              onPressed: () => _reviewOtRequest(request, false),
-                              child: const Text('Reject'),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: () => _reviewOtRequest(request, true,
-                                  approvedText: _approvedOtInputs[requestKey]),
-                              child: const Text('Approve'),
-                            ),
+                            if (isPending) ...[
+                              OutlinedButton(
+                                onPressed: () =>
+                                    _reviewOtRequest(request, false),
+                                child: const Text('Reject'),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton(
+                                onPressed: () => _reviewOtRequest(request, true,
+                                    approvedText:
+                                        _approvedOtInputs[requestKey]),
+                                child: const Text('Approve'),
+                              ),
+                            ] else if (status == 'approved') ...[
+                              _statusChip(status),
+                              const SizedBox(width: 8),
+                              FilledButton.tonal(
+                                onPressed: () => _reviewOtRequest(request, true,
+                                    approvedText: _approvedOtInputs[requestKey]),
+                                child: const Text('Update approval'),
+                              ),
+                            ] else
+                              _statusChip(status),
                           ],
                         ),
                       ),
@@ -3353,9 +3360,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         throw Exception('Enter approved OT as HH:MM, for example 01:30.');
       }
       await SupabaseService.reviewOtRequest(
-        employeeId: request['employee_id'].toString(),
-        branchId: request['branch_id'].toString(),
-        attendanceDate: request['attendance_date'].toString(),
+        requestId: request['id'].toString(),
         approve: approve,
         approvedOtMinutes: approvedMinutes,
       );
@@ -3768,6 +3773,66 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return parts.join(' • ');
   }
 
+  Future<void> _showRosterAssignment(Map<String, dynamic> log) async {
+    final branchId = log['branch_id']?.toString().trim() ?? '';
+    final rawDetails = log['details'];
+    final details = rawDetails is Map
+        ? Map<String, dynamic>.from(rawDetails)
+        : <String, dynamic>{};
+    final period = details['month']?.toString() ?? '';
+    final parts = period.split('-');
+    final year = parts.isNotEmpty ? int.tryParse(parts.first) : null;
+    final month = parts.length > 1 ? int.tryParse(parts[1]) : null;
+
+    if (branchId.isEmpty || year == null || month == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('This log does not contain a valid roster period.'),
+      ));
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: SizedBox(
+          width: 1100,
+          height: 720,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '$branchId roster - ${DateFormat('MMMM yyyy').format(DateTime(year, month))}',
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: MonthlyRosterPage(
+                  branchId: branchId,
+                  initialMonth: DateTime(year, month),
+                  readOnly: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _branchLogsPage() {
     return Padding(
       padding: const EdgeInsets.all(14),
@@ -3879,6 +3944,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     final employeeId =
                         log['employee_id']?.toString().trim() ?? '';
                     final isOpen = log['closed_at'] == null;
+                    final isRoster =
+                        log['action']?.toString() == 'ROSTER_ASSIGNED';
                     final detailsText = _logDetails(log['details']);
                     final employeeText = employeeName.isEmpty
                         ? employeeId
@@ -3923,9 +3990,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                           ],
                         ),
-                        trailing: Text(_logDuration(log),
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: isRoster
+                            ? OutlinedButton.icon(
+                                onPressed: () => _showRosterAssignment(log),
+                                icon: const Icon(Icons.calendar_view_month,
+                                    size: 17),
+                                label: const Text('View roster'),
+                              )
+                            : Text(_logDuration(log),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
                       ),
                     );
                   },

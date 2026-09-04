@@ -5,7 +5,15 @@ import 'supabase_service.dart';
 
 class MonthlyRosterPage extends StatefulWidget {
   final String branchId;
-  const MonthlyRosterPage({super.key, required this.branchId});
+  final DateTime? initialMonth;
+  final bool readOnly;
+
+  const MonthlyRosterPage({
+    super.key,
+    required this.branchId,
+    this.initialMonth,
+    this.readOnly = false,
+  });
 
   @override
   State<MonthlyRosterPage> createState() => _MonthlyRosterPageState();
@@ -42,7 +50,15 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
     _Shift('9:00 AM - 9:00 PM', '09:00', '21:00', 90),
     _Shift('10:00 AM - 10:00 PM', '10:00', '22:00', 90),
   ];
-  DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
+  late DateTime month;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialMonth ?? DateTime.now();
+    month = DateTime(initial.year, initial.month);
+  }
+
   int week = 1;
   _Shift shift = shifts.first;
   String search = '';
@@ -238,7 +254,9 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
               const Text('Select all'),
               const SizedBox(width: 16),
               FilledButton.icon(
-                onPressed: selectedIds.isEmpty || saving ? null : _save,
+                onPressed: widget.readOnly || selectedIds.isEmpty || saving
+                    ? null
+                    : _save,
                 icon: saving
                     ? const SizedBox(
                         width: 16,
