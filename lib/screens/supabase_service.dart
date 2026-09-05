@@ -130,22 +130,22 @@ class SupabaseService {
     int limit = 500,
   }) async {
     try {
-      var query = client.from('branch_activity_logs').select();
-
-      if (branchId != null && branchId.trim().isNotEmpty) {
-        query = query.eq('branch_id', branchId.trim());
-      }
-
+      String? start;
+      String? end;
       if (date != null) {
-        final start = DateTime(date.year, date.month, date.day).toUtc();
-        final end = DateTime(date.year, date.month, date.day + 1).toUtc();
-        query = query
-            .gte('opened_at', start.toIso8601String())
-            .lt('opened_at', end.toIso8601String());
+        start =
+            DateTime(date.year, date.month, date.day).toUtc().toIso8601String();
+        end = DateTime(date.year, date.month, date.day + 1)
+            .toUtc()
+            .toIso8601String();
       }
 
-      final response =
-          await query.order('opened_at', ascending: false).limit(limit);
+      final response = await client.rpc('admin_branch_activity_logs', params: {
+        'p_branch_id': branchId?.trim(),
+        'p_start': start,
+        'p_end': end,
+        'p_limit': limit,
+      });
       return _mapList(response);
     } catch (e, stackTrace) {
       debugPrint('GET BRANCH ACTIVITY LOGS ERROR: $e');
