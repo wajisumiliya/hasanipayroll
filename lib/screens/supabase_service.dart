@@ -375,6 +375,7 @@ class SupabaseService {
     String? branchId, {
     Iterable<String?> aliases = const [],
     bool? frnOnly,
+    bool activeOnly = false,
   }) async {
     try {
       final wanted = <String>{
@@ -390,10 +391,9 @@ class SupabaseService {
         return getEmployees();
       }
 
-      final response = await client
-          .from('employees')
-          .select()
-          .order('name', ascending: true);
+      var query = client.from('employees').select();
+      if (activeOnly) query = query.eq('is_active', true);
+      final response = await query.order('name', ascending: true);
 
       return _mapList(response).where((employee) {
         final isFrn =

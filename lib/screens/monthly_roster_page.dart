@@ -66,7 +66,7 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
   bool saving = false;
 
   Future<List<dynamic>> _load() => Future.wait([
-        SupabaseService.getEmployeesByBranch(widget.branchId),
+        SupabaseService.getEmployeesByBranch(widget.branchId, activeOnly: true),
         SupabaseService.getMonthlyRosters(
           branchId: widget.branchId,
           year: month.year,

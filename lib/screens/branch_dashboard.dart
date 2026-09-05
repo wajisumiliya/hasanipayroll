@@ -69,6 +69,7 @@ class _BranchPortalState extends State<BranchPortal> {
 
   List<Employee> get employees =>
       service.branchEmployees(branchId).where((employee) {
+        if (!employee.isActive) return false;
         final isFrn = employee.address.toUpperCase().contains('FRN');
         return isFrnSession ? isFrn : !isFrn;
       }).toList();
@@ -103,6 +104,7 @@ class _BranchPortalState extends State<BranchPortal> {
       _employeesFuture = SupabaseService.getEmployeesByBranch(
         resolvedBranchId,
         frnOnly: isFrnSession,
+        activeOnly: true,
         aliases: [
           branch?.branchName,
           service.currentUser?.displayName,
