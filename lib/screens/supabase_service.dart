@@ -886,6 +886,31 @@ class SupabaseService {
     }
   }
 
+  static Future<Map<String, dynamic>> transferStaff({
+    required String employeeId,
+    required String toBranchId,
+    required DateTime effectiveDate,
+    String? reason,
+  }) async {
+    final response = await client.rpc('transfer_staff', params: {
+      'p_employee_id': employeeId.trim(),
+      'p_to_branch_id': toBranchId.trim(),
+      'p_effective_date': effectiveDate.toIso8601String().split('T').first,
+      'p_reason': reason?.trim(),
+    });
+    return _map(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getStaffTransferHistory(
+      String employeeId) async {
+    final response = await client
+        .from('staff_transfer_history')
+        .select()
+        .eq('employee_id', employeeId.trim())
+        .order('transferred_at', ascending: false);
+    return _mapList(response);
+  }
+
   static Future<Map<String, dynamic>> updateEmployeeForBranch({
     required String employeeId,
     required String branchId,

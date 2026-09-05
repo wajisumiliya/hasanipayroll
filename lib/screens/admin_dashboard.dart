@@ -2288,6 +2288,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       _showSupabaseEmployeeEdit(employee);
                                     },
                                   ),
+                                  IconButton(
+                                    tooltip: 'Transfer staff',
+                                    icon: const Icon(Icons.swap_horiz,
+                                        color: Colors.orange),
+                                    onPressed: () =>
+                                        _showTransferEmployee(employee),
+                                  ),
 
                                   // DELETE
                                   IconButton(
@@ -3066,6 +3073,131 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
       ),
     );
+  }
+
+  void _showTransferEmployee(Map<String, dynamic> employee) {
+    final employeeId = employee['employee_id']?.toString().trim() ?? '';
+    final name = employee['name']?.toString().trim() ?? 'Employee';
+    final currentBranch = employee['branch_id']?.toString().trim() ?? '';
+    final destinations = service.branches
+        .where((branch) =>
+            branch.id.trim().toLowerCase() != currentBranch.toLowerCase())
+        .toList();
+    String? destination = destinations.isEmpty ? null : destinations.first.id;
+    DateTime effectiveDate = DateTime.now();
+    final reason = TextEditingController();
+    bool saving = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Transfer $name'),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    'Current branch: ${currentBranch.isEmpty ? '-' : currentBranch}'),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: destination,
+                  decoration: const InputDecoration(
+                    labelText: 'Transfer to branch',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: destinations
+                      .map((branch) => DropdownMenuItem(
+                            value: branch.id,
+                            child: Text(branch.name),
+                          ))
+                      .toList(),
+                  onChanged: saving
+                      ? null
+                      : (value) => setDialogState(() => destination = value),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Effective date'),
+                  subtitle:
+                      Text(DateFormat('dd MMM yyyy').format(effectiveDate)),
+                  trailing: const Icon(Icons.calendar_month_outlined),
+                  onTap: saving
+                      ? null
+                      : () async {
+                          final value = await showDatePicker(
+                            context: dialogContext,
+                            initialDate: effectiveDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (value != null) {
+                            setDialogState(() => effectiveDate = value);
+                          }
+                        },
+                ),
+                TextField(
+                  controller: reason,
+                  enabled: !saving,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Reason (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: SupabaseService.getStaffTransferHistory(employeeId),
+                  builder: (context, snapshot) {
+                    final count = snapshot.data?.length ?? 0;
+                    return Text('Previous transfers: $count');
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              icon: const Icon(Icons.swap_horiz),
+              label: Text(saving ? 'Transferring...' : 'Transfer Staff'),
+              onPressed: saving || destination == null
+                  ? null
+                  : () async {
+                      setDialogState(() => saving = true);
+                      try {
+                        await SupabaseService.transferStaff(
+                          employeeId: employeeId,
+                          toBranchId: destination!,
+                          effectiveDate: effectiveDate,
+                          reason: reason.text,
+                        );
+                        if (!mounted) return;
+                        Navigator.pop(dialogContext);
+                        setState(() => _adminEmployeesFuture = null);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Staff transferred successfully.')),
+                        );
+                      } catch (error) {
+                        if (!dialogContext.mounted) return;
+                        setDialogState(() => saving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Transfer failed: $error')),
+                        );
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(reason.dispose);
   }
 
   void _showSupabaseEmployeeEdit(Map<String, dynamic> employee) {
