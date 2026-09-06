@@ -12,7 +12,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with TickerProviderStateMixin {
   final AppService service = AppService.instance;
 
   final TextEditingController usernameController = TextEditingController();
@@ -24,9 +25,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? errorMessage;
 
+  late final AnimationController _entranceController;
+  late final AnimationController _ambientController;
+  late final Animation<double> _heroEntrance;
+  late final Animation<double> _formEntrance;
+
   @override
   void initState() {
     super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _ambientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 9),
+    )..repeat(reverse: true);
+    _heroEntrance = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0, .72, curve: Curves.easeOutCubic),
+    );
+    _formEntrance = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(.18, 1, curve: Curves.easeOutCubic),
+    );
+    _entranceController.forward();
     _restoreSession();
   }
 
@@ -48,6 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _entranceController.dispose();
+    _ambientController.dispose();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -268,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 newPassword,
               );
 
-              if (!mounted) return;
+              if (!mounted || !dialogContext.mounted) return;
 
               if (result != null) {
                 setDialogState(() {
@@ -525,11 +550,11 @@ class _LoginScreenState extends State<LoginScreen> {
           Positioned(
               top: -150,
               right: -100,
-              child: _loginGlow(const Color(0xFF2D5BFF), 420)),
+              child: _floatingGlow(const Color(0xFF2D5BFF), 420, 28)),
           Positioned(
               bottom: -180,
               left: compact ? -180 : 160,
-              child: _loginGlow(const Color(0xFFE51D2A), 440)),
+              child: _floatingGlow(const Color(0xFFE51D2A), 440, -24)),
           SafeArea(
               child: Center(
                   child: SingleChildScrollView(
@@ -538,9 +563,9 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 1160),
               child: compact
                   ? Column(children: [
-                      _logo(),
+                      _entrance(_logo(), _heroEntrance, -28),
                       const SizedBox(height: 18),
-                      _loginCard(compact: true)
+                      _entrance(_loginCard(compact: true), _formEntrance, 32)
                     ])
                   : Container(
                       constraints: const BoxConstraints(minHeight: 680),
@@ -556,14 +581,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ClipRRect(
                           borderRadius: BorderRadius.circular(32),
                           child: Row(children: [
-                            Expanded(flex: 11, child: _premiumHero()),
+                            Expanded(
+                                flex: 11,
+                                child: _entrance(
+                                    _premiumHero(), _heroEntrance, -38)),
                             Expanded(
                                 flex: 9,
                                 child: Container(
                                     color: const Color(0xFFF8FAFF),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 55, vertical: 42),
-                                    child: _loginCard())),
+                                    child: _entrance(
+                                        _loginCard(), _formEntrance, 38))),
                           ])),
                     ),
             ),
@@ -584,6 +613,38 @@ class _LoginScreenState extends State<LoginScreen> {
               color.withValues(alpha: 0)
             ])),
       ));
+
+  Widget _floatingGlow(Color color, double size, double travel) {
+    return AnimatedBuilder(
+      animation: _ambientController,
+      child: _loginGlow(color, size),
+      builder: (context, child) {
+        final progress = Curves.easeInOut.transform(_ambientController.value);
+        return Transform.translate(
+          offset: Offset(travel * progress, travel * .6 * progress),
+          child: Transform.scale(scale: .94 + progress * .08, child: child),
+        );
+      },
+    );
+  }
+
+  Widget _entrance(
+    Widget child,
+    Animation<double> animation,
+    double horizontalOffset,
+  ) {
+    return FadeTransition(
+      opacity: animation,
+      child: AnimatedBuilder(
+        animation: animation,
+        child: child,
+        builder: (context, child) => Transform.translate(
+          offset: Offset(horizontalOffset * (1 - animation.value), 0),
+          child: child,
+        ),
+      ),
+    );
+  }
 
   Widget _premiumHero() => Container(
         padding: const EdgeInsets.all(52),
