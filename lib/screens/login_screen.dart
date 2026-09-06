@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_service.dart';
+import '../widgets/walking_cat.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
@@ -555,10 +556,21 @@ class _LoginScreenState extends State<LoginScreen>
               bottom: -180,
               left: compact ? -180 : 160,
               child: _floatingGlow(const Color(0xFFE51D2A), 440, -24)),
+          const Positioned(
+            left: 24,
+            right: 24,
+            bottom: 4,
+            child: WalkingCat(),
+          ),
           SafeArea(
               child: Center(
                   child: SingleChildScrollView(
-            padding: EdgeInsets.all(compact ? 18 : 34),
+            padding: EdgeInsets.fromLTRB(
+              compact ? 18 : 34,
+              compact ? 18 : 34,
+              compact ? 18 : 34,
+              88,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1160),
               child: compact
@@ -647,66 +659,132 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _premiumHero() => Container(
-        padding: const EdgeInsets.all(52),
+        padding: const EdgeInsets.all(48),
         decoration: const BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-              Color(0xFF183E88),
-              Color(0xFF0D275A),
-              Color(0xFF091A39)
-            ])),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Align(
-              alignment: Alignment.centerLeft,
-              child: SizedBox(width: 230, child: _logo())),
-          const Spacer(),
-          Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white24)),
-              child: const Text('ONE SECURE WORKPLACE',
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF263FA8), Color(0xFF142760), Color(0xFF09152F)],
+            stops: [0, .52, 1],
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -80,
+              top: 40,
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white10, width: 35),
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(width: 205, child: _logo()),
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C8DFF).withValues(alpha: .16),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                        color: const Color(0xFF9DB2FF).withValues(alpha: .35)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome_rounded,
+                          size: 15, color: Color(0xFFFFD27D)),
+                      SizedBox(width: 7),
+                      Text('HASANI WORKHUB  ·  2026',
+                          style: TextStyle(
+                              color: Color(0xFFDDE5FF),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                const Text(
+                  'Everything your team needs,\nin one beautiful place.',
                   style: TextStyle(
-                      color: Color(0xFFBED0FF),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5))),
-          const SizedBox(height: 22),
-          const Text('Your workday,\nbeautifully organised.',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 43,
-                  height: 1.08,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.8)),
-          const SizedBox(height: 20),
-          const Text(
-              'Attendance, payroll, rosters and requests—connected in one private workspace for every Hasani Books team.',
-              style: TextStyle(
-                  color: Color(0xFFC1CDE5), fontSize: 16, height: 1.55)),
-          const SizedBox(height: 32),
-          const Wrap(spacing: 18, runSpacing: 12, children: [
-            _LoginFeature(Icons.verified_user_outlined, 'Protected'),
-            _LoginFeature(Icons.bolt_outlined, 'Efficient'),
-            _LoginFeature(Icons.devices_outlined, 'Any device'),
-          ]),
-          const Spacer(),
-          const Text('HASANI BOOKS EDAR SDN BHD  •  2026',
-              style: TextStyle(
-                  color: Colors.white38, fontSize: 10, letterSpacing: 1.1)),
-        ]),
+                      color: Colors.white,
+                      fontSize: 42,
+                      height: 1.08,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.2),
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  'A smarter workspace for attendance, payroll, rosters and requests—securely connected for every Hasani Books team.',
+                  style: TextStyle(
+                      color: Color(0xFFC8D3F1), fontSize: 15, height: 1.55),
+                ),
+                const SizedBox(height: 25),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .09),
+                    borderRadius: BorderRadius.circular(20),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: .16)),
+                  ),
+                  child: const Row(
+                    children: [
+                      _HeroMetric(Icons.schedule_rounded, 'Attendance', 'Live'),
+                      _HeroDivider(),
+                      _HeroMetric(Icons.payments_outlined, 'Payroll', 'Simple'),
+                      _HeroDivider(),
+                      _HeroMetric(Icons.shield_outlined, 'Security', 'Private'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 23),
+                const Wrap(spacing: 10, runSpacing: 10, children: [
+                  _LoginFeature(Icons.verified_user_outlined, 'Protected'),
+                  _LoginFeature(Icons.bolt_outlined, 'Fast access'),
+                  _LoginFeature(Icons.devices_outlined, 'Any device'),
+                ]),
+                const Spacer(),
+                const Row(
+                  children: [
+                    Icon(Icons.lock_outline_rounded,
+                        color: Colors.white38, size: 14),
+                    SizedBox(width: 6),
+                    Text('Secure employee access',
+                        style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 10,
+                            letterSpacing: 1)),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       );
   Widget _loginCard({bool compact = false}) {
     return Container(
       padding: EdgeInsets.all(compact ? 22 : 32),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F5F8),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFF1F5FF)],
+        ),
         borderRadius: BorderRadius.circular(compact ? 18 : 22),
         border: Border.all(
-          color: const Color(0xFF8B6F7A),
+          color: const Color(0xFFD5DEFF),
           width: 1.2,
         ),
         boxShadow: const [
@@ -720,7 +798,26 @@ class _LoginScreenState extends State<LoginScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 4),
+          Center(
+            child: Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF5273EA), Color(0xFF263FA8)]),
+                borderRadius: BorderRadius.circular(17),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Color(0x443B5ED7),
+                      blurRadius: 20,
+                      offset: Offset(0, 8))
+                ],
+              ),
+              child: const Icon(Icons.lock_person_rounded,
+                  color: Colors.white, size: 27),
+            ),
+          ),
+          const SizedBox(height: 18),
           const Center(
             child: Text(
               'Welcome back',
@@ -830,7 +927,7 @@ class _LoginScreenState extends State<LoginScreen>
             child: ElevatedButton(
               onPressed: loading ? null : _login,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF263451),
+                backgroundColor: const Color(0xFF2948B8),
                 foregroundColor: const Color(0xFFF3F5F8),
                 disabledBackgroundColor: const Color(0xFFB8B8B8),
                 elevation: 4,
@@ -896,7 +993,11 @@ class _LoginScreenState extends State<LoginScreen>
             return Container(
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F5F8),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.white, Color(0xFFF1F5FF)],
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
@@ -925,10 +1026,10 @@ class _LoginScreenState extends State<LoginScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE9E5DC),
+        color: const Color(0xFFEAF0FF),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFE1D2B4),
+          color: const Color(0xFFD5DEFF),
         ),
       ),
       child: const Column(
@@ -1027,5 +1128,42 @@ class _LoginFeature extends StatelessWidget {
               style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.w600)),
         ]),
+      );
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric(this.icon, this.label, this.value);
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFFFFD27D), size: 20),
+            const SizedBox(height: 7),
+            Text(value,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: const TextStyle(color: Color(0xFFAEBCE2), fontSize: 10)),
+          ],
+        ),
+      );
+}
+
+class _HeroDivider extends StatelessWidget {
+  const _HeroDivider();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 1,
+        height: 38,
+        color: Colors.white.withValues(alpha: .14),
       );
 }
