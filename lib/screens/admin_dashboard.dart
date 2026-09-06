@@ -699,7 +699,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Map<String, dynamic> employee,
     bool isActive,
   ) async {
-    final employeeId = employee['id'] ?? employee['employee_id'];
+    final employeeId = employee['employee_id'] ?? employee['id'];
     if (employeeId == null) {
       throw Exception('Employee ID was not found.');
     }
@@ -710,8 +710,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
 
     if (!mounted) return;
-    Navigator.of(context).pop();
-    setState(() {});
+    employee['is_active'] = isActive;
+    setState(() => _adminEmployeesFuture = null);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -726,187 +726,145 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String title,
     List<Map<String, dynamic>> employees,
   ) {
+    var showActive = true;
+    var showInactive = true;
+    var search = '';
+    final searchController = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            String filter = 'all';
-            List<Map<String, dynamic>> filtered() {
-              if (filter == 'active') {
-                return employees.where(_isActive).toList();
-              }
-              if (filter == 'inactive') {
-                return employees.where((e) => !_isActive(e)).toList();
-              }
-              return employees;
-            }
-
-            final list = filtered();
-            return SafeArea(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * .82,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(sheetContext),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(
-                            value: 'all',
-                            label: Text('All'),
-                            icon: Icon(Icons.people),
-                          ),
-                          ButtonSegment(
-                            value: 'active',
-                            label: Text('Active'),
-                            icon: Icon(Icons.check_circle),
-                          ),
-                          ButtonSegment(
-                            value: 'inactive',
-                            label: Text('Inactive'),
-                            icon: Icon(Icons.person_off),
-                          ),
-                        ],
-                        selected: {filter},
-                        onSelectionChanged: (value) {
-                          setSheetState(() => filter = value.first);
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: list.isEmpty
-                          ? const Center(child: Text('No employees found.'))
-                          : ListView.builder(
-                              itemCount: list.length,
-                              itemBuilder: (_, index) {
-                                final employee = list[index];
-                                final active = _isActive(employee);
-                                final name =
-                                    employee['name']?.toString() ?? 'Employee';
-                                final employeeCode =
-                                    employee['employee_id']?.toString() ?? '-';
-                                final department =
-                                    employee['department']?.toString() ?? '';
-                                final branch =
-                                    employee['branch_id']?.toString() ??
-                                        employee['branch']?.toString() ??
-                                        '';
-
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 5,
-                                  ),
-                                  child: ListTile(
-                                    title: Text(
-                                      name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      [
-                                        employeeCode,
-                                        department,
-                                        branch,
-                                      ].where((v) => v.isNotEmpty).join(' • '),
-                                    ),
-                                    trailing: PopupMenuButton<bool>(
-                                      tooltip: 'Change status',
-                                      onSelected: (value) async {
-                                        if (value == active) return;
-                                        try {
-                                          await _changeEmployeeStatus(
-                                            employee,
-                                            value,
-                                          );
-                                        } catch (e) {
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Status update failed: $e',
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      },
-                                      itemBuilder: (_) => [
-                                        PopupMenuItem(
-                                          value: true,
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.check_circle,
-                                                color: active
-                                                    ? Colors.green
-                                                    : Colors.grey,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              const Text('Set Active'),
-                                            ],
-                                          ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: false,
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.person_off,
-                                                color: !active
-                                                    ? Colors.orange
-                                                    : Colors.grey,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              const Text('Set Inactive'),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                      child: Chip(
-                                        label: Text(
-                                          active ? 'Active' : 'Inactive',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          final query = search.toLowerCase();
+          final list = employees.where((employee) {
+            final active = _isActive(employee);
+            if ((active && !showActive) || (!active && !showInactive))
+              return false;
+            if (query.isEmpty) return true;
+            return [
+              'name',
+              'employee_id',
+              'department',
+              'designation',
+              'branch_id'
+            ].any((key) => (employee[key]?.toString().toLowerCase() ?? '')
+                .contains(query));
+          }).toList();
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * .86,
+              child: Column(children: [
+                ListTile(
+                  title: Text(title,
+                      style: const TextStyle(
+                          fontSize: 22, fontWeight: FontWeight.w800)),
+                  trailing: IconButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (value) =>
+                        setSheetState(() => search = value.trim()),
+                    decoration: InputDecoration(
+                      hintText:
+                          'Search name, Employee ID, department or branch',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: search.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                searchController.clear();
+                                setSheetState(() => search = '');
                               },
                             ),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
+                const SizedBox(height: 10),
+                Wrap(spacing: 10, children: [
+                  FilterChip(
+                    selected: showActive,
+                    label: const Text('Active'),
+                    avatar: const Icon(Icons.check_circle, size: 18),
+                    onSelected: (value) =>
+                        setSheetState(() => showActive = value),
+                  ),
+                  FilterChip(
+                    selected: showInactive,
+                    label: const Text('Inactive'),
+                    avatar: const Icon(Icons.person_off, size: 18),
+                    onSelected: (value) =>
+                        setSheetState(() => showInactive = value),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: list.isEmpty
+                      ? const Center(child: Text('No employees found.'))
+                      : ListView.builder(
+                          itemCount: list.length,
+                          itemBuilder: (_, index) {
+                            final employee = list[index];
+                            final active = _isActive(employee);
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 5),
+                              child: ListTile(
+                                onTap: () => _showSupabaseEmployee(employee),
+                                title: Text(
+                                    employee['name']?.toString() ?? 'Employee',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                subtitle: Text([
+                                  employee['employee_id']?.toString() ?? '-',
+                                  employee['department']?.toString() ?? '',
+                                  employee['branch_id']?.toString() ?? '',
+                                ]
+                                    .where((value) => value.isNotEmpty)
+                                    .join(' • ')),
+                                trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Checkbox(
+                                        value: active,
+                                        onChanged: (value) async {
+                                          if (value == null) return;
+                                          try {
+                                            await _changeEmployeeStatus(
+                                                employee, value);
+                                            if (sheetContext.mounted)
+                                              setSheetState(() {});
+                                          } catch (error) {
+                                            if (sheetContext.mounted)
+                                              ScaffoldMessenger.of(sheetContext)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content: Text(
+                                                        'Status update failed: $error')),
+                                              );
+                                          }
+                                        },
+                                      ),
+                                      Text(active ? 'Active' : 'Inactive'),
+                                    ]),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ]),
+            ),
+          );
+        },
+      ),
+    ).whenComplete(searchController.dispose);
   }
 
   Future<Map<String, dynamic>> _loadDashboardData() async {
@@ -3201,133 +3159,135 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   void _showSupabaseEmployeeEdit(Map<String, dynamic> employee) {
-    final nameController = TextEditingController(
-      text: employee['name']?.toString() ?? '',
-    );
-
-    final designationController = TextEditingController(
-      text: employee['designation']?.toString() ?? '',
-    );
-
-    final departmentController = TextEditingController(
-      text: employee['department']?.toString() ?? '',
-    );
-
-    final emailController = TextEditingController(
-      text: employee['email']?.toString() ?? '',
-    );
-
-    final phoneController = TextEditingController(
-      text: employee['phone']?.toString() ?? '',
-    );
-
+    TextEditingController make(String key) =>
+        TextEditingController(text: employee[key]?.toString() ?? '');
+    final fields = <String, TextEditingController>{
+      'Name': make('name'),
+      'Designation': make('designation'),
+      'Department': make('department'),
+      'Email': make('email'),
+      'IC No.': make('new_ic_no'),
+      'Bank Code': make('bank_code'),
+      'Bank Account': make('bank_account'),
+      'Phone': make('phone'),
+      'Address': make('address'),
+    };
+    DateTime? joiningDate =
+        DateTime.tryParse(employee['joining_date']?.toString() ?? '');
+    var active = _isActive(employee);
+    var saving = false;
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Edit Employee'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Employee - All Information'),
           content: SizedBox(
-            width: 500,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Name',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: designationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Designation',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: departmentController,
-                    decoration: const InputDecoration(
-                      labelText: 'Department',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: phoneController,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+              width: 600,
+              child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextFormField(
+                      initialValue: employee['employee_id']?.toString() ?? '',
+                      enabled: false,
+                      decoration:
+                          const InputDecoration(labelText: 'Employee ID')),
+                  ...fields.entries.map((field) => Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: TextField(
+                            controller: field.value,
+                            enabled: !saving,
+                            maxLines: field.key == 'Address' ? 2 : 1,
+                            decoration: InputDecoration(
+                                labelText: field.key,
+                                border: const OutlineInputBorder())),
+                      )),
+                  ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Joining Date'),
+                      subtitle: Text(joiningDate == null
+                          ? 'Not set'
+                          : DateFormat('dd MMM yyyy').format(joiningDate!)),
+                      trailing: const Icon(Icons.calendar_month_outlined),
+                      onTap: saving
+                          ? null
+                          : () async {
+                              final value = await showDatePicker(
+                                  context: dialogContext,
+                                  initialDate: joiningDate ?? DateTime.now(),
+                                  firstDate: DateTime(1950),
+                                  lastDate: DateTime(2100));
+                              if (value != null)
+                                setDialogState(() => joiningDate = value);
+                            }),
+                  TextFormField(
+                      initialValue: employee['branch_id']?.toString() ?? '',
+                      enabled: false,
+                      decoration: const InputDecoration(
+                          labelText: 'Branch',
+                          helperText:
+                              'Use Transfer Staff to change branch and retain history.')),
+                  CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: active,
+                      title: const Text('Active employee'),
+                      onChanged: saving
+                          ? null
+                          : (value) =>
+                              setDialogState(() => active = value ?? false)),
+                ]),
+              )),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
+                onPressed: saving ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Cancel')),
             FilledButton(
-              onPressed: () async {
-                try {
-                  final id = employee['id'];
-
-                  if (id == null) {
-                    throw Exception('Employee ID is missing');
-                  }
-
-                  await SupabaseService.client.from('employees').update({
-                    'name': nameController.text.trim(),
-                    'designation': designationController.text.trim(),
-                    'department': departmentController.text.trim(),
-                    'email': emailController.text.trim(),
-                    'phone': phoneController.text.trim(),
-                  }).eq('id', id);
-
-                  if (!mounted) return;
-
-                  Navigator.pop(dialogContext);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Employee updated successfully.',
-                      ),
-                    ),
-                  );
-
-                  setState(() {});
-                } catch (e) {
-                  if (!mounted) return;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Failed to update employee: $e',
-                      ),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Save'),
-            ),
+                onPressed: saving
+                    ? null
+                    : () async {
+                        setDialogState(() => saving = true);
+                        try {
+                          await SupabaseService.updateEmployee(
+                              employee['employee_id'], {
+                            'name': fields['Name']!.text.trim(),
+                            'designation': fields['Designation']!.text.trim(),
+                            'department': fields['Department']!.text.trim(),
+                            'email': fields['Email']!.text.trim(),
+                            'new_ic_no': fields['IC No.']!.text.trim(),
+                            'bank_code': fields['Bank Code']!.text.trim(),
+                            'bank_account': fields['Bank Account']!.text.trim(),
+                            'phone': fields['Phone']!.text.trim(),
+                            'address': fields['Address']!.text.trim(),
+                            'joining_date':
+                                joiningDate?.toIso8601String().split('T').first,
+                            'is_active': active,
+                          });
+                          if (!mounted) return;
+                          Navigator.pop(dialogContext);
+                          setState(() => _adminEmployeesFuture = null);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text('Employee updated successfully.')));
+                        } catch (error) {
+                          if (!dialogContext.mounted) return;
+                          setDialogState(() => saving = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(
+                                  content: Text(
+                                      'Failed to update employee: $error')));
+                        }
+                      },
+                child: Text(saving ? 'Saving...' : 'Save All Information')),
           ],
-        );
-      },
-    );
+        ),
+      ),
+    ).whenComplete(() {
+      for (final item in fields.values) {
+        item.dispose();
+      }
+    });
   }
 
-  // ===========================================================================
-  // OT REQUEST APPROVAL
+  // ===========================================================================  // OT REQUEST APPROVAL
   // ===========================================================================
 
   Future<List<Map<String, dynamic>>> _loadOtRequests() {
@@ -3925,6 +3885,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                             ),
                             const SizedBox(width: 10),
+                            OutlinedButton.icon(
+                              onPressed: () => _editEmployeeRequest(request),
+                              icon: const Icon(Icons.edit_outlined),
+                              label: const Text('Edit'),
+                            ),
+                            const SizedBox(width: 8),
                             OutlinedButton(
                               onPressed: () => _rejectEmployeeRequest(request),
                               child: const Text('Reject'),
@@ -3947,6 +3913,110 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
       ),
     );
+  }
+
+  Future<void> _editEmployeeRequest(Map<String, dynamic> request) async {
+    const labels = <String, String>{
+      'name': 'Name',
+      'designation': 'Designation',
+      'department': 'Department',
+      'email': 'Email',
+      'new_ic_no': 'IC No.',
+      'bank_code': 'Bank Code',
+      'bank_account': 'Bank Account',
+      'phone': 'Phone',
+      'address': 'Address',
+      'joining_date': 'Joining Date (YYYY-MM-DD)',
+    };
+    final fields = {
+      for (final item in labels.entries)
+        item.key:
+            TextEditingController(text: request[item.key]?.toString() ?? '')
+    };
+    var branchId = request['branch_id']?.toString() ?? '';
+    var saving = false;
+    await showDialog(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+              builder: (context, setDialogState) => AlertDialog(
+                title: Text('Edit ${request['name'] ?? 'Employee Request'}'),
+                content: SizedBox(
+                    width: 600,
+                    child: SingleChildScrollView(
+                        child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ...labels.entries.map((item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: TextField(
+                                  controller: fields[item.key],
+                                  enabled: !saving,
+                                  maxLines: item.key == 'address' ? 2 : 1,
+                                  decoration: InputDecoration(
+                                      labelText: item.value,
+                                      border: const OutlineInputBorder())),
+                            )),
+                        DropdownButtonFormField<String>(
+                          initialValue: service.branches
+                                  .any((branch) => branch.id == branchId)
+                              ? branchId
+                              : null,
+                          decoration: const InputDecoration(
+                              labelText: 'Branch',
+                              border: OutlineInputBorder()),
+                          items: service.branches
+                              .map((branch) => DropdownMenuItem(
+                                  value: branch.id, child: Text(branch.name)))
+                              .toList(),
+                          onChanged: saving
+                              ? null
+                              : (value) => setDialogState(
+                                  () => branchId = value ?? branchId),
+                        ),
+                      ],
+                    ))),
+                actions: [
+                  TextButton(
+                      onPressed:
+                          saving ? null : () => Navigator.pop(dialogContext),
+                      child: const Text('Cancel')),
+                  FilledButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              setDialogState(() => saving = true);
+                              try {
+                                await SupabaseService.updateEmployeeRequest(
+                                  requestId: request['id'].toString(),
+                                  changes: {
+                                    for (final item in fields.entries)
+                                      item.key: item.value.text.trim(),
+                                    'branch_id': branchId
+                                  },
+                                );
+                                if (!mounted) return;
+                                Navigator.pop(dialogContext);
+                                _refreshEmployeeRequests();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Employee request updated. You can now approve it.')));
+                              } catch (error) {
+                                if (!dialogContext.mounted) return;
+                                setDialogState(() => saving = false);
+                                ScaffoldMessenger.of(dialogContext)
+                                    .showSnackBar(SnackBar(
+                                        content: Text(
+                                            'Unable to update request: $error')));
+                              }
+                            },
+                      child: Text(saving ? 'Saving...' : 'Save Changes')),
+                ],
+              ),
+            ));
+    for (final field in fields.values) {
+      field.dispose();
+    }
   }
 
   Future<void> _approveEmployeeRequest(Map<String, dynamic> request) async {

@@ -818,6 +818,20 @@ class SupabaseService {
     }
   }
 
+  static Future<Map<String, dynamic>> updateEmployeeRequest({
+    required String requestId,
+    required Map<String, dynamic> changes,
+  }) async {
+    final response = await client
+        .from('employee_requests')
+        .update(changes)
+        .eq('id', requestId)
+        .eq('status', 'PENDING')
+        .select()
+        .single();
+    return _map(response);
+  }
+
   static Future<Map<String, dynamic>> approveEmployeeRequest({
     required String requestId,
     required String employeeId,
