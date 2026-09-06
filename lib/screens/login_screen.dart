@@ -507,81 +507,137 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF263451),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 520;
-            return Stack(
-              children: [
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
+      backgroundColor: const Color(0xFF061127),
+      body: LayoutBuilder(builder: (context, constraints) {
+        final compact = constraints.maxWidth < 820;
+        return Stack(children: [
+          const Positioned.fill(
+              child: DecoratedBox(
+                  decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF101A36),
-                          Color(0xFF263B73),
-                          Color(0xFF17233F)
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: compact ? -90 : -130,
-                  top: compact ? 70 : 30,
-                  child: Container(
-                    width: compact ? 220 : 360,
-                    height: compact ? 220 : 360,
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF3155D9).withValues(alpha: .22)),
-                  ),
-                ),
-                Positioned(
-                  right: compact ? -80 : -110,
-                  bottom: compact ? 20 : -80,
-                  child: Container(
-                    width: compact ? 190 : 320,
-                    height: compact ? 190 : 320,
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFE51D2A).withValues(alpha: .14)),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: compact ? 8 : 12,
-                    color: const Color(0xFF8B6F7A),
-                  ),
-                ),
-                Center(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                Color(0xFF061127),
+                Color(0xFF15366F),
+                Color(0xFF08152C)
+              ])))),
+          Positioned(
+              top: -150,
+              right: -100,
+              child: _loginGlow(const Color(0xFF2D5BFF), 420)),
+          Positioned(
+              bottom: -180,
+              left: compact ? -180 : 160,
+              child: _loginGlow(const Color(0xFFE51D2A), 440)),
+          SafeArea(
+              child: Center(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      compact ? 18 : 24,
-                      compact ? 28 : 42,
-                      compact ? 18 : 24,
-                      24,
+            padding: EdgeInsets.all(compact ? 18 : 34),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1160),
+              child: compact
+                  ? Column(children: [
+                      _logo(),
+                      const SizedBox(height: 18),
+                      _loginCard(compact: true)
+                    ])
+                  : Container(
+                      constraints: const BoxConstraints(minHeight: 680),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(color: Colors.white24),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Color(0x66000000),
+                                blurRadius: 55,
+                                offset: Offset(0, 28))
+                          ]),
+                      child: ClipRRect(
+                          borderRadius: BorderRadius.circular(32),
+                          child: Row(children: [
+                            Expanded(flex: 11, child: _premiumHero()),
+                            Expanded(
+                                flex: 9,
+                                child: Container(
+                                    color: const Color(0xFFF8FAFF),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 55, vertical: 42),
+                                    child: _loginCard())),
+                          ])),
                     ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 440),
-                      child: _loginCard(compact: compact),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+            ),
+          ))),
+        ]);
+      }),
     );
   }
 
+  Widget _loginGlow(Color color, double size) => IgnorePointer(
+          child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(colors: [
+              color.withValues(alpha: .28),
+              color.withValues(alpha: 0)
+            ])),
+      ));
+
+  Widget _premiumHero() => Container(
+        padding: const EdgeInsets.all(52),
+        decoration: const BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+              Color(0xFF183E88),
+              Color(0xFF0D275A),
+              Color(0xFF091A39)
+            ])),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Align(
+              alignment: Alignment.centerLeft,
+              child: SizedBox(width: 230, child: _logo())),
+          const Spacer(),
+          Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white24)),
+              child: const Text('ONE SECURE WORKPLACE',
+                  style: TextStyle(
+                      color: Color(0xFFBED0FF),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5))),
+          const SizedBox(height: 22),
+          const Text('Your workday,\nbeautifully organised.',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 43,
+                  height: 1.08,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.8)),
+          const SizedBox(height: 20),
+          const Text(
+              'Attendance, payroll, rosters and requests—connected in one private workspace for every Hasani Books team.',
+              style: TextStyle(
+                  color: Color(0xFFC1CDE5), fontSize: 16, height: 1.55)),
+          const SizedBox(height: 32),
+          const Wrap(spacing: 18, runSpacing: 12, children: [
+            _LoginFeature(Icons.verified_user_outlined, 'Protected'),
+            _LoginFeature(Icons.bolt_outlined, 'Efficient'),
+            _LoginFeature(Icons.devices_outlined, 'Any device'),
+          ]),
+          const Spacer(),
+          const Text('HASANI BOOKS EDAR SDN BHD  •  2026',
+              style: TextStyle(
+                  color: Colors.white38, fontSize: 10, letterSpacing: 1.1)),
+        ]),
+      );
   Widget _loginCard({bool compact = false}) {
     return Container(
       padding: EdgeInsets.all(compact ? 22 : 32),
@@ -603,22 +659,10 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _logo(),
-          const SizedBox(height: 22),
-          Center(
-            child: Container(
-              width: 54,
-              height: 3,
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B6F7A),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 4),
           const Center(
             child: Text(
-              'Welcome to Hasani',
+              'Welcome back',
               style: TextStyle(
                 fontSize: 27,
                 fontWeight: FontWeight.w900,
@@ -629,7 +673,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 7),
           const Center(
             child: Text(
-              'Sign in securely to continue to the payroll portal.',
+              'Sign in securely to continue to Hasani Workhub.',
               style: TextStyle(
                 color: Color(0xFF687083),
                 fontSize: 14,
@@ -900,4 +944,27 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+class _LoginFeature extends StatelessWidget {
+  const _LoginFeature(this.icon, this.label);
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 17, color: const Color(0xFFBFD0FF)),
+          const SizedBox(width: 7),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w600)),
+        ]),
+      );
 }
