@@ -10,12 +10,14 @@ class WalkingCat extends StatefulWidget {
     this.catColor = const Color(0xFFFFB45C),
     this.trackColor = const Color(0x24FFFFFF),
     this.duration = const Duration(seconds: 8),
+    this.catCount = 4,
   });
 
   final double height;
   final Color catColor;
   final Color trackColor;
   final Duration duration;
+  final int catCount;
 
   @override
   State<WalkingCat> createState() => _WalkingCatState();
@@ -41,6 +43,15 @@ class _WalkingCatState extends State<WalkingCat>
   @override
   Widget build(BuildContext context) {
     const catWidth = 76.0;
+    const catSpacing = 2.0;
+    const coatColors = [
+      Color(0xFFFFB45C),
+      Color(0xFF9DA8B8),
+      Color(0xFFF4EEE5),
+      Color(0xFFCB8B62),
+      Color(0xFF6D6470),
+    ];
+
     return ExcludeSemantics(
       child: IgnorePointer(
         child: SizedBox(
@@ -50,10 +61,20 @@ class _WalkingCatState extends State<WalkingCat>
             builder: (context, constraints) => AnimatedBuilder(
               animation: _controller,
               builder: (context, _) {
+                final availableCount = math.max(
+                  1,
+                  math.min(widget.catCount, constraints.maxWidth ~/ 62),
+                );
+                final paradeWidth = availableCount * catWidth +
+                    (availableCount - 1) * catSpacing;
+                final travel =
+                    math.max(0.0, constraints.maxWidth - paradeWidth);
                 final movingRight =
                     _controller.status != AnimationStatus.reverse;
-                final x = (constraints.maxWidth - catWidth) * _controller.value;
+                final x =
+                    travel * Curves.easeInOut.transform(_controller.value);
                 final step = math.sin(_controller.value * math.pi * 14);
+
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -64,8 +85,7 @@ class _WalkingCatState extends State<WalkingCat>
                       child: Container(height: 1, color: widget.trackColor),
                     ),
                     Positioned(
-                      left: x.clamp(
-                          0, math.max(0, constraints.maxWidth - catWidth)),
+                      left: x,
                       bottom: 6 + step.abs() * 1.5,
                       child: Transform(
                         alignment: Alignment.center,
@@ -74,14 +94,38 @@ class _WalkingCatState extends State<WalkingCat>
                           1,
                           1,
                         ),
-                        child: CustomPaint(
-                          size: const Size(catWidth, 54),
-                          painter: _CatPainter(
-                            color: widget.catColor,
-                            step: step,
-                            blink: _controller.value > .48 &&
-                                _controller.value < .505,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(availableCount, (index) {
+                            final color = index == 0
+                                ? widget.catColor
+                                : coatColors[index % coatColors.length];
+                            final catStep = math.sin(
+                              _controller.value * math.pi * 14 + index * .8,
+                            );
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                right: index == availableCount - 1
+                                    ? 0
+                                    : catSpacing,
+                              ),
+                              child: Transform.translate(
+                                offset: Offset(0, (index.isOdd ? 1.5 : 0)),
+                                child: CustomPaint(
+                                  size: const Size(catWidth, 54),
+                                  painter: _CatPainter(
+                                    color: color,
+                                    step: catStep,
+                                    blink: (_controller.value + index * .13) %
+                                                1 >
+                                            .48 &&
+                                        (_controller.value + index * .13) % 1 <
+                                            .505,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
                         ),
                       ),
                     ),
