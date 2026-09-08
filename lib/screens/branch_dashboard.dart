@@ -6,6 +6,7 @@ import '../services/app_service.dart';
 import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
+import 'monthly_roster_page.dart';
 import 'branch_ot_requests_page.dart';
 
 // ============================================================================
@@ -228,7 +229,8 @@ class _BranchPortalState extends State<BranchPortal> {
                       Icons.people_outline,
                       2,
                     ),
-                    _drawerItem('OT Requests', Icons.more_time_outlined, 3),
+                    _drawerItem('Monthly Roster', Icons.calendar_view_month, 3),
+                    _drawerItem('OT Requests', Icons.more_time_outlined, 4),
                   ],
                 ),
               ),
@@ -291,7 +293,8 @@ class _BranchPortalState extends State<BranchPortal> {
                   Icons.people_outline,
                   2,
                 ),
-                _sidebarItem('OT Requests', Icons.more_time_outlined, 3),
+                _sidebarItem('Monthly Roster', Icons.calendar_view_month, 3),
+                _sidebarItem('OT Requests', Icons.more_time_outlined, 4),
               ],
             ),
           ),
@@ -534,6 +537,8 @@ class _BranchPortalState extends State<BranchPortal> {
       case 2:
         return 'Employees';
       case 3:
+        return 'Monthly Roster';
+      case 4:
         return 'OT Requests';
       default:
         return 'Dashboard';
@@ -547,6 +552,8 @@ class _BranchPortalState extends State<BranchPortal> {
       case 2:
         return _employeesPage();
       case 3:
+        return MonthlyRosterPage(branchId: branchId);
+      case 4:
         return BranchOtRequestsPage(branchId: branchId);
       default:
         return _dashboardPage();
@@ -647,8 +654,34 @@ class _BranchPortalState extends State<BranchPortal> {
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          _panel(
+            "Today's Attendance",
+            _todayAttendanceList(),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _todayAttendanceList() {
+    if (todayAttendance.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(
+          child: Text(
+            'No attendance recorded today.',
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: todayAttendance
+          .map(
+            (record) => _attendanceTile(record),
+          )
+          .toList(),
     );
   }
 
@@ -679,238 +712,305 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _attendancePage() {
-    final resolvedBranchId = branch?.branchId ?? branchId;
-    return FutureBuilder<List<dynamic>>(
-      future: Future.wait<dynamic>([
-        _liveBranchEmployees(),
-        SupabaseService.getAttendanceByBranch(resolvedBranchId),
-      ]),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _liveBranchEmployees(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
         }
+
         if (snapshot.hasError) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 45),
-                const SizedBox(height: 12),
-                Text('Unable to load attendance register:\n${snapshot.error}',
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 15),
-                OutlinedButton.icon(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 45,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Unable to load employees:\n${snapshot.error}',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 15),
+                  OutlinedButton.icon(
                     onPressed: _refreshEmployees,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Retry')),
-              ]),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
-        final liveEmployees =
-            List<Map<String, dynamic>>.from(snapshot.data![0] as List);
-        final visibleIds = liveEmployees
-            .map(_liveEmployeeId)
-            .map((id) => id.trim().toUpperCase())
-            .toSet();
-        final rows = List<Map<String, dynamic>>.from(snapshot.data![1] as List)
-            .where((row) {
-          final date =
-              DateTime.tryParse(row['attendance_date']?.toString() ?? '');
-          final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
-          return date != null &&
-              date.year == attendanceMonth.year &&
-              date.month == attendanceMonth.month &&
-              visibleIds.contains(id);
-        }).toList();
+        final liveEmployees = snapshot.data ?? [];
 
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Expanded(
-                  child: Text('Monthly Attendance Register',
-                      style: TextStyle(
-                          fontSize: 27, fontWeight: FontWeight.w800))),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: attendanceMonth,
-                    firstDate: DateTime(2022),
-                    lastDate: DateTime(DateTime.now().year + 2),
-                    helpText: 'Select attendance month',
-                  );
-                  if (picked != null && mounted) {
-                    setState(() =>
-                        attendanceMonth = DateTime(picked.year, picked.month));
-                  }
-                },
-                icon: const Icon(Icons.calendar_month),
-                label: Text(DateFormat('MMMM yyyy').format(attendanceMonth)),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Attendance',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ]),
-            const SizedBox(height: 5),
-            Text(
-                '$branchDisplayName • ${liveEmployees.length} active employees',
-                style: const TextStyle(color: Colors.black54)),
-            const SizedBox(height: 10),
-            const Wrap(spacing: 14, runSpacing: 5, children: [
-              _RegisterLegend('P', 'Present'),
-              _RegisterLegend('L', 'Late'),
-              _RegisterLegend('EO', 'Early Out'),
-              _RegisterLegend('O', 'Off'),
-              _RegisterLegend('MC', 'Medical'),
-              _RegisterLegend('AL/PL/EL', 'Leave'),
-              _RegisterLegend('PH', 'Public Holiday'),
-              _RegisterLegend('U', 'Unpaid'),
-            ]),
-            const SizedBox(height: 12),
-            Expanded(
-              child: liveEmployees.isEmpty
-                  ? const Center(child: Text('No active employees found.'))
-                  : _monthlyRegister(liveEmployees, rows),
-            ),
-          ]),
+              const SizedBox(height: 8),
+              Text(
+                '${liveEmployees.length} employees for $branchDisplayName',
+                style: const TextStyle(
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Text(
+                    'Attendance Month: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: attendanceMonth,
+                        firstDate: DateTime(2022),
+                        lastDate: DateTime(
+                          DateTime.now().year + 2,
+                        ),
+                        helpText: 'Select any date in the attendance month',
+                      );
+
+                      if (picked != null && mounted) {
+                        setState(() {
+                          attendanceMonth = DateTime(
+                            picked.year,
+                            picked.month,
+                          );
+                        });
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.calendar_month,
+                    ),
+                    label: Text(
+                      DateFormat(
+                        'MMMM yyyy',
+                      ).format(attendanceMonth),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text(
+                    'Daily Summary: ',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedAttendanceDate,
+                        firstDate: DateTime(2022),
+                        lastDate: DateTime(DateTime.now().year + 2),
+                      );
+                      if (picked != null && mounted) {
+                        setState(() => selectedAttendanceDate = picked);
+                      }
+                    },
+                    icon: const Icon(Icons.today_outlined),
+                    label: Text(DateFormat('dd MMM yyyy')
+                        .format(selectedAttendanceDate)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _dailyAttendanceSummary(liveEmployees),
+              const SizedBox(height: 12),
+              _panel(
+                'Select Employee',
+                liveEmployees.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'No employees matched branch: '
+                          '$branchId',
+                        ),
+                      )
+                    : Column(
+                        children: liveEmployees.map(
+                          (employee) {
+                            final name =
+                                employee['name']?.toString() ?? 'Employee';
+
+                            final id = _liveEmployeeId(
+                              employee,
+                            );
+
+                            final department =
+                                employee['department']?.toString() ?? '';
+
+                            final active = _liveIsActive(
+                              employee,
+                            );
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: const Color(
+                                  0xFFE7F7EF,
+                                ),
+                                child: Text(
+                                  name.isEmpty ? '?' : name[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Color(
+                                      0xFF15965D,
+                                    ),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                [
+                                  id,
+                                  department,
+                                ]
+                                    .where(
+                                      (v) => v.isNotEmpty,
+                                    )
+                                    .join(' • '),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Chip(
+                                    label: Text(
+                                      active ? 'Active' : 'Inactive',
+                                    ),
+                                    backgroundColor: active
+                                        ? const Color(
+                                            0xFFE7F7EF,
+                                          )
+                                        : Colors.black12,
+                                  ),
+                                  const SizedBox(
+                                    width: 8,
+                                  ),
+                                  const Icon(
+                                    Icons.edit_calendar_outlined,
+                                  ),
+                                ],
+                              ),
+                              onTap: () => _openAttendanceSheet(
+                                employee,
+                              ),
+                            );
+                          },
+                        ).toList(),
+                      ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _monthlyRegister(
-    List<Map<String, dynamic>> employees,
-    List<Map<String, dynamic>> attendanceRows,
-  ) {
-    final days =
-        DateUtils.getDaysInMonth(attendanceMonth.year, attendanceMonth.month);
-    final byEmployeeDay = <String, Map<int, Map<String, dynamic>>>{};
-    for (final row in attendanceRows) {
-      final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
-      final date = DateTime.tryParse(row['attendance_date']?.toString() ?? '');
-      if (id.isNotEmpty && date != null) {
-        byEmployeeDay.putIfAbsent(id, () => {})[date.day] = row;
-      }
-    }
+  Widget _dailyAttendanceSummary(List<Map<String, dynamic>> employees) {
+    final resolvedBranchId = branch?.branchId ?? branchId;
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: SupabaseService.getAttendanceByBranchDate(
+        branchId: resolvedBranchId,
+        date: selectedAttendanceDate,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 64,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+        final visibleIds = employees
+            .where(_liveIsActive)
+            .map(_liveEmployeeId)
+            .map((id) => id.trim().toUpperCase())
+            .toSet();
+        final rows = (snapshot.data ?? const <Map<String, dynamic>>[])
+            .where((row) => visibleIds.contains(
+                  row['employee_id']?.toString().trim().toUpperCase(),
+                ))
+            .toList();
+        final presentIds = <String>{};
+        final lateIds = <String>{};
+        for (final row in rows) {
+          final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
+          final status = row['status']?.toString().trim().toLowerCase() ?? '';
+          final hasWork =
+              row['working_in']?.toString().trim().isNotEmpty == true &&
+                  row['working_out']?.toString().trim().isNotEmpty == true;
+          if (status == 'late') {
+            lateIds.add(id);
+          } else if (status == 'present' || (status.isEmpty && hasWork)) {
+            presentIds.add(id);
+          }
+        }
+        final activeCount = employees.where(_liveIsActive).length;
+        final absent = (activeCount - presentIds.length - lateIds.length)
+            .clamp(0, activeCount);
+        return Row(
+          children: [
+            Expanded(
+                child: _summaryCard(
+                    'Present', presentIds.length, const Color(0xFF15965D))),
+            const SizedBox(width: 10),
+            Expanded(child: _summaryCard('Absent', absent, Colors.red)),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _summaryCard('Late', lateIds.length, Colors.orange)),
+          ],
+        );
+      },
+    );
+  }
 
-    Widget cell(String text, double width,
-        {bool header = false, VoidCallback? onTap}) {
-      return InkWell(
-        onTap: onTap,
-        child: Container(
-          width: width,
-          height: header ? 47 : 38,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          decoration: BoxDecoration(
-            color: header ? const Color(0xFFF0F1F3) : Colors.white,
-            border: const Border(
-                right: BorderSide(color: Colors.black54, width: .6),
-                bottom: BorderSide(color: Colors.black54, width: .6)),
-          ),
-          child: Text(text,
-              maxLines: header ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: header ? 9 : 10,
-                  fontWeight: header ? FontWeight.w800 : FontWeight.w600)),
-        ),
-      );
-    }
-
-    final header = Row(mainAxisSize: MainAxisSize.min, children: [
-      cell('EMPLOYEE NAME', 180, header: true),
-      cell('ID', 78, header: true),
-      for (var day = 1; day <= days; day++)
-        cell(
-            '${DateFormat('E').format(DateTime(attendanceMonth.year, attendanceMonth.month, day)).substring(0, 1)}\n$day',
-            31,
-            header: true),
-      cell('P', 34, header: true),
-      cell('L', 34, header: true),
-      cell('O', 34, header: true),
-      cell('LV', 34, header: true),
-      cell('DS', 34, header: true),
-    ]);
-
+  Widget _summaryCard(String label, int count, Color color) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-          border: Border.all(color: Colors.black87, width: 1.2),
-          color: Colors.white),
-      child: Scrollbar(
-        thumbVisibility: true,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              header,
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: employees.map((employee) {
-                      final id = _liveEmployeeId(employee).trim().toUpperCase();
-                      final records = byEmployeeDay[id] ??
-                          const <int, Map<String, dynamic>>{};
-                      var present = 0;
-                      var late = 0;
-                      var off = 0;
-                      var leave = 0;
-                      final codes = <String>[];
-                      for (var day = 1; day <= days; day++) {
-                        final code = _registerStatusCode(records[day]);
-                        codes.add(code);
-                        if (code == 'P') present++;
-                        if (code == 'L' || code == 'L/E') late++;
-                        if (code == 'O') off++;
-                        if (const {'MC', 'AL', 'PL', 'EL', 'PH', 'U'}
-                            .contains(code)) leave++;
-                      }
-                      final name = employee['name']?.toString() ?? id;
-                      return Row(mainAxisSize: MainAxisSize.min, children: [
-                        cell(name, 180,
-                            onTap: () => _openAttendanceSheet(employee)),
-                        cell(id, 78,
-                            onTap: () => _openAttendanceSheet(employee)),
-                        for (final code in codes) cell(code, 31),
-                        cell('$present', 34),
-                        cell('$late', 34),
-                        cell('$off', 34),
-                        cell('$leave', 34),
-                        cell('${present + late}', 34),
-                      ]);
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        ),
+        color: color.withOpacity(.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(.25)),
+      ),
+      child: Row(
+        children: [
+          Text('$count',
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
 
-  String _registerStatusCode(Map<String, dynamic>? row) {
-    if (row == null) return '';
-    final status = row['status']?.toString().trim().toUpperCase() ?? '';
-    switch (status) {
-      case 'PRESENT':
-        return 'P';
-      case 'LATE':
-        return 'L';
-      case 'EARLY OUT':
-        return 'EO';
-      case 'LATE + EARLY OUT':
-        return 'L/E';
-      case 'OFF':
-        return 'O';
-      case 'UNPAID':
-        return 'U';
-      default:
-        return status;
-    }
-  }
   // ==========================================================================
   // OPEN ATTENDANCE DIALOG
   // ==========================================================================
@@ -1830,32 +1930,4 @@ class _BranchPortalState extends State<BranchPortal> {
       ),
     );
   }
-}
-
-class _RegisterLegend extends StatelessWidget {
-  const _RegisterLegend(this.code, this.label);
-
-  final String code;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 28,
-            height: 22,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black54),
-              color: Colors.white,
-            ),
-            child: Text(code,
-                style:
-                    const TextStyle(fontSize: 9, fontWeight: FontWeight.w800)),
-          ),
-          const SizedBox(width: 5),
-          Text(label, style: const TextStyle(fontSize: 11)),
-        ],
-      );
 }
