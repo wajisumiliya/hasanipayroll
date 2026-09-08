@@ -50,6 +50,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   bool loading = true;
   bool saving = false;
   bool submitted = false;
+  final Set<int> _submittedDays = <int>{};
   bool _showBreakAttendanceOnMobile = false;
   String? loadError;
   Timer? _liveRefreshTimer;
@@ -237,7 +238,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       // Only submitted rows are visible outside the Branch Portal.
       final rows = widget.editable ? allRows : allRows;
 
-      submitted = allRows.any((row) => _toBool(row['is_submitted']));
+      _submittedDays.clear();
+      for (final row in allRows) {
+        if (!_toBool(row['is_submitted'])) continue;
+        final submittedDate =
+            DateTime.tryParse((row['attendance_date'] ?? '').toString());
+        if (submittedDate != null) _submittedDays.add(submittedDate.day);
+      }
+      submitted = _submittedDays.isNotEmpty;
 
       // For admin view, the employee can only be edited after Branch submission.
       // For employee view, rows are always read-only.
@@ -306,6 +314,32 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     if (!widget.editable) return false;
     if (widget.adminOnlyAfterSubmit) return submitted;
     return true;
+  }
+
+  bool _canEditDay(int day) {
+    if (!_canEdit) return false;
+    if (widget.adminOnlyAfterSubmit) return true;
+    return !_submittedDays.contains(day);
+  }
+
+  int? get _nextSubmissionEnd {
+    for (final checkpoint in <int>[10, 20, daysInMonth]) {
+      if (!_submittedDays.contains(checkpoint)) return checkpoint;
+    }
+    return null;
+  }
+
+  bool get _canSubmitCheckpoint {
+    final end = _nextSubmissionEnd;
+    if (end == null || saving) return false;
+    return controllers.take(end).every((row) => row.hasData);
+  }
+
+  String get _submissionButtonLabel {
+    final end = _nextSubmissionEnd;
+    if (end == null) return 'Month Fully Submitted';
+    if (saving) return 'Submitting...';
+    return 'Submit Days 1-$end';
   }
 
   // ==========================================================================
@@ -545,8 +579,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     const SizedBox(width: 10),
                     if (widget.showSubmitButton)
                       FilledButton.icon(
-                        onPressed:
-                            saving ? null : () => _saveAttendance(submit: true),
+                        onPressed: _canSubmitCheckpoint
+                            ? () => _saveAttendance(submit: true)
+                            : null,
                         icon: saving
                             ? const SizedBox(
                                 width: 18,
@@ -557,8 +592,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                                 ),
                               )
                             : const Icon(Icons.send),
-                        label: Text(
-                            saving ? 'Submitting...' : 'Submit Attendance'),
+                        label: Text(_submissionButtonLabel),
                       )
                     else
                       FilledButton.icon(
@@ -605,6 +639,43 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   Future<void> _saveAttendance({required bool submit}) async {
     if (saving) return;
 
+    int? submissionEnd;
+    if (submit) {
+      submissionEnd = _nextSubmissionEnd;
+      if (submissionEnd == null) return;
+      if (!_canSubmitCheckpoint) {
+        _showError(
+          'Complete attendance data for every day from 1 to $submissionEnd before submitting.',
+        );
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(Icons.lock_outline,
+              color: Color(0xFF3155D9), size: 34),
+          title: Text('Submit attendance for days 1-$submissionEnd?'),
+          content: Text(
+            'Are you sure you want to submit this attendance? Days 1-$submissionEnd will be locked and cannot be edited by the branch after submission.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Review Again'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.lock),
+              label: const Text('Yes, Submit & Lock'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
     final employeeId = _employeeId();
 
     if (employeeId.trim().isEmpty) {
@@ -627,6 +698,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
     try {
       for (var day = 1; day <= daysInMonth; day++) {
+        if (submit && day > submissionEnd!) continue;
+        if (!widget.adminOnlyAfterSubmit && _submittedDays.contains(day)) {
+          continue;
+        }
         final row = controllers[day - 1];
 
         if (!row.hasData &&
@@ -794,7 +869,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
       if (submit) {
         final start = DateTime(widget.month.year, widget.month.month, 1);
-        final end = DateTime(widget.month.year, widget.month.month + 1, 1);
+        final end = DateTime(
+          widget.month.year,
+          widget.month.month,
+          submissionEnd! + 1,
+        );
 
         await SupabaseService.client
             .from('attendance')
@@ -808,6 +887,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             .gte('attendance_date', start.toIso8601String().substring(0, 10))
             .lt('attendance_date', end.toIso8601String().substring(0, 10));
 
+        _submittedDays.addAll(
+          List<int>.generate(submissionEnd, (index) => index + 1),
+        );
         submitted = true;
       }
 
@@ -1054,6 +1136,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           _timeInput(
             c.workingIn,
             95,
+            day: day,
             focusNode: c.workingInFocus,
             prevFocus: day > 1 ? controllers[day - 2].workingOutFocus : null,
             nextFocus: c.workingOutFocus,
@@ -1061,6 +1144,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           _timeInput(
             c.workingOut,
             95,
+            day: day,
             focusNode: c.workingOutFocus,
             prevFocus: c.workingInFocus,
             nextFocus:
@@ -1227,9 +1311,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             fontSize: 8.5, fontWeight: FontWeight.w800, color: foreground),
       ),
     );
-    if (!_canEdit) return child;
-
-    if (!_canEdit) return child;
+    if (!_canEditDay(day)) return child;
 
     return PopupMenuButton<String>(
       tooltip: 'Status / OT for day $day',
@@ -1531,6 +1613,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           Expanded(
             child: _smallTimeInput(
               c.morningIn,
+              day: day,
               focusNode: c.morningInFocus,
               prevFocus: day > 1 ? controllers[day - 2].overtimeOutFocus : null,
               nextFocus: c.morningOutFocus,
@@ -1540,6 +1623,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           Expanded(
             child: _smallTimeInput(
               c.morningOut,
+              day: day,
               focusNode: c.morningOutFocus,
               prevFocus: c.morningInFocus,
               nextFocus: c.afternoonInFocus,
@@ -1553,6 +1637,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           Expanded(
             child: _smallTimeInput(
               c.afternoonIn,
+              day: day,
               focusNode: c.afternoonInFocus,
               prevFocus: c.morningOutFocus,
               nextFocus: c.afternoonOutFocus,
@@ -1562,6 +1647,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           Expanded(
             child: _smallTimeInput(
               c.afternoonOut,
+              day: day,
               focusNode: c.afternoonOutFocus,
               prevFocus: c.afternoonInFocus,
               nextFocus: c.overtimeInFocus,
@@ -1580,6 +1666,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           Expanded(
             child: _smallTimeInput(
               c.overtimeIn,
+              day: day,
               focusNode: c.overtimeInFocus,
               prevFocus: c.afternoonOutFocus,
               nextFocus: c.overtimeOutFocus,
@@ -1589,6 +1676,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           Expanded(
             child: _smallTimeInput(
               c.overtimeOut,
+              day: day,
               focusNode: c.overtimeOutFocus,
               prevFocus: c.overtimeInFocus,
               nextFocus:
@@ -1795,6 +1883,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   Widget _timeInput(
     TextEditingController controller,
     double width, {
+    required int day,
     required FocusNode focusNode,
     FocusNode? nextFocus,
     FocusNode? prevFocus,
@@ -1815,7 +1904,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       child: RawKeyboardListener(
         focusNode: FocusNode(),
         onKey: (event) {
-          if (!_canEdit) return;
+          if (!_canEditDay(day)) return;
 
           // Arrow Down or Right: Move to next focus
           if (event.isKeyPressed(LogicalKeyboardKey.arrowDown) ||
@@ -1835,8 +1924,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         child: TextField(
           controller: controller,
           focusNode: focusNode,
-          readOnly: !_canEdit,
-          enabled: _canEdit,
+          readOnly: !_canEditDay(day),
+          enabled: _canEditDay(day),
           textInputAction:
               nextFocus == null ? TextInputAction.done : TextInputAction.next,
           onChanged: (value) {
@@ -1881,6 +1970,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
   Widget _smallTimeInput(
     TextEditingController controller, {
+    required int day,
     required FocusNode focusNode,
     FocusNode? nextFocus,
     FocusNode? prevFocus,
@@ -1900,7 +1990,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       child: RawKeyboardListener(
         focusNode: FocusNode(),
         onKey: (event) {
-          if (!_canEdit) return;
+          if (!_canEditDay(day)) return;
 
           // Arrow Down or Right: Move to next focus
           if (event.isKeyPressed(LogicalKeyboardKey.arrowDown) ||
@@ -1920,8 +2010,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         child: TextField(
           controller: controller,
           focusNode: focusNode,
-          readOnly: !_canEdit,
-          enabled: _canEdit,
+          readOnly: !_canEditDay(day),
+          enabled: _canEditDay(day),
           textInputAction:
               nextFocus == null ? TextInputAction.done : TextInputAction.next,
           onChanged: (value) {
