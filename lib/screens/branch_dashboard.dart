@@ -6,7 +6,6 @@ import '../services/app_service.dart';
 import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
-import 'monthly_roster_page.dart';
 import 'branch_ot_requests_page.dart';
 
 // ============================================================================
@@ -229,8 +228,7 @@ class _BranchPortalState extends State<BranchPortal> {
                       Icons.people_outline,
                       2,
                     ),
-                    _drawerItem('Monthly Roster', Icons.calendar_view_month, 3),
-                    _drawerItem('OT Requests', Icons.more_time_outlined, 4),
+                    _drawerItem('OT Requests', Icons.more_time_outlined, 3),
                   ],
                 ),
               ),
@@ -293,8 +291,7 @@ class _BranchPortalState extends State<BranchPortal> {
                   Icons.people_outline,
                   2,
                 ),
-                _sidebarItem('Monthly Roster', Icons.calendar_view_month, 3),
-                _sidebarItem('OT Requests', Icons.more_time_outlined, 4),
+                _sidebarItem('OT Requests', Icons.more_time_outlined, 3),
               ],
             ),
           ),
@@ -537,8 +534,6 @@ class _BranchPortalState extends State<BranchPortal> {
       case 2:
         return 'Employees';
       case 3:
-        return 'Monthly Roster';
-      case 4:
         return 'OT Requests';
       default:
         return 'Dashboard';
@@ -552,8 +547,6 @@ class _BranchPortalState extends State<BranchPortal> {
       case 2:
         return _employeesPage();
       case 3:
-        return MonthlyRosterPage(branchId: branchId);
-      case 4:
         return BranchOtRequestsPage(branchId: branchId);
       default:
         return _dashboardPage();
@@ -655,39 +648,184 @@ class _BranchPortalState extends State<BranchPortal> {
             ),
           ),
           const SizedBox(height: 24),
-          _panel(
-            "Today's Attendance",
-            _todayAttendanceList(),
-          ),
+          _dashboardAttendanceRegister(),
         ],
       ),
-    );
-  }
-
-  Widget _todayAttendanceList() {
-    if (todayAttendance.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(
-          child: Text(
-            'No attendance recorded today.',
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: todayAttendance
-          .map(
-            (record) => _attendanceTile(record),
-          )
-          .toList(),
     );
   }
 
   // ==========================================================================
   // LIVE EMPLOYEES
   // ==========================================================================
+
+  Widget _dashboardAttendanceRegister() {
+    final resolvedBranchId = branch?.branchId ?? branchId;
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait<dynamic>([
+        _liveBranchEmployees(),
+        SupabaseService.getAttendanceByBranch(resolvedBranchId)
+      ]),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return const SizedBox(
+              height: 280, child: Center(child: CircularProgressIndicator()));
+        if (snapshot.hasError)
+          return _panel(
+              'Monthly Attendance Register',
+              Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text('Unable to load register: ${snapshot.error}')));
+        final staff =
+            List<Map<String, dynamic>>.from(snapshot.data![0] as List);
+        final ids = staff
+            .map(_liveEmployeeId)
+            .map((id) => id.trim().toUpperCase())
+            .toSet();
+        final rows = List<Map<String, dynamic>>.from(snapshot.data![1] as List)
+            .where((row) {
+          final date =
+              DateTime.tryParse(row['attendance_date']?.toString() ?? '');
+          final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
+          return date != null &&
+              date.year == attendanceMonth.year &&
+              date.month == attendanceMonth.month &&
+              ids.contains(id);
+        }).toList();
+        return _panel(
+            'Monthly Attendance Register',
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(
+                    child: Text(
+                        '${DateFormat('MMMM yyyy').format(attendanceMonth)} • ${staff.length} employees',
+                        style: const TextStyle(fontWeight: FontWeight.w600))),
+                OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                          context: context,
+                          initialDate: attendanceMonth,
+                          firstDate: DateTime(2022),
+                          lastDate: DateTime(DateTime.now().year + 2),
+                          helpText: 'Select register month');
+                      if (picked != null && mounted)
+                        setState(() => attendanceMonth =
+                            DateTime(picked.year, picked.month));
+                    },
+                    icon: const Icon(Icons.calendar_month, size: 18),
+                    label: const Text('Change Month')),
+              ]),
+              const SizedBox(height: 8),
+              const Wrap(spacing: 12, runSpacing: 4, children: [
+                Text('P = Present', style: TextStyle(fontSize: 10)),
+                Text('L = Late', style: TextStyle(fontSize: 10)),
+                Text('O = Off', style: TextStyle(fontSize: 10)),
+                Text('MC = Medical', style: TextStyle(fontSize: 10)),
+                Text('AL/PL/EL = Leave', style: TextStyle(fontSize: 10)),
+                Text('PH = Public Holiday', style: TextStyle(fontSize: 10))
+              ]),
+              const SizedBox(height: 10),
+              SizedBox(height: 350, child: _dashboardRegisterGrid(staff, rows)),
+            ]));
+      },
+    );
+  }
+
+  Widget _dashboardRegisterGrid(
+      List<Map<String, dynamic>> staff, List<Map<String, dynamic>> rows) {
+    final days =
+        DateUtils.getDaysInMonth(attendanceMonth.year, attendanceMonth.month);
+    final records = <String, Map<int, Map<String, dynamic>>>{};
+    for (final row in rows) {
+      final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
+      final date = DateTime.tryParse(row['attendance_date']?.toString() ?? '');
+      if (id.isNotEmpty && date != null)
+        records.putIfAbsent(id, () => {})[date.day] = row;
+    }
+    Widget cell(String value, double width, {bool header = false}) => Container(
+        width: width,
+        height: header ? 43 : 34,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+            color: header ? const Color(0xFFF0F1F3) : Colors.white,
+            border: const Border(
+                right: BorderSide(color: Colors.black54, width: .5),
+                bottom: BorderSide(color: Colors.black54, width: .5))),
+        child: Text(value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: header ? 8 : 9,
+                fontWeight: header ? FontWeight.w800 : FontWeight.w600)));
+    final header = Row(mainAxisSize: MainAxisSize.min, children: [
+      cell('NAME', 155, header: true),
+      cell('ID', 72, header: true),
+      for (var day = 1; day <= days; day++)
+        cell(
+            '${DateFormat('E').format(DateTime(attendanceMonth.year, attendanceMonth.month, day))[0]}\n$day',
+            28,
+            header: true),
+      cell('P', 30, header: true),
+      cell('L', 30, header: true),
+      cell('O', 30, header: true),
+      cell('LV', 30, header: true),
+      cell('DS', 30, header: true)
+    ]);
+    return Container(
+        decoration: BoxDecoration(border: Border.all(color: Colors.black87)),
+        child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+                height: 348,
+                child: Column(children: [
+                  header,
+                  Expanded(
+                      child: SingleChildScrollView(
+                          child: Column(
+                              children: staff.map((employee) {
+                    final id = _liveEmployeeId(employee).trim().toUpperCase();
+                    final employeeRows =
+                        records[id] ?? const <int, Map<String, dynamic>>{};
+                    final codes = <String>[
+                      for (var day = 1; day <= days; day++)
+                        _dashboardStatusCode(employeeRows[day])
+                    ];
+                    final p = codes.where((c) => c == 'P').length;
+                    final l = codes.where((c) => c == 'L' || c == 'L/E').length;
+                    final o = codes.where((c) => c == 'O').length;
+                    final lv = codes
+                        .where((c) => const {'MC', 'AL', 'PL', 'EL', 'PH', 'U'}
+                            .contains(c))
+                        .length;
+                    return InkWell(
+                        onTap: () => setState(() => selectedPage = 1),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          cell(employee['name']?.toString() ?? id, 155),
+                          cell(id, 72),
+                          for (final code in codes) cell(code, 28),
+                          cell('$p', 30),
+                          cell('$l', 30),
+                          cell('$o', 30),
+                          cell('$lv', 30),
+                          cell('${p + l}', 30)
+                        ]));
+                  }).toList())))
+                ]))));
+  }
+
+  String _dashboardStatusCode(Map<String, dynamic>? row) {
+    final status = row?['status']?.toString().trim().toUpperCase() ?? '';
+    return const {
+          'PRESENT': 'P',
+          'LATE': 'L',
+          'LATE + EARLY OUT': 'L/E',
+          'EARLY OUT': 'EO',
+          'OFF': 'O',
+          'UNPAID': 'U'
+        }[status] ??
+        status;
+  }
 
   String _liveEmployeeId(
     Map<String, dynamic> employee,
