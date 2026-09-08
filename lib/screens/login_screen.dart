@@ -533,84 +533,144 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF061127),
-      body: LayoutBuilder(builder: (context, constraints) {
-        final compact = constraints.maxWidth < 820;
-        return Stack(children: [
-          const Positioned.fill(
-              child: DecoratedBox(
+      backgroundColor: const Color(0xFF071126),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 860;
+          return Stack(
+            children: [
+              const Positioned.fill(
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                Color(0xFF061127),
-                Color(0xFF15366F),
-                Color(0xFF08152C)
-              ])))),
-          Positioned(
-              top: -150,
-              right: -100,
-              child: _floatingGlow(const Color(0xFF2D5BFF), 420, 28)),
-          Positioned(
-              bottom: -180,
-              left: compact ? -180 : 160,
-              child: _floatingGlow(const Color(0xFFE51D2A), 440, -24)),
-          const Positioned(
-            left: 24,
-            right: 24,
-            bottom: 4,
-            child: WalkingCat(height: 88, catCount: 1),
-          ),
-          SafeArea(
-              child: Center(
-                  child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              compact ? 18 : 34,
-              compact ? 18 : 34,
-              compact ? 18 : 34,
-              88,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1160),
-              child: compact
-                  ? Column(children: [
-                      _entrance(_logo(), _heroEntrance, -28),
-                      const SizedBox(height: 18),
-                      _entrance(_loginCard(compact: true), _formEntrance, 32)
-                    ])
-                  : Container(
-                      constraints: const BoxConstraints(minHeight: 680),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(32),
-                          border: Border.all(color: Colors.white24),
-                          boxShadow: const [
-                            BoxShadow(
-                                color: Color(0x66000000),
-                                blurRadius: 55,
-                                offset: Offset(0, 28))
-                          ]),
-                      child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32),
-                          child: Row(children: [
-                            Expanded(
-                                flex: 11,
-                                child: _entrance(
-                                    _premiumHero(), _heroEntrance, -38)),
-                            Expanded(
-                                flex: 9,
-                                child: Container(
-                                    color: const Color(0xFFF8FAFF),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 55, vertical: 42),
-                                    child: _entrance(
-                                        _loginCard(), _formEntrance, 38))),
-                          ])),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF071126),
+                        Color(0xFF10285A),
+                        Color(0xFF070D1C)
+                      ],
+                      stops: [0, .53, 1],
                     ),
-            ),
-          ))),
-        ]);
-      }),
+                  ),
+                ),
+              ),
+              Positioned(
+                  top: -170,
+                  right: -100,
+                  child: _floatingGlow(const Color(0xFF4169FF), 480, 34)),
+              Positioned(
+                  bottom: -210,
+                  left: compact ? -210 : 80,
+                  child: _floatingGlow(const Color(0xFFFF5A61), 500, -30)),
+              SafeArea(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          compact ? 20 : 42, 18, compact ? 20 : 42, 10),
+                      child: Row(
+                        children: [
+                          Container(
+                              width: 9,
+                              height: 9,
+                              decoration: const BoxDecoration(
+                                  color: Color(0xFF63E6BE),
+                                  shape: BoxShape.circle)),
+                          const SizedBox(width: 9),
+                          const Text('HASANI  /  PEOPLE OS',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.7)),
+                          const Spacer(),
+                          if (!compact) ...[
+                            const Icon(Icons.lock_outline_rounded,
+                                color: Color(0xFF9DAFD6), size: 16),
+                            const SizedBox(width: 7),
+                            const Text('Protected workspace',
+                                style: TextStyle(
+                                    color: Color(0xFF9DAFD6), fontSize: 12)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(compact ? 16 : 38, 12,
+                              compact ? 16 : 38, compact ? 96 : 30),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1220),
+                            child: compact
+                                ? Column(
+                                    children: [
+                                      _entrance(_logo(), _heroEntrance, -24),
+                                      const SizedBox(height: 16),
+                                      _entrance(_loginCard(compact: true),
+                                          _formEntrance, 30),
+                                    ],
+                                  )
+                                : Container(
+                                    height: 700,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(36),
+                                      border: Border.all(
+                                          color: Colors.white
+                                              .withValues(alpha: .45)),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                            color: Color(0x77000000),
+                                            blurRadius: 70,
+                                            offset: Offset(0, 32))
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(36),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                              flex: 12,
+                                              child: _entrance(_premiumHero(),
+                                                  _heroEntrance, -42)),
+                                          Expanded(
+                                            flex: 9,
+                                            child: Container(
+                                              color: const Color(0xFFFAFBFF),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 50,
+                                                      vertical: 34),
+                                              child: Center(
+                                                  child: SingleChildScrollView(
+                                                      child: _entrance(
+                                                          _loginCard(),
+                                                          _formEntrance,
+                                                          42))),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                  left: 24,
+                  right: 24,
+                  bottom: 3,
+                  child: WalkingCat(height: 88, catCount: 1)),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -664,7 +724,7 @@ class _LoginScreenState extends State<LoginScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF263FA8), Color(0xFF142760), Color(0xFF09152F)],
+            colors: [Color(0xFF3157D5), Color(0xFF162D70), Color(0xFF081329)],
             stops: [0, .52, 1],
           ),
         ),
@@ -719,7 +779,7 @@ class _LoginScreenState extends State<LoginScreen>
                   'Everything your team needs,\nin one beautiful place.',
                   style: TextStyle(
                       color: Colors.white,
-                      fontSize: 42,
+                      fontSize: 45,
                       height: 1.08,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -1.2),
@@ -782,7 +842,7 @@ class _LoginScreenState extends State<LoginScreen>
           end: Alignment.bottomRight,
           colors: [Colors.white, Color(0xFFF1F5FF)],
         ),
-        borderRadius: BorderRadius.circular(compact ? 18 : 22),
+        borderRadius: BorderRadius.circular(compact ? 24 : 28),
         border: Border.all(
           color: const Color(0xFFD5DEFF),
           width: 1.2,
@@ -820,7 +880,7 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 18),
           const Center(
             child: Text(
-              'Welcome back',
+              'Welcome to Workhub',
               style: TextStyle(
                 fontSize: 27,
                 fontWeight: FontWeight.w900,
@@ -927,7 +987,7 @@ class _LoginScreenState extends State<LoginScreen>
             child: ElevatedButton(
               onPressed: loading ? null : _login,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2948B8),
+                backgroundColor: const Color(0xFF3157D5),
                 foregroundColor: const Color(0xFFF3F5F8),
                 disabledBackgroundColor: const Color(0xFFB8B8B8),
                 elevation: 4,
@@ -949,7 +1009,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     )
                   : const Text(
-                      'SIGN IN SECURELY',
+                      'ENTER YOUR WORKSPACE',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
