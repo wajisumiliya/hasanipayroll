@@ -560,7 +560,7 @@ class _LoginScreenState extends State<LoginScreen>
             left: 24,
             right: 24,
             bottom: 4,
-            child: WalkingCat(),
+            child: WalkingCat(height: 88, catCount: 1),
           ),
           SafeArea(
               child: Center(

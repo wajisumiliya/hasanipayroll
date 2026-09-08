@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 class WalkingCat extends StatefulWidget {
   const WalkingCat({
     super.key,
-    this.height = 72,
+    this.height = 88,
     this.catColor = const Color(0xFFFFB45C),
     this.trackColor = const Color(0x24FFFFFF),
-    this.duration = const Duration(seconds: 8),
-    this.catCount = 4,
+    this.duration = const Duration(seconds: 11),
+    this.catCount = 1,
   });
 
   final double height;
@@ -42,7 +42,7 @@ class _WalkingCatState extends State<WalkingCat>
 
   @override
   Widget build(BuildContext context) {
-    const catWidth = 76.0;
+    const catWidth = 92.0;
     const catSpacing = 2.0;
     const coatColors = [
       Color(0xFFFFB45C),
@@ -63,7 +63,7 @@ class _WalkingCatState extends State<WalkingCat>
               builder: (context, _) {
                 final availableCount = math.max(
                   1,
-                  math.min(widget.catCount, constraints.maxWidth ~/ 62),
+                  math.min(widget.catCount, constraints.maxWidth ~/ 92),
                 );
                 final paradeWidth = availableCount * catWidth +
                     (availableCount - 1) * catSpacing;
@@ -112,7 +112,7 @@ class _WalkingCatState extends State<WalkingCat>
                               child: Transform.translate(
                                 offset: Offset(0, (index.isOdd ? 1.5 : 0)),
                                 child: CustomPaint(
-                                  size: const Size(catWidth, 54),
+                                  size: const Size(catWidth, 66),
                                   painter: _CatPainter(
                                     color: color,
                                     step: catStep,
@@ -159,7 +159,7 @@ class _CatPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     final cream = Paint()..color = const Color(0xFFFFE5BF);
 
-    canvas.drawOval(const Rect.fromLTWH(12, 47, 55, 6), shadow);
+    canvas.drawOval(const Rect.fromLTWH(12, 48, 62, 7), shadow);
 
     final tail = Path()
       ..moveTo(15, 31)
