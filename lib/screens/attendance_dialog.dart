@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import 'supabase_service.dart';
+import '../services/attendance_pdf_service.dart';
 import '../widgets/walking_cat.dart';
 
 // ============================================================================
@@ -49,6 +52,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
   bool loading = true;
   bool saving = false;
+  bool printingAttendance = false;
   bool submitted = false;
   final Set<int> _submittedDays = <int>{};
   bool _showBreakAttendanceOnMobile = false;
@@ -569,6 +573,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     child: const Text('Close'),
                   ),
                   const Spacer(),
+                  OutlinedButton.icon(
+                    onPressed: printingAttendance ? null : _printAttendance,
+                    icon: printingAttendance
+                        ? const SizedBox(
+                            width: 17,
+                            height: 17,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.print_outlined),
+                    label:
+                        Text(printingAttendance ? 'Preparing...' : 'Print A4'),
+                  ),
+                  const SizedBox(width: 10),
                   if (_canEdit) ...[
                     OutlinedButton.icon(
                       onPressed:
@@ -632,6 +649,62 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
+  Future<void> _printAttendance() async {
+    if (printingAttendance) return;
+    setState(() => printingAttendance = true);
+
+    try {
+      final days = List<AttendancePrintDay>.generate(daysInMonth, (index) {
+        final day = index + 1;
+        final c = controllers[index];
+        final work = calculateWorkMinutes(c);
+        final breaks = _calculateBreakMinutes(c);
+        final net = (work - breaks).clamp(0, 24 * 60).toInt();
+        return AttendancePrintDay(
+          day: day,
+          workingIn: c.workingIn.text,
+          workingOut: c.workingOut.text,
+          morningIn: c.morningIn.text,
+          morningOut: c.morningOut.text,
+          afternoonIn: c.afternoonIn.text,
+          afternoonOut: c.afternoonOut.text,
+          eveningIn: c.overtimeIn.text,
+          eveningOut: c.overtimeOut.text,
+          status: _calculatedAttendanceStatus(day, c),
+          workMinutes: work,
+          breakMinutes: breaks,
+          netMinutes: net,
+          overtimeMinutes: _calculateDailyOtMinutes(
+            day: day,
+            c: c,
+            netWorkingMinutes: net,
+          ),
+        );
+      });
+
+      final bytes = await AttendancePdfService.build(
+        employeeId: _employeeId(),
+        employeeName: _employeeName(),
+        department: _department(),
+        section: _section(),
+        branchId: widget.branchId,
+        month: widget.month,
+        days: days,
+      );
+      await Printing.layoutPdf(
+        name:
+            'attendance_${_employeeId()}_${DateFormat('yyyy_MM').format(widget.month)}.pdf',
+        format: PdfPageFormat.a4,
+        onLayout: (_) async => bytes,
+      );
+    } catch (error) {
+      if (mounted) {
+        _showError('Unable to print attendance:\n$error');
+      }
+    } finally {
+      if (mounted) setState(() => printingAttendance = false);
+    }
+  }
   // ==========================================================================
   // SAVE ATTENDANCE
   // ==========================================================================
