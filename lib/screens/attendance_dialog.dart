@@ -679,6 +679,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             c: c,
             netWorkingMinutes: net,
           ),
+          lateMinutes: _calculateLateMinutes(day, c),
         );
       });
 
@@ -1291,6 +1292,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     final minute = int.tryParse(match.group(2)!);
     if (hour == null || minute == null || hour > 23 || minute > 59) return null;
     return hour * 60 + minute;
+  }
+
+  int _calculateLateMinutes(int day, AttendanceDayControllers c) {
+    final actualIn = _clockMinutes(c.workingIn.text);
+    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    final shiftIn = _clockMinutes(roster?['shift_start']?.toString() ?? '');
+    if (actualIn == null || shiftIn == null) return 0;
+    return (actualIn - shiftIn).clamp(0, 24 * 60).toInt();
   }
 
   String _calculatedAttendanceStatus(

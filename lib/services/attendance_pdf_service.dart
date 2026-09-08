@@ -21,6 +21,7 @@ class AttendancePrintDay {
     required this.breakMinutes,
     required this.netMinutes,
     required this.overtimeMinutes,
+    required this.lateMinutes,
   });
 
   final int day;
@@ -37,14 +38,15 @@ class AttendancePrintDay {
   final int breakMinutes;
   final int netMinutes;
   final int overtimeMinutes;
+  final int lateMinutes;
 }
 
 class AttendancePdfService {
-  static const _blue = PdfColor.fromInt(0xFF315AD9);
-  static const _red = PdfColor.fromInt(0xFFD32F2F);
-  static const _ink = PdfColor.fromInt(0xFF263451);
-  static const _paleBlue = PdfColor.fromInt(0xFFE8EEFF);
-  static const _paleRed = PdfColor.fromInt(0xFFFFECEC);
+  static const _blue = PdfColors.black;
+  static const _red = PdfColors.black;
+  static const _ink = PdfColors.black;
+  static const _paleBlue = PdfColors.white;
+  static const _paleRed = PdfColors.white;
 
   static Future<Uint8List> build({
     required String employeeId,
@@ -69,6 +71,7 @@ class AttendancePdfService {
     final breakTotal = days.fold<int>(0, (sum, day) => sum + day.breakMinutes);
     final netTotal = days.fold<int>(0, (sum, day) => sum + day.netMinutes);
     final otTotal = days.fold<int>(0, (sum, day) => sum + day.overtimeMinutes);
+    final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
 
     document.addPage(
       pw.Page(
@@ -84,13 +87,19 @@ class AttendancePdfService {
             pw.SizedBox(height: 8),
             pw.Row(
               children: [
-                _summary('TOTAL WORK', workTotal, _blue),
+                _summary(
+                    'GROSS WORK', 'Check-out - Check-in', workTotal, _blue),
                 pw.SizedBox(width: 5),
-                _summary('TOTAL BREAK', breakTotal, _red),
+                _summary(
+                    'BREAK HOURS', 'All recorded breaks', breakTotal, _red),
                 pw.SizedBox(width: 5),
-                _summary('NET HOURS', netTotal, _blue),
+                _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
                 pw.SizedBox(width: 5),
-                _summary('OVERTIME', otTotal, PdfColors.orange800),
+                _summary('APPROVED OT', 'Authorized overtime', otTotal,
+                    PdfColors.black),
+                pw.SizedBox(width: 5),
+                _summary('LATE HOURS', 'After roster start', lateTotal,
+                    PdfColors.black),
               ],
             ),
             pw.SizedBox(height: 8),
@@ -174,8 +183,8 @@ class AttendancePdfService {
     return pw.Container(
       padding: const pw.EdgeInsets.all(7),
       decoration: pw.BoxDecoration(
-          color: PdfColors.grey100,
-          border: pw.Border.all(color: PdfColors.grey400, width: .6)),
+          color: PdfColors.white,
+          border: pw.Border.all(color: PdfColors.black, width: .6)),
       child: pw.Row(children: [
         _info('EMPLOYEE', name),
         _info('EMPLOYEE ID', id),
@@ -193,7 +202,7 @@ class AttendancePdfService {
               pw.Text(label,
                   style: pw.TextStyle(
                       fontSize: 5.5,
-                      color: PdfColors.grey700,
+                      color: PdfColors.black,
                       fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 2),
               pw.Text(value.trim().isEmpty ? '-' : value,
@@ -205,12 +214,13 @@ class AttendancePdfService {
             ]),
       );
 
-  static pw.Widget _summary(String label, int minutes, PdfColor color) =>
+  static pw.Widget _summary(
+          String label, String description, int minutes, PdfColor color) =>
       pw.Expanded(
         child: pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 6),
           decoration: pw.BoxDecoration(
-              color: PdfColor(color.red, color.green, color.blue, .09),
+              color: PdfColors.white,
               border: pw.Border.all(color: color, width: .7)),
           child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -220,6 +230,11 @@ class AttendancePdfService {
                         fontSize: 5.5,
                         fontWeight: pw.FontWeight.bold,
                         color: color)),
+                pw.SizedBox(height: 1),
+                pw.Text(description,
+                    maxLines: 1,
+                    style: const pw.TextStyle(
+                        fontSize: 4.5, color: PdfColors.black)),
                 pw.SizedBox(height: 2),
                 pw.Text(_duration(minutes),
                     style: pw.TextStyle(
@@ -239,10 +254,11 @@ class AttendancePdfService {
       4: pw.FlexColumnWidth(1),
       5: pw.FlexColumnWidth(1),
       6: pw.FlexColumnWidth(1),
-      7: pw.FlexColumnWidth(1.45),
+      7: pw.FlexColumnWidth(1),
+      8: pw.FlexColumnWidth(1.35),
     };
     return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey500, width: .45),
+      border: pw.TableBorder.all(color: PdfColors.black, width: .45),
       columnWidths: widths,
       children: [
         _row([
@@ -271,7 +287,7 @@ class AttendancePdfService {
 
   static pw.Widget _breakTable(List<AttendancePrintDay> days) {
     return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey500, width: .45),
+      border: pw.TableBorder.all(color: PdfColors.black, width: .45),
       columnWidths: const {
         0: pw.FixedColumnWidth(25),
         1: pw.FlexColumnWidth(1),
@@ -349,11 +365,9 @@ class AttendancePdfService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(label,
-              style:
-                  const pw.TextStyle(fontSize: 5.5, color: PdfColors.grey600)),
+              style: const pw.TextStyle(fontSize: 5.5, color: PdfColors.black)),
           pw.Text('Page $page of 2',
-              style:
-                  const pw.TextStyle(fontSize: 5.5, color: PdfColors.grey600)),
+              style: const pw.TextStyle(fontSize: 5.5, color: PdfColors.black)),
         ],
       );
 
