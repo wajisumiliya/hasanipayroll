@@ -26,6 +26,33 @@ class SupabaseService {
         onConflict:
             'branch_id,employee_id,roster_year,roster_month,week_number');
   }
+
+  static Future<List<Map<String, dynamic>>> getDailyRosters({
+    required String branchId,
+    required String employeeId,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final response = await client
+        .from('daily_rosters')
+        .select()
+        .eq('branch_id', branchId)
+        .eq('employee_id', employeeId)
+        .gte('roster_date', _dateOnlyText(start))
+        .lt('roster_date', _dateOnlyText(end))
+        .order('roster_date');
+    return _mapList(response);
+  }
+
+  static Future<void> saveDailyRosters(
+    List<Map<String, dynamic>> rosters,
+  ) async {
+    if (rosters.isEmpty) return;
+    await client.from('daily_rosters').upsert(
+          rosters,
+          onConflict: 'branch_id,employee_id,roster_date',
+        );
+  }
   // ============================================================
   // SUPABASE CONFIGURATION
   // ============================================================

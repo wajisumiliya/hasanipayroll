@@ -62,6 +62,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   double _requiredWorkHours = 7.5;
   bool _salaryRuleLoaded = false;
   final Map<int, Map<String, dynamic>> _weeklyRoster = {};
+  final Map<int, Map<String, dynamic>> _dailyRoster = {};
 
   // ==========================================================================
   // INIT / DISPOSE
@@ -215,6 +216,18 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         ..clear()
         ..addEntries(rosterRows
             .map((row) => MapEntry(_intValue(row['week_number']), row)));
+      final dailyRosterRows = await SupabaseService.getDailyRosters(
+        branchId: widget.branchId,
+        employeeId: employeeId,
+        start: DateTime(widget.month.year, widget.month.month, 1),
+        end: DateTime(widget.month.year, widget.month.month + 1, 1),
+      );
+      _dailyRoster
+        ..clear()
+        ..addEntries(dailyRosterRows.map((row) {
+          final date = DateTime.parse(row['roster_date'].toString());
+          return MapEntry(date.day, row);
+        }));
 
       final start = DateTime(widget.month.year, widget.month.month, 1);
       final end = DateTime(widget.month.year, widget.month.month + 1, 1);
@@ -333,11 +346,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return null;
   }
 
-  bool get _canSubmitCheckpoint {
-    final end = _nextSubmissionEnd;
-    if (end == null || saving) return false;
-    return controllers.take(end).every((row) => row.hasData);
-  }
+  bool get _canSubmitCheckpoint => _nextSubmissionEnd != null && !saving;
 
   String get _submissionButtonLabel {
     final end = _nextSubmissionEnd;
@@ -649,6 +658,230 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
+  Future<bool> _reviewDailyRoster(int submissionEnd) async {
+    final firstDay = List<int>.generate(submissionEnd, (index) => index + 1)
+        .firstWhere((day) => !_submittedDays.contains(day), orElse: () => 0);
+    if (firstDay == 0) return true;
+
+    const shifts = <String, List<dynamic>>{
+      '09:00 - 17:30 (60 min break)': ['09:00', '17:30', 60],
+      '09:00 - 18:00 (90 min break)': ['09:00', '18:00', 90],
+      '10:00 - 19:00 (90 min break)': ['10:00', '19:00', 90],
+      '11:00 - 20:00 (90 min break)': ['11:00', '20:00', 90],
+      '12:00 - 21:00 (90 min break)': ['12:00', '21:00', 90],
+      '13:00 - 22:00 (90 min break)': ['13:00', '22:00', 90],
+      '09:00 - 21:00 (90 min break)': ['09:00', '21:00', 90],
+      '10:00 - 22:00 (90 min break)': ['10:00', '22:00', 90],
+    };
+    const nonWorking = <String>['OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'UNPAID'];
+    final choices = <int, String?>{};
+
+    for (var day = firstDay; day <= submissionEnd; day++) {
+      final existing = _dailyRoster[day];
+      final type = existing?['assignment_type']?.toString() ?? '';
+      if (type == 'SHIFT') {
+        final start = _shortRosterTime(existing?['shift_start']);
+        final end = _shortRosterTime(existing?['shift_end']);
+        final breaks = _intValue(existing?['break_minutes']);
+        for (final entry in shifts.entries) {
+          if (entry.value[0] == start &&
+              entry.value[1] == end &&
+              entry.value[2] == breaks) {
+            choices[day] = entry.key;
+            break;
+          }
+        }
+      } else if (nonWorking.contains(type)) {
+        choices[day] = type;
+      } else if (nonWorking.contains(controllers[day - 1].status)) {
+        choices[day] = controllers[day - 1].status;
+      }
+    }
+
+    bool savingRoster = false;
+    String? rosterError;
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(children: [
+            const Icon(Icons.calendar_month, color: Color(0xFF3155D9)),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text('Assign roster: days $firstDay-$submissionEnd')),
+          ]),
+          content: SizedBox(
+            width: 560,
+            height: MediaQuery.of(context).size.height * .68,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                '${_employeeName()} • ${DateFormat('MMMM yyyy').format(widget.month)}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 5),
+              const Text(
+                'Assign a shift for each working day. For a non-working day choose OFF, MC, leave, public holiday, or unpaid.',
+                style: TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: submissionEnd - firstDay + 1,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final day = firstDay + index;
+                    final date =
+                        DateTime(widget.month.year, widget.month.month, day);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Row(children: [
+                        SizedBox(
+                          width: 115,
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(DateFormat('EEE, dd MMM').format(date),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700)),
+                                Text(
+                                    controllers[day - 1].status.isEmpty
+                                        ? 'Attendance: not set'
+                                        : 'Attendance: ${controllers[day - 1].status}',
+                                    style: const TextStyle(
+                                        fontSize: 10, color: Colors.black54)),
+                              ]),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: choices[day],
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                                labelText: 'Shift / status',
+                                isDense: true,
+                                border: OutlineInputBorder()),
+                            items: [
+                              ...shifts.keys.map((label) => DropdownMenuItem(
+                                  value: label,
+                                  child: Text(label,
+                                      overflow: TextOverflow.ellipsis))),
+                              const DropdownMenuItem(
+                                  enabled: false, child: Divider()),
+                              ...nonWorking.map((status) => DropdownMenuItem(
+                                  value: status, child: Text(status))),
+                            ],
+                            onChanged: savingRoster
+                                ? null
+                                : (value) => setDialogState(() {
+                                      choices[day] = value;
+                                      rosterError = null;
+                                    }),
+                          ),
+                        ),
+                      ]),
+                    );
+                  },
+                ),
+              ),
+              if (rosterError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(rosterError!,
+                      style: const TextStyle(
+                          color: Colors.red, fontWeight: FontWeight.w600)),
+                ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: savingRoster
+                    ? null
+                    : () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel')),
+            FilledButton.icon(
+              onPressed: savingRoster
+                  ? null
+                  : () async {
+                      final missing = <int>[
+                        for (var day = firstDay; day <= submissionEnd; day++)
+                          if (choices[day] == null) day
+                      ];
+                      if (missing.isNotEmpty) {
+                        setDialogState(() => rosterError =
+                            'Assign a roster or status for day(s): ${missing.join(', ')}.');
+                        return;
+                      }
+                      setDialogState(() {
+                        savingRoster = true;
+                        rosterError = null;
+                      });
+                      try {
+                        final updatedAt =
+                            DateTime.now().toUtc().toIso8601String();
+                        final rows = <Map<String, dynamic>>[];
+                        for (var day = firstDay; day <= submissionEnd; day++) {
+                          final choice = choices[day]!;
+                          final shift = shifts[choice];
+                          final type = shift == null ? choice : 'SHIFT';
+                          final row = <String, dynamic>{
+                            'branch_id': widget.branchId,
+                            'employee_id': _employeeId(),
+                            'roster_date': DateFormat('yyyy-MM-dd').format(
+                                DateTime(widget.month.year, widget.month.month,
+                                    day)),
+                            'assignment_type': type,
+                            'shift_start': shift?[0],
+                            'shift_end': shift?[1],
+                            'break_minutes': shift?[2] ?? 0,
+                            'updated_at': updatedAt,
+                          };
+                          rows.add(row);
+                          _dailyRoster[day] = row;
+                          final attendance = controllers[day - 1];
+                          if (shift == null) {
+                            attendance.status = type;
+                            attendance.isPublicHoliday = type == 'PH';
+                            attendance.isUnpaid = type == 'UNPAID';
+                          } else if (nonWorking.contains(attendance.status)) {
+                            attendance.status = '';
+                            attendance.isPublicHoliday = false;
+                            attendance.isUnpaid = false;
+                          }
+                        }
+                        await SupabaseService.saveDailyRosters(rows);
+                        if (dialogContext.mounted)
+                          Navigator.pop(dialogContext, true);
+                      } catch (error) {
+                        setDialogState(() {
+                          savingRoster = false;
+                          rosterError = 'Unable to save daily roster: $error';
+                        });
+                      }
+                    },
+              icon: savingRoster
+                  ? const SizedBox(
+                      width: 17,
+                      height: 17,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(savingRoster ? 'Saving...' : 'Continue to Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
+    return result == true;
+  }
+
+  String _shortRosterTime(dynamic value) {
+    final text = value?.toString() ?? '';
+    return text.length >= 5 ? text.substring(0, 5) : text;
+  }
+
   Future<void> _printAttendance() async {
     if (printingAttendance) return;
     setState(() => printingAttendance = true);
@@ -717,9 +950,16 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     if (submit) {
       submissionEnd = _nextSubmissionEnd;
       if (submissionEnd == null) return;
-      if (!_canSubmitCheckpoint) {
+      final rosterReady = await _reviewDailyRoster(submissionEnd);
+      if (!rosterReady || !mounted) return;
+
+      final incompleteDays = <int>[
+        for (var day = 1; day <= submissionEnd; day++)
+          if (!controllers[day - 1].hasData) day,
+      ];
+      if (incompleteDays.isNotEmpty) {
         _showError(
-          'Complete attendance data for every day from 1 to $submissionEnd before submitting.',
+          'Attendance is still missing for working day(s): ${incompleteDays.join(', ')}. Enter attendance times, or choose OFF/MC/leave in the roster.',
         );
         return;
       }
@@ -1296,7 +1536,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
   int _calculateLateMinutes(int day, AttendanceDayControllers c) {
     final actualIn = _clockMinutes(c.workingIn.text);
-    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
     final shiftIn = _clockMinutes(roster?['shift_start']?.toString() ?? '');
     if (actualIn == null || shiftIn == null) return 0;
     return (actualIn - shiftIn).clamp(0, 24 * 60).toInt();
@@ -1313,7 +1553,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     final actualIn = _clockMinutes(c.workingIn.text);
     if (actualIn == null) return '';
 
-    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
     if (roster == null) return 'Present';
 
     final shiftIn = _clockMinutes(roster['shift_start']?.toString() ?? '');
@@ -1336,7 +1576,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   ) {
     final effectiveStatus = _calculatedAttendanceStatus(day, c);
     final hasWorkingTime = _clockMinutes(c.workingIn.text) != null;
-    final roster = _weeklyRoster[((day - 1) ~/ 7) + 1];
+    final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
     final actualIn = _clockMinutes(c.workingIn.text);
     final shiftIn = _clockMinutes(roster?['shift_start']?.toString() ?? '');
     final lateMinutes = actualIn != null && shiftIn != null
