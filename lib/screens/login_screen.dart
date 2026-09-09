@@ -449,19 +449,24 @@ class _LoginScreenState extends State<LoginScreen>
 
           return Stack(
             children: [
-              // Deep blue base
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/login_office_background.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                ),
+              ),
               const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
                       colors: [
-                        Color(0xFF071A46),
-                        Color(0xFF0A3A87),
-                        Color(0xFF08172E),
+                        Color(0xB307183D),
+                        Color(0x4D092A68),
+                        Color(0x66051431),
                       ],
-                      stops: [0, .52, 1],
                     ),
                   ),
                 ),
@@ -562,20 +567,35 @@ class _LoginScreenState extends State<LoginScreen>
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
-                                  flex: 11,
+                                  flex: 7,
                                   child: _entrance(
                                     _desktopBranding(),
                                     _heroEntrance,
                                     -42,
                                   ),
                                 ),
-                                const SizedBox(width: 56),
+                                const SizedBox(width: 28),
                                 Expanded(
-                                  flex: 9,
+                                  flex: 8,
+                                  child: Center(
+                                    child: ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 520),
+                                      child: _entrance(
+                                        _glassLoginCard(),
+                                        _formEntrance,
+                                        42,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 34),
+                                Expanded(
+                                  flex: 4,
                                   child: _entrance(
-                                    _glassLoginCard(),
-                                    _formEntrance,
-                                    42,
+                                    _desktopFeatureRail(),
+                                    _heroEntrance,
+                                    34,
                                   ),
                                 ),
                               ],
@@ -671,6 +691,47 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  Widget _desktopFeatureRail() {
+    Widget item(IconData icon, String label) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 17),
+          child: Row(
+            children: [
+              Icon(icon, color: const Color(0xFF9EDCFF), size: 34),
+              const SizedBox(width: 18),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFFE4F1FF),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2.2,
+                ),
+              ),
+            ],
+          ),
+        );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PEOPLE  |  PAYROLL  |  PROGRESS',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            letterSpacing: 2.1,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 65),
+        item(Icons.people_alt_outlined, 'PEOPLE'),
+        item(Icons.calendar_month_outlined, 'PAYROLL'),
+        item(Icons.bar_chart_rounded, 'PROGRESS'),
+      ],
+    );
+  }
+
   Widget _mobileBranding() {
     return Column(
       children: [
@@ -753,7 +814,8 @@ class _LoginScreenState extends State<LoginScreen>
           width: double.infinity,
           padding: EdgeInsets.all(compact ? 22 : 34),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: compact ? .19 : .16),
+            color:
+                const Color(0xFFDCE8FF).withValues(alpha: compact ? .82 : .72),
             borderRadius: BorderRadius.circular(compact ? 28 : 34),
             border: Border.all(
               color: Colors.white.withValues(alpha: .38),
@@ -783,7 +845,7 @@ class _LoginScreenState extends State<LoginScreen>
                 'Welcome Back',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF081B4B),
                   fontSize: 30,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -.7,
@@ -794,7 +856,7 @@ class _LoginScreenState extends State<LoginScreen>
                 'Sign in securely to continue to Hasani Workhub.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: .76),
+                  color: const Color(0xFF24365F).withValues(alpha: .82),
                   fontSize: 14,
                 ),
               ),
@@ -839,9 +901,8 @@ class _LoginScreenState extends State<LoginScreen>
                   Icons.lock_outline_rounded,
                 ).copyWith(
                   suffixIcon: IconButton(
-                    tooltip: obscurePassword
-                        ? 'Show password'
-                        : 'Hide password',
+                    tooltip:
+                        obscurePassword ? 'Show password' : 'Hide password',
                     onPressed: loading
                         ? null
                         : () {
@@ -871,8 +932,7 @@ class _LoginScreenState extends State<LoginScreen>
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFE8EC)
-                            .withValues(alpha: .92),
+                        color: const Color(0xFFFFE8EC).withValues(alpha: .92),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: const Color(0xFFFF8A9A),
@@ -917,8 +977,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0B6CF2)
-                            .withValues(alpha: .38),
+                        color: const Color(0xFF0B6CF2).withValues(alpha: .38),
                         blurRadius: 22,
                         offset: const Offset(0, 10),
                       ),
@@ -973,7 +1032,7 @@ class _LoginScreenState extends State<LoginScreen>
                 children: [
                   Expanded(
                     child: Divider(
-                      color: Colors.white.withValues(alpha: .32),
+                      color: const Color(0xFF263B6D).withValues(alpha: .30),
                     ),
                   ),
                   Padding(
@@ -981,7 +1040,7 @@ class _LoginScreenState extends State<LoginScreen>
                     child: Text(
                       'SECURE ACCESS',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: .62),
+                        color: const Color(0xFF263B6D).withValues(alpha: .70),
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.3,
@@ -990,7 +1049,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   Expanded(
                     child: Divider(
-                      color: Colors.white.withValues(alpha: .32),
+                      color: const Color(0xFF263B6D).withValues(alpha: .30),
                     ),
                   ),
                 ],
@@ -1004,13 +1063,13 @@ class _LoginScreenState extends State<LoginScreen>
                   Icon(
                     Icons.shield_outlined,
                     size: 15,
-                    color: Colors.white.withValues(alpha: .72),
+                    color: const Color(0xFF263B6D).withValues(alpha: .75),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     'Protected  •  Reliable  •  Hasani Books',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: .70),
+                      color: const Color(0xFF263B6D).withValues(alpha: .78),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
