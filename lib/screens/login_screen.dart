@@ -86,7 +86,8 @@ class _LoginScreenState extends State<LoginScreen>
   // ============================================================
 
   Future<void> _showForgotPasswordDialog() async {
-    final username = TextEditingController(text: usernameController.text.trim());
+    final username =
+        TextEditingController(text: usernameController.text.trim());
     final identity = TextEditingController();
     final newPassword = TextEditingController();
     final confirmPassword = TextEditingController();
@@ -103,12 +104,16 @@ class _LoginScreenState extends State<LoginScreen>
           Future<void> submit() async {
             if (submitting) return;
             if (resetToken == null) {
-              if (username.text.trim().isEmpty || identity.text.trim().isEmpty) {
-                setDialogState(() => dialogError =
-                    'Enter your username and IC number.');
+              if (username.text.trim().isEmpty ||
+                  identity.text.trim().isEmpty) {
+                setDialogState(
+                    () => dialogError = 'Enter your username and IC number.');
                 return;
               }
-              setDialogState(() { submitting = true; dialogError = null; });
+              setDialogState(() {
+                submitting = true;
+                dialogError = null;
+              });
               final result = await service.verifyForgotPasswordIdentity(
                 username: username.text,
                 identityNumber: identity.text,
@@ -127,15 +132,18 @@ class _LoginScreenState extends State<LoginScreen>
             }
 
             if (newPassword.text.length < 8) {
-              setDialogState(() => dialogError =
-                  'Password must contain at least 8 characters.');
+              setDialogState(() =>
+                  dialogError = 'Password must contain at least 8 characters.');
               return;
             }
             if (newPassword.text != confirmPassword.text) {
               setDialogState(() => dialogError = 'New passwords do not match.');
               return;
             }
-            setDialogState(() { submitting = true; dialogError = null; });
+            setDialogState(() {
+              submitting = true;
+              dialogError = null;
+            });
             final result = await service.resetForgottenPassword(
               resetToken: resetToken!,
               newPassword: newPassword.text,
@@ -153,11 +161,14 @@ class _LoginScreenState extends State<LoginScreen>
           }
 
           InputDecoration fieldDecoration(String label, IconData icon) =>
-              InputDecoration(labelText: label, prefixIcon: Icon(icon),
+              InputDecoration(
+                  labelText: label,
+                  prefixIcon: Icon(icon),
                   border: const OutlineInputBorder());
 
           return AlertDialog(
-            title: Text(resetToken == null ? 'Forgot Password' : 'Create New Password'),
+            title: Text(
+                resetToken == null ? 'Forgot Password' : 'Create New Password'),
             content: SizedBox(
               width: 430,
               child: SingleChildScrollView(
@@ -167,42 +178,74 @@ class _LoginScreenState extends State<LoginScreen>
                       : 'Identity verified. Choose a new password for your account.'),
                   const SizedBox(height: 18),
                   if (resetToken == null) ...[
-                    TextField(controller: username, enabled: !submitting,
-                      decoration: fieldDecoration('Username / Employee ID', Icons.person_outline)),
+                    TextField(
+                        controller: username,
+                        enabled: !submitting,
+                        decoration: fieldDecoration(
+                            'Username / Employee ID', Icons.person_outline)),
                     const SizedBox(height: 14),
-                    TextField(controller: identity, enabled: !submitting,
-                      textInputAction: TextInputAction.done, onSubmitted: (_) => submit(),
-                      decoration: fieldDecoration('IC Number', Icons.badge_outlined)),
+                    TextField(
+                        controller: identity,
+                        enabled: !submitting,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => submit(),
+                        decoration:
+                            fieldDecoration('IC Number', Icons.badge_outlined)),
                   ] else ...[
-                    TextField(controller: newPassword, enabled: !submitting,
-                      obscureText: obscureNew,
-                      decoration: fieldDecoration('New Password', Icons.lock_outline).copyWith(
-                        suffixIcon: IconButton(onPressed: () => setDialogState(() => obscureNew = !obscureNew),
-                          icon: Icon(obscureNew ? Icons.visibility : Icons.visibility_off)))),
+                    TextField(
+                        controller: newPassword,
+                        enabled: !submitting,
+                        obscureText: obscureNew,
+                        decoration:
+                            fieldDecoration('New Password', Icons.lock_outline)
+                                .copyWith(
+                                    suffixIcon: IconButton(
+                                        onPressed: () => setDialogState(
+                                            () => obscureNew = !obscureNew),
+                                        icon: Icon(obscureNew
+                                            ? Icons.visibility
+                                            : Icons.visibility_off)))),
                     const SizedBox(height: 14),
-                    TextField(controller: confirmPassword, enabled: !submitting,
-                      obscureText: obscureConfirm, textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => submit(),
-                      decoration: fieldDecoration('Confirm New Password', Icons.lock_reset).copyWith(
-                        suffixIcon: IconButton(onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
-                          icon: Icon(obscureConfirm ? Icons.visibility : Icons.visibility_off)))),
+                    TextField(
+                        controller: confirmPassword,
+                        enabled: !submitting,
+                        obscureText: obscureConfirm,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => submit(),
+                        decoration: fieldDecoration(
+                                'Confirm New Password', Icons.lock_reset)
+                            .copyWith(
+                                suffixIcon: IconButton(
+                                    onPressed: () => setDialogState(
+                                        () => obscureConfirm = !obscureConfirm),
+                                    icon: Icon(obscureConfirm
+                                        ? Icons.visibility
+                                        : Icons.visibility_off)))),
                   ],
                   if (dialogError != null) ...[
                     const SizedBox(height: 12),
-                    Text(dialogError!, style: const TextStyle(
-                      color: Colors.red, fontWeight: FontWeight.w600)),
+                    Text(dialogError!,
+                        style: const TextStyle(
+                            color: Colors.red, fontWeight: FontWeight.w600)),
                   ],
                 ]),
               ),
             ),
             actions: [
-              TextButton(onPressed: submitting ? null : () => Navigator.pop(dialogContext),
-                child: const Text('CANCEL')),
-              FilledButton(onPressed: submitting ? null : submit,
-                child: submitting
-                    ? const SizedBox(width: 18, height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text(resetToken == null ? 'VERIFY IDENTITY' : 'RESET PASSWORD')),
+              TextButton(
+                  onPressed:
+                      submitting ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('CANCEL')),
+              FilledButton(
+                  onPressed: submitting ? null : submit,
+                  child: submitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : Text(resetToken == null
+                          ? 'VERIFY IDENTITY'
+                          : 'RESET PASSWORD')),
             ],
           );
         },
@@ -215,7 +258,8 @@ class _LoginScreenState extends State<LoginScreen>
     if (completed == true && mounted) {
       passwordController.clear();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Password reset successfully. Sign in with your new password.'),
+        content: Text(
+            'Password reset successfully. Sign in with your new password.'),
         backgroundColor: Colors.green,
       ));
     }
@@ -1430,14 +1474,14 @@ class _DailyLoginTheme {
           cardMessage: 'Start strong. Your week begins here.',
           footer: 'FOCUS  •  PEOPLE  •  PROGRESS',
           background: [
-            Color(0xFF071A3D),
-            Color(0xFF243AAE),
-            Color(0xFF063C47),
+            Color(0xFF10091D),
+            Color(0xFF35204D),
+            Color(0xFF24162F),
           ],
-          accent1: Color(0xFF6FFFD8),
-          accent2: Color(0xFF7B74FF),
-          buttonStart: Color(0xFF58E7C2),
-          buttonEnd: Color(0xFF7568F5),
+          accent1: Color(0xFFF0D28B),
+          accent2: Color(0xFF9C7AC2),
+          buttonStart: Color(0xFFE6C171),
+          buttonEnd: Color(0xFF7A4D8C),
         );
       case DateTime.tuesday:
         return const _DailyLoginTheme(
@@ -1447,14 +1491,14 @@ class _DailyLoginTheme {
           cardMessage: 'Welcome back. Keep your momentum moving.',
           footer: 'KINDNESS  •  CLARITY  •  ACTION',
           background: [
-            Color(0xFF07162F),
-            Color(0xFF253C68),
-            Color(0xFF7A2F42),
+            Color(0xFF110A1D),
+            Color(0xFF38203E),
+            Color(0xFF4B213E),
           ],
-          accent1: Color(0xFFFF8B83),
-          accent2: Color(0xFF6BA8FF),
-          buttonStart: Color(0xFFFF786F),
-          buttonEnd: Color(0xFF315FCD),
+          accent1: Color(0xFFE8C778),
+          accent2: Color(0xFFA76D86),
+          buttonStart: Color(0xFFDBB25F),
+          buttonEnd: Color(0xFF80465F),
         );
       case DateTime.wednesday:
         return const _DailyLoginTheme(
@@ -1464,14 +1508,14 @@ class _DailyLoginTheme {
           cardMessage: 'Your consistent effort is making a difference.',
           footer: 'GROWTH  •  BALANCE  •  PROGRESS',
           background: [
-            Color(0xFF041D32),
-            Color(0xFF075A62),
-            Color(0xFF07344C),
+            Color(0xFF0C111D),
+            Color(0xFF233D43),
+            Color(0xFF171D2D),
           ],
-          accent1: Color(0xFF5DFFD3),
-          accent2: Color(0xFF20B8D8),
-          buttonStart: Color(0xFF23D6A8),
-          buttonEnd: Color(0xFF168CBF),
+          accent1: Color(0xFFE7C77E),
+          accent2: Color(0xFF668A91),
+          buttonStart: Color(0xFFDDBB68),
+          buttonEnd: Color(0xFF476A70),
         );
       case DateTime.thursday:
         return const _DailyLoginTheme(
@@ -1481,14 +1525,14 @@ class _DailyLoginTheme {
           cardMessage: 'Stay steady. Achievement is getting closer.',
           footer: 'CONSISTENCY  •  PURPOSE  •  RESULTS',
           background: [
-            Color(0xFF17112F),
-            Color(0xFF503078),
-            Color(0xFF4B243A),
+            Color(0xFF10091D),
+            Color(0xFF43254E),
+            Color(0xFF291531),
           ],
-          accent1: Color(0xFFFFB39E),
-          accent2: Color(0xFFB58AFF),
-          buttonStart: Color(0xFFFF9B8B),
-          buttonEnd: Color(0xFF8454D6),
+          accent1: Color(0xFFE8C778),
+          accent2: Color(0xFF986FA9),
+          buttonStart: Color(0xFFDFB964),
+          buttonEnd: Color(0xFF73477F),
         );
       case DateTime.friday:
         return const _DailyLoginTheme(
@@ -1498,14 +1542,14 @@ class _DailyLoginTheme {
           cardMessage: 'One final push toward a rewarding week.',
           footer: 'PURPOSE  •  PRIDE  •  ACHIEVEMENT',
           background: [
-            Color(0xFF080B12),
-            Color(0xFF242018),
-            Color(0xFF10131A),
+            Color(0xFF0D0A12),
+            Color(0xFF382C1D),
+            Color(0xFF18121E),
           ],
-          accent1: Color(0xFFFFD76A),
-          accent2: Color(0xFFC99023),
-          buttonStart: Color(0xFFFFD65E),
-          buttonEnd: Color(0xFFC58B21),
+          accent1: Color(0xFFF3D994),
+          accent2: Color(0xFFB98A3D),
+          buttonStart: Color(0xFFE7C673),
+          buttonEnd: Color(0xFF9B6D2D),
         );
       case DateTime.saturday:
         return const _DailyLoginTheme(
@@ -1515,14 +1559,14 @@ class _DailyLoginTheme {
           cardMessage: 'Balance your work. Enjoy your journey.',
           footer: 'ENERGY  •  BALANCE  •  OPPORTUNITY',
           background: [
-            Color(0xFF061C54),
-            Color(0xFF0757BD),
-            Color(0xFF173E62),
+            Color(0xFF0B1020),
+            Color(0xFF263858),
+            Color(0xFF171F35),
           ],
-          accent1: Color(0xFFB8FF45),
-          accent2: Color(0xFF38BEFF),
-          buttonStart: Color(0xFF8CEB3F),
-          buttonEnd: Color(0xFF168BE8),
+          accent1: Color(0xFFE6C579),
+          accent2: Color(0xFF687DA5),
+          buttonStart: Color(0xFFDAB765),
+          buttonEnd: Color(0xFF4D6085),
         );
       default:
         return const _DailyLoginTheme(
@@ -1532,14 +1576,14 @@ class _DailyLoginTheme {
           cardMessage: 'Rest, reset, and prepare to shine.',
           footer: 'REFLECT  •  RECHARGE  •  RENEW',
           background: [
-            Color(0xFF071326),
-            Color(0xFF172B4A),
-            Color(0xFF10172D),
+            Color(0xFF0E0B18),
+            Color(0xFF2D2942),
+            Color(0xFF191525),
           ],
-          accent1: Color(0xFFD8E7FF),
-          accent2: Color(0xFF829BC4),
-          buttonStart: Color(0xFFB8CDEB),
-          buttonEnd: Color(0xFF55729E),
+          accent1: Color(0xFFEAD39A),
+          accent2: Color(0xFF80739A),
+          buttonStart: Color(0xFFDEC481),
+          buttonEnd: Color(0xFF625675),
         );
     }
   }

@@ -21,8 +21,8 @@ class DailyPortalTheme {
   final List<Color> header;
   final Color surfaceTint;
 
-  Color get glass => const Color(0xFF102A43).withValues(alpha: .88);
-  Color get glassStrong => const Color(0xFF0B2239).withValues(alpha: .96);
+  Color get glass => const Color(0xFF211332).withValues(alpha: .90);
+  Color get glassStrong => const Color(0xFF160B25).withValues(alpha: .97);
   Color get glassBorder => accent.withValues(alpha: .38);
 
   static DailyPortalTheme today() => forWeekday(DateTime.now().weekday);
@@ -33,78 +33,78 @@ class DailyPortalTheme {
         return const DailyPortalTheme(
           day: 'Monday',
           quote: 'A focused mind creates extraordinary days.',
-          accent: Color(0xFF6FFFD8),
-          secondary: Color(0xFF7B74FF),
-          background: [Color(0xFF041225), Color(0xFF063C47)],
-          sidebar: [Color(0xFF061530), Color(0xFF102C55)],
-          header: [Color(0xFF0A2148), Color(0xFF183B74)],
-          surfaceTint: Color(0xFFE9F8F6),
+          accent: Color(0xFFE8C778),
+          secondary: Color(0xFF9C7AC2),
+          background: [Color(0xFF10091D), Color(0xFF35204D)],
+          sidebar: [Color(0xFF130B22), Color(0xFF2A173E)],
+          header: [Color(0xFF1A0F2B), Color(0xFF45275C)],
+          surfaceTint: Color(0xFFF7F0E6),
         );
       case DateTime.tuesday:
         return const DailyPortalTheme(
           day: 'Tuesday',
           quote: 'Small steps create great progress.',
-          accent: Color(0xFFFF8B83),
-          secondary: Color(0xFF6BA8FF),
-          background: [Color(0xFF07162F), Color(0xFF7A2F42)],
-          sidebar: [Color(0xFF07162F), Color(0xFF3B2440)],
-          header: [Color(0xFF102B52), Color(0xFF633044)],
-          surfaceTint: Color(0xFFFFF0EF),
+          accent: Color(0xFFE2B96B),
+          secondary: Color(0xFFA76D86),
+          background: [Color(0xFF110A1D), Color(0xFF4B213E)],
+          sidebar: [Color(0xFF150C23), Color(0xFF35162C)],
+          header: [Color(0xFF20102E), Color(0xFF5B2947)],
+          surfaceTint: Color(0xFFF8EEE9),
         );
       case DateTime.wednesday:
         return const DailyPortalTheme(
           day: 'Wednesday',
           quote: 'Halfway there. Keep moving forward.',
-          accent: Color(0xFF5DFFD3),
-          secondary: Color(0xFF20B8D8),
-          background: [Color(0xFF041D32), Color(0xFF075A62)],
-          sidebar: [Color(0xFF041D32), Color(0xFF064B53)],
-          header: [Color(0xFF062842), Color(0xFF08616A)],
-          surfaceTint: Color(0xFFE8F8F5),
+          accent: Color(0xFFE7C77E),
+          secondary: Color(0xFF668A91),
+          background: [Color(0xFF0C111D), Color(0xFF233D43)],
+          sidebar: [Color(0xFF101522), Color(0xFF1E3338)],
+          header: [Color(0xFF141C2C), Color(0xFF2D4B50)],
+          surfaceTint: Color(0xFFF2F1E9),
         );
       case DateTime.thursday:
         return const DailyPortalTheme(
           day: 'Thursday',
           quote: 'Better days are built by consistent effort.',
-          accent: Color(0xFFFFB39E),
-          secondary: Color(0xFFB58AFF),
-          background: [Color(0xFF17112F), Color(0xFF4B243A)],
-          sidebar: [Color(0xFF17112F), Color(0xFF402553)],
-          header: [Color(0xFF261948), Color(0xFF633451)],
-          surfaceTint: Color(0xFFF8EEF7),
+          accent: Color(0xFFE8C778),
+          secondary: Color(0xFF986FA9),
+          background: [Color(0xFF10091D), Color(0xFF43254E)],
+          sidebar: [Color(0xFF150C23), Color(0xFF321A3A)],
+          header: [Color(0xFF21112F), Color(0xFF53305E)],
+          surfaceTint: Color(0xFFF5EDF6),
         );
       case DateTime.friday:
         return const DailyPortalTheme(
           day: 'Friday',
           quote: 'Finish strong. You make it happen.',
-          accent: Color(0xFFFFD76A),
-          secondary: Color(0xFFC99023),
-          background: [Color(0xFF080B12), Color(0xFF242018)],
-          sidebar: [Color(0xFF080B12), Color(0xFF252017)],
-          header: [Color(0xFF11151D), Color(0xFF40341C)],
-          surfaceTint: Color(0xFFFFF8E7),
+          accent: Color(0xFFF0D28B),
+          secondary: Color(0xFFB98A3D),
+          background: [Color(0xFF0D0A12), Color(0xFF382C1D)],
+          sidebar: [Color(0xFF110D17), Color(0xFF2B2116)],
+          header: [Color(0xFF18121E), Color(0xFF49371F)],
+          surfaceTint: Color(0xFFFFF7E7),
         );
       case DateTime.saturday:
         return const DailyPortalTheme(
           day: 'Saturday',
           quote: 'Good energy brings great opportunities.',
-          accent: Color(0xFFB8FF45),
-          secondary: Color(0xFF38BEFF),
-          background: [Color(0xFF061C54), Color(0xFF0757BD)],
-          sidebar: [Color(0xFF061C54), Color(0xFF074583)],
-          header: [Color(0xFF082769), Color(0xFF0865A2)],
-          surfaceTint: Color(0xFFF1FBE6),
+          accent: Color(0xFFE6C579),
+          secondary: Color(0xFF687DA5),
+          background: [Color(0xFF0B1020), Color(0xFF263858)],
+          sidebar: [Color(0xFF0E1425), Color(0xFF1C2A45)],
+          header: [Color(0xFF141C30), Color(0xFF304666)],
+          surfaceTint: Color(0xFFEEF1F7),
         );
       default:
         return const DailyPortalTheme(
           day: 'Sunday',
           quote: 'A calm mind is a powerful mind.',
-          accent: Color(0xFFD8E7FF),
-          secondary: Color(0xFF829BC4),
-          background: [Color(0xFF071326), Color(0xFF172B4A)],
-          sidebar: [Color(0xFF071326), Color(0xFF152541)],
-          header: [Color(0xFF0A1930), Color(0xFF243B5D)],
-          surfaceTint: Color(0xFFF0F4FA),
+          accent: Color(0xFFEAD39A),
+          secondary: Color(0xFF80739A),
+          background: [Color(0xFF0E0B18), Color(0xFF2D2942)],
+          sidebar: [Color(0xFF120E1D), Color(0xFF242035)],
+          header: [Color(0xFF181324), Color(0xFF39344F)],
+          surfaceTint: Color(0xFFF3F0F6),
         );
     }
   }
@@ -126,13 +126,13 @@ class PortalDayIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     const labels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
     const colors = [
-      Color(0xFF6FFFD8),
-      Color(0xFFFF8B83),
-      Color(0xFF5DFFD3),
-      Color(0xFFFFB39E),
-      Color(0xFFFFD76A),
-      Color(0xFFB8FF45),
-      Color(0xFFD8E7FF),
+      Color(0xFFE8C778),
+      Color(0xFFE2B96B),
+      Color(0xFFE7C77E),
+      Color(0xFFE8C778),
+      Color(0xFFF0D28B),
+      Color(0xFFE6C579),
+      Color(0xFFEAD39A),
     ];
     final todayIndex = DateTime.now().weekday - 1;
     return Row(
