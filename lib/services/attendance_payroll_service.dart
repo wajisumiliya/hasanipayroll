@@ -150,6 +150,7 @@ class AttendancePayrollService {
   }) async {
     final employeeId = _normalizeId(employee['employee_id']);
     final employeeName = _text(employee['name']);
+    final isManagementStaff = _toBool(employee['is_management_staff']);
 
     if (employeeId.isEmpty) {
       return PayrollGenerationItem(
@@ -219,13 +220,15 @@ class AttendancePayrollService {
     // Public holiday and unpaid days are explicit attendance flags.
     // ------------------------------------------------------------------------
 
-    final attendance = await _getSubmittedAttendanceForMonth(
-      employeeId,
-      month,
-    );
+    final attendance = isManagementStaff
+        ? <Map<String, dynamic>>[]
+        : await _getSubmittedAttendanceForMonth(
+            employeeId,
+            month,
+          );
 
     final branchId = _text(employee['branch_id'] ?? employee['branch']).trim();
-    final rosterRows = branchId.isEmpty
+    final rosterRows = isManagementStaff || branchId.isEmpty
         ? <Map<String, dynamic>>[]
         : await SupabaseService.getMonthlyRosters(
             branchId: branchId,
@@ -458,27 +461,29 @@ class AttendancePayrollService {
       'bank_account': _text(employee['bank_account']),
 
       // Debug / audit information
-      'remarks': 'Generated payroll. '
-          'Attendance rows used: ${attendance.length}. '
-          'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
-          'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
-          'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
-          'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '
-          'SOCSO employer: ${socso.employer.toStringAsFixed(2)}. '
-          'EIS employee: ${eis.employee.toStringAsFixed(2)}. '
-          'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
-          'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
-          'Approved OT days: $approvedOtDays. '
-          'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
-          'Public holidays worked: $publicHolidayWorkedDays. '
-          'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
-          'Roster weeks used: ${rosterByWeek.length}. '
-          'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
-          'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
-          'Unpaid days: $unpaidDays. '
-          'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
-          //'Public holiday worked days: $publicHolidayWorkedDays. '
-          'Cuti Umum: ${cutiUmum.toStringAsFixed(2)}.',
+      'remarks': isManagementStaff
+          ? 'Generated management payroll from salary defaults only; attendance and roster calculations were excluded.'
+          : 'Generated payroll. '
+              'Attendance rows used: ${attendance.length}. '
+              'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
+              'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
+              'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
+              'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '
+              'SOCSO employer: ${socso.employer.toStringAsFixed(2)}. '
+              'EIS employee: ${eis.employee.toStringAsFixed(2)}. '
+              'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
+              'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
+              'Approved OT days: $approvedOtDays. '
+              'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
+              'Public holidays worked: $publicHolidayWorkedDays. '
+              'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
+              'Roster weeks used: ${rosterByWeek.length}. '
+              'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
+              'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
+              'Unpaid days: $unpaidDays. '
+              'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
+              //'Public holiday worked days: $publicHolidayWorkedDays. '
+              'Cuti Umum: ${cutiUmum.toStringAsFixed(2)}.',
     };
 
     // ------------------------------------------------------------------------
@@ -574,7 +579,7 @@ class AttendancePayrollService {
     final response = await SupabaseService.client
         .from('employees')
         .select(
-          'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,is_active',
+          'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,is_active,is_management_staff',
         )
         .inFilter('employee_id', employeeIds);
 

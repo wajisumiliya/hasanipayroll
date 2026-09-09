@@ -423,6 +423,11 @@ class SupabaseService {
       final response = await query.order('name', ascending: true);
 
       return _mapList(response).where((employee) {
+        final management = employee['is_management_staff'];
+        if (management == true ||
+            management?.toString().toLowerCase() == 'true') {
+          return false;
+        }
         final isFrn =
             employee['address']?.toString().toUpperCase().contains('FRN') ==
                 true;
@@ -473,6 +478,7 @@ class SupabaseService {
           .select()
           .eq('branch_id', branchId.trim())
           .eq('is_active', true)
+          .neq('is_management_staff', true)
           .order('name', ascending: true);
 
       return _mapList(response);

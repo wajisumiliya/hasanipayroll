@@ -414,6 +414,7 @@ class Employee {
   final String address;
   final DateTime? joiningDate;
   final bool isActive;
+  final bool isManagementStaff;
 
   final String branchId;
 
@@ -430,6 +431,7 @@ class Employee {
     this.address = '',
     this.joiningDate,
     this.isActive = true,
+    this.isManagementStaff = false,
     this.branchId = '',
   });
 
@@ -450,6 +452,7 @@ class Employee {
     String? address,
     DateTime? joiningDate,
     bool? isActive,
+    bool? isManagementStaff,
     String? branchId,
   }) {
     return Employee(
@@ -465,6 +468,7 @@ class Employee {
       address: address ?? this.address,
       joiningDate: joiningDate ?? this.joiningDate,
       isActive: isActive ?? this.isActive,
+      isManagementStaff: isManagementStaff ?? this.isManagementStaff,
       branchId: branchId ?? this.branchId,
     );
   }
@@ -487,6 +491,7 @@ class Employee {
       'address': address,
       'joiningDate': joiningDate?.toIso8601String(),
       'isActive': isActive,
+      'isManagementStaff': isManagementStaff,
       'branchId': branchId,
     };
   }
@@ -512,6 +517,7 @@ class Employee {
         json['isActive'],
         defaultValue: true,
       ),
+      isManagementStaff: _boolValue(json['isManagementStaff']),
       branchId: _stringValue(json['branchId']),
     );
   }

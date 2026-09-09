@@ -716,7 +716,7 @@ class _BranchPortalState extends State<BranchPortal> {
               ]),
               const SizedBox(height: 8),
               const Wrap(spacing: 12, runSpacing: 4, children: [
-                Text('P = Present', style: TextStyle(fontSize: 10)),
+                Text('✓ = Present', style: TextStyle(fontSize: 10)),
                 Text('L = Late', style: TextStyle(fontSize: 10)),
                 Text('O = Off', style: TextStyle(fontSize: 10)),
                 Text('MC = Medical', style: TextStyle(fontSize: 10)),
@@ -741,23 +741,26 @@ class _BranchPortalState extends State<BranchPortal> {
       if (id.isNotEmpty && date != null)
         records.putIfAbsent(id, () => {})[date.day] = row;
     }
-    Widget cell(String value, double width, {bool header = false}) => Container(
-        width: width,
-        height: header ? 43 : 34,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
-            color: header ? const Color(0xFFF0F1F3) : Colors.white,
-            border: const Border(
-                right: BorderSide(color: Colors.black54, width: .5),
-                bottom: BorderSide(color: Colors.black54, width: .5))),
-        child: Text(value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: header ? 8 : 9,
-                fontWeight: header ? FontWeight.w800 : FontWeight.w600)));
+    Widget cell(String value, double width,
+            {bool header = false, Color? color}) =>
+        Container(
+            width: width,
+            height: header ? 43 : 34,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+                color: header ? const Color(0xFFF0F1F3) : Colors.white,
+                border: const Border(
+                    right: BorderSide(color: Colors.black54, width: .5),
+                    bottom: BorderSide(color: Colors.black54, width: .5))),
+            child: Text(value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: header ? 8 : 9,
+                    fontWeight: header ? FontWeight.w800 : FontWeight.w700,
+                    color: color)));
     final header = Row(mainAxisSize: MainAxisSize.min, children: [
       cell('NAME', 155, header: true),
       cell('ID', 72, header: true),
@@ -766,7 +769,7 @@ class _BranchPortalState extends State<BranchPortal> {
             '${DateFormat('E').format(DateTime(attendanceMonth.year, attendanceMonth.month, day))[0]}\n$day',
             28,
             header: true),
-      cell('P', 30, header: true),
+      cell('✓', 30, header: true),
       cell('L', 30, header: true),
       cell('O', 30, header: true),
       cell('LV', 30, header: true),
@@ -791,7 +794,7 @@ class _BranchPortalState extends State<BranchPortal> {
                       for (var day = 1; day <= days; day++)
                         _dashboardStatusCode(employeeRows[day])
                     ];
-                    final p = codes.where((c) => c == 'P').length;
+                    final p = codes.where((c) => c == '✓').length;
                     final l = codes.where((c) => c == 'L' || c == 'L/E').length;
                     final o = codes.where((c) => c == 'O').length;
                     final lv = codes
@@ -803,7 +806,16 @@ class _BranchPortalState extends State<BranchPortal> {
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           cell(employee['name']?.toString() ?? id, 155),
                           cell(id, 72),
-                          for (final code in codes) cell(code, 28),
+                          for (final code in codes)
+                            cell(
+                              code,
+                              28,
+                              color: code.isEmpty
+                                  ? null
+                                  : code == '✓'
+                                      ? const Color(0xFF15965D)
+                                      : const Color(0xFFD32F2F),
+                            ),
                           cell('$p', 30),
                           cell('$l', 30),
                           cell('$o', 30),
@@ -817,7 +829,7 @@ class _BranchPortalState extends State<BranchPortal> {
   String _dashboardStatusCode(Map<String, dynamic>? row) {
     final status = row?['status']?.toString().trim().toUpperCase() ?? '';
     return const {
-          'PRESENT': 'P',
+          'PRESENT': '✓',
           'LATE': 'L',
           'LATE + EARLY OUT': 'L/E',
           'EARLY OUT': 'EO',

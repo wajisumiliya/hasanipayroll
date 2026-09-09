@@ -2308,6 +2308,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     DateTime joiningDate = DateTime.now();
     bool active = true;
+    bool managementStaff = false;
 
     showDialog(
       context: context,
@@ -2424,6 +2425,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           });
                         },
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Management Staff'),
+                        subtitle: const Text(
+                          'Hidden from branch attendance; payroll uses salary defaults only.',
+                        ),
+                        value: managementStaff,
+                        onChanged: (value) =>
+                            setDialogState(() => managementStaff = value),
+                      ),
                     ],
                   ),
                 ),
@@ -2468,6 +2479,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         address: address.text.trim(),
                         joiningDate: joiningDate,
                         isActive: active,
+                        isManagementStaff: managementStaff,
                       ),
                       branchId: branchId,
                     );
@@ -2528,6 +2540,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     DateTime joiningDate = employee.joiningDate ?? DateTime.now();
 
     bool active = employee.isActive;
+    bool managementStaff = employee.isManagementStaff;
 
     showDialog(
       context: context,
@@ -2653,6 +2666,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           });
                         },
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Management Staff'),
+                        subtitle: const Text(
+                          'Hidden from branch attendance; salary-default payroll only.',
+                        ),
+                        value: managementStaff,
+                        onChanged: (value) =>
+                            setDialogState(() => managementStaff = value),
+                      ),
                     ],
                   ),
                 ),
@@ -2678,6 +2701,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       address: address.text.trim(),
                       joiningDate: joiningDate,
                       isActive: active,
+                      isManagementStaff: managementStaff,
                       branchId: branchId,
                     );
 
@@ -3175,6 +3199,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     DateTime? joiningDate =
         DateTime.tryParse(employee['joining_date']?.toString() ?? '');
     var active = _isActive(employee);
+    var managementStaff = employee['is_management_staff'] == true ||
+        employee['is_management_staff']?.toString().toLowerCase() == 'true';
     var saving = false;
     showDialog(
       context: context,
@@ -3233,6 +3259,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ? null
                           : (value) =>
                               setDialogState(() => active = value ?? false)),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: managementStaff,
+                    title: const Text('Management Staff'),
+                    subtitle: const Text(
+                      'Hidden from branch attendance; salary-default payroll only.',
+                    ),
+                    onChanged: saving
+                        ? null
+                        : (value) => setDialogState(
+                              () => managementStaff = value ?? false,
+                            ),
+                  ),
                 ]),
               )),
           actions: [
@@ -3259,6 +3298,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'joining_date':
                                 joiningDate?.toIso8601String().split('T').first,
                             'is_active': active,
+                            'is_management_staff': managementStaff,
                           });
                           if (!mounted) return;
                           Navigator.pop(dialogContext);
@@ -5313,7 +5353,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final employeesFuture = SupabaseService.client
         .from('employees')
         .select(
-          'employee_id,name,branch_id,is_active',
+          'employee_id,name,branch_id,is_active,is_management_staff',
         )
         .eq('is_active', true)
         .order('employee_id');

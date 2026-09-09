@@ -548,6 +548,9 @@ class AppService extends ChangeNotifier {
       isActive: _supabaseBool(
         data['is_active'] ?? data['isActive'],
       ),
+      isManagementStaff: _supabaseBool(
+        data['is_management_staff'] ?? data['isManagementStaff'],
+      ),
       branchId:
           data['branch_id']?.toString() ?? data['branchId']?.toString() ?? '',
     );
@@ -1369,10 +1372,11 @@ class AppService extends ChangeNotifier {
     final result = employees
         .where(
           (employee) =>
+              !employee.isManagementStaff &&
               _normalise(
-                employee.branchId,
-              ) ==
-              id,
+                    employee.branchId,
+                  ) ==
+                  id,
         )
         .toList();
 
@@ -3473,6 +3477,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
         joiningDate,
       ),
       'is_active': employee.isActive,
+      'is_management_staff': employee.isManagementStaff,
       'branch_id': employee.branchId,
     };
   }
