@@ -816,12 +816,6 @@ class _EmployeePortalState extends State<EmployeePortal> {
               ],
             ),
           ),
-          const PortalCatMascot(
-            width: 120,
-            height: 145,
-            compact: true,
-            walkDistance: 14,
-          ),
         ],
       ),
     );

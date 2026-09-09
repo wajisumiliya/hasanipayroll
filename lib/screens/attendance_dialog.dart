@@ -6,7 +6,6 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
-import '../widgets/walking_cat.dart';
 
 // ============================================================================
 // ATTENDANCE DIALOG
@@ -543,16 +542,6 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                 ),
               ),
             ),
-            if (widget.showSubmitButton)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14),
-                child: WalkingCat(
-                  height: 58,
-                  catColor: Color(0xFFFFA94D),
-                  trackColor: Color(0x223155D9),
-                  duration: Duration(seconds: 7),
-                ),
-              ),
             _attendanceSummary(),
             Container(
               padding: const EdgeInsets.symmetric(

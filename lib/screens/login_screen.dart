@@ -590,19 +590,6 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
-
-              Positioned(
-                left: compact ? 14 : 58,
-                bottom: compact ? 8 : 14,
-                child: IgnorePointer(
-                  child: PortalCatMascot(
-                    width: compact ? 96 : 190,
-                    height: compact ? 122 : 240,
-                    compact: compact,
-                    walkDistance: compact ? 34 : 115,
-                  ),
-                ),
-              ),
             ],
           );
         },

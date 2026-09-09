@@ -217,22 +217,6 @@ class _BranchPortalState extends State<BranchPortal> {
         ),
         if (dashboard) PortalAtmosphere(theme: theme),
         Positioned.fill(child: child),
-        if (dashboard)
-          const Positioned(
-            right: 22,
-            bottom: 18,
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: .92,
-                child: PortalCatMascot(
-                  width: 150,
-                  height: 190,
-                  compact: true,
-                  walkDistance: 32,
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
