@@ -436,13 +436,20 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ============================================================
-  // UI — GLASSMORPHISM
+  // UI — DAILY GLASSMORPHISM THEMES
   // ============================================================
+
+  _DailyLoginTheme get _todayTheme {
+    // DateTime.weekday: Monday = 1 ... Sunday = 7.
+    return _DailyLoginTheme.forWeekday(DateTime.now().weekday);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = _todayTheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF06122D),
+      backgroundColor: theme.background.first,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 820;
@@ -450,63 +457,53 @@ class _LoginScreenState extends State<LoginScreen>
           return Stack(
             children: [
               Positioned.fill(
-                child: Image.asset(
-                  'assets/login_office_background.png',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center,
-                ),
-              ),
-              const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Color(0xB307183D),
-                        Color(0x4D092A68),
-                        Color(0x66051431),
-                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: theme.background,
+                      stops: const [0, .52, 1],
                     ),
                   ),
                 ),
               ),
 
-              // Ambient moving light
+              // Large animated ambient glows
               Positioned(
-                top: -180,
-                left: compact ? -180 : -40,
+                top: -190,
+                left: compact ? -210 : -80,
                 child: _floatingGlow(
-                  const Color(0xFF1C8CFF),
-                  compact ? 420 : 620,
-                  42,
+                  theme.accent1,
+                  compact ? 450 : 650,
+                  44,
                 ),
               ),
               Positioned(
-                right: compact ? -220 : -120,
-                bottom: -250,
+                right: compact ? -240 : -120,
+                bottom: -260,
                 child: _floatingGlow(
-                  const Color(0xFFFF3148),
-                  compact ? 470 : 650,
-                  -36,
+                  theme.accent2,
+                  compact ? 500 : 680,
+                  -38,
                 ),
               ),
 
-              // Decorative light streaks
+              // Soft diagonal light streaks
               Positioned(
-                top: 22,
-                left: -80,
-                right: compact ? 80 : 500,
+                top: 38,
+                left: -100,
+                right: compact ? 70 : 510,
                 child: Transform.rotate(
                   angle: -.10,
                   child: Container(
                     height: 3,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          Color(0xFF26B8FF),
+                          theme.accent1.withValues(alpha: .95),
                           Colors.transparent,
                         ],
                       ),
@@ -515,7 +512,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               Positioned(
-                bottom: 40,
+                bottom: 55,
                 right: -100,
                 left: compact ? 100 : 700,
                 child: Transform.rotate(
@@ -524,10 +521,10 @@ class _LoginScreenState extends State<LoginScreen>
                     height: 4,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          Color(0xFFFF2943),
+                          theme.accent2.withValues(alpha: .92),
                           Colors.transparent,
                         ],
                       ),
@@ -541,9 +538,9 @@ class _LoginScreenState extends State<LoginScreen>
                   child: SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
                       compact ? 18 : 40,
-                      compact ? 22 : 34,
+                      compact ? 20 : 32,
                       compact ? 18 : 40,
-                      compact ? 105 : 90,
+                      compact ? 110 : 95,
                     ),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1180),
@@ -551,13 +548,13 @@ class _LoginScreenState extends State<LoginScreen>
                           ? Column(
                               children: [
                                 _entrance(
-                                  _mobileBranding(),
+                                  _mobileBranding(theme),
                                   _heroEntrance,
                                   -24,
                                 ),
                                 const SizedBox(height: 18),
                                 _entrance(
-                                  _glassLoginCard(compact: true),
+                                  _glassLoginCard(theme, compact: true),
                                   _formEntrance,
                                   30,
                                 ),
@@ -567,35 +564,20 @@ class _LoginScreenState extends State<LoginScreen>
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
-                                  flex: 7,
+                                  flex: 11,
                                   child: _entrance(
-                                    _desktopBranding(),
+                                    _desktopBranding(theme),
                                     _heroEntrance,
                                     -42,
                                   ),
                                 ),
-                                const SizedBox(width: 28),
+                                const SizedBox(width: 56),
                                 Expanded(
-                                  flex: 8,
-                                  child: Center(
-                                    child: ConstrainedBox(
-                                      constraints:
-                                          const BoxConstraints(maxWidth: 520),
-                                      child: _entrance(
-                                        _glassLoginCard(),
-                                        _formEntrance,
-                                        42,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 34),
-                                Expanded(
-                                  flex: 4,
+                                  flex: 9,
                                   child: _entrance(
-                                    _desktopFeatureRail(),
-                                    _heroEntrance,
-                                    34,
+                                    _glassLoginCard(theme),
+                                    _formEntrance,
+                                    42,
                                   ),
                                 ),
                               ],
@@ -605,7 +587,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-              // Existing animated cat stays on the login screen
+              // Keep your EXISTING WalkingCat widget/animation.
               Positioned(
                 left: compact ? 12 : 28,
                 right: compact ? 12 : 28,
@@ -624,65 +606,65 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _desktopBranding() {
+  Widget _desktopBranding(_DailyLoginTheme theme) {
     return Padding(
       padding: const EdgeInsets.only(left: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _brandPill(),
-          const SizedBox(height: 34),
-          const Text(
-            'A Brighter\nTomorrow,\nTogether',
-            style: TextStyle(
+          _dayPill(theme),
+          const SizedBox(height: 30),
+          Text(
+            theme.headline,
+            style: const TextStyle(
               color: Colors.white,
-              fontSize: 56,
-              height: .98,
+              fontSize: 55,
+              height: .99,
               fontWeight: FontWeight.w900,
-              letterSpacing: -2.0,
+              letterSpacing: -1.8,
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
           Container(
-            width: 62,
+            width: 64,
             height: 4,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(99),
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF4CC9FF),
-                  Color(0xFFFF304A),
-                ],
+              gradient: LinearGradient(
+                colors: [theme.accent1, theme.accent2],
               ),
             ),
           ),
-          const SizedBox(height: 22),
-          const Text(
-            'Simple Payroll for a Better Workplace',
+          const SizedBox(height: 21),
+          Text(
+            theme.message,
             style: TextStyle(
-              color: Color(0xFFDDE8FF),
+              color: Colors.white.withValues(alpha: .88),
               fontSize: 20,
               height: 1.45,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 32),
-          const Wrap(
+          const SizedBox(height: 30),
+          Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               _GlassFeature(
                 Icons.people_alt_outlined,
                 'People',
+                theme.accent1,
               ),
               _GlassFeature(
                 Icons.calendar_month_outlined,
                 'Attendance',
+                theme.accent1,
               ),
               _GlassFeature(
                 Icons.account_balance_wallet_outlined,
                 'Payroll',
+                theme.accent1,
               ),
             ],
           ),
@@ -691,56 +673,15 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _desktopFeatureRail() {
-    Widget item(IconData icon, String label) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 17),
-          child: Row(
-            children: [
-              Icon(icon, color: const Color(0xFF9EDCFF), size: 34),
-              const SizedBox(width: 18),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFFE4F1FF),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2.2,
-                ),
-              ),
-            ],
-          ),
-        );
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'PEOPLE  |  PAYROLL  |  PROGRESS',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 11,
-            letterSpacing: 2.1,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 65),
-        item(Icons.people_alt_outlined, 'PEOPLE'),
-        item(Icons.calendar_month_outlined, 'PAYROLL'),
-        item(Icons.bar_chart_rounded, 'PROGRESS'),
-      ],
-    );
-  }
-
-  Widget _mobileBranding() {
+  Widget _mobileBranding(_DailyLoginTheme theme) {
     return Column(
       children: [
-        _brandPill(),
-        const SizedBox(height: 16),
-        const Text(
-          'A Brighter Tomorrow, Together',
+        _dayPill(theme),
+        const SizedBox(height: 15),
+        Text(
+          theme.headline.replaceAll('\n', ' '),
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 27,
             fontWeight: FontWeight.w900,
@@ -748,11 +689,11 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
         const SizedBox(height: 7),
-        const Text(
-          'Simple Payroll for a Better Workplace',
+        Text(
+          theme.message,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Color(0xFFD5E2FF),
+            color: Colors.white.withValues(alpha: .82),
             fontSize: 14,
           ),
         ),
@@ -760,7 +701,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _brandPill() {
+  Widget _dayPill(_DailyLoginTheme theme) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
       child: BackdropFilter(
@@ -774,25 +715,34 @@ class _LoginScreenState extends State<LoginScreen>
             color: Colors.white.withValues(alpha: .10),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: Colors.white.withValues(alpha: .20),
+              color: Colors.white.withValues(alpha: .22),
             ),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.verified_user_outlined,
-                size: 16,
-                color: Color(0xFF9DD8FF),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: theme.accent1,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.accent1.withValues(alpha: .55),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 9),
               Text(
-                'HASANI BOOKS  •  SECURE WORKSPACE',
-                style: TextStyle(
+                '${theme.day.toUpperCase()}  •  HASANI WORKHUB',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
+                  letterSpacing: 1.15,
                 ),
               ),
             ],
@@ -802,7 +752,10 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _glassLoginCard({bool compact = false}) {
+  Widget _glassLoginCard(
+    _DailyLoginTheme theme, {
+    bool compact = false,
+  }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(compact ? 28 : 34),
       child: BackdropFilter(
@@ -814,21 +767,20 @@ class _LoginScreenState extends State<LoginScreen>
           width: double.infinity,
           padding: EdgeInsets.all(compact ? 22 : 34),
           decoration: BoxDecoration(
-            color:
-                const Color(0xFFDCE8FF).withValues(alpha: compact ? .82 : .72),
+            color: Colors.white.withValues(alpha: compact ? .19 : .16),
             borderRadius: BorderRadius.circular(compact ? 28 : 34),
             border: Border.all(
-              color: Colors.white.withValues(alpha: .38),
+              color: Colors.white.withValues(alpha: .40),
               width: 1.3,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .30),
+                color: Colors.black.withValues(alpha: .28),
                 blurRadius: 60,
                 offset: const Offset(0, 28),
               ),
               BoxShadow(
-                color: const Color(0xFF4C8DFF).withValues(alpha: .14),
+                color: theme.accent1.withValues(alpha: .16),
                 blurRadius: 36,
                 spreadRadius: 1,
               ),
@@ -837,30 +789,33 @@ class _LoginScreenState extends State<LoginScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Exact Hasani Books asset from your current project
+              // IMPORTANT:
+              // This is YOUR EXISTING Hasani Books logo asset.
+              // No generated book logo and no HB logo is used.
               _logo(compact: compact),
-              SizedBox(height: compact ? 20 : 26),
+
+              SizedBox(height: compact ? 19 : 24),
 
               const Text(
                 'Welcome Back',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF081B4B),
-                  fontSize: 30,
+                  color: Colors.white,
+                  fontSize: 29,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -.7,
+                  letterSpacing: -.6,
                 ),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 6),
               Text(
-                'Sign in securely to continue to Hasani Workhub.',
+                theme.cardMessage,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF24365F).withValues(alpha: .82),
-                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: .76),
+                  fontSize: 13.5,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 28),
 
               TextField(
                 controller: usernameController,
@@ -875,6 +830,7 @@ class _LoginScreenState extends State<LoginScreen>
                 decoration: _inputDecoration(
                   'Username / Employee ID',
                   Icons.person_outline_rounded,
+                  theme,
                 ),
                 onSubmitted: (_) {
                   FocusScope.of(context).nextFocus();
@@ -899,6 +855,7 @@ class _LoginScreenState extends State<LoginScreen>
                 decoration: _inputDecoration(
                   'Password',
                   Icons.lock_outline_rounded,
+                  theme,
                 ).copyWith(
                   suffixIcon: IconButton(
                     tooltip:
@@ -914,7 +871,7 @@ class _LoginScreenState extends State<LoginScreen>
                       obscurePassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: const Color(0xFF3157D5),
+                      color: theme.buttonEnd,
                     ),
                   ),
                 ),
@@ -922,42 +879,33 @@ class _LoginScreenState extends State<LoginScreen>
 
               if (errorMessage != null) ...[
                 const SizedBox(height: 15),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: 12,
-                      sigmaY: 12,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE8EC).withValues(alpha: .94),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFFFF8A9A),
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFE8EC).withValues(alpha: .92),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: const Color(0xFFFF8A9A),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Color(0xFFD11835),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          errorMessage!,
+                          style: const TextStyle(
+                            color: Color(0xFF9B1028),
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.error_outline_rounded,
-                            color: Color(0xFFD11835),
-                          ),
-                          const SizedBox(width: 9),
-                          Expanded(
-                            child: Text(
-                              errorMessage!,
-                              style: const TextStyle(
-                                color: Color(0xFF9B1028),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -969,15 +917,15 @@ class _LoginScreenState extends State<LoginScreen>
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [
-                        Color(0xFF1CA7FF),
-                        Color(0xFF075BE8),
+                        theme.buttonStart,
+                        theme.buttonEnd,
                       ],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0B6CF2).withValues(alpha: .38),
+                        color: theme.buttonEnd.withValues(alpha: .38),
                         blurRadius: 22,
                         offset: const Offset(0, 10),
                       ),
@@ -1026,36 +974,36 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 21),
 
               Row(
                 children: [
                   Expanded(
                     child: Divider(
-                      color: const Color(0xFF263B6D).withValues(alpha: .30),
+                      color: Colors.white.withValues(alpha: .32),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
-                      'SECURE ACCESS',
+                      theme.footer,
                       style: TextStyle(
-                        color: const Color(0xFF263B6D).withValues(alpha: .70),
+                        color: Colors.white.withValues(alpha: .72),
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 1.3,
+                        letterSpacing: .8,
                       ),
                     ),
                   ),
                   Expanded(
                     child: Divider(
-                      color: const Color(0xFF263B6D).withValues(alpha: .30),
+                      color: Colors.white.withValues(alpha: .32),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 17),
+              const SizedBox(height: 16),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1063,13 +1011,13 @@ class _LoginScreenState extends State<LoginScreen>
                   Icon(
                     Icons.shield_outlined,
                     size: 15,
-                    color: const Color(0xFF263B6D).withValues(alpha: .75),
+                    color: Colors.white.withValues(alpha: .72),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     'Protected  •  Reliable  •  Hasani Books',
                     style: TextStyle(
-                      color: const Color(0xFF263B6D).withValues(alpha: .78),
+                      color: Colors.white.withValues(alpha: .70),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1093,10 +1041,10 @@ class _LoginScreenState extends State<LoginScreen>
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .92),
+          color: Colors.white.withValues(alpha: .94),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: Colors.white.withValues(alpha: .75),
+            color: Colors.white.withValues(alpha: .80),
           ),
           boxShadow: [
             BoxShadow(
@@ -1107,6 +1055,7 @@ class _LoginScreenState extends State<LoginScreen>
           ],
         ),
         child: Image.asset(
+          // SAME EXISTING LOGO USED BY YOUR ORIGINAL LOGIN SCREEN
           'assets/hasani_books_logo.jpg',
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
@@ -1200,11 +1149,10 @@ class _LoginScreenState extends State<LoginScreen>
   // INPUT DECORATION
   // ============================================================
 
-  InputDecoration _inputDecoration(
-    String label,
-    IconData icon,
-  ) {
+  InputDecoration _inputDecoration(String label, IconData icon,
+      [_DailyLoginTheme? dailyTheme]) {
     final radius = BorderRadius.circular(15);
+    final theme = dailyTheme ?? _todayTheme;
 
     return InputDecoration(
       labelText: label,
@@ -1213,10 +1161,10 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       prefixIcon: Icon(
         icon,
-        color: const Color(0xFF3157D5),
+        color: theme.buttonEnd,
       ),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: .88),
+      fillColor: Colors.white.withValues(alpha: .90),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 18,
@@ -1230,7 +1178,7 @@ class _LoginScreenState extends State<LoginScreen>
       enabledBorder: OutlineInputBorder(
         borderRadius: radius,
         borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: .78),
+          color: Colors.white.withValues(alpha: .80),
         ),
       ),
       disabledBorder: OutlineInputBorder(
@@ -1241,8 +1189,8 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: radius,
-        borderSide: const BorderSide(
-          color: Color(0xFF48B8FF),
+        borderSide: BorderSide(
+          color: theme.accent1,
           width: 2,
         ),
       ),
@@ -1251,10 +1199,15 @@ class _LoginScreenState extends State<LoginScreen>
 }
 
 class _GlassFeature extends StatelessWidget {
-  const _GlassFeature(this.icon, this.label);
+  const _GlassFeature(
+    this.icon,
+    this.label,
+    this.accent,
+  );
 
   final IconData icon;
   final String label;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -1283,7 +1236,7 @@ class _GlassFeature extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: const Color(0xFFAADFFF),
+                color: accent,
               ),
               const SizedBox(width: 8),
               Text(
@@ -1298,5 +1251,161 @@ class _GlassFeature extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _DailyLoginTheme {
+  const _DailyLoginTheme({
+    required this.day,
+    required this.headline,
+    required this.message,
+    required this.cardMessage,
+    required this.footer,
+    required this.background,
+    required this.accent1,
+    required this.accent2,
+    required this.buttonStart,
+    required this.buttonEnd,
+  });
+
+  final String day;
+  final String headline;
+  final String message;
+  final String cardMessage;
+  final String footer;
+  final List<Color> background;
+  final Color accent1;
+  final Color accent2;
+  final Color buttonStart;
+  final Color buttonEnd;
+
+  static _DailyLoginTheme forWeekday(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return const _DailyLoginTheme(
+          day: 'Monday',
+          headline: 'Start the Week\nStrong',
+          message: 'New week. New goals. You can do it.',
+          cardMessage: 'Sign in and make this week count.',
+          footer: 'TOGETHER FOR A BRIGHTER TOMORROW',
+          background: [
+            Color(0xFF061D4D),
+            Color(0xFF075FC1),
+            Color(0xFF04142F),
+          ],
+          accent1: Color(0xFF39C7FF),
+          accent2: Color(0xFF006CFF),
+          buttonStart: Color(0xFF1EB7FF),
+          buttonEnd: Color(0xFF075AE8),
+        );
+
+      case DateTime.tuesday:
+        return const _DailyLoginTheme(
+          day: 'Tuesday',
+          headline: 'Small Steps,\nBig Progress',
+          message: 'Good work today builds a brighter tomorrow.',
+          cardMessage: 'Learning today. A brighter tomorrow.',
+          footer: 'SMALL STEPS  •  BIG PROGRESS',
+          background: [
+            Color(0xFF32145D),
+            Color(0xFF7543B6),
+            Color(0xFF1C1439),
+          ],
+          accent1: Color(0xFFD49CFF),
+          accent2: Color(0xFF8736E8),
+          buttonStart: Color(0xFFB95CFF),
+          buttonEnd: Color(0xFF7426D7),
+        );
+
+      case DateTime.wednesday:
+        return const _DailyLoginTheme(
+          day: 'Wednesday',
+          headline: 'Halfway to\nGreatness',
+          message: 'Stay focused. Keep going. Great things take time.',
+          cardMessage: 'Progress happens one day at a time.',
+          footer: 'PEOPLE  •  PAYROLL  •  PROGRESS',
+          background: [
+            Color(0xFF061847),
+            Color(0xFF102D82),
+            Color(0xFF5B071F),
+          ],
+          accent1: Color(0xFF3AA8FF),
+          accent2: Color(0xFFFF2547),
+          buttonStart: Color(0xFFFF4357),
+          buttonEnd: Color(0xFFD90E2B),
+        );
+
+      case DateTime.thursday:
+        return const _DailyLoginTheme(
+          day: 'Thursday',
+          headline: 'Consistency\nCreates Results',
+          message: 'Discipline today creates success tomorrow.',
+          cardMessage: 'Invest in knowledge. It always pays.',
+          footer: 'CONSISTENCY  •  FOCUS  •  RESULTS',
+          background: [
+            Color(0xFF0B1118),
+            Color(0xFF302519),
+            Color(0xFF080B10),
+          ],
+          accent1: Color(0xFFFFC75A),
+          accent2: Color(0xFFD58A19),
+          buttonStart: Color(0xFFFFCA57),
+          buttonEnd: Color(0xFFD98B13),
+        );
+
+      case DateTime.friday:
+        return const _DailyLoginTheme(
+          day: 'Friday',
+          headline: 'Finish\nStrong',
+          message: 'You made it this far. Keep going.',
+          cardMessage: 'Good effort creates brighter opportunities.',
+          footer: 'FINISH STRONG  •  FINISH PROUD',
+          background: [
+            Color(0xFF063A73),
+            Color(0xFF1594E3),
+            Color(0xFF052A57),
+          ],
+          accent1: Color(0xFF78E4FF),
+          accent2: Color(0xFF0069FF),
+          buttonStart: Color(0xFF25C2FF),
+          buttonEnd: Color(0xFF0060E8),
+        );
+
+      case DateTime.saturday:
+        return const _DailyLoginTheme(
+          day: 'Saturday',
+          headline: 'Relax,\nRecharge, Read',
+          message: 'A little rest creates a brighter mind.',
+          cardMessage: 'Take time for what makes you happy.',
+          footer: 'RELAX  •  RECHARGE  •  RETURN',
+          background: [
+            Color(0xFF5D1B22),
+            Color(0xFFB84C36),
+            Color(0xFF35111B),
+          ],
+          accent1: Color(0xFFFF9A72),
+          accent2: Color(0xFFFF304B),
+          buttonStart: Color(0xFFFF5B60),
+          buttonEnd: Color(0xFFE21738),
+        );
+
+      default:
+        return const _DailyLoginTheme(
+          day: 'Sunday',
+          headline: 'A Fresh Start\nAwaits',
+          message: 'Reflect. Refresh. Be ready for a greater week.',
+          cardMessage: 'New week. New possibilities.',
+          footer: 'REFLECT  •  REFRESH  •  RENEW',
+          background: [
+            Color(0xFF0B4E8D),
+            Color(0xFF55A9DC),
+            Color(0xFF113D72),
+          ],
+          accent1: Color(0xFF9BE8FF),
+          accent2: Color(0xFF0872E8),
+          buttonStart: Color(0xFF28B8FF),
+          buttonEnd: Color(0xFF0864DA),
+        );
+    }
   }
 }
