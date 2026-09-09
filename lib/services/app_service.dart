@@ -1560,6 +1560,35 @@ class AppService extends ChangeNotifier {
   }
 
   // ==========================================================================
+  Future<void> updateEmployeeActiveStatus({
+    required dynamic employeeId,
+    required bool isActive,
+  }) async {
+    final id = employeeId.toString().trim();
+    if (id.isEmpty) throw Exception('Employee ID was not found.');
+
+    final response = await _postAuth(
+      '/api/admin/employees/${Uri.encodeComponent(id)}/status',
+      {'isActive': isActive},
+      authenticated: true,
+    );
+    if (response['ok'] != true) {
+      throw Exception(
+        response['message']?.toString() ?? 'Unable to update employee status.',
+      );
+    }
+
+    final employee = findEmployee(id);
+    if (employee != null) {
+      final index = employeesDemo.indexOf(employee);
+      if (index >= 0) {
+        employeesDemo[index] = employee.copyWith(isActive: isActive);
+      }
+    }
+    notifyListeners();
+  }
+
+  // ==========================================================================
   // CREATE / UPDATE EMPLOYEE LOGIN
   // ==========================================================================
 

@@ -955,7 +955,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
       final incompleteDays = <int>[
         for (var day = 1; day <= submissionEnd; day++)
-          if (!controllers[day - 1].hasData) day,
+          if (!_isNonWorkingDay(day, controllers[day - 1]) &&
+              !_hasCompleteWorkingTime(controllers[day - 1]))
+            day,
       ];
       if (incompleteDays.isNotEmpty) {
         _showError(
@@ -1045,7 +1047,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         for (final entry in timeFields.entries) {
           final value = entry.value.trim();
 
-          if (value.isNotEmpty && parseTimeToMinutes(value) == null) {
+          if (!_isTimePlaceholder(value) && parseTimeToMinutes(value) == null) {
             throw Exception(
               'Invalid ${entry.key} time on '
               '${DateFormat('dd MMM yyyy').format(
@@ -1532,6 +1534,38 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     final minute = int.tryParse(match.group(2)!);
     if (hour == null || minute == null || hour > 23 || minute > 59) return null;
     return hour * 60 + minute;
+  }
+
+  bool _isTimePlaceholder(String value) {
+    final normalized = value.trim();
+    return normalized.isEmpty ||
+        normalized == '-' ||
+        normalized == '--' ||
+        normalized == '--:--';
+  }
+
+  bool _isNonWorkingDay(int day, AttendanceDayControllers c) {
+    const nonWorkingStatuses = {
+      'OFF',
+      'MC',
+      'PL',
+      'AL',
+      'EL',
+      'PH',
+      'UNPAID',
+    };
+    final status = c.status.trim().toUpperCase();
+    final rosterStatus = (_dailyRoster[day]?['assignment_type'] ?? '')
+        .toString()
+        .trim()
+        .toUpperCase();
+    return nonWorkingStatuses.contains(status) ||
+        nonWorkingStatuses.contains(rosterStatus);
+  }
+
+  bool _hasCompleteWorkingTime(AttendanceDayControllers c) {
+    return _clockMinutes(c.workingIn.text) != null &&
+        _clockMinutes(c.workingOut.text) != null;
   }
 
   int _calculateLateMinutes(int day, AttendanceDayControllers c) {

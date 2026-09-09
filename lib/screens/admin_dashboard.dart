@@ -704,7 +704,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       throw Exception('Employee ID was not found.');
     }
 
-    await SupabaseService.updateEmployeeStatus(
+    await service.updateEmployeeActiveStatus(
       employeeId: employeeId,
       isActive: isActive,
     );
@@ -3284,6 +3284,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     : () async {
                         setDialogState(() => saving = true);
                         try {
+                          if (active != _isActive(employee)) {
+                            await service.updateEmployeeActiveStatus(
+                              employeeId: employee['employee_id'],
+                              isActive: active,
+                            );
+                          }
                           await SupabaseService.updateEmployee(
                               employee['employee_id'], {
                             'name': fields['Name']!.text.trim(),
@@ -4698,7 +4704,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
         SupabaseService.getBranches(),
-        SupabaseService.getEmployeesByBranch(branchId),
+        SupabaseService.getEmployeesByBranch(branchId, activeOnly: true),
         SupabaseService.getAttendanceByBranch(branchId),
       ]),
       builder: (context, snapshot) {
@@ -4722,8 +4728,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
             .where((record) =>
                 _mapRecordMatchesMonth(record, selectedAttendanceMonth))
             .toList();
+
+        final byEmployee = <String, List<Map<String, dynamic>>>{};
+        for (final record in attendance) {
+          final id = (record['employee_id'] ?? '').toString();
+          if (id.isEmpty) continue;
+          byEmployee.putIfAbsent(id, () => []).add(record);
+        }
+
+        final submittedEmployeeIds = <String>{
+          for (final entry in byEmployee.entries)
+            if (entry.value
+                .any((record) => _attendanceBool(record['is_submitted'])))
+              entry.key,
+        };
+        final submittedEmployees = employees.where((employee) {
+          final id =
+              (employee['employee_id'] ?? employee['id'] ?? '').toString();
+          return submittedEmployeeIds.contains(id);
+        }).toList();
+        final submittedCount = submittedEmployees.length;
+        final pendingCount = employees.length - submittedCount;
         final search = _attendanceEmployeeSearch.trim().toLowerCase();
-        final filteredEmployees = employees.where((employee) {
+        final filteredEmployees = submittedEmployees.where((employee) {
           if (search.isEmpty) return true;
           final id = (employee['employee_id'] ?? employee['id'] ?? '')
               .toString()
@@ -4741,20 +4768,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
         final branchName =
             (branch['name'] ?? branch['branch_name'] ?? branchId).toString();
-
-        final employeeMap = <String, Map<String, dynamic>>{};
-        for (final employee in employees) {
-          final id =
-              (employee['employee_id'] ?? employee['id'] ?? '').toString();
-          if (id.isNotEmpty) employeeMap[id] = employee;
-        }
-
-        final byEmployee = <String, List<Map<String, dynamic>>>{};
-        for (final record in attendance) {
-          final id = (record['employee_id'] ?? '').toString();
-          if (id.isEmpty) continue;
-          byEmployee.putIfAbsent(id, () => []).add(record);
-        }
 
         return RefreshIndicator(
           onRefresh: () async => setState(() {}),
@@ -4776,8 +4789,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         fontSize: 28, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
                 Text(
-                    '${filteredEmployees.length} of ${employees.length} employee(s)',
-                    style: const TextStyle(color: Colors.black54)),
+                  '${filteredEmployees.length} submitted attendance record(s) shown',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  children: [
+                    _attendanceCountCard(
+                      label: 'Submitted',
+                      count: submittedCount,
+                      icon: Icons.check_circle_outline,
+                      color: const Color(0xFF15965D),
+                    ),
+                    _attendanceCountCard(
+                      label: 'Pending',
+                      count: pendingCount,
+                      icon: Icons.schedule_outlined,
+                      color: const Color(0xFFF59E0B),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
@@ -4971,6 +5004,43 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         );
       },
+    );
+  }
+
+  Widget _attendanceCountCard({
+    required String label,
+    required int count,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      width: 170,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 23),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$count',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

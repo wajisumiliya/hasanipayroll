@@ -1358,6 +1358,59 @@ app.get(
 );
 
 // ============================================================
+app.post(
+  "/api/admin/employees/:employeeId/status",
+  authenticate,
+  requireAdmin,
+  async (req, res) => {
+    const employeeId = String(req.params.employeeId ?? "").trim();
+    const isActive = req.body?.isActive;
+
+    if (!employeeId || typeof isActive !== "boolean") {
+      return res.status(400).json({
+        ok: false,
+        message: "Employee ID and active status are required.",
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const employeeResult = await client.query(
+        `UPDATE public.employees
+         SET is_active = $2
+         WHERE employee_id = $1
+         RETURNING employee_id`,
+        [employeeId, isActive],
+      );
+
+      if (employeeResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({
+          ok: false,
+          message: "Employee was not found.",
+        });
+      }
+
+      await client.query(
+        `UPDATE public."app_user"
+         SET "isActive" = $2, "updatedAt" = NOW()
+         WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = UPPER($1)`,
+        [employeeId, isActive],
+      );
+      await client.query("COMMIT");
+
+      return res.json({ ok: true, employeeId, isActive });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      console.error("EMPLOYEE STATUS UPDATE ERROR:", error.message);
+      return genericError(res);
+    } finally {
+      client.release();
+    }
+  },
+);
+
 // ADMIN - PAYROLL
 // ============================================================
 
