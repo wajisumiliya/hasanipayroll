@@ -200,17 +200,39 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Widget _portalPage(Widget child) {
     final theme = _portalTheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: selectedPage == 0
-              ? theme.background
-              : [theme.surfaceTint, const Color(0xFFF5F7FB)],
+    final dashboard = selectedPage == 0;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: dashboard
+                  ? theme.background
+                  : [theme.surfaceTint, const Color(0xFFF5F7FB)],
+            ),
+          ),
         ),
-      ),
-      child: child,
+        if (dashboard) PortalAtmosphere(theme: theme),
+        Positioned.fill(child: child),
+        if (dashboard)
+          const Positioned(
+            right: 22,
+            bottom: 18,
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: .92,
+                child: PortalCatMascot(
+                  width: 150,
+                  height: 190,
+                  compact: true,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

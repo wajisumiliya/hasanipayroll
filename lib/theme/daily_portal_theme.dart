@@ -178,3 +178,151 @@ class PortalDayIndicator extends StatelessWidget {
     );
   }
 }
+
+class PortalAtmosphere extends StatelessWidget {
+  const PortalAtmosphere({
+    super.key,
+    required this.theme,
+  });
+
+  final DailyPortalTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: CustomPaint(
+        painter: _PortalAtmospherePainter(theme),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class _PortalAtmospherePainter extends CustomPainter {
+  const _PortalAtmospherePainter(this.theme);
+
+  final DailyPortalTheme theme;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.25
+      ..color = theme.accent.withValues(alpha: .16);
+    final bright = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = theme.secondary.withValues(alpha: .22);
+
+    for (var index = 0; index < 5; index++) {
+      final inset = 28.0 + index * 24;
+      canvas.drawArc(
+        Rect.fromLTWH(
+          size.width - 260 - inset,
+          -100 + inset,
+          330,
+          270,
+        ),
+        .35,
+        2.25,
+        false,
+        line,
+      );
+      canvas.drawArc(
+        Rect.fromLTWH(
+          -170 + inset,
+          size.height - 240,
+          300,
+          250,
+        ),
+        3.8,
+        2.0,
+        false,
+        line,
+      );
+    }
+
+    final path = Path()
+      ..moveTo(0, size.height * .10)
+      ..quadraticBezierTo(
+        size.width * .45,
+        size.height * .02,
+        size.width,
+        size.height * .08,
+      );
+    canvas.drawPath(path, bright);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PortalAtmospherePainter oldDelegate) =>
+      oldDelegate.theme.day != theme.day;
+}
+
+class PortalCatMascot extends StatefulWidget {
+  const PortalCatMascot({
+    super.key,
+    this.width = 180,
+    this.height = 220,
+    this.compact = false,
+  });
+
+  final double width;
+  final double height;
+  final bool compact;
+
+  @override
+  State<PortalCatMascot> createState() => _PortalCatMascotState();
+}
+
+class _PortalCatMascotState extends State<PortalCatMascot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _float = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOut,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _float,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, -4 * _float.value),
+          child: child,
+        );
+      },
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(widget.compact ? 16 : 24),
+          boxShadow: [
+            BoxShadow(
+              color: DailyPortalTheme.today().accent.withValues(alpha: .22),
+              blurRadius: 28,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.asset(
+          'assets/realistic_cat_mascot.png',
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+}

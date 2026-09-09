@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../services/app_service.dart';
-import '../widgets/walking_cat.dart';
+import '../theme/daily_portal_theme.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
@@ -469,6 +469,10 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
+              Positioned.fill(
+                child: PortalAtmosphere(theme: DailyPortalTheme.today()),
+              ),
+
               // Large animated ambient glows
               Positioned(
                 top: -190,
@@ -587,15 +591,14 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-              // Keep your EXISTING WalkingCat widget/animation.
               Positioned(
-                left: compact ? 12 : 28,
-                right: compact ? 12 : 28,
-                bottom: 2,
+                left: compact ? 14 : 58,
+                bottom: compact ? 8 : 14,
                 child: IgnorePointer(
-                  child: WalkingCat(
-                    height: compact ? 72 : 88,
-                    catCount: 1,
+                  child: PortalCatMascot(
+                    width: compact ? 96 : 190,
+                    height: compact ? 122 : 240,
+                    compact: compact,
                   ),
                 ),
               ),

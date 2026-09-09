@@ -7,7 +7,6 @@ import '../services/app_service.dart';
 import '../theme/daily_portal_theme.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
-import '../widgets/walking_cat.dart';
 import 'employee_ot_request_page.dart';
 import 'login_screen.dart';
 
@@ -817,12 +816,10 @@ class _EmployeePortalState extends State<EmployeePortal> {
               ],
             ),
           ),
-          SizedBox(
+          const PortalCatMascot(
             width: 120,
-            child: WalkingCat(
-              height: 72,
-              catCount: 1,
-            ),
+            height: 145,
+            compact: true,
           ),
         ],
       ),
