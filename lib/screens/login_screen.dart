@@ -724,8 +724,6 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-              _walkingCat(constraints.maxWidth, compact),
-
               SafeArea(
                 child: Center(
                   child: SingleChildScrollView(
@@ -779,6 +777,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
+              _walkingCat(constraints.maxWidth, compact),
             ],
           );
         },
@@ -787,13 +786,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _walkingCat(double screenWidth, bool compact) {
-    final catWidth = compact ? 116.0 : 154.0;
+    final catWidth = compact ? 142.0 : 190.0;
 
     return Positioned(
       left: 0,
       right: 0,
-      bottom: compact ? 5 : 8,
-      height: compact ? 88 : 112,
+      bottom: compact ? 8 : 12,
+      height: compact ? 106 : 138,
       child: IgnorePointer(
         child: ClipRect(
           child: AnimatedBuilder(
@@ -802,9 +801,9 @@ class _LoginScreenState extends State<LoginScreen>
               final progress = _catWalkController.value;
               final movingRight =
                   _catWalkController.status == AnimationStatus.reverse;
-              final horizontal =
-                  screenWidth - ((screenWidth + catWidth) * progress);
+              final horizontal = (screenWidth - catWidth) * (1 - progress);
               final step = math.sin(progress * math.pi * 24).abs() * 3;
+              final frameNumber = ((progress * 80).floor() % 8) + 1;
 
               return Transform.translate(
                 offset: Offset(horizontal, -step),
@@ -817,18 +816,29 @@ class _LoginScreenState extends State<LoginScreen>
                       1,
                       1,
                     ),
-                    child: child,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: .28),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/login_cat_walk_$frameNumber.png',
+                        width: catWidth,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        gaplessPlayback: true,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
                   ),
                 ),
               );
             },
-            child: Image.asset(
-              'assets/login_walking_cat.png',
-              width: catWidth,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              excludeFromSemantics: true,
-            ),
           ),
         ),
       ),
