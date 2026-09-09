@@ -875,10 +875,11 @@ class AppService extends ChangeNotifier {
           username: userData['username']?.toString() ??
               userData['email']?.toString() ??
               enteredUsername,
+          verificationId: data['verificationId']?.toString(),
         );
 
         notifyListeners();
-        return 'FIRST_LOGIN_OTP_REQUIRED';
+        return 'FIRST_LOGIN_PASSWORD_REQUIRED';
       }
 
       final backendEmployee = userData['employee'] is Map
@@ -1067,7 +1068,7 @@ class AppService extends ChangeNotifier {
     if (state == null ||
         state.verificationId == null ||
         state.verificationId!.isEmpty) {
-      return 'Please verify the OTP first.';
+      return 'Your first-login session has expired. Please login again.';
     }
 
     final password = newPassword.trim();

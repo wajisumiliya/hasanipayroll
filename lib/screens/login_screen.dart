@@ -122,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen>
       // LOGIN FAILED
       // ==========================================================
 
-      if (result != null && result != 'FIRST_LOGIN_OTP_REQUIRED') {
+      if (result != null && result != 'FIRST_LOGIN_PASSWORD_REQUIRED') {
         setState(() {
           loading = false;
           errorMessage = result;
@@ -135,15 +135,15 @@ class _LoginScreenState extends State<LoginScreen>
       // FIRST LOGIN
       //
       // The backend/app service has detected that the employee
-      // must verify OTP and create a new password.
+      // must create a new password before opening the dashboard.
       // ==========================================================
 
-      if (result == 'FIRST_LOGIN_OTP_REQUIRED') {
+      if (result == 'FIRST_LOGIN_PASSWORD_REQUIRED') {
         setState(() {
           loading = false;
         });
 
-        await _showFirstLoginOtpDialog();
+        await _showFirstLoginPasswordDialog();
 
         return;
       }
@@ -185,290 +185,197 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ============================================================
-  // FIRST LOGIN OTP
+  // FIRST LOGIN PASSWORD CHANGE
   // ============================================================
 
-  Future<void> _showFirstLoginOtpDialog() async {
-    final otpController = TextEditingController();
+  Future<void> _showFirstLoginPasswordDialog() async {
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
-
-    bool requestingOtp = false;
-    bool verifyingOtp = false;
     bool savingPassword = false;
-    bool otpSent = false;
-    bool otpVerified = false;
-
+    bool obscureNewPassword = true;
+    bool obscureConfirmPassword = true;
     String? dialogError;
 
-    await showDialog(
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (
-            context,
-            setDialogState,
-          ) {
-            Future<void> requestOtp() async {
-              setDialogState(() {
-                requestingOtp = true;
-                dialogError = null;
-              });
+        return PopScope(
+          canPop: false,
+          child: StatefulBuilder(
+            builder: (context, setDialogState) {
+              Future<void> savePassword() async {
+                final newPassword = newPasswordController.text;
+                final confirmPassword = confirmPasswordController.text;
 
-              final result = await service.requestFirstLoginOtp();
-
-              if (!mounted) return;
-
-              setDialogState(() {
-                requestingOtp = false;
-
-                if (result == null) {
-                  otpSent = true;
-                } else {
-                  dialogError = result;
+                if (newPassword.length < 8) {
+                  setDialogState(() {
+                    dialogError =
+                        'Password must contain at least 8 characters.';
+                  });
+                  return;
                 }
-              });
-            }
 
-            Future<void> verifyOtp() async {
-              final otp = otpController.text.trim();
-
-              if (otp.length != 6) {
-                setDialogState(() {
-                  dialogError = 'Please enter the 6-digit OTP.';
-                });
-
-                return;
-              }
-
-              setDialogState(() {
-                verifyingOtp = true;
-                dialogError = null;
-              });
-
-              final result = await service.verifyFirstLoginOtp(
-                otp,
-              );
-
-              if (!mounted) return;
-
-              setDialogState(() {
-                verifyingOtp = false;
-
-                if (result == null) {
-                  otpVerified = true;
-                } else {
-                  dialogError = result;
+                if (newPassword != confirmPassword) {
+                  setDialogState(() {
+                    dialogError = 'New passwords do not match.';
+                  });
+                  return;
                 }
-              });
-            }
 
-            Future<void> savePassword() async {
-              final newPassword = newPasswordController.text;
+                if (newPassword == passwordController.text) {
+                  setDialogState(() {
+                    dialogError =
+                        'Your new password must be different from the default password.';
+                  });
+                  return;
+                }
 
-              final confirmPassword = confirmPasswordController.text;
-
-              if (newPassword.length < 6) {
                 setDialogState(() {
-                  dialogError = 'Password must contain at least 6 characters.';
+                  savingPassword = true;
+                  dialogError = null;
                 });
 
-                return;
+                final result = await service.completeFirstLogin(newPassword);
+
+                if (!mounted || !dialogContext.mounted) return;
+
+                if (result != null) {
+                  setDialogState(() {
+                    savingPassword = false;
+                    dialogError = result;
+                  });
+                  return;
+                }
+
+                Navigator.of(dialogContext).pop();
+                passwordController.clear();
+
+                final user = service.currentUser;
+                if (user != null) {
+                  _openCorrectPortal(user);
+                }
               }
 
-              if (newPassword != confirmPassword) {
-                setDialogState(() {
-                  dialogError = 'Passwords do not match.';
-                });
-
-                return;
-              }
-
-              setDialogState(() {
-                savingPassword = true;
-                dialogError = null;
-              });
-
-              final result = await service.completeFirstLogin(
-                newPassword,
-              );
-
-              if (!mounted || !dialogContext.mounted) return;
-
-              if (result != null) {
-                setDialogState(() {
-                  savingPassword = false;
-                  dialogError = result;
-                });
-
-                return;
-              }
-
-              Navigator.of(dialogContext).pop();
-
-              final user = service.currentUser;
-
-              if (user != null) {
-                _openCorrectPortal(user);
-              }
-            }
-
-            return AlertDialog(
-              title: Text(
-                !otpSent
-                    ? 'First Login Verification'
-                    : !otpVerified
-                        ? 'Verify OTP'
-                        : 'Create New Password',
-              ),
-              content: SingleChildScrollView(
-                child: SizedBox(
-                  width: 400,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (!otpSent) ...[
+              return AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.lock_reset_rounded),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Create Your New Password')),
+                  ],
+                ),
+                content: SingleChildScrollView(
+                  child: SizedBox(
+                    width: 420,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         const Text(
-                          'For security, you must verify your registered email address before creating your new password.',
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: requestingOtp ? null : requestOtp,
-                            child: requestingOtp
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    'SEND OTP',
-                                  ),
-                          ),
-                        ),
-                      ],
-                      if (otpSent && !otpVerified) ...[
-                        const Text(
-                          'Enter the 6-digit OTP sent to your registered email address.',
-                        ),
-                        const SizedBox(height: 20),
-                        TextField(
-                          controller: otpController,
-                          keyboardType: TextInputType.number,
-                          maxLength: 6,
-                          decoration: _inputDecoration(
-                            '6-Digit OTP',
-                            Icons.lock_outline,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: verifyingOtp ? null : verifyOtp,
-                            child: verifyingOtp
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    'VERIFY OTP',
-                                  ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: requestingOtp ? null : requestOtp,
-                          child: const Text(
-                            'Resend OTP',
-                          ),
-                        ),
-                      ],
-                      if (otpVerified) ...[
-                        const Text(
-                          'OTP verified successfully. Please create your new password.',
+                          'This is your first login. You must replace the default password before opening your dashboard.',
                         ),
                         const SizedBox(height: 20),
                         TextField(
                           controller: newPasswordController,
-                          obscureText: true,
+                          obscureText: obscureNewPassword,
+                          enabled: !savingPassword,
+                          autofocus: true,
                           decoration: _inputDecoration(
                             'New Password',
                             Icons.lock_outline,
+                          ).copyWith(
+                            helperText: 'Use at least 8 characters.',
+                            suffixIcon: IconButton(
+                              onPressed: () => setDialogState(() {
+                                obscureNewPassword = !obscureNewPassword;
+                              }),
+                              icon: Icon(
+                                obscureNewPassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
                         TextField(
                           controller: confirmPasswordController,
-                          obscureText: true,
+                          obscureText: obscureConfirmPassword,
+                          enabled: !savingPassword,
+                          onSubmitted: (_) {
+                            if (!savingPassword) savePassword();
+                          },
                           decoration: _inputDecoration(
-                            'Confirm New Password',
+                            'Retype New Password',
                             Icons.lock_outline,
+                          ).copyWith(
+                            suffixIcon: IconButton(
+                              onPressed: () => setDialogState(() {
+                                obscureConfirmPassword =
+                                    !obscureConfirmPassword;
+                              }),
+                              icon: Icon(
+                                obscureConfirmPassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        if (dialogError != null) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            dialogError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 22),
                         SizedBox(
                           width: double.infinity,
-                          child: ElevatedButton(
+                          child: ElevatedButton.icon(
                             onPressed: savingPassword ? null : savePassword,
-                            child: savingPassword
+                            icon: savingPassword
                                 ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
+                                    width: 18,
+                                    height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text(
-                                    'SAVE NEW PASSWORD',
-                                  ),
+                                : const Icon(Icons.check_circle_outline),
+                            label: Text(
+                              savingPassword
+                                  ? 'SAVING...'
+                                  : 'SAVE PASSWORD & CONTINUE',
+                            ),
                           ),
                         ),
                       ],
-                      if (dialogError != null) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          dialogError!,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: requestingOtp || verifyingOtp || savingPassword
-                      ? null
-                      : () {
-                          service.cancelFirstLoginOtp();
-
-                          Navigator.of(
-                            dialogContext,
-                          ).pop();
-                        },
-                  child: const Text(
-                    'CANCEL',
+                actions: [
+                  TextButton(
+                    onPressed: savingPassword
+                        ? null
+                        : () {
+                            service.cancelFirstLoginOtp();
+                            Navigator.of(dialogContext).pop();
+                          },
+                    child: const Text('CANCEL'),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         );
       },
     );
 
-    otpController.dispose();
     newPasswordController.dispose();
     confirmPasswordController.dispose();
   }
@@ -1114,7 +1021,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           SizedBox(height: 6),
           Text(
-            'For your first login, verify the OTP sent to your registered email and create a new password.',
+            'For your first login, replace the default password before opening your dashboard.',
           ),
           SizedBox(height: 12),
           Text(

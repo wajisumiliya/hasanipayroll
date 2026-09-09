@@ -496,6 +496,24 @@ function createOtpVerificationToken(
   );
 }
 
+function createFirstLoginPasswordToken(
+  user,
+) {
+  return jwt.sign(
+    {
+      sub: String(user.id),
+      employeeId: user.employeeId || null,
+      type: "first-login-password",
+      nonce: generateRandomToken(16),
+    },
+    JWT_SECRET,
+    {
+      expiresIn: String(OTP_VERIFICATION_MINUTES) + "m",
+      issuer: "hasani-payroll",
+      audience: "hasani-payroll-otp",
+    },
+  );
+}
 function verifyOtpVerificationToken(
   token,
 ) {
@@ -1028,22 +1046,33 @@ app.post(
           user,
         );
 
-      // First-login account.
+      // The default password was verified. Issue a short-lived, restricted
+      // token that can only complete the mandatory first-login password change.
       if (
         user.mustChangePassword ===
         true
       ) {
+        const verificationId =
+          createFirstLoginPasswordToken(
+            user,
+          );
+
         return res.json({
           ok: true,
 
           message:
-            "First login requires email verification.",
+            "You must create a new password before opening the dashboard.",
 
           firstLogin:
             true,
 
           requiresOtp:
+            false,
+
+          requiresPasswordChange:
             true,
+
+          verificationId,
 
           user:
             safeUser,
@@ -2796,14 +2825,19 @@ app.post(
         return res.status(403).json({
           ok: false,
           message:
-            "Verification session has expired. Please verify your OTP again.",
+            "First-login session has expired. Please login again.",
         });
       }
 
-      if (
-        session.type !==
-        "otp-verification"
-      ) {
+      const isOtpVerification =
+        session.type ===
+        "otp-verification";
+
+      const isFirstLoginPassword =
+        session.type ===
+        "first-login-password";
+
+      if (!isOtpVerification && !isFirstLoginPassword) {
         return res.status(403).json({
           ok: false,
           message:
@@ -2845,33 +2879,47 @@ app.post(
         });
       }
 
-      if (
-        !user.otpVerifiedAt
-      ) {
-        return res.status(403).json({
+      const reusesDefaultPassword =
+        await verifyPassword(
+          newPassword,
+          user.passwordHash,
+        );
+
+      if (reusesDefaultPassword) {
+        return res.status(400).json({
           ok: false,
           message:
-            "OTP verification is required.",
+            "Your new password must be different from the default password.",
         });
       }
 
-      const verifiedAt =
-        new Date(
-          user.otpVerifiedAt,
-        ).getTime();
+      if (isOtpVerification) {
+        if (!user.otpVerifiedAt) {
+          return res.status(403).json({
+            ok: false,
+            message:
+              "OTP verification is required.",
+          });
+        }
 
-      if (
-        Date.now() -
-          verifiedAt >
-        OTP_VERIFICATION_MINUTES *
-          60 *
-          1000
-      ) {
-        return res.status(403).json({
-          ok: false,
-          message:
-            "Verification session has expired. Please verify OTP again.",
-        });
+        const verifiedAt =
+          new Date(
+            user.otpVerifiedAt,
+          ).getTime();
+
+        if (
+          Date.now() -
+            verifiedAt >
+          OTP_VERIFICATION_MINUTES *
+            60 *
+            1000
+        ) {
+          return res.status(403).json({
+            ok: false,
+            message:
+              "Verification session has expired. Please login again.",
+          });
+        }
       }
 
       const passwordHash =
