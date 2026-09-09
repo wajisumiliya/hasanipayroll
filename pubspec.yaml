@@ -48,6 +48,7 @@ flutter:
   assets:
     - assets/hasani_books_logo.jpg
     - assets/realistic_cat_mascot.png
+    - assets/realistic_cat_mascot.jpg
     - assets/login_office_background.png
     - assets/payroll_export_template.xlsx
 

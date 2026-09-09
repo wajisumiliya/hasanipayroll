@@ -317,10 +317,18 @@ class _PortalCatMascotState extends State<PortalCatMascot>
         ),
         clipBehavior: Clip.antiAlias,
         child: Image.asset(
-          'assets/realistic_cat_mascot.png',
+          'assets/realistic_cat_mascot.jpg',
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
-          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: const Color(0xFF0B2239),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.pets,
+              color: Colors.white70,
+              size: 48,
+            ),
+          ),
         ),
       ),
     );
