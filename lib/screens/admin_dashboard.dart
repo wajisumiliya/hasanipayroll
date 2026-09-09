@@ -1283,125 +1283,588 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         return RefreshIndicator(
           onRefresh: () async => setState(() {}),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24),
+          color: _portalTheme.accent,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 720;
+              final metricColumns = compact
+                  ? 1
+                  : constraints.maxWidth >= 1180
+                      ? 4
+                      : 2;
+              final horizontalPadding = compact ? 32.0 : 48.0;
+              final metricWidth = (constraints.maxWidth -
+                      horizontalPadding -
+                      (16 * (metricColumns - 1))) /
+                  metricColumns;
+
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.all(compact ? 16 : 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _dashboardCommandHero(
+                      totalGross: totalGross,
+                      totalNet: totalNet,
+                      payrollRecords: payroll.length,
+                      compact: compact,
+                      onGrossTap: () => _showPayrollFlow(
+                        employees,
+                        payroll,
+                        title: 'Gross Payroll',
+                        metric: 'gross',
+                      ),
+                      onNetTap: () => _showPayrollFlow(
+                        employees,
+                        payroll,
+                        title: 'Net Payroll',
+                        metric: 'net',
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    _dashboardSectionTitle(
+                      'Workforce intelligence',
+                      'Tap any metric to explore the live records',
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        _powerMetricCard(
+                          width: metricWidth,
+                          title: 'Total workforce',
+                          value: employees.length.toString(),
+                          icon: Icons.groups_2_outlined,
+                          accent: const Color(0xFFE8C778),
+                          detail: '$departments departments',
+                          onTap: () => _showEmployeeDetails(
+                            'All Employees',
+                            employees,
+                          ),
+                        ),
+                        _powerMetricCard(
+                          width: metricWidth,
+                          title: 'Active employees',
+                          value: activeEmployees.toString(),
+                          icon: Icons.verified_user_outlined,
+                          accent: const Color(0xFF73D6AE),
+                          detail: employees.isEmpty
+                              ? 'No workforce data'
+                              : '${(activeEmployees / employees.length * 100).round()}% of workforce',
+                          onTap: () => _showEmployeeDetails(
+                            'Active Employees',
+                            employees.where(_isActive).toList(),
+                          ),
+                        ),
+                        _powerMetricCard(
+                          width: metricWidth,
+                          title: 'Attention needed',
+                          value: inactiveEmployees.toString(),
+                          icon: Icons.radar_outlined,
+                          accent: const Color(0xFFF0A46B),
+                          detail: 'Inactive employee records',
+                          onTap: () => _showEmployeeDetails(
+                            'Inactive Employees',
+                            employees.where((e) => !_isActive(e)).toList(),
+                          ),
+                        ),
+                        _powerMetricCard(
+                          width: metricWidth,
+                          title: 'Organisation',
+                          value: branches.toString(),
+                          icon: Icons.account_tree_outlined,
+                          accent: const Color(0xFFB79AE2),
+                          detail:
+                              '$branches branches · $departments departments',
+                          onTap: () => _showBranchFlow(employees),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 22),
+                    if (compact) ...[
+                      _dashboardActionDock(),
+                      const SizedBox(height: 16),
+                      _dashboardPulsePanel(
+                        employees: employees.length,
+                        activeEmployees: activeEmployees,
+                        payrollRecords: payroll.length,
+                        departments: departments,
+                        onDepartmentsTap: () => _showDepartmentFlow(employees),
+                        onPayrollTap: () => _showPayrollFlow(
+                          employees,
+                          payroll,
+                          title: 'Payroll Records',
+                          metric: 'generate',
+                        ),
+                      ),
+                    ] else
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 3, child: _dashboardActionDock()),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 2,
+                            child: _dashboardPulsePanel(
+                              employees: employees.length,
+                              activeEmployees: activeEmployees,
+                              payrollRecords: payroll.length,
+                              departments: departments,
+                              onDepartmentsTap: () =>
+                                  _showDepartmentFlow(employees),
+                              onPayrollTap: () => _showPayrollFlow(
+                                employees,
+                                payroll,
+                                title: 'Payroll Records',
+                                metric: 'generate',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _dashboardCommandHero({
+    required double totalGross,
+    required double totalNet,
+    required int payrollRecords,
+    required bool compact,
+    required VoidCallback onGrossTap,
+    required VoidCallback onNetTap,
+  }) {
+    final theme = _portalTheme;
+    final now = DateTime.now();
+    final period = DateFormat('MMMM yyyy').format(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(compact ? 22 : 30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [theme.glassStrong, const Color(0xFF36204A)],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: theme.glassBorder),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF08040D).withValues(alpha: .32),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -34,
+            top: -62,
+            child: Container(
+              width: 190,
+              height: 190,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    theme.accent.withValues(alpha: .20),
+                    theme.accent.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 12,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF73D6AE).withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(
+                        color: const Color(0xFF73D6AE).withValues(alpha: .35),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.circle,
+                          color: Color(0xFF73D6AE),
+                          size: 8,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'SYSTEM LIVE',
+                          style: TextStyle(
+                            color: Color(0xFF9BE6C7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '$period · $payrollRecords payroll records',
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Payroll command centre',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: compact ? 27 : 34,
+                  height: 1.05,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.1,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Your workforce, payroll and operations — unified in real time.',
+                style: TextStyle(color: Colors.white60, height: 1.4),
+              ),
+              SizedBox(height: compact ? 22 : 28),
+              if (compact)
+                Column(
+                  children: [
+                    _heroPayrollMetric(
+                      'Gross payroll',
+                      _money(totalGross),
+                      Icons.account_balance_wallet_outlined,
+                      theme.accent,
+                      onGrossTap,
+                    ),
+                    const SizedBox(height: 10),
+                    _heroPayrollMetric(
+                      'Net payroll',
+                      _money(totalNet),
+                      Icons.payments_outlined,
+                      const Color(0xFF73D6AE),
+                      onNetTap,
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: _heroPayrollMetric(
+                        'Gross payroll',
+                        _money(totalGross),
+                        Icons.account_balance_wallet_outlined,
+                        theme.accent,
+                        onGrossTap,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _heroPayrollMetric(
+                        'Net payroll',
+                        _money(totalNet),
+                        Icons.payments_outlined,
+                        const Color(0xFF73D6AE),
+                        onNetTap,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroPayrollMetric(
+    String label,
+    String value,
+    IconData icon,
+    Color accent,
+    VoidCallback onTap,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .055),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: .10)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: .13),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: accent, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .8,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_outward, color: Colors.white38, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dashboardSectionTitle(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(subtitle, style: const TextStyle(color: Colors.white54)),
+      ],
+    );
+  }
+
+  Widget _powerMetricCard({
+    required double width,
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color accent,
+    required String detail,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Ink(
+            padding: const EdgeInsets.all(19),
+            decoration: BoxDecoration(
+              color: _portalTheme.glass,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: .08)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: .13),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(icon, color: accent, size: 22),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.arrow_outward,
+                      color: accent.withValues(alpha: .65),
+                      size: 18,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 Text(
-                  'Payroll Control Centre',
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -.6,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Live data from Supabase',
-                  style: TextStyle(color: Colors.black54),
-                ),
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    _statCard(
-                        'Employees',
-                        employees.length.toString(),
-                        Icons.people,
-                        const Color(0xFF315AD9),
-                        () => _showEmployeeDetails('All Employees', employees)),
-                    _statCard(
-                        'Active Employees',
-                        activeEmployees.toString(),
-                        Icons.verified_user,
-                        const Color(0xFF15965D),
-                        () => _showEmployeeDetails('Active Employees',
-                            employees.where(_isActive).toList())),
-                    _statCard(
-                        'Inactive Employees',
-                        inactiveEmployees.toString(),
-                        Icons.person_off,
-                        Colors.orange,
-                        () => _showEmployeeDetails('Inactive Employees',
-                            employees.where((e) => !_isActive(e)).toList())),
-                    _statCard(
-                        'Departments',
-                        departments.toString(),
-                        Icons.business_center_outlined,
-                        const Color(0xFF8B5CF6),
-                        () => _showDepartmentFlow(employees)),
-                    _statCard(
-                        'Branches',
-                        branches.toString(),
-                        Icons.account_tree_outlined,
-                        const Color(0xFFEF4444),
-                        () => _showBranchFlow(employees)),
-                    _statCard(
-                        'Payroll Records',
-                        payroll.length.toString(),
-                        Icons.receipt_long,
-                        const Color(0xFF8B5CF6),
-                        () => _showPayrollFlow(employees, payroll,
-                            title: 'Payroll Records', metric: 'generate')),
-                    _statCard(
-                        'Net Payroll',
-                        _money(totalNet),
-                        Icons.payments,
-                        const Color(0xFF15965D),
-                        () => _showPayrollFlow(employees, payroll,
-                            title: 'Net Payroll', metric: 'net')),
-                    _statCard(
-                        'Gross Payroll',
-                        _money(totalGross),
-                        Icons.account_balance_wallet,
-                        const Color(0xFF315AD9),
-                        () => _showPayrollFlow(employees, payroll,
-                            title: 'Gross Payroll', metric: 'gross')),
-                  ],
-                ),
-                const SizedBox(height: 25),
-                _panel(
-                  'Administrator Actions',
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _actionButton(
-                          'Employees', Icons.people, () => changePage(1)),
-                      _actionButton(
-                          'Payroll', Icons.payments, () => changePage(2)),
-                      _actionButton(
-                          'Attendance', Icons.access_time, () => changePage(3)),
-                      _actionButton(
-                          'Import CSV', Icons.upload_file, () => changePage(4)),
-                      _actionButton(
-                          'Reports', Icons.bar_chart, () => changePage(6)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _panel(
-                  'Payroll Summary',
-                  Column(
-                    children: [
-                      _reportRow('Total Gross', _money(totalGross)),
-                      _reportRow('Total Net', _money(totalNet)),
-                      _reportRow('Employees', employees.length.toString()),
-                      _reportRow(
-                          'Active Employees', activeEmployees.toString()),
-                      _reportRow(
-                          'Inactive Employees', inactiveEmployees.toString()),
-                    ],
-                  ),
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _dashboardActionDock() {
+    return _panel(
+      'Command shortcuts',
+      Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          _actionButton(
+              'Employees', Icons.groups_2_outlined, () => changePage(1)),
+          _actionButton(
+              'Payroll', Icons.payments_outlined, () => changePage(2)),
+          _actionButton(
+              'Attendance', Icons.schedule_outlined, () => changePage(3)),
+          _actionButton(
+              'Import CSV', Icons.file_upload_outlined, () => changePage(4)),
+          _actionButton(
+              'Reports', Icons.insights_outlined, () => changePage(6)),
+        ],
+      ),
+    );
+  }
+
+  Widget _dashboardPulsePanel({
+    required int employees,
+    required int activeEmployees,
+    required int payrollRecords,
+    required int departments,
+    required VoidCallback onDepartmentsTap,
+    required VoidCallback onPayrollTap,
+  }) {
+    final coverage =
+        employees == 0 ? 0 : (activeEmployees / employees * 100).round();
+    return _panel(
+      'Operational pulse',
+      Column(
+        children: [
+          _dashboardPulseRow(
+            Icons.bolt_outlined,
+            'Workforce active',
+            '$coverage%',
+            const Color(0xFF73D6AE),
+          ),
+          _dashboardPulseRow(
+            Icons.receipt_long_outlined,
+            'Payroll records',
+            payrollRecords.toString(),
+            _portalTheme.accent,
+            onTap: onPayrollTap,
+          ),
+          _dashboardPulseRow(
+            Icons.business_center_outlined,
+            'Departments',
+            departments.toString(),
+            const Color(0xFFB79AE2),
+            onTap: onDepartmentsTap,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dashboardPulseRow(
+    IconData icon,
+    String label,
+    String value,
+    Color accent, {
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(13),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 9),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, color: accent, size: 18),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Text(label, style: const TextStyle(color: Colors.white60)),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 5),
+              const Icon(Icons.chevron_right, color: Colors.white30, size: 18),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

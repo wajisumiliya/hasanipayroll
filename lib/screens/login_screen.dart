@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -30,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   late final AnimationController _entranceController;
   late final AnimationController _ambientController;
+  late final AnimationController _catWalkController;
   late final Animation<double> _heroEntrance;
   late final Animation<double> _formEntrance;
 
@@ -43,6 +45,10 @@ class _LoginScreenState extends State<LoginScreen>
     _ambientController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 9),
+    )..repeat(reverse: true);
+    _catWalkController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
     )..repeat(reverse: true);
     _heroEntrance = CurvedAnimation(
       parent: _entranceController,
@@ -76,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen>
   void dispose() {
     _entranceController.dispose();
     _ambientController.dispose();
+    _catWalkController.dispose();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -717,6 +724,8 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
+              _walkingCat(constraints.maxWidth, compact),
+
               SafeArea(
                 child: Center(
                   child: SingleChildScrollView(
@@ -773,6 +782,55 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _walkingCat(double screenWidth, bool compact) {
+    final catWidth = compact ? 116.0 : 154.0;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: compact ? 5 : 8,
+      height: compact ? 88 : 112,
+      child: IgnorePointer(
+        child: ClipRect(
+          child: AnimatedBuilder(
+            animation: _catWalkController,
+            builder: (context, child) {
+              final progress = _catWalkController.value;
+              final movingRight =
+                  _catWalkController.status == AnimationStatus.reverse;
+              final horizontal =
+                  screenWidth - ((screenWidth + catWidth) * progress);
+              final step = math.sin(progress * math.pi * 24).abs() * 3;
+
+              return Transform.translate(
+                offset: Offset(horizontal, -step),
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.diagonal3Values(
+                      movingRight ? -1 : 1,
+                      1,
+                      1,
+                    ),
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: Image.asset(
+              'assets/login_walking_cat.png',
+              width: catWidth,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              excludeFromSemantics: true,
+            ),
+          ),
+        ),
       ),
     );
   }
