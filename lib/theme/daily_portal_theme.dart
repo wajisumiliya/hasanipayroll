@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+
+import 'realistic_cat_data.dart';
 
 class DailyPortalTheme {
   const DailyPortalTheme({
@@ -316,8 +320,8 @@ class _PortalCatMascotState extends State<PortalCatMascot>
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Image.asset(
-          'assets/realistic_cat_mascot.jpg',
+        child: Image.memory(
+          base64Decode(realisticCatBase64),
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
           errorBuilder: (context, error, stackTrace) => Container(
