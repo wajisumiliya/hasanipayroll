@@ -339,6 +339,14 @@ function normalizeEmployeeId(
   ).toUpperCase();
 }
 
+function normalizeIdentityNumber(value) {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "")
+    .slice(0, 100);
+}
+
 function isValidEmployeeId(
   value,
 ) {
@@ -511,6 +519,25 @@ function createFirstLoginPasswordToken(
       expiresIn: String(OTP_VERIFICATION_MINUTES) + "m",
       issuer: "hasani-payroll",
       audience: "hasani-payroll-otp",
+    },
+  );
+}
+
+function createPasswordResetToken(user) {
+  return jwt.sign(
+    {
+      sub: String(user.id),
+      type: "password-reset",
+      passwordVersion: user.passwordChangedAt
+        ? new Date(user.passwordChangedAt).toISOString()
+        : null,
+      nonce: generateRandomToken(16),
+    },
+    JWT_SECRET,
+    {
+      expiresIn: "10m",
+      issuer: "hasani-payroll",
+      audience: "hasani-payroll-password-reset",
     },
   );
 }
@@ -1172,6 +1199,122 @@ app.post(
       return res.json({ok: true, message: "Password updated successfully."});
     } catch (error) {
       console.error("CHANGE PASSWORD ERROR:", error.message);
+      return genericError(res);
+    }
+  },
+);
+
+// ============================================================
+// FORGOT PASSWORD
+// ============================================================
+
+app.post(
+  "/api/auth/forgot-password/verify",
+  passwordLimiter,
+  async (req, res) => {
+    try {
+      const username = normalizeLogin(req.body?.username);
+      const identityNumber = normalizeIdentityNumber(req.body?.identityNumber);
+
+      if (!username || !identityNumber) {
+        return res.status(400).json({
+          ok: false,
+          message: "Username and IC or passport number are required.",
+        });
+      }
+
+      const user = await findAppUser(username);
+      let identityMatches = false;
+
+      if (user?.isActive === true && user.employeeId) {
+        const employee = await prisma.employee.findUnique({
+          where: { employeeId: normalizeEmployeeId(user.employeeId) },
+          select: { newIcNo: true, oldIcNo: true, passportNo: true },
+        });
+        identityMatches = [employee?.newIcNo, employee?.oldIcNo, employee?.passportNo]
+          .some((value) => value && normalizeIdentityNumber(value) === identityNumber);
+      }
+
+      // Keep this response generic so an attacker cannot discover accounts or IDs.
+      if (!user || !identityMatches) {
+        return res.status(401).json({
+          ok: false,
+          message: "The username and IC or passport number do not match.",
+        });
+      }
+
+      return res.json({
+        ok: true,
+        message: "Identity verified.",
+        resetToken: createPasswordResetToken(user),
+        expiresIn: 600,
+      });
+    } catch (error) {
+      console.error("FORGOT PASSWORD VERIFY ERROR:", error.message);
+      return genericError(res);
+    }
+  },
+);
+
+app.post(
+  "/api/auth/forgot-password/reset",
+  passwordLimiter,
+  async (req, res) => {
+    try {
+      const resetToken = String(req.body?.resetToken ?? "");
+      const newPassword = String(req.body?.newPassword ?? "");
+
+      if (newPassword.length < 8 || newPassword.length > 128) {
+        return res.status(400).json({
+          ok: false,
+          message: "Password must contain between 8 and 128 characters.",
+        });
+      }
+
+      let payload;
+      try {
+        payload = jwt.verify(resetToken, JWT_SECRET, {
+          issuer: "hasani-payroll",
+          audience: "hasani-payroll-password-reset",
+        });
+      } catch {
+        return res.status(401).json({
+          ok: false,
+          message: "The password reset session is invalid or has expired.",
+        });
+      }
+
+      if (payload.type !== "password-reset") {
+        return res.status(401).json({ ok: false, message: "Invalid password reset session." });
+      }
+
+      const user = await prisma.app_user.findUnique({ where: { id: String(payload.sub) } });
+      const currentVersion = user?.passwordChangedAt
+        ? new Date(user.passwordChangedAt).toISOString()
+        : null;
+      if (!user || user.isActive !== true || payload.passwordVersion !== currentVersion) {
+        return res.status(401).json({
+          ok: false,
+          message: "The password reset session is invalid or has already been used.",
+        });
+      }
+
+      if (await verifyPassword(newPassword, user.passwordHash)) {
+        return res.status(400).json({ ok: false, message: "New password must be different." });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await pool.query(
+        `UPDATE public."app_user"
+         SET "passwordHash" = $1, "mustChangePassword" = FALSE,
+             "passwordChangedAt" = NOW(), "updatedAt" = NOW()
+         WHERE "id" = $2`,
+        [passwordHash, user.id],
+      );
+
+      return res.json({ ok: true, message: "Password reset successfully. You can now sign in." });
+    } catch (error) {
+      console.error("FORGOT PASSWORD RESET ERROR:", error.message);
       return genericError(res);
     }
   },
@@ -3606,4 +3749,3 @@ process.on(
     shutdown("SIGTERM"),
 
 );
-

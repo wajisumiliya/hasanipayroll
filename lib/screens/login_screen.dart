@@ -85,6 +85,142 @@ class _LoginScreenState extends State<LoginScreen>
   // LOGIN
   // ============================================================
 
+  Future<void> _showForgotPasswordDialog() async {
+    final username = TextEditingController(text: usernameController.text.trim());
+    final identity = TextEditingController();
+    final newPassword = TextEditingController();
+    final confirmPassword = TextEditingController();
+    String? resetToken;
+    String? dialogError;
+    bool submitting = false;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+
+    final completed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> submit() async {
+            if (submitting) return;
+            if (resetToken == null) {
+              if (username.text.trim().isEmpty || identity.text.trim().isEmpty) {
+                setDialogState(() => dialogError =
+                    'Enter your username and IC or passport number.');
+                return;
+              }
+              setDialogState(() { submitting = true; dialogError = null; });
+              final result = await service.verifyForgotPasswordIdentity(
+                username: username.text,
+                identityNumber: identity.text,
+              );
+              if (!dialogContext.mounted) return;
+              setDialogState(() {
+                submitting = false;
+                if (result['ok'] == true && result['resetToken'] != null) {
+                  resetToken = result['resetToken'].toString();
+                } else {
+                  dialogError = result['message']?.toString() ??
+                      'The details entered do not match.';
+                }
+              });
+              return;
+            }
+
+            if (newPassword.text.length < 8) {
+              setDialogState(() => dialogError =
+                  'Password must contain at least 8 characters.');
+              return;
+            }
+            if (newPassword.text != confirmPassword.text) {
+              setDialogState(() => dialogError = 'New passwords do not match.');
+              return;
+            }
+            setDialogState(() { submitting = true; dialogError = null; });
+            final result = await service.resetForgottenPassword(
+              resetToken: resetToken!,
+              newPassword: newPassword.text,
+            );
+            if (!dialogContext.mounted) return;
+            if (result['ok'] == true) {
+              Navigator.of(dialogContext).pop(true);
+            } else {
+              setDialogState(() {
+                submitting = false;
+                dialogError = result['message']?.toString() ??
+                    'Unable to reset your password.';
+              });
+            }
+          }
+
+          InputDecoration fieldDecoration(String label, IconData icon) =>
+              InputDecoration(labelText: label, prefixIcon: Icon(icon),
+                  border: const OutlineInputBorder());
+
+          return AlertDialog(
+            title: Text(resetToken == null ? 'Forgot Password' : 'Create New Password'),
+            content: SizedBox(
+              width: 430,
+              child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(resetToken == null
+                      ? 'Verify your account using the IC or passport number in your employee record.'
+                      : 'Identity verified. Choose a new password for your account.'),
+                  const SizedBox(height: 18),
+                  if (resetToken == null) ...[
+                    TextField(controller: username, enabled: !submitting,
+                      decoration: fieldDecoration('Username / Employee ID', Icons.person_outline)),
+                    const SizedBox(height: 14),
+                    TextField(controller: identity, enabled: !submitting,
+                      textInputAction: TextInputAction.done, onSubmitted: (_) => submit(),
+                      decoration: fieldDecoration('IC / Passport Number', Icons.badge_outlined)),
+                  ] else ...[
+                    TextField(controller: newPassword, enabled: !submitting,
+                      obscureText: obscureNew,
+                      decoration: fieldDecoration('New Password', Icons.lock_outline).copyWith(
+                        suffixIcon: IconButton(onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                          icon: Icon(obscureNew ? Icons.visibility : Icons.visibility_off)))),
+                    const SizedBox(height: 14),
+                    TextField(controller: confirmPassword, enabled: !submitting,
+                      obscureText: obscureConfirm, textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => submit(),
+                      decoration: fieldDecoration('Confirm New Password', Icons.lock_reset).copyWith(
+                        suffixIcon: IconButton(onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                          icon: Icon(obscureConfirm ? Icons.visibility : Icons.visibility_off)))),
+                  ],
+                  if (dialogError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(dialogError!, style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w600)),
+                  ],
+                ]),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: submitting ? null : () => Navigator.pop(dialogContext),
+                child: const Text('CANCEL')),
+              FilledButton(onPressed: submitting ? null : submit,
+                child: submitting
+                    ? const SizedBox(width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(resetToken == null ? 'VERIFY IDENTITY' : 'RESET PASSWORD')),
+            ],
+          );
+        },
+      ),
+    );
+    username.dispose();
+    identity.dispose();
+    newPassword.dispose();
+    confirmPassword.dispose();
+    if (completed == true && mounted) {
+      passwordController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Password reset successfully. Sign in with your new password.'),
+        backgroundColor: Colors.green,
+      ));
+    }
+  }
+
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
 
@@ -863,6 +999,20 @@ class _LoginScreenState extends State<LoginScreen>
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
                       color: theme.buttonEnd,
+                    ),
+                  ),
+                ),
+              ),
+
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: loading ? null : _showForgotPasswordDialog,
+                  child: const Text(
+                    'Forgot password?',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),

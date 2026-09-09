@@ -213,6 +213,36 @@ class AppService extends ChangeNotifier {
   // PASSWORD
   // ==========================================================================
 
+  Future<Map<String, dynamic>> verifyForgotPasswordIdentity({
+    required String username,
+    required String identityNumber,
+  }) async {
+    try {
+      return await _postAuth('/api/auth/forgot-password/verify', {
+        'username': username.trim(),
+        'identityNumber': identityNumber.trim(),
+      });
+    } catch (e) {
+      debugPrint('Forgot password verification failed: $e');
+      return {'ok': false, 'message': 'Unable to verify your identity. Please try again.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> resetForgottenPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    try {
+      return await _postAuth('/api/auth/forgot-password/reset', {
+        'resetToken': resetToken,
+        'newPassword': newPassword,
+      });
+    } catch (e) {
+      debugPrint('Forgot password reset failed: $e');
+      return {'ok': false, 'message': 'Unable to reset your password. Please try again.'};
+    }
+  }
+
   Future<bool> updatePassword({
     required String currentPassword,
     required String newPassword,
