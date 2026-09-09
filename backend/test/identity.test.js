@@ -25,7 +25,10 @@ test("findActiveEmployeeIdentity queries the current employees schema", async ()
 
   assert.equal(identity, "AE214357");
   assert.match(capturedQuery, /FROM public\.employees/);
-  assert.match(capturedQuery, /is_active IS TRUE/);
+  assert.match(capturedQuery, /to_jsonb\(employee_row\) ->> 'new_ic_no'/);
+  assert.match(capturedQuery, /to_jsonb\(employee_row\) ->> 'newIcNo'/);
+  assert.match(capturedQuery, /to_jsonb\(employee_row\) ->> 'employee_id'/);
+  assert.match(capturedQuery, /to_jsonb\(employee_row\) ->> 'is_active'/);
   assert.deepEqual(capturedValues, ["EMP-001"]);
 });
 
