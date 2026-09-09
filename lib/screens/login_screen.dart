@@ -599,6 +599,7 @@ class _LoginScreenState extends State<LoginScreen>
                     width: compact ? 96 : 190,
                     height: compact ? 122 : 240,
                     compact: compact,
+                    walkDistance: compact ? 34 : 115,
                   ),
                 ),
               ),

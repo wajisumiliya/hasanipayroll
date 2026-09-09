@@ -344,6 +344,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   width: 150,
                   height: 190,
                   compact: true,
+                  walkDistance: 32,
                 ),
               ),
             ),

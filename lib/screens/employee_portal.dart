@@ -820,6 +820,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
             width: 120,
             height: 145,
             compact: true,
+            walkDistance: 14,
           ),
         ],
       ),

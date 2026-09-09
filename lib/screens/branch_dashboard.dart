@@ -228,6 +228,7 @@ class _BranchPortalState extends State<BranchPortal> {
                   width: 150,
                   height: 190,
                   compact: true,
+                  walkDistance: 32,
                 ),
               ),
             ),

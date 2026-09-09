@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -119,10 +120,12 @@ class PortalDayIndicator extends StatelessWidget {
     super.key,
     required this.theme,
     this.compact = false,
+    this.walkDistance = 28,
   });
 
   final DailyPortalTheme theme;
   final bool compact;
+  final double walkDistance;
 
   @override
   Widget build(BuildContext context) {
@@ -268,11 +271,13 @@ class PortalCatMascot extends StatefulWidget {
     this.width = 180,
     this.height = 220,
     this.compact = false,
+    this.walkDistance = 28,
   });
 
   final double width;
   final double height;
   final bool compact;
+  final double walkDistance;
 
   @override
   State<PortalCatMascot> createState() => _PortalCatMascotState();
@@ -282,12 +287,12 @@ class _PortalCatMascotState extends State<PortalCatMascot>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2600),
-  )..repeat(reverse: true);
+    duration: const Duration(milliseconds: 6200),
+  )..repeat();
 
   late final Animation<double> _float = CurvedAnimation(
     parent: _controller,
-    curve: Curves.easeInOut,
+    curve: Curves.linear,
   );
 
   @override
@@ -301,9 +306,26 @@ class _PortalCatMascotState extends State<PortalCatMascot>
     return AnimatedBuilder(
       animation: _float,
       builder: (context, child) {
+        final phase = _float.value * math.pi * 2;
+        final horizontal = math.sin(phase) * widget.walkDistance;
+        final step = math.sin(phase * 4).abs();
+        final facingLeft = math.cos(phase) < 0;
+        final tilt = math.sin(phase * 4) * .012;
+
         return Transform.translate(
-          offset: Offset(0, -4 * _float.value),
-          child: child,
+          offset: Offset(horizontal, -step * 5),
+          child: Transform.rotate(
+            angle: tilt,
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.diagonal3Values(
+                facingLeft ? -1 : 1,
+                1,
+                1,
+              ),
+              child: child,
+            ),
+          ),
         );
       },
       child: Container(
