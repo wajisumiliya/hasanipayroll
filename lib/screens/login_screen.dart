@@ -34,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen>
   late final AnimationController _catWalkController;
   late final Animation<double> _heroEntrance;
   late final Animation<double> _formEntrance;
+  bool _catFramesCached = false;
 
   @override
   void initState() {
@@ -60,6 +61,16 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _entranceController.forward();
     _restoreSession();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_catFramesCached) return;
+    _catFramesCached = true;
+    for (var frame = 1; frame <= 8; frame++) {
+      precacheImage(AssetImage('assets/login_cat_walk_$frame.png'), context);
+    }
   }
 
   Future<void> _restoreSession() async {
@@ -786,13 +797,14 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _walkingCat(double screenWidth, bool compact) {
-    final catWidth = compact ? 142.0 : 190.0;
+    final catWidth = compact ? 160.0 : 210.0;
+    final catHeight = compact ? 116.0 : 150.0;
 
     return Positioned(
       left: 0,
       right: 0,
       bottom: compact ? 8 : 12,
-      height: compact ? 106 : 138,
+      height: catHeight,
       child: IgnorePointer(
         child: ClipRect(
           child: AnimatedBuilder(
@@ -805,38 +817,42 @@ class _LoginScreenState extends State<LoginScreen>
               final step = math.sin(progress * math.pi * 24).abs() * 3;
               final frameNumber = ((progress * 80).floor() % 8) + 1;
 
-              return Transform.translate(
-                offset: Offset(horizontal, -step),
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.diagonal3Values(
-                      movingRight ? -1 : 1,
-                      1,
-                      1,
-                    ),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: .28),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: horizontal,
+                    bottom: step,
+                    width: catWidth,
+                    height: catHeight,
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.diagonal3Values(
+                        movingRight ? -1 : 1,
+                        1,
+                        1,
                       ),
-                      child: Image.asset(
-                        'assets/login_cat_walk_$frameNumber.png',
-                        width: catWidth,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
-                        gaplessPlayback: true,
-                        excludeFromSemantics: true,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .28),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Image.asset(
+                          'assets/login_cat_walk_$frameNumber.png',
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                          gaplessPlayback: true,
+                          excludeFromSemantics: true,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               );
             },
           ),
