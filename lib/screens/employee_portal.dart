@@ -6,6 +6,7 @@ import '../models/payroll.dart';
 import '../services/app_service.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
+import '../widgets/walking_cat.dart';
 import 'employee_ot_request_page.dart';
 import 'login_screen.dart';
 
@@ -20,6 +21,9 @@ class _EmployeePortalState extends State<EmployeePortal> {
   final AppService service = AppService.instance;
 
   int tab = 0;
+
+  _EmployeeDailyTheme get _dailyTheme =>
+      _EmployeeDailyTheme.forWeekday(DateTime.now().weekday);
 
   DateTime _attendanceMonth =
       DateTime(DateTime.now().year, DateTime.now().month);
@@ -116,23 +120,42 @@ class _EmployeePortalState extends State<EmployeePortal> {
   // =============================================================
 
   Widget _desktop() {
-    return Row(
-      children: [
-        _desktopSidebar(),
-        Expanded(
-          child: Column(
-            children: [
-              _desktopTopBar(),
-              Expanded(
-                child: Container(
-                  color: const Color(0xFFF5F7FB),
-                  child: _page(),
-                ),
-              ),
-            ],
-          ),
+    final dailyTheme = _dailyTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dailyTheme.pageBackground,
         ),
-      ],
+      ),
+      child: Row(
+        children: [
+          _desktopSidebar(),
+          Expanded(
+            child: Column(
+              children: [
+                _desktopTopBar(),
+                Expanded(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          dailyTheme.surfaceTint.withValues(alpha: .96),
+                          const Color(0xFFF5F7FB),
+                        ],
+                      ),
+                    ),
+                    child: _page(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -141,9 +164,21 @@ class _EmployeePortalState extends State<EmployeePortal> {
   // =============================================================
 
   Widget _desktopSidebar() {
+    final dailyTheme = _dailyTheme;
     return Container(
-      width: 240,
-      color: Colors.white,
+      width: 250,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dailyTheme.sidebar,
+        ),
+        border: Border(
+          right: BorderSide(
+            color: dailyTheme.accent.withValues(alpha: .35),
+          ),
+        ),
+      ),
       child: Column(
         children: [
           const SizedBox(height: 25),
@@ -254,14 +289,14 @@ class _EmployeePortalState extends State<EmployeePortal> {
       ),
       child: ListTile(
         selected: selected,
-        selectedTileColor: const Color(0xFFEAF0FF),
+        selectedTileColor: _dailyTheme.accent.withValues(alpha: .18),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
         leading: Icon(
           icon,
           color: selected
-              ? const Color(0xFF2D55D8)
+              ? _dailyTheme.accent
               : title == 'Logout'
                   ? Colors.red
                   : Colors.black54,
@@ -273,8 +308,8 @@ class _EmployeePortalState extends State<EmployeePortal> {
             color: title == 'Logout'
                 ? Colors.red
                 : selected
-                    ? const Color(0xFF2D55D8)
-                    : Colors.black87,
+                    ? Colors.white
+                    : Colors.white70,
           ),
         ),
         onTap: () {
@@ -296,9 +331,17 @@ class _EmployeePortalState extends State<EmployeePortal> {
   // =============================================================
 
   Widget _desktopTopBar() {
+    final dailyTheme = _dailyTheme;
     return Container(
-      height: 70,
-      color: Colors.white,
+      height: 78,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: dailyTheme.header),
+        border: Border(
+          bottom: BorderSide(
+            color: dailyTheme.accent.withValues(alpha: .30),
+          ),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(
         horizontal: 28,
       ),
@@ -307,6 +350,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
           Text(
             _pageTitle().toUpperCase(),
             style: const TextStyle(
+              color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -314,7 +358,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
           const Spacer(),
           CircleAvatar(
             radius: 18,
-            backgroundColor: const Color(0xFFEAF0FF),
+            backgroundColor: _dailyTheme.accent.withValues(alpha: .20),
             child: const Icon(
               Icons.person,
               color: Color(0xFF2D55D8),
@@ -328,6 +372,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
               Text(
                 employee!.name,
                 style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -356,8 +401,15 @@ class _EmployeePortalState extends State<EmployeePortal> {
   // =============================================================
 
   Widget _mobile() {
+    final dailyTheme = _dailyTheme;
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: Colors.white,
+        flexibleSpace: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: dailyTheme.header),
+          ),
+        ),
         title: Text(_mobileTitle()),
         actions: [
           IconButton(
@@ -367,11 +419,21 @@ class _EmployeePortalState extends State<EmployeePortal> {
           ),
         ],
       ),
-      body: Container(
-        color: const Color(0xFFF5F7FB),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              dailyTheme.surfaceTint,
+              const Color(0xFFF5F7FB),
+            ],
+          ),
+        ),
         child: _page(),
       ),
       bottomNavigationBar: NavigationBar(
+        indicatorColor: dailyTheme.accent.withValues(alpha: .22),
         selectedIndex: tab == 6
             ? 3
             : (tab == 3
@@ -386,30 +448,18 @@ class _EmployeePortalState extends State<EmployeePortal> {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(
-              Icons.home_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.home,
-            ),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.receipt_long_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.receipt_long,
-            ),
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
             label: 'Payslips',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.calendar_month_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.calendar_month,
-            ),
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
             label: 'Attendance',
           ),
           NavigationDestination(
@@ -418,12 +468,8 @@ class _EmployeePortalState extends State<EmployeePortal> {
             label: 'OT Request',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.person_outline,
-            ),
-            selectedIcon: Icon(
-              Icons.person,
-            ),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
@@ -671,68 +717,98 @@ class _EmployeePortalState extends State<EmployeePortal> {
   // =============================================================
 
   Widget _welcome() {
+    final dailyTheme = _dailyTheme;
     final name = employee!.name.trim();
-
     final parts =
         name.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).take(2).toList();
-
-    final initials = parts.isEmpty
-        ? '?'
-        : parts
-            .map(
-              (e) => e[0].toUpperCase(),
-            )
-            .join();
+    final initials =
+        parts.isEmpty ? '?' : parts.map((e) => e[0].toUpperCase()).join();
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 18
+            ? 'Good afternoon'
+            : 'Good evening';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      constraints: const BoxConstraints(minHeight: 156),
+      padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D55D8),
-        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dailyTheme.hero,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: dailyTheme.accent.withValues(alpha: .42),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: dailyTheme.accent.withValues(alpha: .18),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 27,
-            backgroundColor: Colors.white,
+            radius: 29,
+            backgroundColor: Colors.white.withValues(alpha: .16),
             child: Text(
               initials,
-              style: const TextStyle(
-                color: Color(0xFF2D55D8),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+              style: TextStyle(
+                color: dailyTheme.accent,
+                fontWeight: FontWeight.w900,
+                fontSize: 17,
               ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 15),
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Welcome,',
-                  style: TextStyle(
-                    color: Colors.white70,
-                  ),
+                Text(
+                  greeting + ',',
+                  style: const TextStyle(color: Colors.white70),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   employee!.name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 5),
                 Text(
-                  employee!.employeeId,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  employee!.employeeId +
+                      '  •  ' +
+                      DateFormat('EEEE, d MMMM').format(DateTime.now()),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+                const SizedBox(height: 13),
+                Text(
+                  '“' + dailyTheme.quote + '”',
+                  style: TextStyle(
+                    color: dailyTheme.accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
                   ),
                 ),
               ],
+            ),
+          ),
+          SizedBox(
+            width: 120,
+            child: WalkingCat(
+              height: 72,
+              catCount: 1,
             ),
           ),
         ],
@@ -989,7 +1065,8 @@ class _EmployeePortalState extends State<EmployeePortal> {
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: const Color(0xFFEAF0FF),
+                        backgroundColor:
+                            _dailyTheme.accent.withValues(alpha: .20),
                         child: Text(
                           currentEmployee.name.isEmpty
                               ? '?'
@@ -1530,5 +1607,100 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
         ),
       ),
     );
+  }
+}
+
+class _EmployeeDailyTheme {
+  const _EmployeeDailyTheme({
+    required this.accent,
+    required this.quote,
+    required this.sidebar,
+    required this.header,
+    required this.hero,
+    required this.pageBackground,
+    required this.surfaceTint,
+  });
+
+  final Color accent;
+  final String quote;
+  final List<Color> sidebar;
+  final List<Color> header;
+  final List<Color> hero;
+  final List<Color> pageBackground;
+  final Color surfaceTint;
+
+  static _EmployeeDailyTheme forWeekday(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return const _EmployeeDailyTheme(
+          accent: Color(0xFF6FFFD8),
+          quote: 'A focused mind creates extraordinary days.',
+          sidebar: [Color(0xFF061530), Color(0xFF102C55)],
+          header: [Color(0xFF0A2148), Color(0xFF183B74)],
+          hero: [Color(0xFF152E78), Color(0xFF075D64)],
+          pageBackground: [Color(0xFF071A3D), Color(0xFF063C47)],
+          surfaceTint: Color(0xFFE9F8F6),
+        );
+      case DateTime.tuesday:
+        return const _EmployeeDailyTheme(
+          accent: Color(0xFFFF8B83),
+          quote: 'Small steps create great progress.',
+          sidebar: [Color(0xFF07162F), Color(0xFF3B2440)],
+          header: [Color(0xFF102B52), Color(0xFF633044)],
+          hero: [Color(0xFF183C70), Color(0xFF8B4050)],
+          pageBackground: [Color(0xFF07162F), Color(0xFF7A2F42)],
+          surfaceTint: Color(0xFFFFF0EF),
+        );
+      case DateTime.wednesday:
+        return const _EmployeeDailyTheme(
+          accent: Color(0xFF5DFFD3),
+          quote: 'Halfway there. Keep moving forward.',
+          sidebar: [Color(0xFF041D32), Color(0xFF064B53)],
+          header: [Color(0xFF062842), Color(0xFF08616A)],
+          hero: [Color(0xFF075464), Color(0xFF087765)],
+          pageBackground: [Color(0xFF041D32), Color(0xFF075A62)],
+          surfaceTint: Color(0xFFE8F8F5),
+        );
+      case DateTime.thursday:
+        return const _EmployeeDailyTheme(
+          accent: Color(0xFFFFB39E),
+          quote: 'Better days are built by consistent effort.',
+          sidebar: [Color(0xFF17112F), Color(0xFF402553)],
+          header: [Color(0xFF261948), Color(0xFF633451)],
+          hero: [Color(0xFF51327A), Color(0xFF74405A)],
+          pageBackground: [Color(0xFF17112F), Color(0xFF4B243A)],
+          surfaceTint: Color(0xFFF8EEF7),
+        );
+      case DateTime.friday:
+        return const _EmployeeDailyTheme(
+          accent: Color(0xFFFFD76A),
+          quote: 'Finish strong. You make it happen.',
+          sidebar: [Color(0xFF080B12), Color(0xFF252017)],
+          header: [Color(0xFF11151D), Color(0xFF40341C)],
+          hero: [Color(0xFF171B23), Color(0xFF6A501D)],
+          pageBackground: [Color(0xFF080B12), Color(0xFF242018)],
+          surfaceTint: Color(0xFFFFF8E7),
+        );
+      case DateTime.saturday:
+        return const _EmployeeDailyTheme(
+          accent: Color(0xFFB8FF45),
+          quote: 'Good energy brings great opportunities.',
+          sidebar: [Color(0xFF061C54), Color(0xFF074583)],
+          header: [Color(0xFF082769), Color(0xFF0865A2)],
+          hero: [Color(0xFF0846A4), Color(0xFF0A7790)],
+          pageBackground: [Color(0xFF061C54), Color(0xFF0757BD)],
+          surfaceTint: Color(0xFFF1FBE6),
+        );
+      default:
+        return const _EmployeeDailyTheme(
+          accent: Color(0xFFD8E7FF),
+          quote: 'A calm mind is a powerful mind.',
+          sidebar: [Color(0xFF071326), Color(0xFF152541)],
+          header: [Color(0xFF0A1930), Color(0xFF243B5D)],
+          hero: [Color(0xFF152A4A), Color(0xFF344966)],
+          pageBackground: [Color(0xFF071326), Color(0xFF172B4A)],
+          surfaceTint: Color(0xFFF0F4FA),
+        );
+    }
   }
 }
