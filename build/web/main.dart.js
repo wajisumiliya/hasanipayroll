@@ -124575,12 +124575,12 @@ $1(a){var s=this
 return new A.hX(new A.b19(s.a,s.b,s.c,s.d,a,s.e,s.f),null)},
 $S:39}
 A.b19.prototype={
-$2(a,b){var s,r=this,q=null,p=r.a,o=r.c,n=r.d,m=r.e,l=r.f,k=r.r,j=new A.b1b(p,r.b,o,n,b,m,l,k),i=new A.b1a(),h=p.b==null,g=A.E(h?"Forgot Password":"Create New Password",q,q,q,q,q,q,q),f=t.p,e=A.b([A.E(h?"Verify your account using the IC or passport number in your employee record.":"Identity verified. Choose a new password for your account.",q,q,q,q,q,q,q),B.ej],f)
+$2(a,b){var s,r=this,q=null,p=r.a,o=r.c,n=r.d,m=r.e,l=r.f,k=r.r,j=new A.b1b(p,r.b,o,n,b,m,l,k),i=new A.b1a(),h=p.b==null,g=A.E(h?"Forgot Password":"Create New Password",q,q,q,q,q,q,q),f=t.p,e=A.b([A.E(h?"Verify your account using the IC number in your employee record.":"Identity verified. Choose a new password for your account.",q,q,q,q,q,q,q),B.ej],f)
 h=p.b
 s=!p.c
 if(h==null){o=A.fw(q,B.bj,!1,q,!0,B.V,q,A.fO(),o,q,q,q,q,q,2,i.$2("Username / Employee ID",B.u9),B.ap,!0,q,!0,s,!1,q,B.bm,q,q,q,q,q,q,q,q,1,q,q,!1,"\u2022",q,q,q,q,q,!1,q,q,!1,q,!0,q,B.aL,q,q,q,q,q,q,q,q,q,q,q,q,!0,B.at,q,B.bG,q,q,q,q)
 l=p.c
-B.m.N(e,A.b([o,B.dt,A.fw(q,B.bj,!1,q,!0,B.V,q,A.fO(),n,q,q,q,q,q,2,i.$2("IC / Passport Number",B.aaa),B.ap,!0,q,!0,!l,!1,q,B.bm,q,q,q,q,q,q,q,q,1,q,q,!1,"\u2022",q,q,q,new A.b0Y(j),q,!1,q,q,!1,q,!0,q,B.aL,q,q,q,q,q,q,q,q,q,q,q,q,!0,B.at,q,B.bG,q,B.hM,q,q)],f))}else{o=p.e
+B.m.N(e,A.b([o,B.dt,A.fw(q,B.bj,!1,q,!0,B.V,q,A.fO(),n,q,q,q,q,q,2,i.$2("IC Number",B.aaa),B.ap,!0,q,!0,!l,!1,q,B.bm,q,q,q,q,q,q,q,q,1,q,q,!1,"\u2022",q,q,q,new A.b0Y(j),q,!1,q,q,!1,q,!0,q,B.aL,q,q,q,q,q,q,q,q,q,q,q,q,!0,B.at,q,B.bG,q,B.hM,q,q)],f))}else{o=p.e
 n=i.$2("New Password",B.iF)
 o=A.fw(q,B.bj,!1,q,!0,B.V,q,A.fO(),l,q,q,q,q,q,2,n.Jk(A.dl(q,q,q,A.ef(p.e?B.ua:B.ub,q,q,q),q,q,new A.b0Z(p,b),q,q,q,q)),B.ap,!0,q,!0,s,!1,q,B.bm,q,q,q,q,q,q,q,q,1,q,q,o,"\u2022",q,q,q,q,q,!1,q,q,!1,q,!0,q,B.aL,q,q,q,q,q,q,q,q,q,q,q,q,!0,B.at,q,B.bG,q,q,q,q)
 n=p.c
@@ -124637,7 +124637,7 @@ case 1:return A.x(q,r)}})
 return A.y($async$$0,r)},
 $S:3}
 A.b12.prototype={
-$0(){return this.a.a="Enter your username and IC or passport number."},
+$0(){return this.a.a="Enter your username and IC number."},
 $S:0}
 A.b13.prototype={
 $0(){var s=this.a

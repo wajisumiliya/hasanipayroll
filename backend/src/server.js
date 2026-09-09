@@ -12,6 +12,10 @@ import nodemailer from "nodemailer";
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import {
+  findActiveEmployeeIdentity,
+  normalizeIdentityNumber,
+} from "./identity.js";
 
 // ============================================================
 // CONFIGURATION
@@ -337,14 +341,6 @@ function normalizeEmployeeId(
   return normalizeLogin(
     value,
   ).toUpperCase();
-}
-
-function normalizeIdentityNumber(value) {
-  return String(value ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/[\s-]+/g, "")
-    .slice(0, 100);
 }
 
 function isValidEmployeeId(
@@ -1231,18 +1227,13 @@ app.post(
         // table. Do not use Prisma's legacy `Employee` model here: it maps to
         // a different table and includes identity columns that do not exist in
         // the current schema.
-        const employeeResult = await pool.query(
-          `SELECT new_ic_no
-           FROM public.employees
-           WHERE UPPER(TRIM(employee_id)) = $1
-             AND is_active = TRUE
-           LIMIT 1`,
-          [normalizeEmployeeId(user.employeeId)],
+        const employeeIdentity = await findActiveEmployeeIdentity(
+          pool,
+          user.employeeId,
         );
-        const employee = employeeResult.rows[0];
         identityMatches = Boolean(
-          employee?.new_ic_no &&
-            normalizeIdentityNumber(employee.new_ic_no) === identityNumber,
+          employeeIdentity &&
+            normalizeIdentityNumber(employeeIdentity) === identityNumber,
         );
       }
 
