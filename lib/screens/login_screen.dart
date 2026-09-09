@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen>
             if (resetToken == null) {
               if (username.text.trim().isEmpty || identity.text.trim().isEmpty) {
                 setDialogState(() => dialogError =
-                    'Enter your username and IC or passport number.');
+                    'Enter your username and IC number.');
                 return;
               }
               setDialogState(() { submitting = true; dialogError = null; });
@@ -163,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen>
               child: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(resetToken == null
-                      ? 'Verify your account using the IC or passport number in your employee record.'
+                      ? 'Verify your account using the IC number in your employee record.'
                       : 'Identity verified. Choose a new password for your account.'),
                   const SizedBox(height: 18),
                   if (resetToken == null) ...[
@@ -172,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen>
                     const SizedBox(height: 14),
                     TextField(controller: identity, enabled: !submitting,
                       textInputAction: TextInputAction.done, onSubmitted: (_) => submit(),
-                      decoration: fieldDecoration('IC / Passport Number', Icons.badge_outlined)),
+                      decoration: fieldDecoration('IC Number', Icons.badge_outlined)),
                   ] else ...[
                     TextField(controller: newPassword, enabled: !submitting,
                       obscureText: obscureNew,

@@ -1219,7 +1219,7 @@ app.post(
       if (!username || !identityNumber) {
         return res.status(400).json({
           ok: false,
-          message: "Username and IC or passport number are required.",
+          message: "Username and IC number are required.",
         });
       }
 
@@ -1227,19 +1227,30 @@ app.post(
       let identityMatches = false;
 
       if (user?.isActive === true && user.employeeId) {
-        const employee = await prisma.employee.findUnique({
-          where: { employeeId: normalizeEmployeeId(user.employeeId) },
-          select: { newIcNo: true, oldIcNo: true, passportNo: true },
-        });
-        identityMatches = [employee?.newIcNo, employee?.oldIcNo, employee?.passportNo]
-          .some((value) => value && normalizeIdentityNumber(value) === identityNumber);
+        // Employee profile data is stored in the Supabase-style `employees`
+        // table. Do not use Prisma's legacy `Employee` model here: it maps to
+        // a different table and includes identity columns that do not exist in
+        // the current schema.
+        const employeeResult = await pool.query(
+          `SELECT new_ic_no
+           FROM public.employees
+           WHERE UPPER(TRIM(employee_id)) = $1
+             AND is_active = TRUE
+           LIMIT 1`,
+          [normalizeEmployeeId(user.employeeId)],
+        );
+        const employee = employeeResult.rows[0];
+        identityMatches = Boolean(
+          employee?.new_ic_no &&
+            normalizeIdentityNumber(employee.new_ic_no) === identityNumber,
+        );
       }
 
       // Keep this response generic so an attacker cannot discover accounts or IDs.
       if (!user || !identityMatches) {
         return res.status(401).json({
           ok: false,
-          message: "The username and IC or passport number do not match.",
+          message: "The username and IC number do not match.",
         });
       }
 
