@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/payroll.dart';
 import '../services/app_service.dart';
+import '../theme/daily_portal_theme.dart';
 import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
@@ -21,6 +22,8 @@ class BranchPortal extends StatefulWidget {
 
 class _BranchPortalState extends State<BranchPortal> {
   final AppService service = AppService.instance;
+
+  DailyPortalTheme get _portalTheme => DailyPortalTheme.today();
 
   int selectedPage = 0;
 
@@ -170,23 +173,44 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _desktop() {
-    return Row(
-      children: [
-        _sidebar(),
-        Expanded(
-          child: Column(
-            children: [
-              _topBar(),
-              Expanded(
-                child: Container(
-                  color: const Color(0xFFF5F7FB),
-                  child: _currentPage(),
-                ),
-              ),
-            ],
-          ),
+    final theme = _portalTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: theme.background,
         ),
-      ],
+      ),
+      child: Row(
+        children: [
+          _sidebar(),
+          Expanded(
+            child: Column(
+              children: [
+                _topBar(),
+                Expanded(child: _portalPage(_currentPage())),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _portalPage(Widget child) {
+    final theme = _portalTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: selectedPage == 0
+              ? theme.background
+              : [theme.surfaceTint, const Color(0xFFF5F7FB)],
+        ),
+      ),
+      child: child,
     );
   }
 
@@ -197,6 +221,12 @@ class _BranchPortalState extends State<BranchPortal> {
   Widget _mobile() {
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: Colors.white,
+        flexibleSpace: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: _portalTheme.header),
+          ),
+        ),
         title: Text(_pageTitle()),
         actions: [
           IconButton(
@@ -251,10 +281,7 @@ class _BranchPortalState extends State<BranchPortal> {
           ),
         ),
       ),
-      body: Container(
-        color: const Color(0xFFF5F7FB),
-        child: _currentPage(),
-      ),
+      body: _portalPage(_currentPage()),
     );
   }
 
@@ -264,8 +291,17 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Widget _sidebar() {
     return Container(
-      width: 240,
-      color: Colors.white,
+      width: 250,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: _portalTheme.sidebar,
+        ),
+        border: Border(
+          right: BorderSide(color: _portalTheme.glassBorder),
+        ),
+      ),
       child: Column(
         children: [
           _sidebarHeader(),
@@ -420,19 +456,19 @@ class _BranchPortalState extends State<BranchPortal> {
       ),
       child: ListTile(
         selected: selected,
-        selectedTileColor: const Color(0xFFE7F7EF),
+        selectedTileColor: _portalTheme.accent.withValues(alpha: .18),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
         leading: Icon(
           icon,
-          color: selected ? const Color(0xFF15965D) : Colors.black54,
+          color: selected ? _portalTheme.accent : Colors.white60,
         ),
         title: Text(
           title,
           style: TextStyle(
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? const Color(0xFF15965D) : Colors.black87,
+            color: selected ? Colors.white : Colors.white70,
           ),
         ),
         onTap: () {
@@ -451,7 +487,7 @@ class _BranchPortalState extends State<BranchPortal> {
   ) {
     return ListTile(
       selected: selectedPage == page,
-      selectedTileColor: const Color(0xFFE7F7EF),
+      selectedTileColor: _portalTheme.accent.withValues(alpha: .18),
       leading: Icon(icon),
       title: Text(title),
       onTap: () {
@@ -469,9 +505,15 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _topBar() {
+    final theme = _portalTheme;
     return Container(
-      height: 70,
-      color: Colors.white,
+      height: 78,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: theme.header),
+        border: Border(
+          bottom: BorderSide(color: theme.glassBorder),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(
         horizontal: 28,
       ),
@@ -480,11 +522,14 @@ class _BranchPortalState extends State<BranchPortal> {
           Text(
             _pageTitle().toUpperCase(),
             style: const TextStyle(
+              color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
           const Spacer(),
+          PortalDayIndicator(theme: theme),
+          const SizedBox(width: 24),
           const CircleAvatar(
             radius: 18,
             backgroundColor: Color(0xFFE7F7EF),
@@ -574,9 +619,10 @@ class _BranchPortalState extends State<BranchPortal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Branch Dashboard',
-            style: TextStyle(
+          Text(
+            'Branch Operations',
+            style: const TextStyle(
+              color: Colors.white,
               fontSize: 28,
               fontWeight: FontWeight.w800,
             ),
@@ -2015,12 +2061,15 @@ class _BranchPortalState extends State<BranchPortal> {
     String title,
     Widget child,
   ) {
+    final isDashboard = selectedPage == 0;
+    final theme = _portalTheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: isDashboard ? theme.glass : Colors.white,
+        borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
+        border: isDashboard ? Border.all(color: theme.glassBorder) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2048,6 +2097,8 @@ class _BranchPortalState extends State<BranchPortal> {
     IconData icon,
     VoidCallback onTap,
   ) {
+    final isDashboard = selectedPage == 0;
+    final theme = _portalTheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -2055,23 +2106,24 @@ class _BranchPortalState extends State<BranchPortal> {
         width: 180,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F7FB),
+          color: isDashboard ? theme.glassStrong : const Color(0xFFF5F7FB),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.black12,
+            color: isDashboard ? theme.glassBorder : Colors.black12,
           ),
         ),
         child: Column(
           children: [
             Icon(
               icon,
-              color: const Color(0xFF15965D),
+              color: isDashboard ? theme.accent : const Color(0xFF15965D),
             ),
             const SizedBox(height: 8),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
+                color: isDashboard ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.bold,
               ),
             ),

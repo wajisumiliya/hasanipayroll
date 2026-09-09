@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import '../models/payroll.dart';
 import '../services/app_service.dart';
+import '../theme/daily_portal_theme.dart';
 import '../services/ot_request_pdf_service.dart';
 import '../services/attendance_payroll_service.dart';
 import 'login_screen.dart';
@@ -27,6 +28,8 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   final AppService service = AppService.instance;
+
+  DailyPortalTheme get _portalTheme => DailyPortalTheme.today();
 
   int selectedPage = 0;
 
@@ -286,23 +289,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // ===========================================================================
 
   Widget _desktopLayout() {
-    return Row(
-      children: [
-        _sidebar(),
-        Expanded(
-          child: Column(
-            children: [
-              _topBar(),
-              Expanded(
-                child: Container(
-                  color: const Color(0xFFF5F7FB),
-                  child: _currentPage(),
-                ),
-              ),
-            ],
-          ),
+    final theme = _portalTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: theme.background,
         ),
-      ],
+      ),
+      child: Row(
+        children: [
+          _sidebar(),
+          Expanded(
+            child: Column(
+              children: [
+                _topBar(),
+                Expanded(child: _portalPage(_currentPage())),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _portalPage(Widget child) {
+    final theme = _portalTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: selectedPage == 0
+              ? theme.background
+              : [theme.surfaceTint, const Color(0xFFF5F7FB)],
+        ),
+      ),
+      child: child,
     );
   }
 
@@ -313,8 +337,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _mobileLayout() {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: _portalTheme.header.first,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           _pageTitle(),
@@ -412,10 +436,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ),
       ),
-      body: Container(
-        color: const Color(0xFFF5F7FB),
-        child: _currentPage(),
-      ),
+      body: _portalPage(_currentPage()),
     );
   }
 
@@ -426,12 +447,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _sidebar() {
     return Container(
       width: 245,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: _portalTheme.sidebar,
+        ),
         border: Border(
-          right: BorderSide(
-            color: Color(0xFFE5E7EB),
-          ),
+          right: BorderSide(color: _portalTheme.glassBorder),
         ),
       ),
       child: Column(
@@ -581,19 +604,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       child: ListTile(
         selected: selected,
-        selectedTileColor: const Color(0xFFEAF0FF),
+        selectedTileColor: _portalTheme.accent.withValues(alpha: .18),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
         leading: Icon(
           icon,
-          color: selected ? const Color(0xFF2D55D8) : Colors.black54,
+          color: selected ? _portalTheme.accent : Colors.white60,
         ),
         title: Text(
           title,
           style: TextStyle(
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? const Color(0xFF2D55D8) : Colors.black87,
+            color: selected ? Colors.white : Colors.white70,
           ),
         ),
         onTap: () {
@@ -610,7 +633,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   ) {
     return ListTile(
       selected: selectedPage == page,
-      selectedTileColor: const Color(0xFFEAF0FF),
+      selectedTileColor: _portalTheme.accent.withValues(alpha: .18),
       leading: Icon(
         icon,
         color: selectedPage == page ? const Color(0xFF2D55D8) : Colors.black54,
@@ -636,9 +659,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // ===========================================================================
 
   Widget _topBar() {
+    final theme = _portalTheme;
     return Container(
-      height: 70,
-      color: Colors.white,
+      height: 78,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: theme.header),
+        border: Border(
+          bottom: BorderSide(color: theme.glassBorder),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(
         horizontal: 28,
       ),
@@ -647,11 +676,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Text(
             _pageTitle().toUpperCase(),
             style: const TextStyle(
+              color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
           const Spacer(),
+          PortalDayIndicator(theme: theme),
+          const SizedBox(width: 24),
           const CircleAvatar(
             radius: 18,
             backgroundColor: Color(0xFFEAF0FF),
@@ -1250,9 +1282,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Payroll Dashboard',
-                  style: TextStyle(
+                Text(
+                  'Payroll Control Centre',
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                   ),
@@ -9189,12 +9222,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String title,
     Widget child,
   ) {
+    final isDashboard = selectedPage == 0;
+    final theme = _portalTheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: isDashboard ? theme.glass : Colors.white,
+        borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
+        border: isDashboard ? Border.all(color: theme.glassBorder) : null,
         boxShadow: const [
           BoxShadow(
             color: Color(0x08000000),
@@ -9227,6 +9263,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Color color, [
     VoidCallback? onTap,
   ]) {
+    final isDashboard = selectedPage == 0;
+    final theme = _portalTheme;
     return SizedBox(
       width: 220,
       child: InkWell(
@@ -9237,9 +9275,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDashboard ? theme.glass : Colors.white,
             borderRadius: BorderRadius.circular(
-              14,
+              isDashboard ? 18 : 14,
             ),
             boxShadow: const [
               BoxShadow(
@@ -9274,9 +9312,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Colors.black54,
+                  color: isDashboard ? Colors.white60 : Colors.black54,
                 ),
               ),
               const SizedBox(
@@ -9286,7 +9324,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
+                  color: isDashboard ? Colors.white : Colors.black87,
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                 ),
@@ -9303,6 +9342,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     IconData icon,
     VoidCallback onTap,
   ) {
+    final isDashboard = selectedPage == 0;
+    final theme = _portalTheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(
@@ -9312,24 +9353,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
         width: 150,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F7FB),
+          color: isDashboard ? theme.glassStrong : const Color(0xFFF5F7FB),
           borderRadius: BorderRadius.circular(
             12,
           ),
           border: Border.all(
-            color: Colors.black12,
+            color: isDashboard ? theme.glassBorder : Colors.black12,
           ),
         ),
         child: Column(
           children: [
             Icon(
               icon,
-              color: const Color(0xFF2D55D8),
+              color: isDashboard ? theme.accent : const Color(0xFF2D55D8),
             ),
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
+                color: isDashboard ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -9343,6 +9385,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String title,
     String value,
   ) {
+    final isDashboard = selectedPage == 0;
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: 6,
@@ -9352,8 +9395,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                color: Colors.black54,
+              style: TextStyle(
+                color: isDashboard ? Colors.white60 : Colors.black54,
                 fontSize: 13,
               ),
             ),

@@ -4,6 +4,7 @@ import 'package:printing/printing.dart';
 
 import '../models/payroll.dart';
 import '../services/app_service.dart';
+import '../theme/daily_portal_theme.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
 import '../widgets/walking_cat.dart';
@@ -84,9 +85,10 @@ class _EmployeePortalState extends State<EmployeePortal> {
                 color: Colors.grey,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Employee information not found.',
                 style: TextStyle(
+                  color: tab == 0 ? Colors.white : Colors.black87,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -142,10 +144,12 @@ class _EmployeePortalState extends State<EmployeePortal> {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          dailyTheme.surfaceTint.withValues(alpha: .96),
-                          const Color(0xFFF5F7FB),
-                        ],
+                        colors: tab == 0
+                            ? dailyTheme.pageBackground
+                            : [
+                                dailyTheme.surfaceTint.withValues(alpha: .96),
+                                const Color(0xFFF5F7FB),
+                              ],
                       ),
                     ),
                     child: _page(),
@@ -356,6 +360,8 @@ class _EmployeePortalState extends State<EmployeePortal> {
             ),
           ),
           const Spacer(),
+          PortalDayIndicator(theme: DailyPortalTheme.today()),
+          const SizedBox(width: 22),
           CircleAvatar(
             radius: 18,
             backgroundColor: _dailyTheme.accent.withValues(alpha: .20),
@@ -424,10 +430,12 @@ class _EmployeePortalState extends State<EmployeePortal> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              dailyTheme.surfaceTint,
-              const Color(0xFFF5F7FB),
-            ],
+            colors: tab == 0
+                ? dailyTheme.pageBackground
+                : [
+                    dailyTheme.surfaceTint,
+                    const Color(0xFFF5F7FB),
+                  ],
           ),
         ),
         child: _page(),
@@ -596,9 +604,10 @@ class _EmployeePortalState extends State<EmployeePortal> {
           const SizedBox(height: 18),
           _salary(payroll),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Quick Access',
             style: TextStyle(
+              color: tab == 0 ? Colors.white : Colors.black87,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -658,9 +667,10 @@ class _EmployeePortalState extends State<EmployeePortal> {
           const SizedBox(height: 24),
           Row(
             children: [
-              const Text(
+              Text(
                 'Recent Payslips',
                 style: TextStyle(
+                  color: tab == 0 ? Colors.white : Colors.black87,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                 ),
@@ -690,8 +700,11 @@ class _EmployeePortalState extends State<EmployeePortal> {
       width: double.infinity,
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: tab == 0 ? const Color(0xE6102A43) : Colors.white,
+        borderRadius: BorderRadius.circular(tab == 0 ? 18 : 14),
+        border: tab == 0
+            ? Border.all(color: _dailyTheme.accent.withValues(alpha: .38))
+            : null,
       ),
       child: const Column(
         children: [
@@ -827,8 +840,11 @@ class _EmployeePortalState extends State<EmployeePortal> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: tab == 0 ? const Color(0xE6102A43) : Colors.white,
+        borderRadius: BorderRadius.circular(tab == 0 ? 18 : 14),
+        border: tab == 0
+            ? Border.all(color: _dailyTheme.accent.withValues(alpha: .38))
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -864,7 +880,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
                 child: _metric(
                   'Gross Earnings',
                   payroll.totalEarnings,
-                  Colors.black,
+                  tab == 0 ? Colors.white : Colors.black,
                 ),
               ),
               Expanded(
@@ -902,8 +918,8 @@ class _EmployeePortalState extends State<EmployeePortal> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.black54,
+          style: TextStyle(
+            color: tab == 0 ? Colors.white60 : Colors.black54,
             fontSize: 12,
           ),
         ),
@@ -937,22 +953,25 @@ class _EmployeePortalState extends State<EmployeePortal> {
         child: Container(
           padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: tab == 0 ? const Color(0xE60B2239) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.black12,
+              color: tab == 0
+                  ? _dailyTheme.accent.withValues(alpha: .38)
+                  : Colors.black12,
             ),
           ),
           child: Column(
             children: [
               Icon(
                 icon,
-                color: const Color(0xFF2D55D8),
+                color: tab == 0 ? _dailyTheme.accent : const Color(0xFF2D55D8),
               ),
               const SizedBox(height: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
+                  color: tab == 0 ? Colors.white : Colors.black87,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
@@ -972,6 +991,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
     PayrollRecord payroll,
   ) {
     return Card(
+      color: tab == 0 ? const Color(0xE6102A43) : Colors.white,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: const CircleAvatar(
@@ -983,12 +1003,14 @@ class _EmployeePortalState extends State<EmployeePortal> {
         ),
         title: Text(
           DateFormat('MMMM yyyy').format(payroll.period),
-          style: const TextStyle(
+          style: TextStyle(
+            color: tab == 0 ? Colors.white : Colors.black87,
             fontWeight: FontWeight.bold,
           ),
         ),
         subtitle: Text(
           'Net pay RM ${payroll.netPay.toStringAsFixed(2)}',
+          style: TextStyle(color: tab == 0 ? Colors.white60 : Colors.black54),
         ),
         trailing: IconButton(
           onPressed: () => _pdf(payroll),
