@@ -150,7 +150,13 @@ class PortalDayIndicator extends StatelessWidget {
                   height: index == todayIndex ? 9 : 6,
                   decoration: BoxDecoration(
                     color: colors[index],
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(2),
+                    border: Border.all(
+                      color: Colors.white.withValues(
+                        alpha: index == todayIndex ? .72 : .20,
+                      ),
+                      width: .7,
+                    ),
                     boxShadow: index == todayIndex
                         ? [
                             BoxShadow(
@@ -253,6 +259,43 @@ class _PortalAtmospherePainter extends CustomPainter {
         size.height * .08,
       );
     canvas.drawPath(path, bright);
+
+    // Fine gilded framing and jewel-shaped flourishes give every weekday
+    // palette the same restrained royal character without obscuring content.
+    final frame = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = theme.accent.withValues(alpha: .20);
+    const margin = 14.0;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          margin,
+          margin,
+          size.width - (margin * 2),
+          size.height - (margin * 2),
+        ),
+        const Radius.circular(18),
+      ),
+      frame,
+    );
+
+    void drawJewel(Offset center) {
+      const radius = 6.0;
+      final jewel = Path()
+        ..moveTo(center.dx, center.dy - radius)
+        ..lineTo(center.dx + radius, center.dy)
+        ..lineTo(center.dx, center.dy + radius)
+        ..lineTo(center.dx - radius, center.dy)
+        ..close();
+      canvas.drawPath(jewel, frame);
+      canvas.drawCircle(center, 1.5, Paint()..color = theme.secondary);
+    }
+
+    drawJewel(const Offset(margin, margin));
+    drawJewel(Offset(size.width - margin, margin));
+    drawJewel(Offset(margin, size.height - margin));
+    drawJewel(Offset(size.width - margin, size.height - margin));
   }
 
   @override
