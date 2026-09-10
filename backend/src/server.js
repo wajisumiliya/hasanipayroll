@@ -1518,20 +1518,14 @@ app.post(
     const resetPassword = req.body?.resetPassword === true;
 
     try {
-      const employeeResult = await pool.query(
-        `SELECT to_jsonb(employee_row) AS data FROM public.employees AS employee_row
-         WHERE UPPER(TRIM(COALESCE(to_jsonb(employee_row) ->> 'employee_id',
-           to_jsonb(employee_row) ->> 'employeeId', ''))) = $1 LIMIT 1`,
-        [employeeId],
-      );
-      const employee = employeeResult.rows[0]?.data;
-      if (!employee) return res.status(404).json({ ok: false, message: "Employee was not found." });
-
-      const email = String(employee.email || "").trim().toLowerCase();
+      const email = String(req.body?.email || "").trim().toLowerCase();
       if (!email || !email.includes("@")) {
-        return res.status(400).json({ ok: false, message: "A valid employee email address is required to create the login account." });
+        return res.status(400).json({
+          ok: false,
+          message: "A valid employee email address is required to create the login account.",
+        });
       }
-      const isActive = [true, "true", "t", "1"].includes(employee.is_active ?? employee.isActive ?? true);
+      const isActive = req.body?.isActive !== false;
       const existing = await pool.query(
         `SELECT "id", "employeeId", "email" FROM public."app_user"
          WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = $1

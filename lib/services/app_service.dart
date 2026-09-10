@@ -1467,7 +1467,11 @@ class AppService extends ChangeNotifier {
             ),
           );
 
-      final accountError = await _provisionEmployeeLogin(cleanId);
+      final accountError = await _provisionEmployeeLogin(
+        cleanId,
+        email: employeeWithBranch.email,
+        isActive: employeeWithBranch.isActive,
+      );
       await loadEmployeesFromSupabase();
 
       if (accountError != null) {
@@ -1513,8 +1517,11 @@ class AppService extends ChangeNotifier {
             updatedEmployee.employeeId,
           );
 
-      final accountError =
-          await _provisionEmployeeLogin(updatedEmployee.employeeId);
+      final accountError = await _provisionEmployeeLogin(
+        updatedEmployee.employeeId,
+        email: updatedEmployee.email,
+        isActive: updatedEmployee.isActive,
+      );
       if (accountError != null) {
         return 'Employee details were updated, but login setup failed: $accountError';
       }
@@ -1614,9 +1621,15 @@ class AppService extends ChangeNotifier {
   // CREATE / UPDATE EMPLOYEE LOGIN
   // ==========================================================================
 
-  Future<String> createOrResetEmployeeLogin(String employeeId) async {
+  Future<String> createOrResetEmployeeLogin(
+    String employeeId, {
+    required String email,
+    required bool isActive,
+  }) async {
     final error = await _provisionEmployeeLogin(
       employeeId,
+      email: email,
+      isActive: isActive,
       resetPassword: true,
     );
     return error ??
@@ -1625,12 +1638,18 @@ class AppService extends ChangeNotifier {
 
   Future<String?> _provisionEmployeeLogin(
     String employeeId, {
+    required String email,
+    required bool isActive,
     bool resetPassword = false,
   }) async {
     try {
       final data = await _postAuth(
         '/api/admin/employees/${Uri.encodeComponent(employeeId.trim())}/account',
-        {'resetPassword': resetPassword},
+        {
+          'email': email.trim(),
+          'isActive': isActive,
+          'resetPassword': resetPassword,
+        },
         authenticated: true,
       );
       if (data['ok'] == true) return null;
@@ -1935,7 +1954,11 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
                 employeeId,
               );
 
-          final accountError = await _provisionEmployeeLogin(employeeId);
+          final accountError = await _provisionEmployeeLogin(
+            employeeId,
+            email: employee.email,
+            isActive: employee.isActive,
+          );
           if (accountError != null) throw Exception(accountError);
 
           updated++;
@@ -1946,7 +1969,11 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
                 ),
               );
 
-          final accountError = await _provisionEmployeeLogin(employeeId);
+          final accountError = await _provisionEmployeeLogin(
+            employeeId,
+            email: employee.email,
+            isActive: employee.isActive,
+          );
           if (accountError != null) throw Exception(accountError);
 
           imported++;

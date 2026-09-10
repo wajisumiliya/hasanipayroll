@@ -2848,7 +2848,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
     if (confirmed != true || !mounted) return;
 
-    final result = await service.createOrResetEmployeeLogin(employeeId);
+    final result = await service.createOrResetEmployeeLogin(
+      employeeId,
+      email: email,
+      isActive: employee['is_active'] != false,
+    );
     if (!mounted) return;
     _message(result);
   }
