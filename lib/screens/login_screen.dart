@@ -805,6 +805,7 @@ class _LoginScreenState extends State<LoginScreen>
               final travel = screenWidth - catWidth;
               final horizontal = progress * travel;
               final walkCycle = progress * 16;
+              final frameNumber = (walkCycle.floor() % 8) + 1;
               final bodyBounce = math.sin(walkCycle * math.pi).abs() * 3;
 
               return Stack(

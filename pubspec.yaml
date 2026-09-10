@@ -50,14 +50,14 @@ flutter:
     - assets/login_office_background.png
     - assets/login_walking_cat.png
     - assets/login_cat_walking.gif
-    - assets/login_cat_clean_$_.png
-    - assets/login_cat_clean_$_.png
-    - assets/login_cat_clean_$_.png
-    - assets/login_cat_clean_$_.png
-    - assets/login_cat_clean_$_.png
-    - assets/login_cat_clean_$_.png
-    - assets/login_cat_clean_$_.png
-    - assets/login_cat_clean_$_.png
+    - assets/login_cat_clean_1.png
+    - assets/login_cat_clean_2.png
+    - assets/login_cat_clean_3.png
+    - assets/login_cat_clean_4.png
+    - assets/login_cat_clean_5.png
+    - assets/login_cat_clean_6.png
+    - assets/login_cat_clean_7.png
+    - assets/login_cat_clean_8.png
     - assets/login_cat_walk_1.png
     - assets/login_cat_walk_2.png
     - assets/login_cat_walk_3.png
