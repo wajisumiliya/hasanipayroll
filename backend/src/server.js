@@ -1533,14 +1533,28 @@ app.post(
       }
       const isActive = [true, "true", "t", "1"].includes(employee.is_active ?? employee.isActive ?? true);
       const existing = await pool.query(
-        `SELECT "id", "employeeId" FROM public."app_user"
+        `SELECT "id", "employeeId", "email" FROM public."app_user"
          WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = $1
-            OR LOWER(TRIM(COALESCE("email", ''))) = $2 LIMIT 1`,
+            OR LOWER(TRIM(COALESCE("email", ''))) = $2`,
         [employeeId, email],
       );
 
       if (existing.rowCount > 0) {
-        const account = existing.rows[0];
+        const employeeAccount = existing.rows.find(
+          (row) => normalizeEmployeeId(row.employeeId) === employeeId,
+        );
+        const emailAccount = existing.rows.find(
+          (row) => String(row.email || "").trim().toLowerCase() === email,
+        );
+        if (employeeAccount && emailAccount && employeeAccount.id !== emailAccount.id) {
+          return res.status(409).json({
+            ok: false,
+            message:
+              "Two application accounts conflict for this employee ID and email. Remove or correct the duplicate app_user account first.",
+          });
+        }
+
+        const account = employeeAccount || emailAccount;
         if (account.employeeId && normalizeEmployeeId(account.employeeId) !== employeeId) {
           return res.status(409).json({ ok: false, message: "That email address is already assigned to another employee login." });
         }
@@ -1581,7 +1595,11 @@ app.post(
       return res.status(201).json({ ok: true, created: true, employeeId, email });
     } catch (error) {
       console.error("EMPLOYEE ACCOUNT PROVISION ERROR:", error.message);
-      return res.status(503).json({ ok: false, message: "Unable to create the employee login account right now." });
+      const errorCode = String(error.code || "database_error");
+      return res.status(503).json({
+        ok: false,
+        message: `Unable to create or reset the application login (${errorCode}).`,
+      });
     }
   },
 );
