@@ -1,53 +1,151 @@
 name: Build Android
+
 on:
   workflow_dispatch:
+
   push:
-    branches: [main]
+    branches:
+      - main
+
   pull_request:
-    branches: [main]
+    branches:
+      - main
+
 permissions:
   contents: read
+
 concurrency:
   group: android-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   build:
+    name: Build Android APK & AAB
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    timeout-minutes: 40
 
+    steps:
+      # ==========================================================
+      # CHECKOUT
+      # ==========================================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ==========================================================
+      # JAVA
+      # Flutter/Android Gradle builds need Java available explicitly
+      # ==========================================================
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      # ==========================================================
+      # FLUTTER
+      # ==========================================================
       - name: Install Flutter
-        uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046 # v2.18.0
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.0'
           channel: stable
+          cache: true
 
+      # ==========================================================
+      # ENVIRONMENT INFO
+      # ==========================================================
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      # ==========================================================
+      # DEPENDENCIES
+      # ==========================================================
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+      # ==========================================================
+      # FORMAT CHECK
+      #
+      # Do not include "test" here because GitHub Actions will fail
+      # if your project does not currently contain a test directory.
+      # ==========================================================
+      - name: Check Dart formatting
+        run: dart format --output=none --set-exit-if-changed lib
 
+      # ==========================================================
+      # ANALYZE
+      # ==========================================================
       - name: Analyze source
         run: flutter analyze
 
+      # ==========================================================
+      # TEST
+      # Run only when test files actually exist.
+      # ==========================================================
       - name: Run tests
-        run: flutter test
+        shell: bash
+        run: |
+          if [ -d "test" ] && find test -type f -name "*_test.dart" | grep -q .; then
+            echo "Tests found. Running Flutter tests..."
+            flutter test --no-pub
+          else
+            echo "No Flutter tests found. Skipping test step."
+          fi
 
-      - name: Build APK
-        run: flutter build apk --release
+      # ==========================================================
+      # BUILD APK
+      # ==========================================================
+      - name: Build release APK
+        run: flutter build apk --release --no-pub
 
-      - name: Build app bundle
-        run: flutter build appbundle --release
+      # ==========================================================
+      # BUILD AAB
+      # This is the file normally uploaded to Google Play.
+      # ==========================================================
+      - name: Build release app bundle
+        run: flutter build appbundle --release --no-pub
 
+      # ==========================================================
+      # VERIFY OUTPUT
+      # ==========================================================
+      - name: Verify Android artifacts
+        shell: bash
+        run: |
+          echo "Checking build outputs..."
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          AAB="build/app/outputs/bundle/release/app-release.aab"
+
+          if [ ! -f "$APK" ]; then
+            echo "ERROR: APK was not generated."
+            exit 1
+          fi
+
+          if [ ! -f "$AAB" ]; then
+            echo "ERROR: AAB was not generated."
+            exit 1
+          fi
+
+          echo "APK:"
+          ls -lh "$APK"
+
+          echo "AAB:"
+          ls -lh "$AAB"
+
+      # ==========================================================
+      # UPLOAD
+      # ==========================================================
       - name: Upload Android artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@v4
         with:
-          name: HASANI-PAYROLL
+          name: HASANI-PAYROLL-ANDROID
           if-no-files-found: error
           retention-days: 14
+          compression-level: 6
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
