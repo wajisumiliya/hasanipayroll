@@ -32,10 +32,7 @@ class SharedAttendanceSheet extends StatelessWidget {
 
   Map<String, dynamic>? _rowForDay(int day) {
     for (final row in attendance) {
-      final rawDate =
-          row['attendance_date'] ??
-          row['date'] ??
-          row['work_date'];
+      final rawDate = row['attendance_date'] ?? row['date'] ?? row['work_date'];
 
       if (rawDate == null) {
         continue;
@@ -70,8 +67,7 @@ class SharedAttendanceSheet extends StatelessWidget {
     for (final key in keys) {
       final value = row[key];
 
-      if (value != null &&
-          value.toString().trim().isNotEmpty) {
+      if (value != null && value.toString().trim().isNotEmpty) {
         return _formatTime(value);
       }
     }
@@ -111,10 +107,7 @@ class SharedAttendanceSheet extends StatelessWidget {
     }
 
     return double.tryParse(
-          value
-              .toString()
-              .replaceAll(',', '')
-              .trim(),
+          value.toString().replaceAll(',', '').trim(),
         ) ??
         0;
   }
@@ -141,8 +134,7 @@ class SharedAttendanceSheet extends StatelessWidget {
     }
 
     return _number(
-      row['break_minutes'] ??
-          row['total_break_minutes'],
+      row['break_minutes'] ?? row['total_break_minutes'],
     ).round();
   }
 
@@ -154,8 +146,7 @@ class SharedAttendanceSheet extends StatelessWidget {
     }
 
     return _number(
-      row['overtime_minutes'] ??
-          row['ot_minutes'],
+      row['overtime_minutes'] ?? row['ot_minutes'],
     ).round();
   }
 
@@ -166,19 +157,15 @@ class SharedAttendanceSheet extends StatelessWidget {
       return false;
     }
 
-    final value =
-        row['ot_authorized'];
+    final value = row['ot_authorized'];
 
     if (value is bool) {
       return value;
     }
 
-    final text =
-        value?.toString().toLowerCase().trim();
+    final text = value?.toString().toLowerCase().trim();
 
-    return text == 'true' ||
-        text == '1' ||
-        text == 'yes';
+    return text == 'true' || text == '1' || text == 'yes';
   }
 
   String _formatMinutes(int minutes) {
@@ -204,16 +191,14 @@ class SharedAttendanceSheet extends StatelessWidget {
   int get _totalWorkMinutes {
     return attendance.fold<int>(
       0,
-      (total, row) =>
-          total + _workMinutes(row),
+      (total, row) => total + _workMinutes(row),
     );
   }
 
   int get _totalBreakMinutes {
     return attendance.fold<int>(
       0,
-      (total, row) =>
-          total + _breakMinutes(row),
+      (total, row) => total + _breakMinutes(row),
     );
   }
 
@@ -231,9 +216,11 @@ class SharedAttendanceSheet extends StatelessWidget {
   }
 
   int get _workingDays {
-    return attendance.where(
-      (row) => _workMinutes(row) > 0,
-    ).length;
+    return attendance
+        .where(
+          (row) => _workMinutes(row) > 0,
+        )
+        .length;
   }
 
   // ============================================================
@@ -244,53 +231,38 @@ class SharedAttendanceSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _header(),
-
           const SizedBox(height: 16),
-
           _summary(),
-
           const SizedBox(height: 20),
-
           _sectionTitle(
             'WORK ATTENDANCE',
             Icons.work_outline,
             const Color(0xFF15965D),
           ),
-
           const SizedBox(height: 8),
-
           _horizontalTable(
             _buildWorkTable(),
           ),
-
           const SizedBox(height: 24),
-
           _sectionTitle(
             'BREAK ATTENDANCE',
             Icons.coffee_outlined,
             const Color(0xFF315AD9),
           ),
-
           const SizedBox(height: 8),
-
           _horizontalTable(
             _buildBreakTable(),
           ),
-
           const SizedBox(height: 24),
-
           _sectionTitle(
             'OVERTIME ATTENDANCE',
             Icons.timer_outlined,
             const Color(0xFFF59E0B),
           ),
-
           const SizedBox(height: 8),
-
           _horizontalTable(
             _buildOvertimeTable(),
           ),
@@ -317,13 +289,9 @@ class SharedAttendanceSheet extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-
           const SizedBox(height: 12),
-
           Text(
-            employeeName.isEmpty
-                ? employeeId
-                : employeeName,
+            employeeName.isEmpty ? employeeId : employeeName,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
@@ -331,18 +299,14 @@ class SharedAttendanceSheet extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-
           const SizedBox(height: 4),
-
           Text(
             'Employee ID: $employeeId',
             style: const TextStyle(
               color: Colors.white70,
             ),
           ),
-
           const SizedBox(height: 12),
-
           Text(
             'FOR THE MONTH OF '
             '${DateFormat('MMMM yyyy').format(month).toUpperCase()}',
@@ -367,7 +331,6 @@ class SharedAttendanceSheet extends StatelessWidget {
           Icons.calendar_month,
           const Color(0xFF15965D),
         ),
-
         _summaryCard(
           'WORKING HOURS',
           _formatMinutes(
@@ -376,7 +339,6 @@ class SharedAttendanceSheet extends StatelessWidget {
           Icons.access_time,
           const Color(0xFF315AD9),
         ),
-
         _summaryCard(
           'BREAK TIME',
           _formatMinutes(
@@ -385,7 +347,6 @@ class SharedAttendanceSheet extends StatelessWidget {
           Icons.coffee_outlined,
           const Color(0xFF7C3AED),
         ),
-
         _summaryCard(
           'AUTHORIZED OT',
           _formatMinutes(
@@ -409,8 +370,7 @@ class SharedAttendanceSheet extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius:
-              BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: color.withOpacity(0.25),
           ),
@@ -422,9 +382,7 @@ class SharedAttendanceSheet extends StatelessWidget {
               icon,
               color: color,
             ),
-
             const SizedBox(height: 8),
-
             Text(
               value,
               style: TextStyle(
@@ -433,9 +391,7 @@ class SharedAttendanceSheet extends StatelessWidget {
                 color: color,
               ),
             ),
-
             const SizedBox(height: 4),
-
             Text(
               label,
               textAlign: TextAlign.center,
@@ -461,9 +417,7 @@ class SharedAttendanceSheet extends StatelessWidget {
           icon,
           color: color,
         ),
-
         const SizedBox(width: 8),
-
         Text(
           text,
           style: TextStyle(
@@ -529,11 +483,7 @@ class SharedAttendanceSheet extends StatelessWidget {
       ),
     );
 
-    for (
-      int day = 1;
-      day <= _daysInMonth;
-      day++
-    ) {
+    for (int day = 1; day <= _daysInMonth; day++) {
       final row = _rowForDay(day);
       final work = _workMinutes(row);
 
@@ -572,9 +522,7 @@ class SharedAttendanceSheet extends StatelessWidget {
               bold: true,
             ),
             _cell(
-              work > 0
-                  ? 'RECORDED'
-                  : '-',
+              work > 0 ? 'RECORDED' : '-',
               140,
             ),
           ],
@@ -649,11 +597,7 @@ class SharedAttendanceSheet extends StatelessWidget {
       ),
     );
 
-    for (
-      int day = 1;
-      day <= _daysInMonth;
-      day++
-    ) {
+    for (int day = 1; day <= _daysInMonth; day++) {
       final row = _rowForDay(day);
 
       rows.add(
@@ -775,9 +719,7 @@ class SharedAttendanceSheet extends StatelessWidget {
             color: const Color(0xFFF59E0B),
           ),
           _cell(
-            showOtAuthorization
-                ? 'AUTHORIZE OT'
-                : 'OT STATUS',
+            showOtAuthorization ? 'AUTHORIZE OT' : 'OT STATUS',
             220,
             header: true,
             color: const Color(0xFFF59E0B),
@@ -786,15 +728,10 @@ class SharedAttendanceSheet extends StatelessWidget {
       ),
     );
 
-    for (
-      int day = 1;
-      day <= _daysInMonth;
-      day++
-    ) {
+    for (int day = 1; day <= _daysInMonth; day++) {
       final row = _rowForDay(day);
       final ot = _otMinutes(row);
-      final authorized =
-          _otAuthorized(row);
+      final authorized = _otAuthorized(row);
 
       Widget statusWidget;
 
@@ -823,9 +760,7 @@ class SharedAttendanceSheet extends StatelessWidget {
                   : 'PENDING',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: authorized
-                ? Colors.green
-                : Colors.orange,
+            color: authorized ? Colors.green : Colors.orange,
           ),
         );
       }
@@ -899,9 +834,7 @@ class SharedAttendanceSheet extends StatelessWidget {
       height: 44,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: header
-            ? (color ?? Colors.blue)
-            : Colors.white,
+        color: header ? (color ?? Colors.blue) : Colors.white,
         border: Border.all(
           color: Colors.grey.shade300,
         ),
@@ -914,12 +847,8 @@ class SharedAttendanceSheet extends StatelessWidget {
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 11,
-          color: header
-              ? Colors.white
-              : Colors.black87,
-          fontWeight: header || bold
-              ? FontWeight.bold
-              : FontWeight.normal,
+          color: header ? Colors.white : Colors.black87,
+          fontWeight: header || bold ? FontWeight.bold : FontWeight.normal,
         ),
       ),
     );

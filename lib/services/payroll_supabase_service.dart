@@ -12,17 +12,15 @@ class PayrollSupabaseService {
   // ============================================================
 
   static Future<List<Map<String, dynamic>>> getEmployees() async {
-    final response = await _client
-        .from('employees')
-        .select()
-        .order('employee_id');
+    final response =
+        await _client.from('employees').select().order('employee_id');
 
     return List<Map<String, dynamic>>.from(response);
   }
 
   static Future<Map<String, dynamic>?> getEmployee(
-      String employeeId,
-      ) async {
+    String employeeId,
+  ) async {
     final response = await _client
         .from('employees')
         .select()
@@ -46,8 +44,8 @@ class PayrollSupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getPayrollForEmployee(
-      String employeeId,
-      ) async {
+    String employeeId,
+  ) async {
     final response = await _client
         .from('payroll')
         .select()
@@ -58,10 +56,9 @@ class PayrollSupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getPayrollForPeriod(
-      DateTime period,
-      ) async {
-    final periodString =
-        '${period.year.toString().padLeft(4, '0')}-'
+    DateTime period,
+  ) async {
+    final periodString = '${period.year.toString().padLeft(4, '0')}-'
         '${period.month.toString().padLeft(2, '0')}-01';
 
     final response = await _client
@@ -78,11 +75,9 @@ class PayrollSupabaseService {
   // ============================================================
 
   static Future<void> saveEmployee(
-      Map<String, dynamic> employee,
-      ) async {
-    await _client
-        .from('employees')
-        .upsert(employee, onConflict: 'employee_id');
+    Map<String, dynamic> employee,
+  ) async {
+    await _client.from('employees').upsert(employee, onConflict: 'employee_id');
   }
 
   // ============================================================
@@ -90,14 +85,12 @@ class PayrollSupabaseService {
   // ============================================================
 
   static Future<void> savePayroll(
-      Map<String, dynamic> payroll,
-      ) async {
-    await _client
-        .from('payroll')
-        .upsert(
-      payroll,
-      onConflict: 'employee_id,period',
-    );
+    Map<String, dynamic> payroll,
+  ) async {
+    await _client.from('payroll').upsert(
+          payroll,
+          onConflict: 'employee_id,period',
+        );
   }
 
   // ============================================================
@@ -105,16 +98,10 @@ class PayrollSupabaseService {
   // ============================================================
 
   static Future<void> deleteEmployee(String employeeId) async {
-    await _client
-        .from('employees')
-        .delete()
-        .eq('employee_id', employeeId);
+    await _client.from('employees').delete().eq('employee_id', employeeId);
   }
 
   static Future<void> deletePayroll(String id) async {
-    await _client
-        .from('payroll')
-        .delete()
-        .eq('id', id);
+    await _client.from('payroll').delete().eq('id', id);
   }
 }

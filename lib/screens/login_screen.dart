@@ -822,7 +822,7 @@ class _LoginScreenState extends State<LoginScreen>
                         1,
                       ),
                       child: Image.asset(
-                        'assets/login_cat_walking.gif',
+                        'assets/login_cat_clean_$frameNumber.png',
                         fit: BoxFit.contain,
                         gaplessPlayback: true,
                         filterQuality: FilterQuality.high,

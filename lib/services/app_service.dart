@@ -224,7 +224,10 @@ class AppService extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint('Forgot password verification failed: $e');
-      return {'ok': false, 'message': 'Unable to verify your identity. Please try again.'};
+      return {
+        'ok': false,
+        'message': 'Unable to verify your identity. Please try again.'
+      };
     }
   }
 
@@ -239,7 +242,10 @@ class AppService extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint('Forgot password reset failed: $e');
-      return {'ok': false, 'message': 'Unable to reset your password. Please try again.'};
+      return {
+        'ok': false,
+        'message': 'Unable to reset your password. Please try again.'
+      };
     }
   }
 

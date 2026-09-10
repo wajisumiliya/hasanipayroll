@@ -2,8 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 class NotificationService {
-  static final FirebaseMessaging _messaging =
-      FirebaseMessaging.instance;
+  static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   static Future<void> initialize() async {
     try {
@@ -19,7 +18,7 @@ class NotificationService {
 
       debugPrint(
         'Notification permission: '
-            '${settings.authorizationStatus}',
+        '${settings.authorizationStatus}',
       );
 
       // ============================================================
@@ -61,7 +60,7 @@ class NotificationService {
       // ============================================================
 
       FirebaseMessaging.onMessage.listen(
-            (RemoteMessage message) {
+        (RemoteMessage message) {
           debugPrint('');
           debugPrint(
             '========================================',
@@ -88,7 +87,7 @@ class NotificationService {
       // ============================================================
 
       FirebaseMessaging.onMessageOpenedApp.listen(
-            (RemoteMessage message) {
+        (RemoteMessage message) {
           debugPrint('');
           debugPrint(
             '========================================',
@@ -111,8 +110,7 @@ class NotificationService {
       // APP OPENED FROM A TERMINATED STATE
       // ============================================================
 
-      final initialMessage =
-      await _messaging.getInitialMessage();
+      final initialMessage = await _messaging.getInitialMessage();
 
       if (initialMessage != null) {
         debugPrint('');
