@@ -1644,7 +1644,9 @@ class AppService extends ChangeNotifier {
   }) async {
     try {
       final data = await _postAuth(
-        '/api/admin/employees/${Uri.encodeComponent(employeeId.trim())}/account',
+        '/api/admin/employees/${Uri.encodeComponent(employeeId.trim())}/account'
+        '?email=${Uri.encodeQueryComponent(email.trim())}'
+        '&isActive=$isActive',
         {
           'email': email.trim(),
           'isActive': isActive,

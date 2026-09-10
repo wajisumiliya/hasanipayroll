@@ -1518,14 +1518,17 @@ app.post(
     const resetPassword = req.body?.resetPassword === true;
 
     try {
-      const email = String(req.body?.email || "").trim().toLowerCase();
+      const email = String(req.body?.email || req.query?.email || "")
+        .trim()
+        .toLowerCase();
       if (!email || !email.includes("@")) {
         return res.status(400).json({
           ok: false,
           message: "A valid employee email address is required to create the login account.",
         });
       }
-      const isActive = req.body?.isActive !== false;
+      const requestedActive = req.body?.isActive ?? req.query?.isActive;
+      const isActive = ![false, "false", "0"].includes(requestedActive);
       const existing = await pool.query(
         `SELECT "id", "employeeId", "email" FROM public."app_user"
          WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = $1
