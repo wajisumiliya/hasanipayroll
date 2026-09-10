@@ -1647,73 +1647,73 @@ class _EmployeeDailyTheme {
     switch (weekday) {
       case DateTime.monday:
         return const _EmployeeDailyTheme(
-          accent: Color(0xFF6FFFD8),
+          accent: Color(0xFFF0D28B),
           quote: 'A focused mind creates extraordinary days.',
-          sidebar: [Color(0xFF061530), Color(0xFF102C55)],
-          header: [Color(0xFF0A2148), Color(0xFF183B74)],
-          hero: [Color(0xFF152E78), Color(0xFF075D64)],
-          pageBackground: [Color(0xFF071A3D), Color(0xFF063C47)],
-          surfaceTint: Color(0xFFE9F8F6),
+          sidebar: [Color(0xFF130B22), Color(0xFF2A173E)],
+          header: [Color(0xFF1A0F2B), Color(0xFF45275C)],
+          hero: [Color(0xFF24143A), Color(0xFF624078)],
+          pageBackground: [Color(0xFF10091D), Color(0xFF35204D)],
+          surfaceTint: Color(0xFFF7F0E6),
         );
       case DateTime.tuesday:
         return const _EmployeeDailyTheme(
-          accent: Color(0xFFFF8B83),
+          accent: Color(0xFFE8C778),
           quote: 'Small steps create great progress.',
-          sidebar: [Color(0xFF07162F), Color(0xFF3B2440)],
-          header: [Color(0xFF102B52), Color(0xFF633044)],
-          hero: [Color(0xFF183C70), Color(0xFF8B4050)],
-          pageBackground: [Color(0xFF07162F), Color(0xFF7A2F42)],
-          surfaceTint: Color(0xFFFFF0EF),
+          sidebar: [Color(0xFF150C23), Color(0xFF35162C)],
+          header: [Color(0xFF20102E), Color(0xFF5B2947)],
+          hero: [Color(0xFF321634), Color(0xFF75405B)],
+          pageBackground: [Color(0xFF110A1D), Color(0xFF4B213E)],
+          surfaceTint: Color(0xFFF8EEE9),
         );
       case DateTime.wednesday:
         return const _EmployeeDailyTheme(
-          accent: Color(0xFF5DFFD3),
+          accent: Color(0xFFE7C77E),
           quote: 'Halfway there. Keep moving forward.',
-          sidebar: [Color(0xFF041D32), Color(0xFF064B53)],
-          header: [Color(0xFF062842), Color(0xFF08616A)],
-          hero: [Color(0xFF075464), Color(0xFF087765)],
-          pageBackground: [Color(0xFF041D32), Color(0xFF075A62)],
-          surfaceTint: Color(0xFFE8F8F5),
+          sidebar: [Color(0xFF101522), Color(0xFF1E3338)],
+          header: [Color(0xFF141C2C), Color(0xFF2D4B50)],
+          hero: [Color(0xFF182536), Color(0xFF3E6261)],
+          pageBackground: [Color(0xFF0C111D), Color(0xFF233D43)],
+          surfaceTint: Color(0xFFF2F1E9),
         );
       case DateTime.thursday:
         return const _EmployeeDailyTheme(
-          accent: Color(0xFFFFB39E),
+          accent: Color(0xFFE8C778),
           quote: 'Better days are built by consistent effort.',
-          sidebar: [Color(0xFF17112F), Color(0xFF402553)],
-          header: [Color(0xFF261948), Color(0xFF633451)],
-          hero: [Color(0xFF51327A), Color(0xFF74405A)],
-          pageBackground: [Color(0xFF17112F), Color(0xFF4B243A)],
-          surfaceTint: Color(0xFFF8EEF7),
+          sidebar: [Color(0xFF150C23), Color(0xFF321A3A)],
+          header: [Color(0xFF21112F), Color(0xFF53305E)],
+          hero: [Color(0xFF331943), Color(0xFF70416D)],
+          pageBackground: [Color(0xFF10091D), Color(0xFF43254E)],
+          surfaceTint: Color(0xFFF5EDF6),
         );
       case DateTime.friday:
         return const _EmployeeDailyTheme(
-          accent: Color(0xFFFFD76A),
+          accent: Color(0xFFF3D994),
           quote: 'Finish strong. You make it happen.',
-          sidebar: [Color(0xFF080B12), Color(0xFF252017)],
-          header: [Color(0xFF11151D), Color(0xFF40341C)],
-          hero: [Color(0xFF171B23), Color(0xFF6A501D)],
-          pageBackground: [Color(0xFF080B12), Color(0xFF242018)],
+          sidebar: [Color(0xFF110D17), Color(0xFF2B2116)],
+          header: [Color(0xFF18121E), Color(0xFF49371F)],
+          hero: [Color(0xFF241A1B), Color(0xFF745925)],
+          pageBackground: [Color(0xFF0D0A12), Color(0xFF382C1D)],
           surfaceTint: Color(0xFFFFF8E7),
         );
       case DateTime.saturday:
         return const _EmployeeDailyTheme(
-          accent: Color(0xFFB8FF45),
+          accent: Color(0xFFE6C579),
           quote: 'Good energy brings great opportunities.',
-          sidebar: [Color(0xFF061C54), Color(0xFF074583)],
-          header: [Color(0xFF082769), Color(0xFF0865A2)],
-          hero: [Color(0xFF0846A4), Color(0xFF0A7790)],
-          pageBackground: [Color(0xFF061C54), Color(0xFF0757BD)],
-          surfaceTint: Color(0xFFF1FBE6),
+          sidebar: [Color(0xFF0E1425), Color(0xFF1C2A45)],
+          header: [Color(0xFF141C30), Color(0xFF304666)],
+          hero: [Color(0xFF1B2945), Color(0xFF405D7E)],
+          pageBackground: [Color(0xFF0B1020), Color(0xFF263858)],
+          surfaceTint: Color(0xFFEEF1F7),
         );
       default:
         return const _EmployeeDailyTheme(
-          accent: Color(0xFFD8E7FF),
+          accent: Color(0xFFEAD39A),
           quote: 'A calm mind is a powerful mind.',
-          sidebar: [Color(0xFF071326), Color(0xFF152541)],
-          header: [Color(0xFF0A1930), Color(0xFF243B5D)],
-          hero: [Color(0xFF152A4A), Color(0xFF344966)],
-          pageBackground: [Color(0xFF071326), Color(0xFF172B4A)],
-          surfaceTint: Color(0xFFF0F4FA),
+          sidebar: [Color(0xFF120E1D), Color(0xFF242035)],
+          header: [Color(0xFF181324), Color(0xFF39344F)],
+          hero: [Color(0xFF211B31), Color(0xFF4C4562)],
+          pageBackground: [Color(0xFF0E0B18), Color(0xFF2D2942)],
+          surfaceTint: Color(0xFFF3F0F6),
         );
     }
   }

@@ -731,64 +731,47 @@ function requireEmployeeAccess(
 // USER LOOKUP
 // ============================================================
 
-async function findAppUser(
-  login,
-) {
-  const cleanLogin =
-    normalizeLogin(login);
+async function findAppUser(login) {
+  const cleanLogin = normalizeLogin(login);
+  if (!cleanLogin) return null;
 
-  if (!cleanLogin) {
-    return null;
-  }
-
-  const employeeId =
-    normalizeEmployeeId(
-      cleanLogin,
-    );
-
-  const result =
-    await pool.query(
-      `
-      SELECT
-        "id",
-        "employeeId",
-        "username",
-        "email",
-        "passwordHash",
-        "role",
-        "isActive",
-        "mustChangePassword",
-        "passwordChangedAt",
-        "otpHash",
-        "otpExpiresAt",
-        "otpAttempts",
-        "otpLastSentAt",
-        "otpVerifiedAt",
-        "lastLoginAt",
-        "createdAt",
-        "updatedAt"
-      FROM public."app_user"
-      WHERE
-        LOWER(TRIM(COALESCE("username", ''))) =
-        LOWER(TRIM($1))
-      OR
-        LOWER(TRIM(COALESCE("email", ''))) =
-        LOWER(TRIM($1))
-      OR
-        UPPER(TRIM(COALESCE("employeeId", ''))) =
-        $2
-      LIMIT 1
-      `,
-      [
-        cleanLogin,
-        employeeId,
-      ],
-    );
-
-  return (
-    result.rows[0] ||
-    null
+  const employeeId = normalizeEmployeeId(cleanLogin);
+  // Read the row as JSON so older deployments that do not yet contain every
+  // optional auth/OTP column still support login and password recovery.
+  const result = await pool.query(
+    `SELECT to_jsonb(account_row) AS data
+     FROM public."app_user" AS account_row
+     WHERE LOWER(TRIM(COALESCE(
+             to_jsonb(account_row) ->> 'username',
+             ''
+           ))) = LOWER(TRIM($1))
+        OR LOWER(TRIM(COALESCE(
+             to_jsonb(account_row) ->> 'email',
+             ''
+           ))) = LOWER(TRIM($1))
+        OR UPPER(TRIM(COALESCE(
+             to_jsonb(account_row) ->> 'employeeId',
+             to_jsonb(account_row) ->> 'employee_id',
+             ''
+           ))) = $2
+     LIMIT 1`,
+    [cleanLogin, employeeId],
   );
+
+  const data = result.rows[0]?.data;
+  if (!data) return null;
+  return {
+    ...data,
+    employeeId: data.employeeId ?? data.employee_id ?? null,
+    passwordHash: data.passwordHash ?? data.password_hash ?? null,
+    isActive: [true, "true", "t", "1"].includes(
+      data.isActive ?? data.is_active ?? true,
+    ),
+    mustChangePassword:
+      data.mustChangePassword ?? data.must_change_password ?? false,
+    passwordChangedAt:
+      data.passwordChangedAt ?? data.password_changed_at ?? null,
+  };
 }
 
 // ============================================================
@@ -1227,10 +1210,24 @@ app.post(
         // table. Do not use Prisma's legacy `Employee` model here: it maps to
         // a different table and includes identity columns that do not exist in
         // the current schema.
-        const employeeIdentity = await findActiveEmployeeIdentity(
-          pool,
-          user.employeeId,
-        );
+        let employeeIdentity;
+        try {
+          employeeIdentity = await findActiveEmployeeIdentity(
+            pool,
+            user.employeeId,
+          );
+        } catch (identityError) {
+          // Support installations still using Prisma's legacy Employee table
+          // while the Supabase employees migration is being applied.
+          console.warn("PRIMARY EMPLOYEE IDENTITY LOOKUP FAILED:", identityError.message);
+          const legacyEmployee = await prisma.employee.findUnique({
+            where: { employeeId: normalizeEmployeeId(user.employeeId) },
+            select: { newIcNo: true, isActive: true },
+          });
+          employeeIdentity = legacyEmployee?.isActive
+            ? legacyEmployee.newIcNo
+            : null;
+        }
         identityMatches = Boolean(
           employeeIdentity &&
             normalizeIdentityNumber(employeeIdentity) === identityNumber,
@@ -1518,8 +1515,9 @@ app.post(
       });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+      client = await pool.connect();
       await client.query("BEGIN");
       const employeeResult = await client.query(
         `UPDATE public.employees
@@ -1539,7 +1537,7 @@ app.post(
 
       await client.query(
         `UPDATE public."app_user"
-         SET "isActive" = $2, "updatedAt" = NOW()
+         SET "isActive" = $2
          WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = UPPER($1)`,
         [employeeId, isActive],
       );
@@ -1547,11 +1545,20 @@ app.post(
 
       return res.json({ ok: true, employeeId, isActive });
     } catch (error) {
-      await client.query("ROLLBACK");
+      if (client) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (rollbackError) {
+          console.error("EMPLOYEE STATUS ROLLBACK ERROR:", rollbackError.message);
+        }
+      }
       console.error("EMPLOYEE STATUS UPDATE ERROR:", error.message);
-      return genericError(res);
+      return res.status(503).json({
+        ok: false,
+        message: "Unable to update employee status right now. Please try again.",
+      });
     } finally {
-      client.release();
+      client?.release();
     }
   },
 );
