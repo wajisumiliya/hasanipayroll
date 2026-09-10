@@ -21,6 +21,36 @@ class _EmployeePortalState extends State<EmployeePortal> {
   final AppService service = AppService.instance;
 
   int tab = 0;
+  bool _showFinancialDetails = false;
+
+  void _toggleFinancialDetails() {
+    setState(() => _showFinancialDetails = !_showFinancialDetails);
+  }
+
+  String _moneyText(double value) {
+    if (!_showFinancialDetails) return 'RM ••••••';
+    return 'RM ${NumberFormat('#,##0.00').format(value)}';
+  }
+
+  String _privateText(String value) {
+    if (!_showFinancialDetails) return '••••••••';
+    return value.trim().isEmpty ? '-' : value;
+  }
+
+  Widget _financialVisibilityButton({Color? color}) {
+    return IconButton(
+      onPressed: _toggleFinancialDetails,
+      tooltip: _showFinancialDetails
+          ? 'Hide salary and bank details'
+          : 'Show salary and bank details',
+      icon: Icon(
+        _showFinancialDetails
+            ? Icons.visibility_off_outlined
+            : Icons.visibility_outlined,
+        color: color,
+      ),
+    );
+  }
 
   _EmployeeDailyTheme get _dailyTheme =>
       _EmployeeDailyTheme.forWeekday(DateTime.now().weekday);
@@ -367,6 +397,8 @@ class _EmployeePortalState extends State<EmployeePortal> {
             ),
           ),
           const Spacer(),
+          _financialVisibilityButton(color: Colors.white70),
+          const SizedBox(width: 8),
           PortalDayIndicator(theme: DailyPortalTheme.today()),
           const SizedBox(width: 22),
           CircleAvatar(
@@ -425,6 +457,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
         ),
         title: Text(_mobileTitle()),
         actions: [
+          _financialVisibilityButton(),
           IconButton(
             onPressed: logout,
             tooltip: 'Logout',
@@ -923,7 +956,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
         ),
         const SizedBox(height: 4),
         Text(
-          'RM ${NumberFormat('#,##0.00').format(value)}',
+          _moneyText(value),
           style: TextStyle(
             fontSize: big ? 26 : 18,
             fontWeight: FontWeight.w800,
@@ -1007,7 +1040,9 @@ class _EmployeePortalState extends State<EmployeePortal> {
           ),
         ),
         subtitle: Text(
-          'Net pay RM ${payroll.netPay.toStringAsFixed(2)}',
+          _showFinancialDetails
+              ? 'Net pay RM ${payroll.netPay.toStringAsFixed(2)}'
+              : 'Net pay RM ••••••',
           style: TextStyle(color: tab == 0 ? Colors.white60 : Colors.black54),
         ),
         trailing: IconButton(
@@ -1312,7 +1347,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
                     ),
                     title: const Text('Bank Code'),
                     subtitle: Text(
-                      employee!.bankCode,
+                      _privateText(employee!.bankCode),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
@@ -1327,7 +1362,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
                       'Bank Account Number',
                     ),
                     subtitle: Text(
-                      employee!.bankAccount,
+                      _privateText(employee!.bankAccount),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
@@ -1388,6 +1423,17 @@ class _EmployeePortalState extends State<EmployeePortal> {
   Future<void> _pdf(
     PayrollRecord payroll,
   ) async {
+    if (!_showFinancialDetails) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Tap the eye icon to reveal financial details before viewing the payslip.',
+          ),
+        ),
+      );
+      return;
+    }
+
     try {
       final bytes = await PdfService.buildPayslip(
         employee: employee!,

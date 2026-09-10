@@ -1507,6 +1507,86 @@ app.get(
 
 // ============================================================
 app.post(
+  "/api/admin/employees/:employeeId/account",
+  authenticate,
+  requireAdmin,
+  async (req, res) => {
+    const employeeId = normalizeEmployeeId(req.params.employeeId);
+    if (!employeeId) return res.status(400).json({ ok: false, message: "Employee ID is required." });
+
+    const defaultPassword = "112233";
+    const resetPassword = req.body?.resetPassword === true;
+
+    try {
+      const employeeResult = await pool.query(
+        `SELECT to_jsonb(employee_row) AS data FROM public.employees AS employee_row
+         WHERE UPPER(TRIM(COALESCE(to_jsonb(employee_row) ->> 'employee_id',
+           to_jsonb(employee_row) ->> 'employeeId', ''))) = $1 LIMIT 1`,
+        [employeeId],
+      );
+      const employee = employeeResult.rows[0]?.data;
+      if (!employee) return res.status(404).json({ ok: false, message: "Employee was not found." });
+
+      const email = String(employee.email || "").trim().toLowerCase();
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ ok: false, message: "A valid employee email address is required to create the login account." });
+      }
+      const isActive = [true, "true", "t", "1"].includes(employee.is_active ?? employee.isActive ?? true);
+      const existing = await pool.query(
+        `SELECT "id", "employeeId" FROM public."app_user"
+         WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = $1
+            OR LOWER(TRIM(COALESCE("email", ''))) = $2 LIMIT 1`,
+        [employeeId, email],
+      );
+
+      if (existing.rowCount > 0) {
+        const account = existing.rows[0];
+        if (account.employeeId && normalizeEmployeeId(account.employeeId) !== employeeId) {
+          return res.status(409).json({ ok: false, message: "That email address is already assigned to another employee login." });
+        }
+        if (resetPassword) {
+          const passwordHash = await bcrypt.hash(defaultPassword, 12);
+          await pool.query(
+            `UPDATE public."app_user" SET "employeeId" = $2, "username" = $3,
+             "email" = $3, "passwordHash" = $4, "role" = 'EMPLOYEE',
+             "isActive" = $5, "mustChangePassword" = TRUE,
+             "passwordChangedAt" = NULL, "updatedAt" = NOW()
+             WHERE "id" = $1`,
+            [account.id, employeeId, email, passwordHash, isActive],
+          );
+        } else {
+          await pool.query(
+            `UPDATE public."app_user" SET "employeeId" = $2, "username" = $3,
+             "email" = $3, "role" = 'EMPLOYEE', "isActive" = $4, "updatedAt" = NOW()
+             WHERE "id" = $1`,
+            [account.id, employeeId, email, isActive],
+          );
+        }
+        return res.json({
+          ok: true,
+          created: false,
+          passwordReset: resetPassword,
+          employeeId,
+          email,
+        });
+      }
+
+      const passwordHash = await bcrypt.hash(defaultPassword, 12);
+      await pool.query(
+        `INSERT INTO public."app_user" ("id", "employeeId", "username", "email",
+          "passwordHash", "role", "isActive", "mustChangePassword", "passwordChangedAt", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $3, $4, 'EMPLOYEE', $5, TRUE, NULL, NOW(), NOW())`,
+        [crypto.randomUUID(), employeeId, email, passwordHash, isActive],
+      );
+      return res.status(201).json({ ok: true, created: true, employeeId, email });
+    } catch (error) {
+      console.error("EMPLOYEE ACCOUNT PROVISION ERROR:", error.message);
+      return res.status(503).json({ ok: false, message: "Unable to create the employee login account right now." });
+    }
+  },
+);
+
+app.post(
   "/api/admin/employees/:employeeId/status",
   authenticate,
   requireAdmin,

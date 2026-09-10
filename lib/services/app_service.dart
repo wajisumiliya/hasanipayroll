@@ -1467,9 +1467,13 @@ class AppService extends ChangeNotifier {
             ),
           );
 
+      final accountError = await _provisionEmployeeLogin(cleanId);
       await loadEmployeesFromSupabase();
 
-      return 'Employee $cleanId added successfully.';
+      if (accountError != null) {
+        return 'Employee $cleanId was added, but login setup failed: $accountError';
+      }
+      return 'Employee $cleanId added successfully with login access.';
     } catch (e) {
       debugPrint(
         'Add employee error: $e',
@@ -1509,13 +1513,11 @@ class AppService extends ChangeNotifier {
             updatedEmployee.employeeId,
           );
 
-      await _supabase.from('app_user').update({
-        'branch_id': branch.id,
-        'display_name': updatedEmployee.name,
-      }).eq(
-        'employee_id',
-        updatedEmployee.employeeId,
-      );
+      final accountError =
+          await _provisionEmployeeLogin(updatedEmployee.employeeId);
+      if (accountError != null) {
+        return 'Employee details were updated, but login setup failed: $accountError';
+      }
 
       await loadEmployeesFromSupabase();
       await loadUsersFromSupabase();
@@ -1612,42 +1614,31 @@ class AppService extends ChangeNotifier {
   // CREATE / UPDATE EMPLOYEE LOGIN
   // ==========================================================================
 
-  Future<void> _createOrUpdateEmployeeUser(
-    Employee employee,
-    String branchId,
-  ) async {
+  Future<String> createOrResetEmployeeLogin(String employeeId) async {
+    final error = await _provisionEmployeeLogin(
+      employeeId,
+      resetPassword: true,
+    );
+    return error ??
+        'Application login is ready. User ID: employee email, default password: 112233.';
+  }
+
+  Future<String?> _provisionEmployeeLogin(
+    String employeeId, {
+    bool resetPassword = false,
+  }) async {
     try {
-      final existing = await _supabase
-          .from('app_user')
-          .select()
-          .eq(
-            'employee_id',
-            employee.employeeId,
-          )
-          .maybeSingle();
-
-      final data = <String, dynamic>{
-        'username': employee.employeeId,
-        'role': 'employee',
-        'employee_id': employee.employeeId,
-        'branch_id': branchId,
-        'display_name': employee.name,
-      };
-
-      if (existing == null) {
-        await _supabase.from('app_user').insert(data);
-      } else {
-        await _supabase.from('app_user').update(data).eq(
-              'employee_id',
-              employee.employeeId,
-            );
-      }
-
-      await loadUsersFromSupabase();
-    } catch (e) {
-      debugPrint(
-        'Employee user error: $e',
+      final data = await _postAuth(
+        '/api/admin/employees/${Uri.encodeComponent(employeeId.trim())}/account',
+        {'resetPassword': resetPassword},
+        authenticated: true,
       );
+      if (data['ok'] == true) return null;
+      return data['message']?.toString() ??
+          'Unable to create the employee login account.';
+    } catch (e) {
+      debugPrint('Employee login provisioning error: $e');
+      return 'Unable to contact the payroll server.';
     }
   }
 
@@ -1944,10 +1935,8 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
                 employeeId,
               );
 
-          await _createOrUpdateEmployeeUser(
-            employee,
-            branch.id,
-          );
+          final accountError = await _provisionEmployeeLogin(employeeId);
+          if (accountError != null) throw Exception(accountError);
 
           updated++;
         } else {
@@ -1957,10 +1946,8 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
                 ),
               );
 
-          await _createOrUpdateEmployeeUser(
-            employee,
-            branch.id,
-          );
+          final accountError = await _provisionEmployeeLogin(employeeId);
+          if (accountError != null) throw Exception(accountError);
 
           imported++;
         }

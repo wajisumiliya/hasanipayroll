@@ -2771,6 +2771,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         _showTransferEmployee(employee),
                                   ),
 
+                                  IconButton(
+                                    tooltip: 'Create/reset application login',
+                                    icon: const Icon(
+                                      Icons.manage_accounts_outlined,
+                                      color: Colors.purple,
+                                    ),
+                                    onPressed: () =>
+                                        _createOrResetApplicationLogin(
+                                            employee),
+                                  ),
                                   // DELETE
                                   IconButton(
                                     tooltip: 'Delete',
@@ -2802,6 +2812,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
       },
     );
+  }
+
+  Future<void> _createOrResetApplicationLogin(
+    Map<String, dynamic> employee,
+  ) async {
+    final employeeId = employee['employee_id']?.toString().trim() ?? '';
+    final email = employee['email']?.toString().trim() ?? '';
+    if (employeeId.isEmpty || email.isEmpty || !email.contains('@')) {
+      _message('A valid Employee ID and email address are required.');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Create Application Login'),
+        content: Text(
+          'User ID: $email\nDefault password: 112233\n\n'
+          'If an account already exists, its password will be reset. The employee '
+          'must create a new password before the dashboard can open.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.manage_accounts_outlined),
+            label: const Text('Create / Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final result = await service.createOrResetEmployeeLogin(employeeId);
+    if (!mounted) return;
+    _message(result);
   }
 
   // ===========================================================================
@@ -2964,7 +3013,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final id = employeeId.text.trim();
                     final employeeName = name.text.trim();
 
@@ -2982,7 +3031,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       return;
                     }
 
-                    service.addEmployee(
+                    final result = await service.addEmployee(
                       Employee(
                         employeeId: id,
                         name: employeeName,
@@ -3001,11 +3050,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       branchId: branchId,
                     );
 
+                    if (!dialogContext.mounted) return;
                     Navigator.pop(dialogContext);
-
-                    _message(
-                      'Employee added successfully.',
-                    );
+                    if (!mounted) return;
+                    _message(result);
                   },
                   child: const Text(
                     'Save Employee',
