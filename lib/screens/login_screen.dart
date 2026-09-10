@@ -34,8 +34,6 @@ class _LoginScreenState extends State<LoginScreen>
   late final AnimationController _catWalkController;
   late final Animation<double> _heroEntrance;
   late final Animation<double> _formEntrance;
-  bool _catFramesCached = false;
-  bool _showAttendanceSports = false;
 
   @override
   void initState() {
@@ -62,16 +60,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _entranceController.forward();
     _restoreSession();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_catFramesCached) return;
-    _catFramesCached = true;
-    for (var frame = 1; frame <= 8; frame++) {
-      precacheImage(AssetImage('assets/login_cat_walk_$frame.png'), context);
-    }
   }
 
   Future<void> _restoreSession() async {
@@ -798,13 +786,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _walkingCat(double screenWidth, bool compact) {
-    final catWidth = compact ? 160.0 : 210.0;
-    final catHeight = compact ? 116.0 : 150.0;
+    final catWidth = compact ? 150.0 : 200.0;
+    final catHeight = compact ? 105.0 : 140.0;
 
     return Positioned(
       left: 0,
       right: 0,
-      bottom: compact ? 8 : 12,
+      bottom: compact ? 6 : 10,
       height: catHeight,
       child: IgnorePointer(
         child: ClipRect(
@@ -813,17 +801,18 @@ class _LoginScreenState extends State<LoginScreen>
             builder: (context, child) {
               final progress = _catWalkController.value;
               final movingRight =
-                  _catWalkController.status == AnimationStatus.reverse;
-              final horizontal = (screenWidth - catWidth) * (1 - progress);
-              final step = math.sin(progress * math.pi * 24).abs() * 3;
-              final frameNumber = ((progress * 80).floor() % 8) + 1;
+                  _catWalkController.status == AnimationStatus.forward;
+              final travel = screenWidth - catWidth;
+              final horizontal = progress * travel;
+              final walkCycle = progress * 16;
+              final frameNumber = (walkCycle.floor() % 8) + 1;
+              final bodyBounce = math.sin(walkCycle * math.pi).abs() * 3;
 
               return Stack(
-                clipBehavior: Clip.none,
                 children: [
                   Positioned(
-                    left: horizontal,
-                    bottom: step,
+                    left: horizontal.clamp(0, travel),
+                    bottom: bodyBounce,
                     width: catWidth,
                     height: catHeight,
                     child: Transform(
@@ -833,23 +822,12 @@ class _LoginScreenState extends State<LoginScreen>
                         1,
                         1,
                       ),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: .28),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          'assets/login_cat_walk_$frameNumber.png',
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                          gaplessPlayback: true,
-                          excludeFromSemantics: true,
-                        ),
+                      child: Image.asset(
+                        'assets/login_cat_walk_$frameNumber.png',
+                        fit: BoxFit.contain,
+                        gaplessPlayback: true,
+                        filterQuality: FilterQuality.high,
+                        excludeFromSemantics: true,
                       ),
                     ),
                   ),
@@ -911,100 +889,20 @@ class _LoginScreenState extends State<LoginScreen>
                 Icons.people_alt_outlined,
                 'People',
                 theme.accent1,
-                onTap: () => setState(() => _showAttendanceSports = false),
               ),
               _GlassFeature(
                 Icons.calendar_month_outlined,
                 'Attendance',
                 theme.accent1,
-                selected: _showAttendanceSports,
-                onTap: () => setState(
-                  () => _showAttendanceSports = !_showAttendanceSports,
-                ),
               ),
               _GlassFeature(
                 Icons.account_balance_wallet_outlined,
                 'Payroll',
                 theme.accent1,
-                onTap: () => setState(() => _showAttendanceSports = false),
               ),
             ],
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: _showAttendanceSports
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: _attendanceSportsCats(),
-                  )
-                : const SizedBox.shrink(),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _attendanceSportsCats() {
-    return Semantics(
-      label: 'Two cats playing football',
-      child: SizedBox(
-        width: 300,
-        height: 105,
-        child: AnimatedBuilder(
-          animation: _catWalkController,
-          builder: (context, child) {
-            final progress = _catWalkController.value;
-            final frameNumber = ((progress * 80).floor() % 8) + 1;
-            final bounce = math.sin(progress * math.pi * 12).abs();
-            final ballTravel = math.sin(progress * math.pi * 4) * 54;
-
-            Widget cat({required bool facesRight}) => SizedBox(
-                  width: 105,
-                  height: 88,
-                  child: Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.diagonal3Values(
-                      facesRight ? -1 : 1,
-                      1,
-                      1,
-                    ),
-                    child: Image.asset(
-                      'assets/login_cat_walk_$frameNumber.png',
-                      fit: BoxFit.contain,
-                      gaplessPlayback: true,
-                      filterQuality: FilterQuality.high,
-                    ),
-                  ),
-                );
-
-            return Stack(
-              alignment: Alignment.bottomCenter,
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(left: 0, bottom: 0, child: cat(facesRight: true)),
-                Positioned(right: 0, bottom: 0, child: cat(facesRight: false)),
-                Positioned(
-                  left: 137 + ballTravel,
-                  bottom: 8 + bounce * 32,
-                  child: const Icon(
-                    Icons.sports_soccer_rounded,
-                    size: 28,
-                    color: Color(0xFFFFD166),
-                    shadows: [
-                      Shadow(
-                        color: Colors.black45,
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
       ),
     );
   }
@@ -1552,16 +1450,12 @@ class _GlassFeature extends StatelessWidget {
   const _GlassFeature(
     this.icon,
     this.label,
-    this.accent, {
-    this.selected = false,
-    this.onTap,
-  });
+    this.accent,
+  );
 
   final IconData icon;
   final String label;
   final Color accent;
-  final bool selected;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1569,38 +1463,28 @@ class _GlassFeature extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .10),
             borderRadius: BorderRadius.circular(16),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: selected ? .22 : .10),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: selected
-                      ? accent.withValues(alpha: .90)
-                      : Colors.white.withValues(alpha: .18),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: .18),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: accent),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 18, color: accent),
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
       ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -570,7 +571,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                           },
                     child: const Text('Close'),
                   ),
-                  const Spacer(),
+                  const Expanded(
+                    child: Center(child: _AttendanceSportsCats()),
+                  ),
                   OutlinedButton.icon(
                     onPressed: printingAttendance ? null : _printAttendance,
                     icon: printingAttendance
@@ -2625,6 +2628,94 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 // ============================================================================
 // ATTENDANCE DAY CONTROLLERS
 // ============================================================================
+
+class _AttendanceSportsCats extends StatefulWidget {
+  const _AttendanceSportsCats();
+
+  @override
+  State<_AttendanceSportsCats> createState() => _AttendanceSportsCatsState();
+}
+
+class _AttendanceSportsCatsState extends State<_AttendanceSportsCats>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Two cats playing football',
+      child: SizedBox(
+        width: 220,
+        height: 68,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final progress = _controller.value;
+            final ballX = math.sin(progress * math.pi * 2) * 35;
+            final ballY = math.sin(progress * math.pi * 4).abs() * 18;
+            final catStep = math.sin(progress * math.pi * 4).abs() * 2;
+
+            Widget cat(bool faceRight) => Transform.translate(
+                  offset: Offset(0, -catStep),
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.diagonal3Values(
+                      faceRight ? -1 : 1,
+                      1,
+                      1,
+                    ),
+                    child: Image.asset(
+                      'assets/login_walking_cat.png',
+                      width: 82,
+                      height: 62,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                );
+
+            return Stack(
+              alignment: Alignment.bottomCenter,
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(left: 0, bottom: 0, child: cat(true)),
+                Positioned(right: 0, bottom: 0, child: cat(false)),
+                Positioned(
+                  left: 100 + ballX,
+                  bottom: 4 + ballY,
+                  child: Transform.rotate(
+                    angle: progress * math.pi * 4,
+                    child: const Icon(
+                      Icons.sports_soccer,
+                      size: 24,
+                      color: Color(0xFF3155D9),
+                      shadows: [Shadow(color: Colors.black26, blurRadius: 5)],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
 
 class AttendanceDayControllers {
   final TextEditingController workingIn = TextEditingController();
