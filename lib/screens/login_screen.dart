@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -31,7 +30,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   late final AnimationController _entranceController;
   late final AnimationController _ambientController;
-  late final AnimationController _catWalkController;
   late final Animation<double> _heroEntrance;
   late final Animation<double> _formEntrance;
 
@@ -45,10 +43,6 @@ class _LoginScreenState extends State<LoginScreen>
     _ambientController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 9),
-    )..repeat(reverse: true);
-    _catWalkController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 14),
     )..repeat(reverse: true);
     _heroEntrance = CurvedAnimation(
       parent: _entranceController,
@@ -82,7 +76,6 @@ class _LoginScreenState extends State<LoginScreen>
   void dispose() {
     _entranceController.dispose();
     _ambientController.dispose();
-    _catWalkController.dispose();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -777,65 +770,9 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
-              _walkingCat(constraints.maxWidth, compact),
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _walkingCat(double screenWidth, bool compact) {
-    final catWidth = compact ? 150.0 : 200.0;
-    final catHeight = compact ? 105.0 : 140.0;
-
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: compact ? 6 : 10,
-      height: catHeight,
-      child: IgnorePointer(
-        child: ClipRect(
-          child: AnimatedBuilder(
-            animation: _catWalkController,
-            builder: (context, child) {
-              final progress = _catWalkController.value;
-              final movingRight =
-                  _catWalkController.status == AnimationStatus.forward;
-              final travel = screenWidth - catWidth;
-              final horizontal = progress * travel;
-              final walkCycle = progress * 16;
-              final frameNumber = (walkCycle.floor() % 8) + 1;
-              final bodyBounce = math.sin(walkCycle * math.pi).abs() * 3;
-
-              return Stack(
-                children: [
-                  Positioned(
-                    left: horizontal.clamp(0, travel),
-                    bottom: bodyBounce,
-                    width: catWidth,
-                    height: catHeight,
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.diagonal3Values(
-                        movingRight ? -1 : 1,
-                        1,
-                        1,
-                      ),
-                      child: Image.asset(
-                        'assets/login_cat_clean_$frameNumber.png',
-                        fit: BoxFit.contain,
-                        gaplessPlayback: true,
-                        filterQuality: FilterQuality.high,
-                        excludeFromSemantics: true,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
       ),
     );
   }
