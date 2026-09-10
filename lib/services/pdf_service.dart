@@ -96,8 +96,6 @@ class PdfService {
                 earlyOutDays: earlyOutDays,
                 unpaidDays: unpaidDays,
               ),
-              if ((p.remarks ?? '').trim().isNotEmpty)
-                _singleLine('REMARKS', p.remarks!.trim()),
               pw.Padding(
                 padding: const pw.EdgeInsets.fromLTRB(7, 5, 7, 6),
                 child: pw.Row(
@@ -381,17 +379,6 @@ class PdfService {
           ),
         ],
       ),
-    );
-  }
-
-  static pw.Widget _singleLine(String label, String value) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(bottom: pw.BorderSide(width: .8)),
-      ),
-      child:
-          pw.Text('$label : $value', style: const pw.TextStyle(fontSize: 5.8)),
     );
   }
 
