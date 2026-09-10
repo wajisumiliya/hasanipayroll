@@ -805,7 +805,6 @@ class _LoginScreenState extends State<LoginScreen>
               final travel = screenWidth - catWidth;
               final horizontal = progress * travel;
               final walkCycle = progress * 16;
-              final frameNumber = (walkCycle.floor() % 8) + 1;
               final bodyBounce = math.sin(walkCycle * math.pi).abs() * 3;
 
               return Stack(
@@ -823,7 +822,7 @@ class _LoginScreenState extends State<LoginScreen>
                         1,
                       ),
                       child: Image.asset(
-                        'assets/login_cat_walk_$frameNumber.png',
+                        'assets/login_cat_walking.gif',
                         fit: BoxFit.contain,
                         gaplessPlayback: true,
                         filterQuality: FilterQuality.high,
