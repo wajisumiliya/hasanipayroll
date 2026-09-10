@@ -15,6 +15,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import {
   findActiveEmployeeIdentity,
   normalizeIdentityNumber,
+  resolvePasswordRecoveryEmployeeId,
 } from "./identity.js";
 
 // ============================================================
@@ -1205,7 +1206,12 @@ app.post(
       const user = await findAppUser(username);
       let identityMatches = false;
 
-      if (user?.isActive === true && user.employeeId) {
+      const recoveryEmployeeId = resolvePasswordRecoveryEmployeeId(
+        user,
+        username,
+      );
+
+      if (user?.isActive === true && recoveryEmployeeId) {
         // Employee profile data is stored in the Supabase-style `employees`
         // table. Do not use Prisma's legacy `Employee` model here: it maps to
         // a different table and includes identity columns that do not exist in
@@ -1214,14 +1220,14 @@ app.post(
         try {
           employeeIdentity = await findActiveEmployeeIdentity(
             pool,
-            user.employeeId,
+            recoveryEmployeeId,
           );
         } catch (identityError) {
           // Support installations still using Prisma's legacy Employee table
           // while the Supabase employees migration is being applied.
           console.warn("PRIMARY EMPLOYEE IDENTITY LOOKUP FAILED:", identityError.message);
           const legacyEmployee = await prisma.employee.findUnique({
-            where: { employeeId: normalizeEmployeeId(user.employeeId) },
+            where: { employeeId: normalizeEmployeeId(recoveryEmployeeId) },
             select: { newIcNo: true, isActive: true },
           });
           employeeIdentity = legacyEmployee?.isActive

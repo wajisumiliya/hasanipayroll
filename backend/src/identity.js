@@ -2,8 +2,18 @@ export function normalizeIdentityNumber(value) {
   return String(value ?? "")
     .trim()
     .toUpperCase()
-    .replace(/[\s-]+/g, "")
+    .replace(/[^A-Z0-9]/g, "")
     .slice(0, 100);
+}
+
+export function resolvePasswordRecoveryEmployeeId(user, login) {
+  const linkedEmployeeId = String(
+    user?.employeeId ?? user?.employee_id ?? "",
+  ).trim();
+  if (linkedEmployeeId) return linkedEmployeeId.toUpperCase();
+
+  const enteredEmployeeId = String(login ?? "").trim().toUpperCase();
+  return enteredEmployeeId || null;
 }
 
 export async function findActiveEmployeeIdentity(pool, employeeId) {

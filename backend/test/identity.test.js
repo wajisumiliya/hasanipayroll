@@ -4,10 +4,29 @@ import test from "node:test";
 import {
   findActiveEmployeeIdentity,
   normalizeIdentityNumber,
+  resolvePasswordRecoveryEmployeeId,
 } from "../src/identity.js";
 
 test("normalizeIdentityNumber ignores case, spaces, and hyphens", () => {
   assert.equal(normalizeIdentityNumber("  ae-21 4357 "), "AE214357");
+});
+
+test("normalizeIdentityNumber ignores common IC formatting characters", () => {
+  assert.equal(normalizeIdentityNumber(" 900101/02-1234 "), "900101021234");
+});
+
+test("password recovery uses linked employee ID when available", () => {
+  assert.equal(
+    resolvePasswordRecoveryEmployeeId({ employeeId: " emp-001 " }, "other"),
+    "EMP-001",
+  );
+});
+
+test("password recovery falls back to entered employee ID for legacy users", () => {
+  assert.equal(
+    resolvePasswordRecoveryEmployeeId({ employeeId: null }, " emp-002 "),
+    "EMP-002",
+  );
 });
 
 test("findActiveEmployeeIdentity queries the current employees schema", async () => {
