@@ -24,6 +24,8 @@ class DailyPortalTheme {
   Color get glass => const Color(0xFF241334).withValues(alpha: .92);
   Color get glassStrong => const Color(0xFF12081F).withValues(alpha: .98);
   Color get glassBorder => accent.withValues(alpha: .52);
+  Color get mutedText => Colors.white.withValues(alpha: .64);
+  Color get headerShadow => const Color(0xFF07030D).withValues(alpha: .42);
 
   static DailyPortalTheme today() => forWeekday(DateTime.now().weekday);
 
@@ -259,6 +261,40 @@ class _PortalAtmospherePainter extends CustomPainter {
         size.height * .08,
       );
     canvas.drawPath(path, bright);
+
+    final ornament = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = theme.accent.withValues(alpha: .18);
+    const margin = 15.0;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          margin,
+          margin,
+          size.width - margin * 2,
+          size.height - margin * 2,
+        ),
+        const Radius.circular(22),
+      ),
+      ornament,
+    );
+
+    for (final center in <Offset>[
+      const Offset(margin, margin),
+      Offset(size.width - margin, margin),
+      Offset(margin, size.height - margin),
+      Offset(size.width - margin, size.height - margin),
+    ]) {
+      const radius = 6.0;
+      final jewel = Path()
+        ..moveTo(center.dx, center.dy - radius)
+        ..lineTo(center.dx + radius, center.dy)
+        ..lineTo(center.dx, center.dy + radius)
+        ..lineTo(center.dx - radius, center.dy)
+        ..close();
+      canvas.drawPath(jewel, ornament);
+    }
   }
 
   @override

@@ -519,6 +519,13 @@ class _BranchPortalState extends State<BranchPortal> {
       height: 78,
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: theme.header),
+        boxShadow: [
+          BoxShadow(
+            color: theme.headerShadow,
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
         border: Border(
           bottom: BorderSide(color: theme.glassBorder),
         ),
@@ -534,17 +541,18 @@ class _BranchPortalState extends State<BranchPortal> {
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
             ),
           ),
           const Spacer(),
           PortalDayIndicator(theme: theme),
           const SizedBox(width: 24),
-          const CircleAvatar(
+          CircleAvatar(
             radius: 18,
-            backgroundColor: Color(0xFFE7F7EF),
+            backgroundColor: theme.accent.withValues(alpha: .16),
             child: Icon(
               Icons.business,
-              color: Color(0xFF15965D),
+              color: theme.accent,
             ),
           ),
           const SizedBox(width: 10),
@@ -555,14 +563,15 @@ class _BranchPortalState extends State<BranchPortal> {
               Text(
                 branchDisplayName,
                 style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 branchId,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
-                  color: Colors.black54,
+                  color: theme.mutedText,
                 ),
               ),
             ],
@@ -570,7 +579,7 @@ class _BranchPortalState extends State<BranchPortal> {
           const SizedBox(width: 20),
           IconButton(
             onPressed: logout,
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: theme.mutedText),
           ),
         ],
       ),

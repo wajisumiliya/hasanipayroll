@@ -339,6 +339,13 @@ class _EmployeePortalState extends State<EmployeePortal> {
       height: 78,
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: dailyTheme.header),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF07030D).withValues(alpha: .42),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
         border: Border(
           bottom: BorderSide(
             color: dailyTheme.accent.withValues(alpha: .30),
@@ -356,6 +363,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
             ),
           ),
           const Spacer(),
@@ -366,7 +374,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
             backgroundColor: _dailyTheme.accent.withValues(alpha: .20),
             child: const Icon(
               Icons.person,
-              color: Color(0xFF2D55D8),
+              color: Colors.white,
             ),
           ),
           const SizedBox(width: 10),
@@ -385,7 +393,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
                 employee!.employeeId,
                 style: const TextStyle(
                   fontSize: 11,
-                  color: Colors.black54,
+                  color: Colors.white60,
                 ),
               ),
             ],
@@ -394,7 +402,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
           IconButton(
             onPressed: logout,
             tooltip: 'Logout',
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white70),
           ),
         ],
       ),

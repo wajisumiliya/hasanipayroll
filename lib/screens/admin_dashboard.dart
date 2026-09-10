@@ -673,6 +673,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
       height: 78,
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: theme.header),
+        boxShadow: [
+          BoxShadow(
+            color: theme.headerShadow,
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
         border: Border(
           bottom: BorderSide(color: theme.glassBorder),
         ),
@@ -688,27 +695,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
             ),
           ),
           const Spacer(),
           PortalDayIndicator(theme: theme),
           const SizedBox(width: 24),
-          const CircleAvatar(
+          CircleAvatar(
             radius: 18,
-            backgroundColor: Color(0xFFEAF0FF),
+            backgroundColor: theme.accent.withValues(alpha: .16),
             child: Icon(
               Icons.admin_panel_settings,
-              color: Color(0xFF2D55D8),
+              color: theme.accent,
             ),
           ),
           const SizedBox(width: 10),
-          const Column(
+          Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Admin User',
-                style: TextStyle(
+                style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -716,7 +725,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'Administrator',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.black54,
+                  color: theme.mutedText,
                 ),
               ),
             ],
@@ -725,7 +734,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           IconButton(
             tooltip: 'Logout',
             onPressed: logout,
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: theme.mutedText),
           ),
         ],
       ),
