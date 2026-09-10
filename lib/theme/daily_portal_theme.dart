@@ -150,7 +150,13 @@ class PortalDayIndicator extends StatelessWidget {
                   height: index == todayIndex ? 9 : 6,
                   decoration: BoxDecoration(
                     color: colors[index],
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(2),
+                    border: Border.all(
+                      color: Colors.white.withValues(
+                        alpha: index == todayIndex ? .72 : .20,
+                      ),
+                      width: .7,
+                    ),
                     boxShadow: index == todayIndex
                         ? [
                             BoxShadow(
@@ -253,27 +259,6 @@ class _PortalAtmospherePainter extends CustomPainter {
         size.height * .08,
       );
     canvas.drawPath(path, bright);
-
-    // Fine gold diamond details give admin and branch portals a restrained
-    // royal finish without reducing dashboard readability.
-    final jewel = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.15
-      ..color = theme.accent.withValues(alpha: .24);
-    for (final center in <Offset>[
-      Offset(size.width * .12, size.height * .16),
-      Offset(size.width * .84, size.height * .72),
-      Offset(size.width * .72, size.height * .22),
-    ]) {
-      const radius = 8.0;
-      final diamond = Path()
-        ..moveTo(center.dx, center.dy - radius)
-        ..lineTo(center.dx + radius, center.dy)
-        ..lineTo(center.dx, center.dy + radius)
-        ..lineTo(center.dx - radius, center.dy)
-        ..close();
-      canvas.drawPath(diamond, jewel);
-    }
   }
 
   @override
