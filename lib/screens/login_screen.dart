@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen>
   late final AnimationController _catWalkController;
   late final Animation<double> _heroEntrance;
   late final Animation<double> _formEntrance;
-  bool _catFramesCached = false;
+  String _activeFeature = 'People';
 
   @override
   void initState() {
@@ -61,16 +61,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _entranceController.forward();
     _restoreSession();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_catFramesCached) return;
-    _catFramesCached = true;
-    for (var frame = 1; frame <= 8; frame++) {
-      precacheImage(AssetImage('assets/login_cat_walk_$frame.png'), context);
-    }
   }
 
   Future<void> _restoreSession() async {
@@ -788,7 +778,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
-              _walkingCat(constraints.maxWidth, compact),
+              _catActivity(constraints.maxWidth, compact),
             ],
           );
         },
@@ -796,7 +786,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _walkingCat(double screenWidth, bool compact) {
+  Widget _catActivity(double screenWidth, bool compact) {
     final catWidth = compact ? 160.0 : 210.0;
     final catHeight = compact ? 116.0 : 150.0;
 
@@ -815,41 +805,23 @@ class _LoginScreenState extends State<LoginScreen>
                   _catWalkController.status == AnimationStatus.reverse;
               final horizontal = (screenWidth - catWidth) * (1 - progress);
               final step = math.sin(progress * math.pi * 24).abs() * 3;
-              final frameNumber = ((progress * 80).floor() % 8) + 1;
+              final playing = _activeFeature == 'Attendance';
 
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
-                    left: horizontal,
+                    left: playing ? 0 : horizontal,
                     bottom: step,
-                    width: catWidth,
+                    width: playing ? screenWidth : catWidth,
                     height: catHeight,
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.diagonal3Values(
-                        movingRight ? -1 : 1,
-                        1,
-                        1,
-                      ),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: .28),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
+                    child: CustomPaint(
+                      painter: playing
+                          ? _PlayingCatsPainter(progress)
+                          : _WalkingCatPainter(
+                              progress: progress,
+                              facingRight: movingRight,
                             ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          'assets/login_cat_walk_$frameNumber.png',
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                          gaplessPlayback: true,
-                          excludeFromSemantics: true,
-                        ),
-                      ),
                     ),
                   ),
                 ],
@@ -910,16 +882,22 @@ class _LoginScreenState extends State<LoginScreen>
                 Icons.people_alt_outlined,
                 'People',
                 theme.accent1,
+                selected: _activeFeature == 'People',
+                onTap: () => setState(() => _activeFeature = 'People'),
               ),
               _GlassFeature(
                 Icons.calendar_month_outlined,
                 'Attendance',
                 theme.accent1,
+                selected: _activeFeature == 'Attendance',
+                onTap: () => setState(() => _activeFeature = 'Attendance'),
               ),
               _GlassFeature(
                 Icons.account_balance_wallet_outlined,
                 'Payroll',
                 theme.accent1,
+                selected: _activeFeature == 'Payroll',
+                onTap: () => setState(() => _activeFeature = 'Payroll'),
               ),
             ],
           ),
@@ -1471,55 +1449,182 @@ class _GlassFeature extends StatelessWidget {
   const _GlassFeature(
     this.icon,
     this.label,
-    this.accent,
-  );
+    this.accent, {
+    required this.selected,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
   final Color accent;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 10,
-          sigmaY: 10,
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 11,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .10),
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label animation',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: InkWell(
+            onTap: onTap,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: .18),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: accent,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: selected ? .22 : .10),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: selected
+                      ? accent.withValues(alpha: .85)
+                      : Colors.white.withValues(alpha: .18),
                 ),
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 18, color: accent),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+/// A code-drawn cat stays crisp and visible on every background. The previous
+/// raster frames included a baked-in checkerboard, which hid the cat at the
+/// small size used along the bottom of the login page.
+class _WalkingCatPainter extends CustomPainter {
+  const _WalkingCatPainter({required this.progress, required this.facingRight});
+
+  final double progress;
+  final bool facingRight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    if (facingRight) {
+      canvas.translate(size.width, 0);
+      canvas.scale(-1, 1);
+    }
+    _CatPainter.drawCat(canvas, size, const Color(0xFFF2A65A),
+        legPhase: progress * math.pi * 24);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _WalkingCatPainter oldDelegate) =>
+      progress != oldDelegate.progress || facingRight != oldDelegate.facingRight;
+}
+
+class _PlayingCatsPainter extends CustomPainter {
+  const _PlayingCatsPainter(this.progress);
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final catSize = Size(math.min(150.0, size.width * .22), size.height);
+    final center = size.width / 2;
+    final bounce = math.sin(progress * math.pi * 4).abs();
+
+    canvas.save();
+    canvas.translate(center - catSize.width - 34, 0);
+    canvas.scale(-1, 1);
+    canvas.translate(-catSize.width, 0);
+    _CatPainter.drawCat(canvas, catSize, const Color(0xFFF2A65A),
+        legPhase: progress * math.pi * 16);
+    canvas.restore();
+
+    canvas.save();
+    canvas.translate(center + 34, 0);
+    _CatPainter.drawCat(canvas, catSize, const Color(0xFFE8E5DF),
+        legPhase: progress * math.pi * 16 + math.pi);
+    canvas.restore();
+
+    final ballCenter = Offset(
+      center + math.sin(progress * math.pi * 2) * 62,
+      size.height - 29 - bounce * 34,
+    );
+    final ball = Paint()..color = const Color(0xFFFFC857);
+    canvas.drawCircle(ballCenter, 15, ball);
+    final seam = Paint()
+      ..color = const Color(0xFF7B4D9B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    canvas.drawArc(Rect.fromCircle(center: ballCenter, radius: 11), 0, math.pi,
+        false, seam);
+    canvas.drawArc(Rect.fromCircle(center: ballCenter, radius: 11), math.pi,
+        math.pi, false, seam);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PlayingCatsPainter oldDelegate) =>
+      progress != oldDelegate.progress;
+}
+
+class _CatPainter {
+  static void drawCat(Canvas canvas, Size size, Color color,
+      {required double legPhase}) {
+    final scale = math.min(size.width / 180, size.height / 120);
+    canvas.translate((size.width - 180 * scale) / 2, size.height - 112 * scale);
+    canvas.scale(scale, scale);
+    final fur = Paint()..color = color;
+    final dark = Paint()..color = const Color(0xFF49313A);
+    final shadow = Paint()
+      ..color = Colors.black.withValues(alpha: .24)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7);
+    canvas.drawOval(const Rect.fromLTWH(20, 100, 145, 10), shadow);
+    canvas.drawOval(const Rect.fromLTWH(47, 35, 105, 58), fur);
+    canvas.drawCircle(const Offset(42, 48), 30, fur);
+    final ears = Path()
+      ..moveTo(19, 27)
+      ..lineTo(25, 0)
+      ..lineTo(43, 22)
+      ..moveTo(47, 20)
+      ..lineTo(62, 2)
+      ..lineTo(67, 32);
+    canvas.drawPath(ears, fur);
+    canvas.drawCircle(const Offset(31, 43), 3.5, dark);
+    canvas.drawCircle(const Offset(50, 43), 3.5, dark);
+    final nose = Paint()..color = const Color(0xFFE46B76);
+    canvas.drawCircle(const Offset(39, 53), 3, nose);
+    final stride = math.sin(legPhase) * 7;
+    final legs = Paint()
+      ..color = color
+      ..strokeWidth = 13
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(66, 79), Offset(61 + stride, 103), legs);
+    canvas.drawLine(Offset(91, 81), Offset(96 - stride, 103), legs);
+    canvas.drawLine(Offset(124, 78), Offset(119 + stride, 103), legs);
+    canvas.drawLine(Offset(143, 73), Offset(148 - stride, 101), legs);
+    final tail = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 15
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(const Rect.fromLTWH(135, 16, 38, 60), -1.2, 2.1, false, tail);
+    final whisker = Paint()
+      ..color = Colors.white.withValues(alpha: .9)
+      ..strokeWidth = 1.4;
+    canvas.drawLine(const Offset(17, 54), const Offset(0, 49), whisker);
+    canvas.drawLine(const Offset(18, 59), const Offset(0, 62), whisker);
   }
 }
 
