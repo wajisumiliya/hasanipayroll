@@ -452,7 +452,7 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
         ),
       );
 
-  Widget _approvalCell(String title, String name, String date) => Container(
+  Widget _approvalCell(String title, String name, String date) => SizedBox(
         height: 92,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

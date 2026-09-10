@@ -271,8 +271,9 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
                           'Unable to load OT requests:\n${snapshot.error}'));
                 }
                 final rows = snapshot.data ?? [];
-                if (rows.isEmpty)
+                if (rows.isEmpty) {
                   return const Center(child: Text('No OT requests.'));
+                }
                 return ListView.builder(
                   itemCount: rows.length,
                   itemBuilder: (context, index) {

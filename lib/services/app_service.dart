@@ -1,3 +1,5 @@
+// ignore_for_file: camel_case_types
+
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -358,8 +360,6 @@ class AppService extends ChangeNotifier {
 
   final List<app_user> users = [];
 
-  bool _usersLoaded = false;
-
   // ==========================================================================
   // EMPLOYEES
   // ==========================================================================
@@ -380,15 +380,11 @@ class AppService extends ChangeNotifier {
 
   final List<PayrollRecord> payroll = [];
 
-  bool _payrollLoaded = false;
-
   // ==========================================================================
   // ATTENDANCE
   // ==========================================================================
 
   final List<AttendanceRecord> attendance = [];
-
-  bool _attendanceLoaded = false;
 
   // ==========================================================================
   // RESTORE
@@ -490,16 +486,12 @@ class AppService extends ChangeNotifier {
         }
       }
 
-      _usersLoaded = true;
-
       debugPrint(
         'Supabase app_user loaded: ${users.length}',
       );
 
       notifyListeners();
     } catch (e) {
-      _usersLoaded = false;
-
       debugPrint(
         'ERROR loading app_user: $e',
       );
@@ -618,16 +610,12 @@ class AppService extends ChangeNotifier {
         }
       }
 
-      _payrollLoaded = true;
-
       debugPrint(
         'Supabase payroll loaded: ${payroll.length}',
       );
 
       notifyListeners();
     } catch (e) {
-      _payrollLoaded = false;
-
       debugPrint(
         'ERROR loading payroll: $e',
       );
@@ -796,16 +784,12 @@ class AppService extends ChangeNotifier {
         }
       }
 
-      _attendanceLoaded = true;
-
       debugPrint(
         'Supabase attendance loaded: ${attendance.length}',
       );
 
       notifyListeners();
     } catch (e) {
-      _attendanceLoaded = false;
-
       debugPrint(
         'ERROR loading attendance: $e',
       );
@@ -1694,7 +1678,7 @@ class AppService extends ChangeNotifier {
         allowMalformed: true,
       );
 
-      return importEmployeesCsvText(
+      return await importEmployeesCsvText(
         csvText,
       );
     } catch (e) {
@@ -2059,7 +2043,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
         allowMalformed: true,
       );
 
-      return importPayrollCsvText(
+      return await importPayrollCsvText(
         csvText,
       );
     } catch (e) {

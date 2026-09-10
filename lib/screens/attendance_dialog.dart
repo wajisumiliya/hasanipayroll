@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field, deprecated_member_use
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -745,7 +747,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: choices[day],
+                            initialValue: choices[day],
                             isExpanded: true,
                             decoration: const InputDecoration(
                                 labelText: 'Shift / status',
@@ -840,8 +842,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                           }
                         }
                         await SupabaseService.saveDailyRosters(rows);
-                        if (dialogContext.mounted)
+                        if (dialogContext.mounted) {
                           Navigator.pop(dialogContext, true);
+                        }
                       } catch (error) {
                         setDialogState(() {
                           savingRoster = false;
@@ -2146,7 +2149,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       height: double.infinity,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: color.withValues(alpha: .08),
         border: Border(
           right: BorderSide(
             color: color,
@@ -2509,7 +2512,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         vertical: 5,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: color.withValues(alpha: .08),
         borderRadius: BorderRadius.zero,
       ),
       child: Row(

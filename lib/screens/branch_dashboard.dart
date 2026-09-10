@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -719,15 +721,17 @@ class _BranchPortalState extends State<BranchPortal> {
         SupabaseService.getAttendanceByBranch(resolvedBranchId)
       ]),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
               height: 280, child: Center(child: CircularProgressIndicator()));
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return _panel(
               'Monthly Attendance Register',
               Padding(
                   padding: const EdgeInsets.all(20),
                   child: Text('Unable to load register: ${snapshot.error}')));
+        }
         final staff =
             List<Map<String, dynamic>>.from(snapshot.data![0] as List);
         final ids = staff
@@ -760,9 +764,10 @@ class _BranchPortalState extends State<BranchPortal> {
                           firstDate: DateTime(2022),
                           lastDate: DateTime(DateTime.now().year + 2),
                           helpText: 'Select register month');
-                      if (picked != null && mounted)
+                      if (picked != null && mounted) {
                         setState(() => attendanceMonth =
                             DateTime(picked.year, picked.month));
+                      }
                     },
                     icon: const Icon(Icons.calendar_month, size: 18),
                     label: const Text('Change Month')),
@@ -791,8 +796,9 @@ class _BranchPortalState extends State<BranchPortal> {
     for (final row in rows) {
       final id = row['employee_id']?.toString().trim().toUpperCase() ?? '';
       final date = DateTime.tryParse(row['attendance_date']?.toString() ?? '');
-      if (id.isNotEmpty && date != null)
+      if (id.isNotEmpty && date != null) {
         records.putIfAbsent(id, () => {})[date.day] = row;
+      }
     }
     Widget cell(String value, double width,
             {bool header = false, Color? color}) =>
@@ -1198,9 +1204,9 @@ class _BranchPortalState extends State<BranchPortal> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: color.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(.25)),
+        border: Border.all(color: color.withValues(alpha: .25)),
       ),
       child: Row(
         children: [
@@ -1295,7 +1301,7 @@ class _BranchPortalState extends State<BranchPortal> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(.12),
+          backgroundColor: color.withValues(alpha: .12),
           child: Icon(
             record.status == 'Present'
                 ? Icons.check
@@ -1323,7 +1329,7 @@ class _BranchPortalState extends State<BranchPortal> {
             vertical: 6,
           ),
           decoration: BoxDecoration(
-            color: color.withOpacity(.10),
+            color: color.withValues(alpha: .10),
             borderRadius: BorderRadius.circular(
               20,
             ),

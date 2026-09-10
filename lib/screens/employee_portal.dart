@@ -785,7 +785,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  greeting + ',',
+                  '$greeting,',
                   style: const TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(height: 3),
@@ -799,14 +799,12 @@ class _EmployeePortalState extends State<EmployeePortal> {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  employee!.employeeId +
-                      '  •  ' +
-                      DateFormat('EEEE, d MMMM').format(DateTime.now()),
+                  '${employee!.employeeId}  •  ${DateFormat('EEEE, d MMMM').format(DateTime.now())}',
                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
                 const SizedBox(height: 13),
                 Text(
-                  '“' + dailyTheme.quote + '”',
+                  '“${dailyTheme.quote}”',
                   style: TextStyle(
                     color: dailyTheme.accent,
                     fontWeight: FontWeight.w700,
@@ -839,7 +837,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 15,
           ),
         ],

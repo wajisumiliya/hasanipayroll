@@ -372,9 +372,9 @@ class SharedAttendanceSheet extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: color.withOpacity(0.25),
+            color: color.withValues(alpha: 0.25),
           ),
-          color: color.withOpacity(0.06),
+          color: color.withValues(alpha: 0.06),
         ),
         child: Column(
           children: [

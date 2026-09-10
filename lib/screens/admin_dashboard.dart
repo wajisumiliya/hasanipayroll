@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
@@ -777,8 +779,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           final query = search.toLowerCase();
           final list = employees.where((employee) {
             final active = _isActive(employee);
-            if ((active && !showActive) || (!active && !showInactive))
+            if ((active && !showActive) || (!active && !showInactive)) {
               return false;
+            }
             if (query.isEmpty) return true;
             return [
               'name',
@@ -878,16 +881,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                           try {
                                             await _changeEmployeeStatus(
                                                 employee, value);
-                                            if (sheetContext.mounted)
+                                            if (sheetContext.mounted) {
                                               setSheetState(() {});
+                                            }
                                           } catch (error) {
-                                            if (sheetContext.mounted)
+                                            if (sheetContext.mounted) {
                                               ScaffoldMessenger.of(sheetContext)
                                                   .showSnackBar(
                                                 SnackBar(
                                                     content: Text(
                                                         'Status update failed: $error')),
                                               );
+                                            }
                                           }
                                         },
                                       ),
@@ -913,8 +918,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ]);
 
     return {
-      'employees': results[0] as List<Map<String, dynamic>>,
-      'payroll': results[1] as List<Map<String, dynamic>>,
+      'employees': results[0],
+      'payroll': results[1],
     };
   }
 
@@ -1910,7 +1915,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               boxShadow: [
                 BoxShadow(
                   color: selected
-                      ? color.withOpacity(0.15)
+                      ? color.withValues(alpha: 0.15)
                       : const Color(0x08000000),
                   blurRadius: selected ? 16 : 10,
                   offset: const Offset(0, 4),
@@ -1923,7 +1928,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.10),
+                    color: color.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
@@ -2423,7 +2428,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: color.withOpacity(0.10),
+                      backgroundColor: color.withValues(alpha: 0.10),
                       child: Text(
                         employee.name.isEmpty
                             ? '?'
@@ -2561,7 +2566,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           );
         }
 
-        Widget _employeeDetail(
+        Widget employeeDetail(
           String label,
           dynamic value,
         ) {
@@ -2867,7 +2872,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       if (service.branches.isNotEmpty)
                         DropdownButtonFormField<String>(
-                          value: branchId,
+                          initialValue: branchId,
                           decoration: const InputDecoration(
                             labelText: 'Branch',
                           ),
@@ -3107,7 +3112,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       if (service.branches.isNotEmpty)
                         DropdownButtonFormField<String>(
-                          value: service.branches.any(
+                          initialValue: service.branches.any(
                             (branch) => branch.id == branchId,
                           )
                               ? branchId
@@ -3744,8 +3749,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   initialDate: joiningDate ?? DateTime.now(),
                                   firstDate: DateTime(1950),
                                   lastDate: DateTime(2100));
-                              if (value != null)
+                              if (value != null) {
                                 setDialogState(() => joiningDate = value);
+                              }
                             }),
                   TextFormField(
                       initialValue: employee['branch_id']?.toString() ?? '',
@@ -4882,7 +4888,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               SizedBox(
                 width: 220,
                 child: DropdownButtonFormField<String>(
-                  value: selectedLogBranchId,
+                  initialValue: selectedLogBranchId,
                   decoration: const InputDecoration(
                       labelText: 'Branch', border: OutlineInputBorder()),
                   hint: const Text('All branches'),
@@ -5157,7 +5163,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                             side: BorderSide(
-                                color: Colors.blueGrey.withOpacity(.20)),
+                                color: Colors.blueGrey.withValues(alpha: .20)),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(14),
@@ -5401,7 +5407,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                             side: BorderSide(
-                              color: Colors.blueGrey.withOpacity(.20),
+                              color: Colors.blueGrey.withValues(alpha: .20),
                             ),
                           ),
                           child: Padding(
@@ -6083,8 +6089,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(16),
                                         side: BorderSide(
-                                          color:
-                                              Colors.blueGrey.withOpacity(.20),
+                                          color: Colors.blueGrey
+                                              .withValues(alpha: .20),
                                         ),
                                       ),
                                       child: InkWell(
@@ -6812,7 +6818,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 side: BorderSide(
-                                  color: Colors.blueGrey.withOpacity(.20),
+                                  color: Colors.blueGrey.withValues(alpha: .20),
                                 ),
                               ),
                               child: InkWell(
@@ -6997,7 +7003,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.10),
+              color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -8142,7 +8148,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       width: double.infinity,
       decoration: BoxDecoration(
         border: Border.all(
-          color: Colors.blueGrey.withOpacity(.15),
+          color: Colors.blueGrey.withValues(alpha: .15),
         ),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -8164,7 +8170,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           border: TableBorder(
             horizontalInside: BorderSide(
-              color: Colors.blueGrey.withOpacity(.12),
+              color: Colors.blueGrey.withValues(alpha: .12),
             ),
           ),
 
@@ -9764,8 +9770,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(
-                    0.1,
+                  color: color.withValues(
+                    alpha: 0.1,
                   ),
                   borderRadius: BorderRadius.circular(
                     12,

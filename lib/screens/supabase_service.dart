@@ -415,7 +415,7 @@ class SupabaseService {
       }..remove('');
 
       if (wanted.isEmpty) {
-        return getEmployees();
+        return await getEmployees();
       }
 
       var query = client.from('employees').select();
@@ -470,7 +470,7 @@ class SupabaseService {
   ) async {
     try {
       if (branchId == null || branchId.trim().isEmpty) {
-        return getActiveEmployees();
+        return await getActiveEmployees();
       }
 
       final response = await client
@@ -1076,7 +1076,7 @@ class SupabaseService {
   ) async {
     try {
       if (branchId == null || branchId.trim().isEmpty) {
-        return getPayroll();
+        return await getPayroll();
       }
 
       final employees = await getEmployeesByBranch(branchId);
@@ -1185,7 +1185,7 @@ class SupabaseService {
   ) async {
     try {
       if (branchId == null || branchId.trim().isEmpty) {
-        return getAttendance();
+        return await getAttendance();
       }
 
       final response = await client
@@ -2263,7 +2263,7 @@ class SupabaseService {
       final value = search.trim();
 
       if (value.isEmpty) {
-        return getDashboardEmployees(
+        return await getDashboardEmployees(
           branchId: branchId,
         );
       }

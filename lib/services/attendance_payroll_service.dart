@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../screens/supabase_service.dart';
 
 /// ============================================================================
@@ -197,11 +199,11 @@ class AttendancePayrollService {
       salaryDefault['eis_applicable'],
     );
 
-    print('========================================');
-    print('STATUTORY SETTINGS FOR $employeeId');
-    print('epf_category = [$epfCategory]');
-    print('eis_applicable = [$eisApplicable]');
-    print('========================================');
+    debugPrint('========================================');
+    debugPrint('STATUTORY SETTINGS FOR $employeeId');
+    debugPrint('epf_category = [$epfCategory]');
+    debugPrint('eis_applicable = [$eisApplicable]');
+    debugPrint('========================================');
 
     // ------------------------------------------------------------------------
     // 2. ATTENDANCE-BASED CALCULATIONS
@@ -614,12 +616,12 @@ class AttendancePayrollService {
           )
           .eq('employee_id', wantedId);
 
-      print('========================================');
-      print('PAYROLL SALARY DEFAULT LOOKUP');
-      print('Requested employee ID: [$wantedId]');
-      print('Rows returned: ${response.length}');
-      print('Salary response: $response');
-      print('========================================');
+      debugPrint('========================================');
+      debugPrint('PAYROLL SALARY DEFAULT LOOKUP');
+      debugPrint('Requested employee ID: [$wantedId]');
+      debugPrint('Rows returned: ${response.length}');
+      debugPrint('Salary response: $response');
+      debugPrint('========================================');
 
       for (final row in response) {
         if (_normalizeId(row['employee_id']) == wantedId) {
@@ -629,11 +631,11 @@ class AttendancePayrollService {
 
       return null;
     } catch (e) {
-      print('========================================');
-      print('SALARY DEFAULT QUERY ERROR');
-      print('Employee ID: [$wantedId]');
-      print('Error: $e');
-      print('========================================');
+      debugPrint('========================================');
+      debugPrint('SALARY DEFAULT QUERY ERROR');
+      debugPrint('Employee ID: [$wantedId]');
+      debugPrint('Error: $e');
+      debugPrint('========================================');
       rethrow;
     }
   }
