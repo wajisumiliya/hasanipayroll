@@ -389,8 +389,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       2,
                     ),
                     ListTile(
-                      leading: const Icon(Icons.edit_note_outlined),
-                      title: const Text('Edit Payroll'),
+                      leading: const Icon(
+                        Icons.edit_note_outlined,
+                        color: Color(0xFF2D55D8),
+                      ),
+                      title: const Text(
+                        'Edit Payroll',
+                        style: TextStyle(
+                          color: Color(0xFF2D55D8),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         _showEditPayrollDialog();
@@ -497,10 +506,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   Icons.payments_outlined,
                   2,
                 ),
-                ListTile(
-                  leading: const Icon(Icons.edit_note_outlined),
-                  title: const Text('Edit Payroll'),
-                  onTap: _showEditPayrollDialog,
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 2,
+                  ),
+                  child: ListTile(
+                    tileColor: _portalTheme.accent.withValues(alpha: .12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    leading: Icon(
+                      Icons.edit_note_outlined,
+                      color: _portalTheme.accent,
+                    ),
+                    title: const Text(
+                      'Edit Payroll',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    onTap: _showEditPayrollDialog,
+                  ),
                 ),
                 _sidebarItem(
                   'RHB Layout',
@@ -1801,6 +1829,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
               'Employees', Icons.groups_2_outlined, () => changePage(1)),
           _actionButton(
               'Payroll', Icons.payments_outlined, () => changePage(2)),
+          _actionButton(
+            'Edit Payroll',
+            Icons.edit_note_outlined,
+            _showEditPayrollDialog,
+          ),
           _actionButton(
               'Attendance', Icons.schedule_outlined, () => changePage(3)),
           _actionButton(
