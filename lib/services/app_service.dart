@@ -20,6 +20,7 @@ class app_user {
   final String? branchId;
   final String? employeeId;
   final String? displayName;
+  final bool isReviewer;
 
   const app_user({
     required this.username,
@@ -27,6 +28,7 @@ class app_user {
     this.branchId,
     this.employeeId,
     this.displayName,
+    this.isReviewer = false,
   });
 
   bool get isAdmin => role.trim().toLowerCase() == 'admin';
@@ -42,6 +44,7 @@ class app_user {
       'branch_id': branchId,
       'employee_id': employeeId,
       'display_name': displayName,
+      'is_reviewer': isReviewer,
     };
   }
 
@@ -56,6 +59,7 @@ class app_user {
           json['employee_id']?.toString() ?? json['employeeId']?.toString(),
       displayName:
           json['display_name']?.toString() ?? json['displayName']?.toString(),
+      isReviewer: json['is_reviewer'] == true || json['isReviewer'] == true,
     );
   }
 }
@@ -204,6 +208,8 @@ class AppService extends ChangeNotifier {
   bool get isBranch => _currentUser?.isBranch ?? false;
 
   bool get isEmployee => _currentUser?.isEmployee ?? false;
+
+  bool get isReviewer => _currentUser?.isReviewer ?? false;
 
   String? get currentBranchId => _currentUser?.branchId;
 
@@ -427,6 +433,7 @@ class AppService extends ChangeNotifier {
               verified['employeeId']?.toString() ?? _currentUser!.employeeId,
           displayName:
               verified['displayName']?.toString() ?? _currentUser!.displayName,
+          isReviewer: verified['isReviewer'] == true,
         );
         await _persistCurrentUser();
       } catch (e) {
@@ -922,6 +929,7 @@ class AppService extends ChangeNotifier {
                 : enteredUsername;
       }
 
+      final isReviewer = userData['isReviewer'] == true;
       String? displayName = backendEmployee['name']?.toString();
 
       final responseUsername = userData['username']?.toString().trim() ?? '';
@@ -932,17 +940,19 @@ class AppService extends ChangeNotifier {
               ? responseEmail
               : enteredUsername;
 
-      try {
-        if (!_employeesLoaded) {
-          await loadEmployeesFromSupabase();
+      if (!isReviewer) {
+        try {
+          if (!_employeesLoaded) {
+            await loadEmployeesFromSupabase();
+          }
+          final localEmployee = findEmployee(employeeId);
+          if (localEmployee != null) {
+            branchId ??= localEmployee.branchId;
+            displayName ??= localEmployee.name;
+          }
+        } catch (e) {
+          debugPrint('Employee compatibility load error: $e');
         }
-        final localEmployee = findEmployee(employeeId);
-        if (localEmployee != null) {
-          branchId ??= localEmployee.branchId;
-          displayName ??= localEmployee.name;
-        }
-      } catch (e) {
-        debugPrint('Employee compatibility load error: $e');
       }
 
       _currentUser = app_user(
@@ -950,7 +960,8 @@ class AppService extends ChangeNotifier {
         role: role,
         branchId: branchId,
         employeeId: employeeId,
-        displayName: displayName ?? email,
+        displayName: isReviewer ? 'Google Play Reviewer' : displayName ?? email,
+        isReviewer: isReviewer,
       );
       _accessToken = data['accessToken']?.toString();
       if (_accessToken == null || _accessToken!.isEmpty) {
@@ -1115,6 +1126,7 @@ class AppService extends ChangeNotifier {
           : <String, dynamic>{};
 
       final employeeId = userData['employeeId']?.toString() ?? state.employeeId;
+      final isReviewer = userData['isReviewer'] == true;
 
       final employee = userData['employee'] is Map
           ? Map<String, dynamic>.from(userData['employee'])
@@ -1125,17 +1137,19 @@ class AppService extends ChangeNotifier {
 
       String? displayName = employee['name']?.toString();
 
-      try {
-        if (!_employeesLoaded) {
-          await loadEmployeesFromSupabase();
+      if (!isReviewer) {
+        try {
+          if (!_employeesLoaded) {
+            await loadEmployeesFromSupabase();
+          }
+          final localEmployee = findEmployee(employeeId);
+          if (localEmployee != null) {
+            branchId ??= localEmployee.branchId;
+            displayName ??= localEmployee.name;
+          }
+        } catch (e) {
+          debugPrint('First login compatibility error: $e');
         }
-        final localEmployee = findEmployee(employeeId);
-        if (localEmployee != null) {
-          branchId ??= localEmployee.branchId;
-          displayName ??= localEmployee.name;
-        }
-      } catch (e) {
-        debugPrint('First login compatibility error: $e');
       }
 
       _currentUser = app_user(
@@ -1146,6 +1160,7 @@ class AppService extends ChangeNotifier {
         branchId: branchId,
         employeeId: employeeId,
         displayName: displayName ?? userData['email']?.toString(),
+        isReviewer: isReviewer,
       );
       _accessToken = data['accessToken']?.toString();
       if (_accessToken == null || _accessToken!.isEmpty) {
@@ -1178,6 +1193,16 @@ class AppService extends ChangeNotifier {
   // ==========================================================================
 
   Future<void> _loadDataForCurrentUser() async {
+    if (isReviewer) {
+      employees.clear();
+      payroll.clear();
+      attendance.clear();
+      users.clear();
+      _employeesLoaded = false;
+      notifyListeners();
+      return;
+    }
+
     try {
       await loadEmployeesFromSupabase();
       await loadPayrollFromSupabase();
@@ -2731,6 +2756,19 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
   // ==========================================================================
 
   Employee? get currentEmployee {
+    if (isReviewer) {
+      return const Employee(
+        employeeId: 'PLAY_REVIEWER',
+        name: 'Google Play Reviewer',
+        designation: 'App Reviewer',
+        department: 'Demonstration',
+        email: '',
+        newIcNo: '',
+        bankCode: '',
+        bankAccount: '',
+      );
+    }
+
     final id = currentEmployeeId;
 
     if (id == null || id.trim().isEmpty) {

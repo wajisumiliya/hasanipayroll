@@ -39,6 +39,17 @@ const SUPABASE_JWT_KEY_ID = String(
 const JWT_EXPIRES_IN =
   process.env.JWT_EXPIRES_IN || "8h";
 
+const PLAY_REVIEWER_USERNAME = String(
+  process.env.PLAY_REVIEWER_USERNAME || "googleplayreviewer",
+).trim().toLowerCase();
+const PLAY_REVIEWER_EMAIL = String(
+  process.env.PLAY_REVIEWER_EMAIL || "googleplayreviewer@hasani.local",
+).trim().toLowerCase();
+const PLAY_REVIEWER_PASSWORD = String(
+  process.env.PLAY_REVIEWER_PASSWORD || "",
+);
+const PLAY_REVIEWER_EMPLOYEE_ID = "PLAY_REVIEWER";
+
 const FRONTEND_URL = String(process.env.FRONTEND_URL ||
     "https://hasanihub.onrender.com",
 )
@@ -418,6 +429,13 @@ function generateRandomToken(
 // JWT
 // ============================================================
 
+function isPlayReviewer(user) {
+  const username = String(user?.username || "").trim().toLowerCase();
+  const email = String(user?.email || "").trim().toLowerCase();
+  const employeeId = normalizeEmployeeId(user?.employeeId);
+  return employeeId === PLAY_REVIEWER_EMPLOYEE_ID ||
+    username === PLAY_REVIEWER_USERNAME || email === PLAY_REVIEWER_EMAIL;
+}
 function createAccessToken(
   user,
 ) {
@@ -440,6 +458,7 @@ function createAccessToken(
         branch_id: branchId,
         employee_id: user.employeeId || null,
         is_frn: login.endsWith("FRN"),
+        is_reviewer: isPlayReviewer(user),
       },
 
       employeeId:
@@ -789,9 +808,10 @@ async function publicAppUser(
       .trim()
       .toLowerCase();
 
+  const reviewer = isPlayReviewer(user);
   let employee = null;
 
-  if (user.employeeId) {
+  if (user.employeeId && !reviewer) {
     employee =
       await prisma.employee.findUnique(
         {
@@ -855,6 +875,8 @@ async function publicAppUser(
 
     isEmployee:
       role === "employee",
+
+    isReviewer: reviewer,
   };
 }
 
@@ -3699,6 +3721,42 @@ async function ensureFrnBranchAccounts() {
   console.log(`FRN branch accounts ready: ${usernames.length}`);
 }
 
+async function ensurePlayReviewerAccount() {
+  if (!PLAY_REVIEWER_PASSWORD) {
+    console.warn("Google Play reviewer account skipped: PLAY_REVIEWER_PASSWORD is not set.");
+    return;
+  }
+  if (PLAY_REVIEWER_PASSWORD.length < 12) {
+    throw new Error("PLAY_REVIEWER_PASSWORD must contain at least 12 characters.");
+  }
+
+  const passwordHash = await bcrypt.hash(PLAY_REVIEWER_PASSWORD, 12);
+  const updated = await pool.query(
+    `UPDATE public."app_user"
+     SET "employeeId" = $1, "username" = $2, "email" = $3,
+         "passwordHash" = $4, "role" = 'EMPLOYEE', "isActive" = TRUE,
+         "mustChangePassword" = FALSE, "passwordChangedAt" = NOW(),
+         "updatedAt" = NOW()
+     WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = $1
+        OR LOWER(TRIM(COALESCE("username", ''))) = $2
+        OR LOWER(TRIM(COALESCE("email", ''))) = $3
+     RETURNING "id"`,
+    [PLAY_REVIEWER_EMPLOYEE_ID, PLAY_REVIEWER_USERNAME, PLAY_REVIEWER_EMAIL, passwordHash],
+  );
+
+  if (updated.rowCount === 0) {
+    await pool.query(
+      `INSERT INTO public."app_user" (
+         "id", "employeeId", "username", "email", "passwordHash", "role",
+         "isActive", "mustChangePassword", "passwordChangedAt", "createdAt", "updatedAt"
+       ) VALUES ($1, $2, $3, $4, $5, 'EMPLOYEE', TRUE, FALSE, NOW(), NOW(), NOW())`,
+      [crypto.randomUUID(), PLAY_REVIEWER_EMPLOYEE_ID, PLAY_REVIEWER_USERNAME,
+        PLAY_REVIEWER_EMAIL, passwordHash],
+    );
+  }
+
+  console.log("Google Play reviewer account synchronized.");
+}
 async function ensureAdminAccount() {
   const email = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
   const password = String(process.env.ADMIN_PASSWORD || "");
@@ -3751,6 +3809,7 @@ let server;
 async function startServer() {
   await testDatabase();
   await ensureAdminAccount();
+  await ensurePlayReviewerAccount();
   await ensureFrnBranchAccounts();
 
   server =
