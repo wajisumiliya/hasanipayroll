@@ -6711,6 +6711,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool loading = false;
     bool saving = false;
     String? error;
+    String? success;
 
     double number(String key) =>
         double.tryParse(controllers[key]!.text.trim().replaceAll(',', '')) ?? 0;
@@ -6738,6 +6739,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               setDialogState(() {
                 loading = true;
                 error = null;
+                success = null;
                 storedRecord = null;
               });
 
@@ -6779,6 +6781,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 month = DateTime(picked.year, picked.month);
                 storedRecord = null;
                 error = null;
+                success = null;
                 fillControllers(null);
               });
               if (employeeId != null) await loadPayroll();
@@ -6801,6 +6804,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               setDialogState(() {
                 saving = true;
                 error = null;
+                success = null;
               });
 
               try {
@@ -6839,13 +6843,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 await service.loadPayrollFromSupabase();
                 selectedPayrollMonth = month;
                 if (!dialogContext.mounted) return;
-                Navigator.pop(dialogContext);
-                if (mounted) {
-                  setState(() {});
-                  _message(
-                    'Payroll saved for $employeeId • ${DateFormat('MMMM yyyy').format(month)}.',
-                  );
-                }
+                setDialogState(() {
+                  storedRecord = Map<String, dynamic>.from(record);
+                  saving = false;
+                  success =
+                      'Payroll saved for $employeeId - ${DateFormat('MMMM yyyy').format(month)}. You can select another employee or use Previous/Next.';
+                });
+                if (mounted) setState(() {});
               } catch (e) {
                 if (dialogContext.mounted) {
                   setDialogState(() {
@@ -6886,6 +6890,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     filteredEmployees[nextIndex]['employee_id']?.toString();
                 storedRecord = null;
                 error = null;
+                success = null;
                 fillControllers(null);
               });
               await loadPayroll();
@@ -6903,7 +6908,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   enabled: employeeId != null && !loading && !saving,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (_) => setDialogState(() {}),
+                  onChanged: (_) => setDialogState(() => success = null),
                   decoration: InputDecoration(
                     labelText: field.$2,
                     prefixText: 'RM ',
@@ -7096,6 +7101,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               backgroundColor: Colors.green.shade50,
                             ),
                           ],
+                        ),
+                      ],
+                      if (success != null) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Text(
+                            success!,
+                            style: TextStyle(
+                              color: Colors.green.shade800,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ],
                       if (error != null) ...[
