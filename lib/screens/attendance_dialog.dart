@@ -657,6 +657,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     const shifts = <String, List<dynamic>>{
       '09:00 - 17:30 (60 min break)': ['09:00', '17:30', 60],
       '09:00 - 18:00 (90 min break)': ['09:00', '18:00', 90],
+      '10:00 - 18:30 (60 min break)': ['10:00', '18:30', 60],
       '10:00 - 19:00 (90 min break)': ['10:00', '19:00', 90],
       '11:00 - 20:00 (90 min break)': ['11:00', '20:00', 90],
       '12:00 - 21:00 (90 min break)': ['12:00', '21:00', 90],

@@ -43,6 +43,7 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
   static const shifts = <_Shift>[
     _Shift('9:00 AM – 5:30 PM', '09:00', '17:30', 60),
     _Shift('9:00 AM – 6:00 PM', '09:00', '18:00', 90),
+    _Shift('10:00 AM – 6:30 PM', '10:00', '18:30', 60),
     _Shift('10:00 AM – 7:00 PM', '10:00', '19:00', 90),
     _Shift('11:00 AM – 8:00 PM', '11:00', '20:00', 90),
     _Shift('12:00 PM – 9:00 PM', '12:00', '21:00', 90),

@@ -62,6 +62,70 @@ class AttendancePayrollService {
   AttendancePayrollService._();
 
   // ==========================================================================
+  // LIVE STATUTORY CONTRIBUTIONS
+  // ==========================================================================
+
+  static Future<Map<String, double>> calculateStatutoryContributions({
+    required String employeeId,
+    required double basicSalary,
+    required double salaryDeduction,
+  }) async {
+    final salaryDefault = await _getSalaryDefault(employeeId);
+    if (salaryDefault == null) {
+      throw Exception(
+        'No salary default found in employee_salary_defaults for $employeeId.',
+      );
+    }
+
+    final statutoryWage = _roundMoney(basicSalary - salaryDeduction);
+    if (statutoryWage < 0) {
+      throw Exception('Salary deductions cannot exceed the basic salary.');
+    }
+
+    final epfCategory = _normalizeCategory(salaryDefault['epf_category']);
+    final eisApplicable = _isApplicable(salaryDefault['eis_applicable']);
+
+    final _ContributionRow epf;
+    if (epfCategory == 'normal') {
+      final twoPercent = _roundMoney(statutoryWage * 0.02);
+      epf = _ContributionRow(
+        statutoryWage,
+        statutoryWage,
+        twoPercent,
+        twoPercent,
+      );
+    } else {
+      epf = _findContribution(
+        schedule: _epfSchedule,
+        wage: statutoryWage,
+        scheduleName: 'EPF',
+      );
+    }
+
+    final socso = _findContribution(
+      schedule: _socsoFirstCategorySchedule,
+      wage: statutoryWage,
+      scheduleName: 'SOCSO First Category',
+    );
+    final eis = eisApplicable
+        ? _findContribution(
+            schedule: _eisSchedule,
+            wage: statutoryWage,
+            scheduleName: 'EIS',
+          )
+        : const _ContributionRow(0, 0, 0, 0);
+
+    return {
+      'statutory_wage': statutoryWage,
+      'epf_employee': epf.employee,
+      'epf_employer': epf.employer,
+      'socso_employee': socso.employee,
+      'socso_employer': socso.employer,
+      'eis_employee': eis.employee,
+      'eis_employer': eis.employer,
+    };
+  }
+  // ==========================================================================
   // GENERATE MONTHLY PAYROLL
   // ==========================================================================
 

@@ -6684,6 +6684,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ('eis_employer', 'EIS Employer', 'Employer Contributions'),
     ];
 
+    const automaticContributionFields = {
+      'epf_employee',
+      'epf_employer',
+      'socso_employee',
+      'socso_employer',
+      'eis_employee',
+      'eis_employer',
+    };
+    const contributionBasisFields = {
+      'basic_salary',
+      'late_deduction',
+      'unpaid_deduction',
+    };
+
     final controllers = <String, TextEditingController>{
       for (final field in fields) field.$1: TextEditingController(text: '0.00'),
     };
@@ -6712,6 +6726,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool saving = false;
     String? error;
     String? success;
+    String? statutoryInfo;
+    bool calculatingStatutory = false;
+    int statutoryRevision = 0;
 
     double number(String key) =>
         double.tryParse(controllers[key]!.text.trim().replaceAll(',', '')) ?? 0;
@@ -6740,6 +6757,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 loading = true;
                 error = null;
                 success = null;
+                statutoryInfo = null;
+                calculatingStatutory = false;
+                statutoryRevision++;
                 storedRecord = null;
               });
 
@@ -6788,7 +6808,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             }
 
             Future<void> savePayroll() async {
-              if (employeeId == null || loading || saving) return;
+              if (employeeId == null ||
+                  loading ||
+                  saving ||
+                  calculatingStatutory) {
+                return;
+              }
               for (final field in fields) {
                 final raw =
                     controllers[field.$1]!.text.trim().replaceAll(',', '');
@@ -6896,6 +6921,51 @@ class _AdminDashboardState extends State<AdminDashboard> {
               await loadPayroll();
             }
 
+            Future<void> recalculateStatutoryContributions() async {
+              final selectedId = employeeId;
+              if (selectedId == null) return;
+              final revision = ++statutoryRevision;
+              await Future<void>.delayed(const Duration(milliseconds: 300));
+              if (revision != statutoryRevision || !dialogContext.mounted) {
+                return;
+              }
+
+              setDialogState(() {
+                calculatingStatutory = true;
+                statutoryInfo = null;
+                error = null;
+                success = null;
+              });
+              try {
+                final salaryDeduction =
+                    number('late_deduction') + number('unpaid_deduction');
+                final result = await AttendancePayrollService
+                    .calculateStatutoryContributions(
+                  employeeId: selectedId,
+                  basicSalary: number('basic_salary'),
+                  salaryDeduction: salaryDeduction,
+                );
+                if (revision != statutoryRevision || !dialogContext.mounted) {
+                  return;
+                }
+                for (final key in automaticContributionFields) {
+                  controllers[key]!.text = result[key]!.toStringAsFixed(2);
+                }
+                setDialogState(() {
+                  calculatingStatutory = false;
+                  statutoryInfo =
+                      'EPF, SOCSO and EIS updated from contribution wage ${_money(result['statutory_wage']!)}.';
+                });
+              } catch (e) {
+                if (revision == statutoryRevision && dialogContext.mounted) {
+                  setDialogState(() {
+                    calculatingStatutory = false;
+                    error = 'Unable to calculate statutory contributions: $e';
+                  });
+                }
+              }
+            }
+
             final earnings = totalFor('Earnings');
             final deductions = totalFor('Deductions');
             final net = earnings - deductions;
@@ -6906,9 +6976,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: TextField(
                   controller: controllers[field.$1],
                   enabled: employeeId != null && !loading && !saving,
+                  readOnly: automaticContributionFields.contains(field.$1),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (_) => setDialogState(() => success = null),
+                  onChanged: (_) {
+                    setDialogState(() => success = null);
+                    if (contributionBasisFields.contains(field.$1)) {
+                      recalculateStatutoryContributions();
+                    }
+                  },
                   decoration: InputDecoration(
                     labelText: field.$2,
                     prefixText: 'RM ',
@@ -6990,6 +7066,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         employeeId = null;
                                         storedRecord = null;
                                         error = null;
+                                        success = null;
+                                        statutoryInfo = null;
+                                        calculatingStatutory = false;
+                                        statutoryRevision++;
                                         fillControllers(null);
                                       });
                                     },
@@ -7028,6 +7108,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         employeeId = value;
                                         storedRecord = null;
                                         error = null;
+                                        success = null;
+                                        statutoryInfo = null;
+                                        calculatingStatutory = false;
+                                        statutoryRevision++;
                                         fillControllers(null);
                                       });
                                       loadPayroll();
@@ -7074,6 +7158,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
+                        if (calculatingStatutory || statutoryInfo != null) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              if (calculatingStatutory) ...[
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  calculatingStatutory
+                                      ? 'Checking EPF, SOCSO and EIS tables...'
+                                      : statutoryInfo!,
+                                  style: TextStyle(
+                                    color: Colors.blue.shade800,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         fieldGroup('Earnings'),
                         fieldGroup('Deductions'),
@@ -7142,7 +7254,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: const Text('Cancel'),
                 ),
                 FilledButton.icon(
-                  onPressed: employeeId == null || loading || saving
+                  onPressed: employeeId == null ||
+                          loading ||
+                          saving ||
+                          calculatingStatutory
                       ? null
                       : savePayroll,
                   icon: saving
