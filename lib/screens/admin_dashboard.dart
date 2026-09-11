@@ -9381,6 +9381,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
             .value = xls.DoubleCellValue(columnTotals[column]);
       }
 
+      // Match the payroll statement layout: bold totals with a continuous
+      // horizontal rule above and below the complete A:T total row.
+      final totalBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
+      for (var column = 0; column < columnTotals.length; column++) {
+        final cell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(
+            columnIndex: column,
+            rowIndex: totalRow - 1,
+          ),
+        );
+        cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+          boldVal: true,
+          topBorderVal: totalBorder,
+          bottomBorderVal: totalBorder,
+        );
+      }
+
       // Keep the original footer area as a visual part of the template.
       final footerTotalRow = totalRow + 5;
       sheet.cell(xls.CellIndex.indexByString('R$footerTotalRow')).value =
@@ -9660,6 +9677,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               )
               .value = xls.DoubleCellValue(columnTotals[column]);
+        }
+
+        final totalBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
+        for (var column = 0; column < columnTotals.length; column++) {
+          final cell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(
+              columnIndex: column,
+              rowIndex: totalRowIndex,
+            ),
+          );
+          cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+            boldVal: true,
+            topBorderVal: totalBorder,
+            bottomBorderVal: totalBorder,
+          );
         }
       }
 
