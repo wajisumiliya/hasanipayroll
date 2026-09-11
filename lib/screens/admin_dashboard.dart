@@ -6869,6 +6869,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 (a, b) => _normalizeBranchValue(a['employee_id'])
                     .compareTo(_normalizeBranchValue(b['employee_id'])),
               );
+            final selectedEmployeeIndex = employeeId == null
+                ? -1
+                : filteredEmployees.indexWhere(
+                    (employee) =>
+                        employee['employee_id']?.toString() == employeeId,
+                  );
+
+            Future<void> selectAdjacentEmployee(int direction) async {
+              final nextIndex = selectedEmployeeIndex + direction;
+              if (nextIndex < 0 || nextIndex >= filteredEmployees.length) {
+                return;
+              }
+              setDialogState(() {
+                employeeId =
+                    filteredEmployees[nextIndex]['employee_id']?.toString();
+                storedRecord = null;
+                error = null;
+                fillControllers(null);
+              });
+              await loadPayroll();
+            }
+
             final earnings = totalFor('Earnings');
             final deductions = totalFor('Deductions');
             final net = earnings - deductions;
@@ -7006,6 +7028,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       loadPayroll();
                                     },
                             ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed:
+                                loading || saving || selectedEmployeeIndex <= 0
+                                    ? null
+                                    : () => selectAdjacentEmployee(-1),
+                            icon: const Icon(Icons.chevron_left),
+                            label: const Text('Previous'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: loading ||
+                                    saving ||
+                                    selectedEmployeeIndex < 0 ||
+                                    selectedEmployeeIndex >=
+                                        filteredEmployees.length - 1
+                                ? null
+                                : () => selectAdjacentEmployee(1),
+                            icon: const Icon(Icons.chevron_right),
+                            label: const Text('Next'),
                           ),
                           if (loading) const CircularProgressIndicator(),
                         ],
@@ -9546,7 +9587,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
               selectedPayrollMonth,
             ),
           )
-          .toList();
+          .toList()
+        ..sort(
+          (a, b) => _normalizeBranchValue(a['employee_id'])
+              .compareTo(_normalizeBranchValue(b['employee_id'])),
+        );
 
       if (payrollRows.isEmpty) {
         _message(

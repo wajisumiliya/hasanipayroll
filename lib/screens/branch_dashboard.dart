@@ -741,8 +741,13 @@ class _BranchPortalState extends State<BranchPortal> {
                   padding: const EdgeInsets.all(20),
                   child: Text('Unable to load register: ${snapshot.error}')));
         }
-        final staff =
-            List<Map<String, dynamic>>.from(snapshot.data![0] as List);
+        final staff = List<Map<String, dynamic>>.from(snapshot.data![0] as List)
+          ..sort(
+            (a, b) => _liveEmployeeId(a)
+                .trim()
+                .toUpperCase()
+                .compareTo(_liveEmployeeId(b).trim().toUpperCase()),
+          );
         final ids = staff
             .map(_liveEmployeeId)
             .map((id) => id.trim().toUpperCase())
@@ -1402,8 +1407,8 @@ class _BranchPortalState extends State<BranchPortal> {
 
         final allEmployees = snapshot.data ?? [];
         final search = _employeeSearch.trim().toLowerCase();
-        final liveEmployees = search.isEmpty
-            ? allEmployees
+        final liveEmployees = (search.isEmpty
+            ? List<Map<String, dynamic>>.from(allEmployees)
             : allEmployees.where((employee) {
                 return [
                   employee['employee_id'],
@@ -1413,7 +1418,13 @@ class _BranchPortalState extends State<BranchPortal> {
                   employee['email'],
                 ].any((value) =>
                     value?.toString().toLowerCase().contains(search) == true);
-              }).toList();
+              }).toList())
+          ..sort(
+            (a, b) => _liveEmployeeId(a)
+                .trim()
+                .toUpperCase()
+                .compareTo(_liveEmployeeId(b).trim().toUpperCase()),
+          );
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
