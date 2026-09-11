@@ -40,3 +40,31 @@ export async function findActiveEmployeeIdentity(pool, employeeId) {
 
   return result.rows[0]?.new_ic_no ?? null;
 }
+
+export async function findPasswordResetUser(pool, userId) {
+  const cleanUserId = String(userId ?? "").trim();
+  if (!cleanUserId) return null;
+
+  // Read the account as JSON so password recovery also works on deployments
+  // that predate optional app_user columns in the Prisma model.
+  const result = await pool.query(
+    `SELECT to_jsonb(account_row) AS data
+     FROM public."app_user" AS account_row
+     WHERE account_row."id" = $1
+     LIMIT 1`,
+    [cleanUserId],
+  );
+
+  const data = result.rows[0]?.data;
+  if (!data) return null;
+
+  return {
+    ...data,
+    passwordHash: data.passwordHash ?? data.password_hash ?? null,
+    passwordChangedAt:
+      data.passwordChangedAt ?? data.password_changed_at ?? null,
+    isActive: [true, "true", "t", "1"].includes(
+      data.isActive ?? data.is_active ?? true,
+    ),
+  };
+}

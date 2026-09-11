@@ -14,6 +14,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   findActiveEmployeeIdentity,
+  findPasswordResetUser,
   normalizeIdentityNumber,
   resolvePasswordRecoveryEmployeeId,
 } from "./identity.js";
@@ -1315,7 +1316,9 @@ app.post(
         return res.status(401).json({ ok: false, message: "Invalid password reset session." });
       }
 
-      const user = await prisma.app_user.findUnique({ where: { id: String(payload.sub) } });
+      // Keep password recovery compatible with app_user deployments that do
+      // not yet contain every optional column represented by the Prisma model.
+      const user = await findPasswordResetUser(pool, payload.sub);
       const currentVersion = user?.passwordChangedAt
         ? new Date(user.passwordChangedAt).toISOString()
         : null;

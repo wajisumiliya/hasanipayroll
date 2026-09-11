@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   findActiveEmployeeIdentity,
+  findPasswordResetUser,
   normalizeIdentityNumber,
   resolvePasswordRecoveryEmployeeId,
 } from "../src/identity.js";
@@ -55,4 +56,37 @@ test("findActiveEmployeeIdentity returns null when no employee matches", async (
   const pool = { query: async () => ({ rows: [] }) };
 
   assert.equal(await findActiveEmployeeIdentity(pool, "EMP-404"), null);
+});
+
+test("findPasswordResetUser tolerates legacy snake_case account columns", async () => {
+  let capturedValues;
+  const pool = {
+    async query(_query, values) {
+      capturedValues = values;
+      return {
+        rows: [{
+          data: {
+            id: "user-1",
+            password_hash: "hash",
+            password_changed_at: "2026-09-11T00:00:00.000Z",
+            is_active: "t",
+          },
+        }],
+      };
+    },
+  };
+
+  const user = await findPasswordResetUser(pool, " user-1 ");
+
+  assert.deepEqual(capturedValues, ["user-1"]);
+  assert.equal(user.passwordHash, "hash");
+  assert.equal(user.passwordChangedAt, "2026-09-11T00:00:00.000Z");
+  assert.equal(user.isActive, true);
+});
+
+test("findPasswordResetUser returns null for a missing user", async () => {
+  const pool = { query: async () => ({ rows: [] }) };
+
+  assert.equal(await findPasswordResetUser(pool, "user-404"), null);
+  assert.equal(await findPasswordResetUser(pool, "  "), null);
 });
