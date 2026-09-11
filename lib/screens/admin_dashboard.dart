@@ -6633,14 +6633,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
 // ============================================================================
 
   Future<void> _showEditPayrollDialog() async {
+    List<Map<String, dynamic>> branches;
     List<Map<String, dynamic>> employees;
     try {
-      final response = await SupabaseService.client
-          .from('employees')
-          .select()
-          .eq('is_active', true)
-          .order('employee_id');
-      employees = List<Map<String, dynamic>>.from(response);
+      final responses = await Future.wait([
+        SupabaseService.getBranches(),
+        SupabaseService.client
+            .from('employees')
+            .select()
+            .eq('is_active', true)
+            .order('employee_id'),
+      ]);
+      branches = List<Map<String, dynamic>>.from(responses[0]);
+      employees = List<Map<String, dynamic>>.from(responses[1]);
+      employees.sort(
+        (a, b) => _normalizeBranchValue(a['employee_id'])
+            .compareTo(_normalizeBranchValue(b['employee_id'])),
+      );
     } catch (e) {
       if (mounted) _message('Unable to load employees: $e');
       return;
@@ -6679,7 +6688,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
       for (final field in fields) field.$1: TextEditingController(text: '0.00'),
     };
     final remarksController = TextEditingController();
+    final branchNames = <String, String>{};
+    for (final branch in branches) {
+      final id = _branchIdFromMap(branch);
+      if (id.isNotEmpty) branchNames[id] = _branchNameFromMap(branch, id);
+    }
+    for (final employee in employees) {
+      final id = _normalizeBranchValue(employee['branch_id']);
+      if (id.isNotEmpty) branchNames.putIfAbsent(id, () => id);
+    }
+    final branchIds = branchNames.keys.toList()
+      ..sort(
+        (a, b) => (branchNames[a] ?? a)
+            .toLowerCase()
+            .compareTo((branchNames[b] ?? b).toLowerCase()),
+      );
+
     DateTime month = selectedPayrollMonth;
+    String? branchId;
     String? employeeId;
     Map<String, dynamic>? storedRecord;
     bool loading = false;
@@ -6830,6 +6856,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
               }
             }
 
+            final filteredEmployees = branchId == null
+                ? <Map<String, dynamic>>[]
+                : employees
+                    .where(
+                      (employee) =>
+                          _normalizeBranchValue(employee['branch_id']) ==
+                          branchId,
+                    )
+                    .toList()
+              ..sort(
+                (a, b) => _normalizeBranchValue(a['employee_id'])
+                    .compareTo(_normalizeBranchValue(b['employee_id'])),
+              );
             final earnings = totalFor('Earnings');
             final deductions = totalFor('Deductions');
             final net = earnings - deductions;
@@ -6891,7 +6930,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Choose a payroll month and employee. Existing values are loaded automatically; if no record exists, a new payroll record will be created.',
+                        'Choose a branch, payroll month, and employee. Employees are listed by Employee ID from A to Z. Existing values load automatically; if no record exists, a new one will be created.',
                       ),
                       const SizedBox(height: 18),
                       Wrap(
@@ -6899,6 +6938,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         runSpacing: 12,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
+                          SizedBox(
+                            width: 280,
+                            child: DropdownButtonFormField<String>(
+                              initialValue: branchId,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Branch',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: branchIds
+                                  .map(
+                                    (id) => DropdownMenuItem(
+                                      value: id,
+                                      child: Text(branchNames[id] ?? id),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: loading || saving
+                                  ? null
+                                  : (value) {
+                                      setDialogState(() {
+                                        branchId = value;
+                                        employeeId = null;
+                                        storedRecord = null;
+                                        error = null;
+                                        fillControllers(null);
+                                      });
+                                    },
+                            ),
+                          ),
                           OutlinedButton.icon(
                             onPressed: loading || saving ? null : chooseMonth,
                             icon: const Icon(Icons.calendar_month_outlined),
@@ -6907,13 +6976,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           SizedBox(
                             width: 360,
                             child: DropdownButtonFormField<String>(
+                              key: ValueKey('$branchId-$employeeId'),
                               initialValue: employeeId,
                               isExpanded: true,
                               decoration: const InputDecoration(
-                                labelText: 'Employee',
+                                labelText: 'Employee (ID A-Z)',
                                 border: OutlineInputBorder(),
                               ),
-                              items: employees.map((employee) {
+                              items: filteredEmployees.map((employee) {
                                 final id =
                                     employee['employee_id']?.toString() ?? '';
                                 final name =
@@ -7155,7 +7225,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
           );
 
           return branchMatches && monthMatches;
-        }).toList();
+        }).toList()
+          ..sort(
+            (a, b) => _normalizeBranchValue(a['employee_id'])
+                .compareTo(_normalizeBranchValue(b['employee_id'])),
+          );
 
         double totalPayroll = 0;
         for (final payroll in visiblePayrollRecords) {
