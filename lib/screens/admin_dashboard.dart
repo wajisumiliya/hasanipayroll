@@ -9215,6 +9215,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ..sort((a, b) => _normalizeBranchValue(a['employee_id'])
             .compareTo(_normalizeBranchValue(b['employee_id'])));
 
+      final columnTotals = List<double>.filled(20, 0);
       for (var index = 0; index < sortedRecords.length; index++) {
         final payroll = sortedRecords[index];
         final rowNumber = firstDataRow + index;
@@ -9351,6 +9352,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           final value = values[column];
           if (value is num) {
+            columnTotals[column] += value.toDouble();
             cell.value = xls.DoubleCellValue(value.toDouble());
           } else {
             cell.value = xls.TextCellValue(value?.toString() ?? '');
@@ -9366,33 +9368,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
       sheet.cell(xls.CellIndex.indexByString('A$totalRow')).value =
           xls.TextCellValue('TOTAL AMOUNT');
 
-      final totalColumns = <String>[
-        'H',
-        'I',
-        'J',
-        'K',
-        'L',
-        'M',
-        'N',
-        'O',
-        'P',
-        'Q',
-        'R',
-        'S',
-        'T',
-      ];
-
-      for (final column in totalColumns) {
-        sheet.cell(xls.CellIndex.indexByString('$column$totalRow')).value =
-            xls.FormulaCellValue(
-                'SUM($column$firstDataRow:$column$lastDataRow)');
+      // Write calculated values instead of formulas so totals are visible in
+      // Excel, LibreOffice and mobile spreadsheet viewers immediately.
+      for (var column = 7; column < columnTotals.length; column++) {
+        sheet
+            .cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: totalRow - 1,
+              ),
+            )
+            .value = xls.DoubleCellValue(columnTotals[column]);
       }
 
-      // Keep the original footer area as a visual part of the template, but
-      // update its TOTAL formula to the selected branch/month.
+      // Keep the original footer area as a visual part of the template.
       final footerTotalRow = totalRow + 5;
       sheet.cell(xls.CellIndex.indexByString('R$footerTotalRow')).value =
-          xls.FormulaCellValue('SUM(T$firstDataRow:T$lastDataRow)');
+          xls.DoubleCellValue(columnTotals[19]);
 
       // --------------------------------------------------------------------------
       // 9. Filename: branch + selected month.
@@ -9568,6 +9560,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           cell.value = xls.TextCellValue(headers[c]);
         }
 
+        final columnTotals = List<double>.filled(headers.length, 0);
         for (var i = 0; i < branchRecords.length; i++) {
           final payroll = branchRecords[i];
           final row = i + 4;
@@ -9640,10 +9633,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
               rowIndex: row,
             ));
             final value = values[c];
-            cell.value = value is num
-                ? xls.DoubleCellValue(value.toDouble())
-                : xls.TextCellValue(value.toString());
+            if (value is num) {
+              columnTotals[c] += value.toDouble();
+              cell.value = xls.DoubleCellValue(value.toDouble());
+            } else {
+              cell.value = xls.TextCellValue(value.toString());
+            }
           }
+        }
+
+        final totalRowIndex = 4 + branchRecords.length;
+        sheet
+            .cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: 0,
+                rowIndex: totalRowIndex,
+              ),
+            )
+            .value = xls.TextCellValue('TOTAL AMOUNT');
+        for (var column = 7; column < columnTotals.length; column++) {
+          sheet
+              .cell(
+                xls.CellIndex.indexByColumnRow(
+                  columnIndex: column,
+                  rowIndex: totalRowIndex,
+                ),
+              )
+              .value = xls.DoubleCellValue(columnTotals[column]);
         }
       }
 
