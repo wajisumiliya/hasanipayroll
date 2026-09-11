@@ -388,6 +388,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       Icons.payments_outlined,
                       2,
                     ),
+                    ListTile(
+                      leading: const Icon(Icons.edit_note_outlined),
+                      title: const Text('Edit Payroll'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showEditPayrollDialog();
+                      },
+                    ),
                     _drawerItem(
                       'RHB Layout',
                       Icons.account_balance_outlined,
@@ -488,6 +496,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Payroll',
                   Icons.payments_outlined,
                   2,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_note_outlined),
+                  title: const Text('Edit Payroll'),
+                  onTap: _showEditPayrollDialog,
                 ),
                 _sidebarItem(
                   'RHB Layout',
@@ -6583,6 +6596,409 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
 // ============================================================================
+// EDIT PAYROLL
+// ============================================================================
+
+  Future<void> _showEditPayrollDialog() async {
+    List<Map<String, dynamic>> employees;
+    try {
+      final response = await SupabaseService.client
+          .from('employees')
+          .select()
+          .eq('is_active', true)
+          .order('employee_id');
+      employees = List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      if (mounted) _message('Unable to load employees: $e');
+      return;
+    }
+
+    if (!mounted) return;
+    if (employees.isEmpty) {
+      _message('No active employees are available.');
+      return;
+    }
+
+    const fields = <(String, String, String)>[
+      ('basic_salary', 'Basic Salary', 'Earnings'),
+      ('fw_salary', 'FW Salary', 'Earnings'),
+      ('elaun_kedatangan', 'Elaun Kedatangan', 'Earnings'),
+      ('elaun_perkhidmatan', 'Elaun Perkhidmatan', 'Earnings'),
+      ('elaun_kerajinan', 'Elaun Kerajinan', 'Earnings'),
+      ('overtime', 'Overtime', 'Earnings'),
+      ('cuti_umum', 'Cuti Umum', 'Earnings'),
+      ('bonus', 'Bonus', 'Earnings'),
+      ('commission', 'Commission', 'Earnings'),
+      ('other_earnings', 'Other Earnings', 'Earnings'),
+      ('late_deduction', 'Late Deduction', 'Deductions'),
+      ('unpaid_deduction', 'Unpaid Deduction', 'Deductions'),
+      ('epf_employee', 'EPF Employee', 'Deductions'),
+      ('socso_employee', 'SOCSO Employee', 'Deductions'),
+      ('eis_employee', 'EIS Employee', 'Deductions'),
+      ('pcb', 'PCB', 'Deductions'),
+      ('zakat', 'Zakat', 'Deductions'),
+      ('epf_employer', 'EPF Employer', 'Employer Contributions'),
+      ('socso_employer', 'SOCSO Employer', 'Employer Contributions'),
+      ('eis_employer', 'EIS Employer', 'Employer Contributions'),
+    ];
+
+    final controllers = <String, TextEditingController>{
+      for (final field in fields) field.$1: TextEditingController(text: '0.00'),
+    };
+    final remarksController = TextEditingController();
+    DateTime month = selectedPayrollMonth;
+    String? employeeId;
+    Map<String, dynamic>? storedRecord;
+    bool loading = false;
+    bool saving = false;
+    String? error;
+
+    double number(String key) =>
+        double.tryParse(controllers[key]!.text.trim().replaceAll(',', '')) ?? 0;
+
+    void fillControllers(Map<String, dynamic>? record) {
+      for (final field in fields) {
+        final value = _payrollNumber(record?[field.$1]);
+        controllers[field.$1]!.text = value.toStringAsFixed(2);
+      }
+      remarksController.text = record?['remarks']?.toString() ?? '';
+    }
+
+    double totalFor(String group) => fields
+        .where((field) => field.$3 == group)
+        .fold<double>(0, (sum, field) => sum + number(field.$1));
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> loadPayroll() async {
+              if (employeeId == null || loading || saving) return;
+              setDialogState(() {
+                loading = true;
+                error = null;
+                storedRecord = null;
+              });
+
+              try {
+                final start = DateTime(month.year, month.month);
+                final end = DateTime(month.year, month.month + 1);
+                final response = await SupabaseService.client
+                    .from('payroll')
+                    .select()
+                    .eq('employee_id', employeeId!)
+                    .gte('period', DateFormat('yyyy-MM-dd').format(start))
+                    .lt('period', DateFormat('yyyy-MM-dd').format(end))
+                    .order('period')
+                    .limit(1);
+                final rows = List<Map<String, dynamic>>.from(response);
+                storedRecord =
+                    rows.isEmpty ? null : Map<String, dynamic>.from(rows.first);
+                fillControllers(storedRecord);
+              } catch (e) {
+                error = 'Unable to load payroll: $e';
+                fillControllers(null);
+              }
+
+              if (dialogContext.mounted) {
+                setDialogState(() => loading = false);
+              }
+            }
+
+            Future<void> chooseMonth() async {
+              final picked = await showDatePicker(
+                context: dialogContext,
+                initialDate: month,
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2100),
+                helpText: 'Select Payroll Month',
+              );
+              if (picked == null || !dialogContext.mounted) return;
+              setDialogState(() {
+                month = DateTime(picked.year, picked.month);
+                storedRecord = null;
+                error = null;
+                fillControllers(null);
+              });
+              if (employeeId != null) await loadPayroll();
+            }
+
+            Future<void> savePayroll() async {
+              if (employeeId == null || loading || saving) return;
+              for (final field in fields) {
+                final raw =
+                    controllers[field.$1]!.text.trim().replaceAll(',', '');
+                final value = double.tryParse(raw);
+                if (value == null || value < 0) {
+                  setDialogState(() {
+                    error = '${field.$2} must be a valid amount of 0 or more.';
+                  });
+                  return;
+                }
+              }
+
+              setDialogState(() {
+                saving = true;
+                error = null;
+              });
+
+              try {
+                final employee = employees.firstWhere(
+                  (row) => row['employee_id']?.toString() == employeeId,
+                );
+                final now = DateTime.now().toIso8601String();
+                final period =
+                    '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}-01';
+                final record = <String, dynamic>{
+                  if (storedRecord != null) ...storedRecord!,
+                  'id': storedRecord?['id'] ??
+                      'PAY-$employeeId-${month.year}-${month.month.toString().padLeft(2, '0')}',
+                  'employee_id': employeeId,
+                  'period': period,
+                  for (final field in fields) field.$1: number(field.$1),
+                  'new_ic_no':
+                      storedRecord?['new_ic_no'] ?? employee['new_ic_no'],
+                  'bank_code':
+                      storedRecord?['bank_code'] ?? employee['bank_code'],
+                  'bank_account':
+                      storedRecord?['bank_account'] ?? employee['bank_account'],
+                  'remarks': remarksController.text.trim().isEmpty
+                      ? null
+                      : remarksController.text.trim(),
+                  'created_at': storedRecord?['created_at'] ?? now,
+                  'updated_at': now,
+                };
+                record.remove('branch_id');
+                record.remove('branch_name');
+
+                await SupabaseService.client.from('payroll').upsert(
+                      record,
+                      onConflict: 'employee_id,period',
+                    );
+                await service.loadPayrollFromSupabase();
+                selectedPayrollMonth = month;
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                if (mounted) {
+                  setState(() {});
+                  _message(
+                    'Payroll saved for $employeeId • ${DateFormat('MMMM yyyy').format(month)}.',
+                  );
+                }
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  setDialogState(() {
+                    saving = false;
+                    error = 'Unable to save payroll: $e';
+                  });
+                }
+              }
+            }
+
+            final earnings = totalFor('Earnings');
+            final deductions = totalFor('Deductions');
+            final net = earnings - deductions;
+
+            Widget amountField((String, String, String) field) {
+              return SizedBox(
+                width: 205,
+                child: TextField(
+                  controller: controllers[field.$1],
+                  enabled: employeeId != null && !loading && !saving,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setDialogState(() {}),
+                  decoration: InputDecoration(
+                    labelText: field.$2,
+                    prefixText: 'RM ',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              );
+            }
+
+            Widget fieldGroup(String title) {
+              final groupFields =
+                  fields.where((field) => field.$3 == title).toList();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: groupFields.map(amountField).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              );
+            }
+
+            return AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.edit_note_outlined),
+                  SizedBox(width: 10),
+                  Text('Edit Payroll'),
+                ],
+              ),
+              content: SizedBox(
+                width: 900,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Choose a payroll month and employee. Existing values are loaded automatically; if no record exists, a new payroll record will be created.',
+                      ),
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: loading || saving ? null : chooseMonth,
+                            icon: const Icon(Icons.calendar_month_outlined),
+                            label: Text(DateFormat('MMMM yyyy').format(month)),
+                          ),
+                          SizedBox(
+                            width: 360,
+                            child: DropdownButtonFormField<String>(
+                              initialValue: employeeId,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Employee',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: employees.map((employee) {
+                                final id =
+                                    employee['employee_id']?.toString() ?? '';
+                                final name =
+                                    employee['name']?.toString().trim() ?? '';
+                                return DropdownMenuItem(
+                                  value: id,
+                                  child:
+                                      Text(name.isEmpty ? id : '$id • $name'),
+                                );
+                              }).toList(),
+                              onChanged: loading || saving
+                                  ? null
+                                  : (value) {
+                                      setDialogState(() {
+                                        employeeId = value;
+                                        storedRecord = null;
+                                        error = null;
+                                        fillControllers(null);
+                                      });
+                                      loadPayroll();
+                                    },
+                            ),
+                          ),
+                          if (loading) const CircularProgressIndicator(),
+                        ],
+                      ),
+                      if (employeeId != null && !loading) ...[
+                        const SizedBox(height: 18),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: storedRecord == null
+                                ? Colors.amber.shade50
+                                : Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            storedRecord == null
+                                ? 'No payroll exists for this month. Saving will create it.'
+                                : 'Existing payroll loaded from the database.',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        fieldGroup('Earnings'),
+                        fieldGroup('Deductions'),
+                        fieldGroup('Employer Contributions'),
+                        TextField(
+                          controller: remarksController,
+                          enabled: !saving,
+                          maxLines: 2,
+                          decoration: const InputDecoration(
+                            labelText: 'Remarks',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            Chip(label: Text('Gross: ${_money(earnings)}')),
+                            Chip(
+                                label:
+                                    Text('Deductions: ${_money(deductions)}')),
+                            Chip(
+                              label: Text('Net Pay: ${_money(net)}'),
+                              backgroundColor: Colors.green.shade50,
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (error != null) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          error!,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: saving ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.icon(
+                  onPressed: employeeId == null || loading || saving
+                      ? null
+                      : savePayroll,
+                  icon: saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(saving ? 'Saving...' : 'Save Payroll'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } finally {
+      for (final controller in controllers.values) {
+        controller.dispose();
+      }
+      remarksController.dispose();
+    }
+  }
+// ============================================================================
 // PAYROLL PAGE
 // ============================================================================
 
@@ -6746,6 +7162,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       onPressed: _showGenerateAttendancePayrollDialog,
                       icon: const Icon(Icons.calculate_outlined),
                       label: const Text('Generate Payroll'),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: _showEditPayrollDialog,
+                      icon: const Icon(Icons.edit_note_outlined),
+                      label: const Text('Edit Payroll'),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {
