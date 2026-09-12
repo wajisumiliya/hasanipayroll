@@ -85,19 +85,23 @@ class AttendancePayrollService {
     final epfCategory = _normalizeCategory(salaryDefault['epf_category']);
     final eisApplicable = _isApplicable(salaryDefault['eis_applicable']);
 
+    // Foreign employees (EIS not applicable) calculate EPF from the full
+    // basic salary. EIS-applicable employees use the deduction-adjusted wage.
+    final epfWage = eisApplicable ? statutoryWage : _roundMoney(basicSalary);
+
     final _ContributionRow epf;
     if (epfCategory == 'normal') {
-      final twoPercent = _roundMoney(statutoryWage * 0.02);
+      final twoPercent = _roundMoney(epfWage * 0.02);
       epf = _ContributionRow(
-        statutoryWage,
-        statutoryWage,
+        epfWage,
+        epfWage,
         twoPercent,
         twoPercent,
       );
     } else {
       epf = _findContribution(
         schedule: _epfSchedule,
-        wage: statutoryWage,
+        wage: epfWage,
         scheduleName: 'EPF',
       );
     }
@@ -117,6 +121,7 @@ class AttendancePayrollService {
 
     return {
       'statutory_wage': statutoryWage,
+      'epf_wage': epfWage,
       'epf_employee': epf.employee,
       'epf_employer': epf.employer,
       'socso_employee': socso.employee,
@@ -426,23 +431,27 @@ class AttendancePayrollService {
     // 4. EPF
     // ------------------------------------------------------------------------
 
+    // Foreign employees (EIS not applicable) calculate EPF from basic salary
+    // only. For EIS-applicable employees, EPF uses the same adjusted statutory
+    // wage as before.
+    final epfWage = eisApplicable ? statutoryWage : basicSalary;
     final _ContributionRow epf;
 
     if (epfCategory == 'normal') {
       // SPECIAL RULE:
       // epf_category = normal -> 2% employee + 2% employer.
-      final epfTwoPercent = _roundMoney(statutoryWage * 0.02);
+      final epfTwoPercent = _roundMoney(epfWage * 0.02);
 
       epf = _ContributionRow(
-        statutoryWage,
-        statutoryWage,
+        epfWage,
+        epfWage,
         epfTwoPercent,
         epfTwoPercent,
       );
     } else {
       epf = _findContribution(
         schedule: _epfSchedule,
-        wage: statutoryWage,
+        wage: epfWage,
         scheduleName: 'EPF',
       );
     }
@@ -532,6 +541,7 @@ class AttendancePayrollService {
           : 'Generated payroll. '
               'Attendance rows used: ${attendance.length}. '
               'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
+              'EPF wage: ${epfWage.toStringAsFixed(2)}. '
               'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
               'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
               'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '

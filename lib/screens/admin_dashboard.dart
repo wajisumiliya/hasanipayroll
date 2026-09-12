@@ -2918,6 +2918,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final account = TextEditingController();
     final phone = TextEditingController();
     final address = TextEditingController();
+    final basicSalary = TextEditingController();
+    final fwSalary = TextEditingController(text: '0');
+    final elaunKedatangan = TextEditingController(text: '0');
+    final elaunPerkhidmatan = TextEditingController(text: '0');
+    final elaunKerajinan = TextEditingController(text: '0');
 
     String branchId =
         service.branches.isNotEmpty ? service.branches.first.id : '';
@@ -2925,6 +2930,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     DateTime joiningDate = DateTime.now();
     bool active = true;
     bool managementStaff = false;
+    String epfCategory = 'normal1';
+    bool eisApplicable = true;
 
     showDialog(
       context: context,
@@ -2977,6 +2984,80 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       _dialogField(
                         address,
                         'Address',
+                      ),
+                      const Divider(height: 28),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Default Salary',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _dialogField(
+                        basicSalary,
+                        'Basic Salary (RM)',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      _dialogField(
+                        fwSalary,
+                        'FW Salary (RM)',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      _dialogField(
+                        elaunKedatangan,
+                        'Elaun Kedatangan (RM)',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      _dialogField(
+                        elaunPerkhidmatan,
+                        'Elaun Perkhidmatan (RM)',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      _dialogField(
+                        elaunKerajinan,
+                        'Elaun Kerajinan (RM)',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      DropdownButtonFormField<String>(
+                        initialValue: epfCategory,
+                        decoration: const InputDecoration(
+                          labelText: 'EPF Category',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'normal1',
+                            child: Text('Normal 1 (statutory schedule)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'normal',
+                            child: Text('Normal (2% employee + employer)'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => epfCategory = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 5),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('EIS Applicable'),
+                        value: eisApplicable,
+                        onChanged: (value) =>
+                            setDialogState(() => eisApplicable = value),
                       ),
                       if (service.branches.isNotEmpty)
                         DropdownButtonFormField<String>(
@@ -3081,6 +3162,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       return;
                     }
 
+                    double? salaryValue(TextEditingController controller) {
+                      return double.tryParse(
+                        controller.text.trim().replaceAll(',', ''),
+                      );
+                    }
+
+                    final parsedBasicSalary = salaryValue(basicSalary);
+                    final parsedFwSalary = salaryValue(fwSalary);
+                    final parsedElaunKedatangan =
+                        salaryValue(elaunKedatangan);
+                    final parsedElaunPerkhidmatan =
+                        salaryValue(elaunPerkhidmatan);
+                    final parsedElaunKerajinan = salaryValue(elaunKerajinan);
+                    final salaryValues = [
+                      parsedBasicSalary,
+                      parsedFwSalary,
+                      parsedElaunKedatangan,
+                      parsedElaunPerkhidmatan,
+                      parsedElaunKerajinan,
+                    ];
+
+                    if (salaryValues.any(
+                      (value) => value == null || value < 0,
+                    )) {
+                      _message(
+                        'Enter valid non-negative amounts for all salary fields.',
+                      );
+                      return;
+                    }
+
                     final result = await service.addEmployee(
                       Employee(
                         employeeId: id,
@@ -3098,6 +3209,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         isManagementStaff: managementStaff,
                       ),
                       branchId: branchId,
+                      salaryDefaults: {
+                        'basic_salary': parsedBasicSalary!,
+                        'fw_salary': parsedFwSalary!,
+                        'elaun_kedatangan': parsedElaunKedatangan!,
+                        'elaun_perkhidmatan': parsedElaunPerkhidmatan!,
+                        'elaun_kerajinan': parsedElaunKerajinan!,
+                        'epf_category': epfCategory,
+                        'eis_applicable': eisApplicable,
+                      },
                     );
 
                     if (!dialogContext.mounted) return;
@@ -6954,7 +7074,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 setDialogState(() {
                   calculatingStatutory = false;
                   statutoryInfo =
-                      'EPF, SOCSO and EIS updated from contribution wage ${_money(result['statutory_wage']!)}.';
+                      'EPF updated from wage ${_money(result['epf_wage']!)}; '
+                      'SOCSO and EIS updated from wage '
+                      '${_money(result['statutory_wage']!)}.';
                 });
               } catch (e) {
                 if (revision == statutoryRevision && dialogContext.mounted) {
@@ -10466,14 +10588,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _dialogField(
     TextEditingController controller,
-    String label,
-  ) {
+    String label, {
+    TextInputType? keyboardType,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(
         bottom: 10,
       ),
       child: TextField(
         controller: controller,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),

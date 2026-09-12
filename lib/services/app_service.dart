@@ -1464,6 +1464,7 @@ class AppService extends ChangeNotifier {
   Future<String> addEmployee(
     Employee employee, {
     required String branchId,
+    required Map<String, dynamic> salaryDefaults,
   }) async {
     final cleanId = employee.employeeId.trim();
 
@@ -1492,6 +1493,25 @@ class AppService extends ChangeNotifier {
             ),
           );
 
+      try {
+        await _supabase.from('employee_salary_defaults').insert({
+          'employee_id': cleanId,
+          ...salaryDefaults,
+        });
+      } catch (salaryError) {
+        try {
+          await _supabase
+              .from('employees')
+              .delete()
+              .eq('employee_id', cleanId);
+        } catch (rollbackError) {
+          return 'Employee $cleanId was added, but salary defaults failed: '
+              '$salaryError. Employee rollback also failed: $rollbackError';
+        }
+        return 'Failed to add employee salary defaults: $salaryError. '
+            'Employee creation was rolled back.';
+      }
+
       final accountError = await _provisionEmployeeLogin(
         cleanId,
         email: employeeWithBranch.email,
@@ -1500,9 +1520,11 @@ class AppService extends ChangeNotifier {
       await loadEmployeesFromSupabase();
 
       if (accountError != null) {
-        return 'Employee $cleanId was added, but login setup failed: $accountError';
+        return 'Employee $cleanId and salary defaults were added, but login '
+            'setup failed: $accountError';
       }
-      return 'Employee $cleanId added successfully with login access.';
+      return 'Employee $cleanId added successfully with salary defaults and '
+          'login access.';
     } catch (e) {
       debugPrint(
         'Add employee error: $e',
