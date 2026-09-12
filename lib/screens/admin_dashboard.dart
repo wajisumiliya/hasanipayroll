@@ -65,6 +65,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       TextEditingController();
   String _adminEmployeeSearch = '';
   String _attendanceEmployeeSearch = '';
+  String _attendanceSubmissionFilter = 'submitted';
   final Map<String, String> _approvedOtInputs = {};
 
   final List<String> months = const [
@@ -5383,8 +5384,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         borderRadius: BorderRadius.circular(18),
                         onTap: id.isEmpty
                             ? null
-                            : () =>
-                                setState(() => selectedAttendanceBranchId = id),
+                            : () => setState(() {
+                                  selectedAttendanceBranchId = id;
+                                  _attendanceSubmissionFilter = 'submitted';
+                                }),
                         child: Card(
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -5483,10 +5486,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
               (employee['employee_id'] ?? employee['id'] ?? '').toString();
           return submittedEmployeeIds.contains(id);
         }).toList();
+        final pendingEmployees = employees.where((employee) {
+          final id =
+              (employee['employee_id'] ?? employee['id'] ?? '').toString();
+          return !submittedEmployeeIds.contains(id);
+        }).toList();
         final submittedCount = submittedEmployees.length;
         final pendingCount = employees.length - submittedCount;
         final search = _attendanceEmployeeSearch.trim().toLowerCase();
-        final filteredEmployees = submittedEmployees.where((employee) {
+        final displayedEmployees = _attendanceSubmissionFilter == 'pending'
+            ? pendingEmployees
+            : submittedEmployees;
+        final filteredEmployees = displayedEmployees.where((employee) {
           if (search.isEmpty) return true;
           final id = (employee['employee_id'] ?? employee['id'] ?? '')
               .toString()
@@ -5525,7 +5536,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         fontSize: 28, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
                 Text(
-                  '${filteredEmployees.length} submitted attendance record(s) shown',
+                  '${filteredEmployees.length} '
+                  '${_attendanceSubmissionFilter == 'pending' ? 'pending' : 'submitted'} '
+                  'attendance record(s) shown',
                   style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
@@ -5538,12 +5551,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       count: submittedCount,
                       icon: Icons.check_circle_outline,
                       color: const Color(0xFF15965D),
+                      selected: _attendanceSubmissionFilter == 'submitted',
+                      onTap: () => setState(
+                        () => _attendanceSubmissionFilter = 'submitted',
+                      ),
                     ),
                     _attendanceCountCard(
                       label: 'Pending',
                       count: pendingCount,
                       icon: Icons.schedule_outlined,
                       color: const Color(0xFFF59E0B),
+                      selected: _attendanceSubmissionFilter == 'pending',
+                      onTap: () => setState(
+                        () => _attendanceSubmissionFilter = 'pending',
+                      ),
                     ),
                   ],
                 ),
@@ -5748,34 +5769,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
     required int count,
     required IconData icon,
     required Color color,
+    required bool selected,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      width: 170,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 23),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 170,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: selected ? 0.16 : 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: color.withValues(alpha: selected ? 0.80 : 0.25),
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
             children: [
-              Text(
-                '$count',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w800,
-                ),
+              Icon(icon, color: color, size: 23),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$count',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(label,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                ],
               ),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+              if (selected) ...[
+                const Spacer(),
+                Icon(Icons.filter_alt, color: color, size: 18),
+              ],
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -10146,8 +10185,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       void writeRow(
         xls.Sheet sheet,
         int row,
-        List<dynamic> values,
-      ) {
+        List<dynamic> values, {
+        Set<int> textColumns = const <int>{},
+      }) {
         for (var c = 0; c < values.length; c++) {
           final cell = sheet.cell(
             xls.CellIndex.indexByColumnRow(
@@ -10158,7 +10198,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           final item = values[c];
 
-          if (item is num) {
+          if (textColumns.contains(c)) {
+            cell.value = xls.TextCellValue(
+              item?.toString() ?? '',
+            );
+          } else if (item is num) {
             cell.value = xls.DoubleCellValue(
               item.toDouble(),
             );
@@ -10192,6 +10236,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         }
 
         final sheet = excel[sheetName];
+        final textColumns = <int>{
+          for (var index = 0; index < headers.length; index++)
+            if (const {
+              'NEW_IC_NO',
+              'EPF_NO',
+              'BANK_ACCOUNT',
+            }.contains(headers[index].trim().toUpperCase()))
+              index,
+        };
 
         writeRow(
           sheet,
@@ -10204,6 +10257,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             sheet,
             r + 1,
             rows[r],
+            textColumns: textColumns,
           );
         }
 
@@ -10228,7 +10282,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final eis = <List<dynamic>>[];
 
-      final socso = <List<dynamic>>[];
+      final socsoLocal = <List<dynamic>>[];
+
+      final socsoForeign = <List<dynamic>>[];
 
       // ============================================================
       // BUILD EXPORT DATA
@@ -10284,6 +10340,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
 
         final ic = employeeIc.isNotEmpty ? employeeIc : payrollIc;
+
+        // SOCSO identifier rule:
+        // - Malaysian IC numbers containing 12 digits continue to use IC.
+        // - For shorter IDs, employees marked FRN in the address column use
+        //   their SOCSO number when one is available.
+        final address = value(
+          employee,
+          const ['address'],
+        );
+        final socsoNo = value(
+          employee,
+          const ['socso_no', 'socsoNo'],
+        );
+        final icDigitCount = RegExp(r'\d').allMatches(ic).length;
+        final useForeignSocsoNo = icDigitCount < 12 &&
+            address.trim().toUpperCase() == 'FRN' &&
+            socsoNo.isNotEmpty;
+        final socsoIdentifier = useForeignSocsoNo ? socsoNo : ic;
 
         // ----------------------------------------------------------
         // BANK ACCOUNT
@@ -10417,11 +10491,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // SOCSO
         // ----------------------------------------------------------
 
-        socso.add([
+        final socsoRow = <dynamic>[
           name,
-          ic,
+          socsoIdentifier,
           socsoTotal,
-        ]);
+        ];
+        if (useForeignSocsoNo) {
+          socsoForeign.add(socsoRow);
+        } else {
+          socsoLocal.add(socsoRow);
+        }
       }
 
       // ============================================================
@@ -10486,7 +10565,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           'NEW_IC_NO',
           'SOCSO TOTAL AMOUNT',
         ],
-        socso,
+        [
+          ...socsoLocal,
+          ...socsoForeign,
+        ],
       );
 
       // ============================================================
