@@ -10317,6 +10317,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // EMPLOYEE NAME
         // ----------------------------------------------------------
 
+        final salaryDefaultName = value(
+          salaryDefault,
+          const ['name', 'employee_name'],
+        );
         final employeeName = value(
           employee,
           const [
@@ -10333,12 +10337,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         );
 
-        final name = employeeName.isNotEmpty ? employeeName : payrollName;
+        final name = salaryDefaultName.isNotEmpty
+            ? salaryDefaultName
+            : (employeeName.isNotEmpty ? employeeName : payrollName);
 
         // ----------------------------------------------------------
         // IC
         // ----------------------------------------------------------
 
+        final salaryDefaultIc = value(
+          salaryDefault,
+          const ['new_ic_no', 'newIcNo'],
+        );
         final employeeIc = value(
           employee,
           const [
@@ -10355,7 +10365,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         );
 
-        final ic = employeeIc.isNotEmpty ? employeeIc : payrollIc;
+        final ic = salaryDefaultIc.isNotEmpty
+            ? salaryDefaultIc
+            : (employeeIc.isNotEmpty ? employeeIc : payrollIc);
 
         // SOCSO identifier rule:
         // - Malaysian IC numbers containing 12 digits continue to use IC.
@@ -10392,6 +10404,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // BANK ACCOUNT
         // ----------------------------------------------------------
 
+        final salaryDefaultBank = value(
+          salaryDefault,
+          const ['bank_account', 'bankAccount'],
+        );
         final employeeBank = value(
           employee,
           const [
@@ -10408,13 +10424,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         );
 
-        final bankAccount =
-            employeeBank.isNotEmpty ? employeeBank : payrollBank;
+        final bankAccount = salaryDefaultBank.isNotEmpty
+            ? salaryDefaultBank
+            : (employeeBank.isNotEmpty ? employeeBank : payrollBank);
 
         // ----------------------------------------------------------
         // EPF NUMBER
         // ----------------------------------------------------------
 
+        final salaryDefaultEpfNo = value(
+          salaryDefault,
+          const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo'],
+        );
         final employeeEpfNo = value(
           employee,
           const [
@@ -10435,7 +10456,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         );
 
-        final epfNo = employeeEpfNo.isNotEmpty ? employeeEpfNo : payrollEpfNo;
+        final epfNo = salaryDefaultEpfNo.isNotEmpty
+            ? salaryDefaultEpfNo
+            : (employeeEpfNo.isNotEmpty ? employeeEpfNo : payrollEpfNo);
 
         // ----------------------------------------------------------
         // CALCULATE AMOUNTS
