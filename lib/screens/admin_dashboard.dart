@@ -10358,12 +10358,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         final ic = employeeIc.isNotEmpty ? employeeIc : payrollIc;
 
-        // SOCSO identifier rule is controlled only by the salary-default
-        // address: FRN uses SOCSO number; empty/non-FRN uses IC number.
-        final address = value(
+        // Prefer the salary-default address, with employee address as a schema
+        // fallback. A value containing FRN uses SOCSO number; empty/non-FRN
+        // uses IC number.
+        final salaryDefaultAddress = value(
           salaryDefault,
           const ['address', 'Address', 'ADDRESS'],
         );
+        final employeeAddress = value(
+          employee,
+          const ['address', 'Address', 'ADDRESS'],
+        );
+        final address = salaryDefaultAddress.isNotEmpty
+            ? salaryDefaultAddress
+            : employeeAddress;
         final socsoNo = value(
           employee,
           const [
@@ -10375,7 +10383,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
         final icDigits = ic.replaceAll(RegExp(r'[^0-9]'), '');
         final icDigitCount = icDigits.length;
-        final isForeign = address.trim().toUpperCase() == 'FRN';
+        final isForeign = address.trim().toUpperCase().contains('FRN');
         final isDigitsOnly = RegExp(r'^\d+$').hasMatch(ic);
         final exportIc = !isForeign && isDigitsOnly && ic.length < 12
             ? ic.padLeft(12, '0')
@@ -10609,7 +10617,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       _message(
         'Generated 4 Excel files for $selectedMonth: '
-        'RHB Layout, EPF, EIS and SOCSO.',
+        'RHB Layout, EPF, EIS and SOCSO. '
+        'SOCSO exported ${socsoLocal.length} local and '
+        '${socsoForeign.length} foreign employee(s).',
       );
     } catch (e) {
       _message(
