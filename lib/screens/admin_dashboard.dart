@@ -10504,10 +10504,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         epf.add([
           name,
+          '',
+          '',
           exportIc,
           epfNo,
           epfEmployee,
           epfEmployer,
+          '',
           gross,
         ]);
 
@@ -10518,6 +10521,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         eis.add([
           name,
           exportIc,
+          '',
           eisTotal,
         ]);
 
@@ -10568,11 +10572,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'EPF',
         const [
           'NAME',
-          'NEW_IC_NO',
+          '',
+          '',
+          'IC_NO',
           'EPF_NO',
           'EMPLOYEE EPF AMOUNT',
           'EMPLOYER EPF AMOUNT',
-          'JUMLAH',
+          '',
+          'TOTAL AMOUNT',
         ],
         epf,
       );
@@ -10586,7 +10593,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'EIS',
         const [
           'NAME',
-          'NEW_IC_NO',
+          'IC_NO',
+          '',
           'EIS TOTAL AMOUNT',
         ],
         eis,
