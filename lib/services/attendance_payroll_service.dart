@@ -69,6 +69,7 @@ class AttendancePayrollService {
     required String employeeId,
     required double basicSalary,
     required double salaryDeduction,
+    required double unpaidDeduction,
   }) async {
     final salaryDefault = await _getSalaryDefault(employeeId);
     if (salaryDefault == null) {
@@ -84,13 +85,19 @@ class AttendancePayrollService {
 
     final epfCategory = _normalizeCategory(salaryDefault['epf_category']);
     final eisApplicable = _isApplicable(salaryDefault['eis_applicable']);
+    final contributionEligibilityWage =
+        _roundMoney(basicSalary - unpaidDeduction);
+    final contributionsApplicable = contributionEligibilityWage >= 500;
 
-    // Foreign employees (EIS not applicable) calculate EPF from the full
-    // basic salary. EIS-applicable employees use the deduction-adjusted wage.
+    // Foreign employees (EIS not applicable) calculate EPF and SOCSO from the
+    // full basic salary. EIS-applicable employees use the adjusted wage.
     final epfWage = eisApplicable ? statutoryWage : _roundMoney(basicSalary);
+    final socsoWage = eisApplicable ? statutoryWage : _roundMoney(basicSalary);
 
     final _ContributionRow epf;
-    if (epfCategory == 'normal') {
+    if (!contributionsApplicable) {
+      epf = const _ContributionRow(0, 0, 0, 0);
+    } else if (epfCategory == 'normal') {
       final twoPercent = _roundMoney(epfWage * 0.02);
       epf = _ContributionRow(
         epfWage,
@@ -106,12 +113,14 @@ class AttendancePayrollService {
       );
     }
 
-    final socso = _findContribution(
-      schedule: _socsoFirstCategorySchedule,
-      wage: statutoryWage,
-      scheduleName: 'SOCSO First Category',
-    );
-    final eis = eisApplicable
+    final socso = contributionsApplicable
+        ? _findContribution(
+            schedule: _socsoFirstCategorySchedule,
+            wage: socsoWage,
+            scheduleName: 'SOCSO First Category',
+          )
+        : const _ContributionRow(0, 0, 0, 0);
+    final eis = contributionsApplicable && eisApplicable
         ? _findContribution(
             schedule: _eisSchedule,
             wage: statutoryWage,
@@ -122,6 +131,9 @@ class AttendancePayrollService {
     return {
       'statutory_wage': statutoryWage,
       'epf_wage': epfWage,
+      'socso_wage': socsoWage,
+      'contribution_eligibility_wage': contributionEligibilityWage,
+      'contributions_applicable': contributionsApplicable ? 1.0 : 0.0,
       'epf_employee': epf.employee,
       'epf_employer': epf.employer,
       'socso_employee': socso.employee,
@@ -431,13 +443,20 @@ class AttendancePayrollService {
     // 4. EPF
     // ------------------------------------------------------------------------
 
-    // Foreign employees (EIS not applicable) calculate EPF from basic salary
-    // only. For EIS-applicable employees, EPF uses the same adjusted statutory
-    // wage as before.
+    final contributionEligibilityWage =
+        _roundMoney(basicSalary - unpaidDeduction);
+    final contributionsApplicable = contributionEligibilityWage >= 500;
+
+    // Foreign employees (EIS not applicable) calculate EPF and SOCSO from
+    // basic salary only. EIS-applicable employees use the adjusted statutory
+    // wage. All contributions are zero below the RM500 eligibility threshold.
     final epfWage = eisApplicable ? statutoryWage : basicSalary;
+    final socsoWage = eisApplicable ? statutoryWage : basicSalary;
     final _ContributionRow epf;
 
-    if (epfCategory == 'normal') {
+    if (!contributionsApplicable) {
+      epf = const _ContributionRow(0, 0, 0, 0);
+    } else if (epfCategory == 'normal') {
       // SPECIAL RULE:
       // epf_category = normal -> 2% employee + 2% employer.
       final epfTwoPercent = _roundMoney(epfWage * 0.02);
@@ -460,11 +479,13 @@ class AttendancePayrollService {
     // 5. SOCSO - FIRST CATEGORY
     // ------------------------------------------------------------------------
 
-    final socso = _findContribution(
-      schedule: _socsoFirstCategorySchedule,
-      wage: statutoryWage,
-      scheduleName: 'SOCSO First Category',
-    );
+    final socso = contributionsApplicable
+        ? _findContribution(
+            schedule: _socsoFirstCategorySchedule,
+            wage: socsoWage,
+            scheduleName: 'SOCSO First Category',
+          )
+        : const _ContributionRow(0, 0, 0, 0);
 
     // ------------------------------------------------------------------------
     // 6. EIS
@@ -472,7 +493,7 @@ class AttendancePayrollService {
 
     final _ContributionRow eis;
 
-    if (eisApplicable) {
+    if (contributionsApplicable && eisApplicable) {
       eis = _findContribution(
         schedule: _eisSchedule,
         wage: statutoryWage,
@@ -541,7 +562,9 @@ class AttendancePayrollService {
           : 'Generated payroll. '
               'Attendance rows used: ${attendance.length}. '
               'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
+              'Contribution eligibility wage: ${contributionEligibilityWage.toStringAsFixed(2)}. '
               'EPF wage: ${epfWage.toStringAsFixed(2)}. '
+              'SOCSO wage: ${socsoWage.toStringAsFixed(2)}. '
               'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
               'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
               'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '

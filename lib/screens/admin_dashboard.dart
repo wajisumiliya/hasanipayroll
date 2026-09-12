@@ -7057,13 +7057,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 success = null;
               });
               try {
+                final unpaidDeduction = number('unpaid_deduction');
                 final salaryDeduction =
-                    number('late_deduction') + number('unpaid_deduction');
+                    number('late_deduction') + unpaidDeduction;
                 final result = await AttendancePayrollService
                     .calculateStatutoryContributions(
                   employeeId: selectedId,
                   basicSalary: number('basic_salary'),
                   salaryDeduction: salaryDeduction,
+                  unpaidDeduction: unpaidDeduction,
                 );
                 if (revision != statutoryRevision || !dialogContext.mounted) {
                   return;
@@ -7073,10 +7075,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 }
                 setDialogState(() {
                   calculatingStatutory = false;
-                  statutoryInfo =
-                      'EPF updated from wage ${_money(result['epf_wage']!)}; '
-                      'SOCSO and EIS updated from wage '
-                      '${_money(result['statutory_wage']!)}.';
+                  statutoryInfo = result['contributions_applicable'] == 0
+                      ? 'EPF, SOCSO and EIS are RM0 because basic salary minus '
+                          'unpaid deduction is below RM500.'
+                      : 'EPF updated from wage '
+                          '${_money(result['epf_wage']!)}; SOCSO updated from '
+                          'wage ${_money(result['socso_wage']!)}; EIS updated '
+                          'from wage ${_money(result['statutory_wage']!)}.';
                 });
               } catch (e) {
                 if (revision == statutoryRevision && dialogContext.mounted) {
