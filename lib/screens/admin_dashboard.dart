@@ -10293,9 +10293,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final rhb = <List<dynamic>>[];
 
-      final epf = <List<dynamic>>[];
+      final epfLocal = <List<dynamic>>[];
 
-      final eis = <List<dynamic>>[];
+      final epfForeign = <List<dynamic>>[];
+
+      final eisLocal = <List<dynamic>>[];
+
+      final eisForeign = <List<dynamic>>[];
 
       final socsoLocal = <List<dynamic>>[];
 
@@ -10502,28 +10506,42 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // JUMLAH = GROSS SALARY
         // ----------------------------------------------------------
 
-        epf.add([
-          name,
-          '',
-          '',
-          exportIc,
-          epfNo,
-          epfEmployee,
-          epfEmployer,
-          '',
-          gross,
-        ]);
+        if (epfEmployee + epfEmployer > 0) {
+          final epfRow = <dynamic>[
+            name,
+            '',
+            '',
+            exportIc,
+            epfNo,
+            epfEmployee,
+            epfEmployer,
+            '',
+            gross,
+          ];
+          if (isForeign) {
+            epfForeign.add(epfRow);
+          } else {
+            epfLocal.add(epfRow);
+          }
+        }
 
         // ----------------------------------------------------------
         // EIS
         // ----------------------------------------------------------
 
-        eis.add([
-          name,
-          exportIc,
-          '',
-          eisTotal,
-        ]);
+        if (eisTotal > 0) {
+          final eisRow = <dynamic>[
+            name,
+            exportIc,
+            '',
+            eisTotal,
+          ];
+          if (isForeign) {
+            eisForeign.add(eisRow);
+          } else {
+            eisLocal.add(eisRow);
+          }
+        }
 
         // ----------------------------------------------------------
         // SOCSO
@@ -10581,7 +10599,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           '',
           'TOTAL AMOUNT',
         ],
-        epf,
+        [
+          ...epfLocal,
+          ...epfForeign,
+        ],
       );
 
       // ============================================================
@@ -10597,7 +10618,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           '',
           'EIS TOTAL AMOUNT',
         ],
-        eis,
+        [
+          ...eisLocal,
+          ...eisForeign,
+        ],
       );
 
       // ============================================================
@@ -10626,6 +10650,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       _message(
         'Generated 4 Excel files for $selectedMonth: '
         'RHB Layout, EPF, EIS and SOCSO. '
+        'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
+        'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
         'SOCSO exported ${socsoLocal.length} local and '
         '${socsoForeign.length} foreign employee(s).',
       );
