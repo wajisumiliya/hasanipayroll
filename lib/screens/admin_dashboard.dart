@@ -9969,6 +9969,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           DateFormat('MMMM yyyy').format(selectedPayrollMonth);
 
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
+      final exportStamp =
+          DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
 
       // ============================================================
       // LOAD PAYROLL
@@ -10569,7 +10571,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // ============================================================
 
       saveExcel(
-        'RHB_Layout_$monthFile.xlsx',
+        'RHB_Layout_${monthFile}_$exportStamp.xlsx',
         'RHB Layout',
         const [
           'NAME',
@@ -10586,7 +10588,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // ============================================================
 
       saveExcel(
-        'EPF_$monthFile.xlsx',
+        'EPF_${monthFile}_$exportStamp.xlsx',
         'EPF',
         const [
           'NAME',
@@ -10610,7 +10612,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // ============================================================
 
       saveExcel(
-        'EIS_$monthFile.xlsx',
+        'EIS_${monthFile}_$exportStamp.xlsx',
         'EIS',
         const [
           'NAME',
@@ -10629,7 +10631,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // ============================================================
 
       saveExcel(
-        'SOCSO_$monthFile.xlsx',
+        'SOCSO_${monthFile}_$exportStamp.xlsx',
         'SOCSO',
         const [
           'NAME',
@@ -10649,7 +10651,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       _message(
         'Generated 4 Excel files for $selectedMonth: '
-        'RHB Layout, EPF, EIS and SOCSO. '
+        'RHB Layout, EPF, EIS and SOCSO (export $exportStamp). '
         'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
         'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
         'SOCSO exported ${socsoLocal.length} local and '
