@@ -10347,22 +10347,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
         //   their SOCSO number when one is available.
         final address = value(
           employee,
-          const ['address'],
+          const ['address', 'Address', 'ADDRESS'],
         );
         final socsoNo = value(
           employee,
-          const ['socso_no', 'socsoNo'],
+          const [
+            'socso_no',
+            'socsoNo',
+            'socso_number',
+            'SOCSO_NO',
+          ],
         );
-        final icDigitCount = RegExp(r'\d').allMatches(ic).length;
+        final icDigits = ic.replaceAll(RegExp(r'[^0-9]'), '');
+        final icDigitCount = icDigits.length;
         final isForeign = address.trim().toUpperCase() == 'FRN';
         final isDigitsOnly = RegExp(r'^\d+$').hasMatch(ic);
         final exportIc = !isForeign && isDigitsOnly && ic.length < 12
             ? ic.padLeft(12, '0')
-            : ic;
+            : (icDigitCount == 12 ? icDigits : ic.replaceAll('-', ''));
         final useForeignSocsoNo = icDigitCount < 12 &&
             isForeign &&
             socsoNo.isNotEmpty;
-        final socsoIdentifier = useForeignSocsoNo ? socsoNo : exportIc;
+        final socsoIdentifier = useForeignSocsoNo
+            ? socsoNo.replaceAll('-', '')
+            : exportIc;
 
         // ----------------------------------------------------------
         // BANK ACCOUNT
