@@ -10035,6 +10035,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
         }
       }
 
+      final salaryDefaultsResponse = await SupabaseService.client
+          .from('employee_salary_defaults')
+          .select()
+          .inFilter('employee_id', employeeIds);
+      final salaryDefaultsMap = <String, Map<String, dynamic>>{};
+      for (final salaryDefault in List<Map<String, dynamic>>.from(
+        salaryDefaultsResponse,
+      )) {
+        final id = _normalizeBranchValue(salaryDefault['employee_id']);
+        if (id.isNotEmpty) {
+          salaryDefaultsMap[id] = salaryDefault;
+        }
+      }
+
       // ============================================================
       // MONEY HELPER
       // ============================================================
@@ -10296,6 +10310,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
 
         final employee = employeeMap[id] ?? <String, dynamic>{};
+        final salaryDefault =
+            salaryDefaultsMap[id] ?? <String, dynamic>{};
 
         // ----------------------------------------------------------
         // EMPLOYEE NAME
@@ -10346,11 +10362,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // - For shorter IDs, employees marked FRN in the address column use
         //   their SOCSO number when one is available.
         final address = value(
-          employee,
+          salaryDefault,
           const ['address', 'Address', 'ADDRESS'],
         );
         final socsoNo = value(
-          employee,
+          salaryDefault,
           const [
             'socso_no',
             'socsoNo',
