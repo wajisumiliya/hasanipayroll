@@ -10254,6 +10254,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           for (var index = 0; index < headers.length; index++)
             if (const {
               'NEW_IC_NO',
+              'IC_NO',
               'EPF_NO',
               'BANK_ACCOUNT',
             }.contains(headers[index].trim().toUpperCase()))
@@ -10539,15 +10540,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // SOCSO
         // ----------------------------------------------------------
 
-        final socsoRow = <dynamic>[
-          name,
-          socsoIdentifier,
-          socsoTotal,
-        ];
-        if (isForeign) {
-          socsoForeign.add(socsoRow);
-        } else {
-          socsoLocal.add(socsoRow);
+        final eligibleForSocsoExport = socsoTotal > 0 &&
+            (isForeign ? socsoNo.isNotEmpty : icDigitCount == 12);
+        if (eligibleForSocsoExport) {
+          final socsoRow = <dynamic>[
+            name,
+            socsoIdentifier,
+            '',
+            socsoTotal,
+          ];
+          if (isForeign) {
+            socsoForeign.add(socsoRow);
+          } else {
+            socsoLocal.add(socsoRow);
+          }
         }
       }
 
@@ -10610,7 +10616,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'SOCSO',
         const [
           'NAME',
-          'NEW_IC_NO',
+          'IC_NO',
+          '',
           'SOCSO TOTAL AMOUNT',
         ],
         [
