@@ -7108,7 +7108,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   onChanged: (_) {
                     setDialogState(() {
                       success = null;
-                      if (automaticContributionFields.contains(field.$1)) {
+                      if (field.$1 == 'socso_employee' ||
+                          field.$1 == 'eis_employee') {
+                        final employeeShare = double.tryParse(
+                          controllers[field.$1]!
+                              .text
+                              .trim()
+                              .replaceAll(',', ''),
+                        );
+                        if (employeeShare == null || employeeShare < 0) {
+                          statutoryInfo =
+                              '${field.$2} must be a valid amount.';
+                        } else {
+                          final contribution = field.$1 == 'socso_employee'
+                              ? 'socso'
+                              : 'eis';
+                          final employerShare = AttendancePayrollService
+                              .employerShareForEmployeeContribution(
+                            contribution: contribution,
+                            employeeShare: employeeShare,
+                          );
+                          if (employerShare == null) {
+                            statutoryInfo =
+                                'No ${contribution.toUpperCase()} table row '
+                                'matches employee share '
+                                '${_money(employeeShare)}.';
+                          } else {
+                            final employerKey = field.$1 == 'socso_employee'
+                                ? 'socso_employer'
+                                : 'eis_employer';
+                            controllers[employerKey]!.text =
+                                employerShare.toStringAsFixed(2);
+                            statutoryInfo =
+                                '${contribution.toUpperCase()} employer share '
+                                'updated from the contribution table.';
+                          }
+                        }
+                      } else if (automaticContributionFields
+                          .contains(field.$1)) {
                         statutoryInfo =
                             '${field.$2} manually overridden by admin.';
                       }

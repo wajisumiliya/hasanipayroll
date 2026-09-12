@@ -803,6 +803,31 @@ class AttendancePayrollService {
   // CONTRIBUTION LOOKUP
   // ==========================================================================
 
+  static double? employerShareForEmployeeContribution({
+    required String contribution,
+    required double employeeShare,
+  }) {
+    if (employeeShare < 0) return null;
+    if (employeeShare == 0) return 0;
+
+    final schedule = switch (contribution.trim().toLowerCase()) {
+      'socso' => _socsoFirstCategorySchedule,
+      'eis' => _eisSchedule,
+      _ => throw ArgumentError.value(
+          contribution,
+          'contribution',
+          'Only SOCSO and EIS are supported.',
+        ),
+    };
+    final roundedShare = _roundMoney(employeeShare);
+    for (final row in schedule) {
+      if ((row.employee - roundedShare).abs() < 0.001) {
+        return row.employer;
+      }
+    }
+    return null;
+  }
+
   static _ContributionRow _findContribution({
     required List<_ContributionRow> schedule,
     required double wage,
