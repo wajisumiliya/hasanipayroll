@@ -1449,11 +1449,13 @@ class AttendancePayrollService {
   // ==========================================================================
   // Source: SOCSO Schedule Amendment(1).xlsx
   //
-  // Employee contribution = Invalidity + Non-Employment Injury.
+  // The imported source rows contain total employer contribution followed by
+  // the employer-only portion. Build the First Category employee share as the
+  // difference between those two values. For example, 27.15 - 19.40 = 7.75.
   // Second Category is intentionally NOT used.
   // ==========================================================================
 
-  static final List<_ContributionRow> _socsoFirstCategorySchedule =
+  static final List<_ContributionRow> _socsoFirstCategorySourceSchedule =
       <_ContributionRow>[
     _ContributionRow(0.01, 30, 0.40, 0.30),
     _ContributionRow(30.01, 50, 0.70, 0.50),
@@ -1521,6 +1523,18 @@ class AttendancePayrollService {
     _ContributionRow(5900.01, 6000, 104.15, 74.40),
     _ContributionRow(6000.01, 99999.99, 104.15, 74.40)
   ];
+
+  static final List<_ContributionRow> _socsoFirstCategorySchedule =
+      _socsoFirstCategorySourceSchedule
+          .map(
+            (row) => _ContributionRow(
+              row.start,
+              row.end,
+              row.employer,
+              _roundMoney(row.employer - row.employee),
+            ),
+          )
+          .toList(growable: false);
 
   // ==========================================================================
   // EIS SCHEDULE
