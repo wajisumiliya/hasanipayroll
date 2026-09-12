@@ -10369,10 +10369,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ? salaryDefaultIc
             : (employeeIc.isNotEmpty ? employeeIc : payrollIc);
 
-        // SOCSO identifier rule:
-        // - Malaysian IC numbers containing 12 digits continue to use IC.
-        // - For shorter IDs, employees marked FRN in the address column use
-        //   their SOCSO number when one is available.
+        // SOCSO identifier rule is controlled only by the salary-default
+        // address: FRN uses SOCSO number; empty/non-FRN uses IC number.
         final address = value(
           salaryDefault,
           const ['address', 'Address', 'ADDRESS'],
@@ -10393,9 +10391,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final exportIc = !isForeign && isDigitsOnly && ic.length < 12
             ? ic.padLeft(12, '0')
             : (icDigitCount == 12 ? icDigits : ic.replaceAll('-', ''));
-        final useForeignSocsoNo = icDigitCount < 12 &&
-            isForeign &&
-            socsoNo.isNotEmpty;
+        final useForeignSocsoNo = isForeign && socsoNo.isNotEmpty;
         final socsoIdentifier = useForeignSocsoNo
             ? socsoNo.replaceAll('-', '')
             : exportIc;
@@ -10548,7 +10544,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           socsoIdentifier,
           socsoTotal,
         ];
-        if (useForeignSocsoNo) {
+        if (isForeign) {
           socsoForeign.add(socsoRow);
         } else {
           socsoLocal.add(socsoRow);
