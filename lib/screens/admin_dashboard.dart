@@ -10354,10 +10354,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const ['socso_no', 'socsoNo'],
         );
         final icDigitCount = RegExp(r'\d').allMatches(ic).length;
+        final isForeign = address.trim().toUpperCase() == 'FRN';
+        final isDigitsOnly = RegExp(r'^\d+$').hasMatch(ic);
+        final exportIc = !isForeign && isDigitsOnly && ic.length < 12
+            ? ic.padLeft(12, '0')
+            : ic;
         final useForeignSocsoNo = icDigitCount < 12 &&
-            address.trim().toUpperCase() == 'FRN' &&
+            isForeign &&
             socsoNo.isNotEmpty;
-        final socsoIdentifier = useForeignSocsoNo ? socsoNo : ic;
+        final socsoIdentifier = useForeignSocsoNo ? socsoNo : exportIc;
 
         // ----------------------------------------------------------
         // BANK ACCOUNT
@@ -10456,7 +10461,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         rhb.add([
           name,
-          ic,
+          exportIc,
           bankAccount,
           net,
           selectedMonth,
@@ -10470,7 +10475,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         epf.add([
           name,
-          ic,
+          exportIc,
           epfNo,
           epfEmployee,
           epfEmployer,
@@ -10483,7 +10488,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         eis.add([
           name,
-          ic,
+          exportIc,
           eisTotal,
         ]);
 
