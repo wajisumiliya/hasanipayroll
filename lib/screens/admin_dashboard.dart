@@ -7103,11 +7103,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: TextField(
                   controller: controllers[field.$1],
                   enabled: employeeId != null && !loading && !saving,
-                  readOnly: automaticContributionFields.contains(field.$1),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (_) {
-                    setDialogState(() => success = null);
+                    setDialogState(() {
+                      success = null;
+                      if (automaticContributionFields.contains(field.$1)) {
+                        statutoryInfo =
+                            '${field.$2} manually overridden by admin.';
+                      }
+                    });
                     if (contributionBasisFields.contains(field.$1)) {
                       recalculateStatutoryContributions();
                     }
@@ -7115,6 +7120,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   decoration: InputDecoration(
                     labelText: field.$2,
                     prefixText: 'RM ',
+                    helperText:
+                        automaticContributionFields.contains(field.$1)
+                            ? 'Auto-calculated; editable'
+                            : null,
                     border: const OutlineInputBorder(),
                   ),
                 ),
