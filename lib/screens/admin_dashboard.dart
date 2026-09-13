@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import '../models/payroll.dart';
 import '../services/app_service.dart';
 import '../theme/daily_portal_theme.dart';
@@ -1356,7 +1358,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.all(compact ? 16 : 24),
+                padding: EdgeInsets.all(compact ? 12 : 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1378,12 +1380,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         metric: 'net',
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 14),
                     _dashboardSectionTitle(
                       'Workforce intelligence',
                       'Tap any metric to explore the live records',
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     Wrap(
                       spacing: 16,
                       runSpacing: 16,
@@ -1438,7 +1440,76 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 16),
+                    _dashboardSectionTitle(
+                      'Payroll reports',
+                      'Preview a month before exporting or printing',
+                    ),
+                    const SizedBox(height: 10),
+                    LayoutBuilder(
+                      builder: (context, reportConstraints) {
+                        final columns = reportConstraints.maxWidth >= 1250
+                            ? 6
+                            : reportConstraints.maxWidth >= 760
+                                ? 3
+                                : reportConstraints.maxWidth >= 480
+                                    ? 2
+                                    : 1;
+                        final width = (reportConstraints.maxWidth -
+                                (10 * (columns - 1))) /
+                            columns;
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _dashboardReportCard(
+                              width,
+                              'EPF',
+                              'Employee and employer shares',
+                              Icons.savings_outlined,
+                              const Color(0xFFE8C778),
+                              assetName: 'assets/official_epf_logo.gif',
+                            ),
+                            _dashboardReportCard(
+                              width,
+                              'SOCSO',
+                              'Eligible local and foreign staff',
+                              Icons.health_and_safety_outlined,
+                              const Color(0xFF73D6AE),
+                              assetName: 'assets/official_socso_logo.png',
+                            ),
+                            _dashboardReportCard(width, 'EIS',
+                                'Monthly insurance contribution', Icons.shield_outlined,
+                                const Color(0xFF84B6F4)),
+                            _dashboardReportCard(
+                              width,
+                              'HRDF',
+                              'Salary, headcount and levy',
+                              Icons.account_balance_outlined,
+                              const Color(0xFFF0A46B),
+                              assetName: 'assets/official_hrdf_logo.png',
+                            ),
+                            _dashboardReportCard(
+                              width,
+                              'Salary',
+                              'Branch payroll worksheets',
+                              Icons.payments_outlined,
+                              const Color(0xFFB79AE2),
+                              assetName: 'assets/hasani_books_logo.jpg',
+                            ),
+                            _dashboardReportCard(
+                              width,
+                              'Payroll Summary',
+                              'Branch totals on landscape A4',
+                              Icons.summarize_outlined,
+                              const Color(0xFFE58AAE),
+                              assetName: 'assets/hb_payroll_icon.png',
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     if (compact) ...[
                       _dashboardActionDock(),
                       const SizedBox(height: 16),
@@ -1504,7 +1575,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 22 : 30),
+      padding: EdgeInsets.all(compact ? 16 : 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1756,7 +1827,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           child: Ink(
-            padding: const EdgeInsets.all(19),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: _portalTheme.glass,
               borderRadius: BorderRadius.circular(20),
@@ -1768,13 +1839,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Row(
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: accent.withValues(alpha: .13),
                         borderRadius: BorderRadius.circular(13),
                       ),
-                      child: Icon(icon, color: accent, size: 22),
+                      child: Icon(icon, color: accent, size: 19),
                     ),
                     const Spacer(),
                     Icon(
@@ -1784,14 +1855,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 28,
+                    fontSize: 23,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -.6,
                   ),
@@ -6015,6 +6086,90 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Icon(Icons.filter_alt, color: color, size: 18),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dashboardReportCard(
+    double width,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color accent, {
+    String? imageUrl,
+    String? assetName,
+  }) {
+    Widget fallbackIcon() => Icon(icon, color: accent, size: 21);
+
+    final logo = imageUrl != null
+        ? Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => fallbackIcon(),
+          )
+        : assetName != null
+            ? Image.asset(
+                assetName,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => fallbackIcon(),
+              )
+            : fallbackIcon();
+    return SizedBox(
+      width: width,
+      height: 102,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showDashboardReport(title),
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _portalTheme.glass,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: .08)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: imageUrl != null || assetName != null
+                        ? Colors.white
+                        : accent.withValues(alpha: .14),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: logo,
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text(subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: accent, size: 18),
+              ],
+            ),
           ),
         ),
       ),
@@ -10264,7 +10419,408 @@ class _AdminDashboardState extends State<AdminDashboard> {
 // RHB / STATUTORY LAYOUT EXPORTS
 // One click generates four separate Excel files for the selected payroll month.
 
-  Future<void> _exportRhbLayout() async {
+  Future<List<Map<String, dynamic>>> _loadDashboardReportRows(
+      DateTime month) async {
+    final results = await Future.wait([
+      SupabaseService.getPayroll(),
+      SupabaseService.getEmployees(),
+      SupabaseService.getBranches(),
+    ]);
+    final payroll = results[0]
+        .where((row) => _payrollPeriodMatchesMonth(row['period'], month))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+    final employees = <String, Map<String, dynamic>>{};
+    for (final row in results[1]) {
+      employees[_normalizeBranchValue(row['employee_id'])] = row;
+    }
+    final branchNames = <String, String>{};
+    for (final row in results[2]) {
+      final id = _normalizeBranchValue(row['id'] ?? row['branch_id']);
+      if (id.isNotEmpty) {
+        branchNames[id] = (row['name'] ?? row['branch_name'] ?? id).toString();
+      }
+    }
+
+    final grouped = <String, Map<String, dynamic>>{};
+    for (final row in payroll) {
+      final employeeId = _normalizeBranchValue(row['employee_id']);
+      final employee = employees[employeeId] ?? <String, dynamic>{};
+      final branchId = employee.isEmpty
+          ? _normalizeBranchValue(row['branch_id'])
+          : _payrollBranchIdFromEmployee(employee);
+      final fallbackBranch = branchId.isEmpty ? 'Unassigned' : branchId;
+      final branch = branchNames[branchId] ??
+          (row['branch_name'] ?? fallbackBranch).toString();
+      final summary = grouped.putIfAbsent(branch, () => <String, dynamic>{
+            'branch': branch,
+            'employees': 0,
+            'malaysianEmployees': 0,
+            'basic': 0.0,
+            'gross': 0.0,
+            'epfEmployee': 0.0,
+            'epfEmployer': 0.0,
+            'socsoEmployee': 0.0,
+            'socsoEmployer': 0.0,
+            'eisEmployee': 0.0,
+            'eisEmployer': 0.0,
+            'deductions': 0.0,
+            'net': 0.0,
+            'hrdfBase': 0.0,
+          });
+      summary['employees'] = (summary['employees'] as int) + 1;
+      final basic = _number(row['basic_salary']);
+      final gross = _payrollTotalEarnings(row);
+      final unpaid = _number(row['unpaid_deduction']);
+      final late = _number(row['late_deduction']);
+      final epfEmployee = _number(row['epf_employee']);
+      final epfEmployer = _number(row['epf_employer']);
+      final socsoEmployee = _number(row['socso_employee']);
+      final socsoEmployer = _number(row['socso_employer']);
+      final eisEmployee = _number(row['eis_employee']);
+      final eisEmployer = _number(row['eis_employer']);
+      final deductions = unpaid +
+          late +
+          epfEmployee +
+          socsoEmployee +
+          eisEmployee +
+          _number(row['pcb']) +
+          _number(row['zakat']);
+      final net = _number(row['net_pay'] ?? row['net_salary']);
+      summary['basic'] = (summary['basic'] as double) + basic;
+      summary['gross'] = (summary['gross'] as double) + gross;
+      summary['epfEmployee'] =
+          (summary['epfEmployee'] as double) + epfEmployee;
+      summary['epfEmployer'] =
+          (summary['epfEmployer'] as double) + epfEmployer;
+      summary['socsoEmployee'] =
+          (summary['socsoEmployee'] as double) + socsoEmployee;
+      summary['socsoEmployer'] =
+          (summary['socsoEmployer'] as double) + socsoEmployer;
+      summary['eisEmployee'] =
+          (summary['eisEmployee'] as double) + eisEmployee;
+      summary['eisEmployer'] =
+          (summary['eisEmployer'] as double) + eisEmployer;
+      summary['deductions'] = (summary['deductions'] as double) + deductions;
+      summary['net'] = (summary['net'] as double) +
+          (net == 0 ? gross - deductions : net);
+
+      final foreign = employee['address']
+              ?.toString()
+              .trim()
+              .toUpperCase()
+              .contains('FRN') ==
+          true;
+      if (!foreign) {
+        summary['malaysianEmployees'] =
+            (summary['malaysianEmployees'] as int) + 1;
+        final fixedAllowances = _number(row['elaun_perkhidmatan']) +
+            _number(row['elaun_kerajinan']);
+        summary['hrdfBase'] = (summary['hrdfBase'] as double) +
+            (basic - unpaid).clamp(0, double.infinity).toDouble() +
+            fixedAllowances;
+      }
+    }
+    final rows = grouped.values.toList()
+      ..sort((a, b) =>
+          a['branch'].toString().compareTo(b['branch'].toString()));
+    if (rows.isNotEmpty) {
+      final total = <String, dynamic>{
+        'branch': 'GRAND TOTAL',
+        'employees': 0,
+        'malaysianEmployees': 0,
+        'basic': 0.0,
+        'gross': 0.0,
+        'epfEmployee': 0.0,
+        'epfEmployer': 0.0,
+        'socsoEmployee': 0.0,
+        'socsoEmployer': 0.0,
+        'eisEmployee': 0.0,
+        'eisEmployer': 0.0,
+        'deductions': 0.0,
+        'net': 0.0,
+        'hrdfBase': 0.0,
+      };
+      const integerKeys = ['employees', 'malaysianEmployees'];
+      const moneyKeys = [
+        'basic',
+        'gross',
+        'epfEmployee',
+        'epfEmployer',
+        'socsoEmployee',
+        'socsoEmployer',
+        'eisEmployee',
+        'eisEmployer',
+        'deductions',
+        'net',
+        'hrdfBase',
+      ];
+      for (final row in rows) {
+        for (final key in integerKeys) {
+          total[key] = (total[key] as int) + (row[key] as int);
+        }
+        for (final key in moneyKeys) {
+          total[key] = (total[key] as double) + _number(row[key]);
+        }
+      }
+      rows.add(total);
+    }
+    return rows;
+  }
+
+  Future<void> _showDashboardReport(String report) async {
+    var month = selectedPayrollMonth;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: 1180,
+            height: MediaQuery.sizeOf(context).height * .82,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text('$report Preview',
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.w800)),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_month_outlined),
+                      label: Text(DateFormat('MMMM yyyy').format(month)),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: month,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                          helpText: 'Select report month',
+                        );
+                        if (picked != null) {
+                          setDialogState(
+                              () => month = DateTime(picked.year, picked.month));
+                        }
+                      },
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(_reportDescription(report),
+                      style: const TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      key: ValueKey('${report}_${month.year}_${month.month}'),
+                      future: _loadDashboardReportRows(month),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(
+                              child: Text('Unable to load report: ${snapshot.error}'));
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) {
+                          return const Center(
+                              child: Text('No payroll records for this month.'));
+                        }
+                        return Column(children: [
+                          Expanded(child: _dashboardReportPreview(report, rows)),
+                          const SizedBox(height: 12),
+                          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                            if (report == 'HRDF' || report == 'Payroll Summary')
+                              OutlinedButton.icon(
+                                onPressed: () => _printDashboardReport(
+                                    report, month, rows),
+                                icon: const Icon(Icons.print_outlined),
+                                label: const Text('Print Landscape A4'),
+                              ),
+                            if (report == 'HRDF' || report == 'Payroll Summary')
+                              const SizedBox(width: 10),
+                            FilledButton.icon(
+                              onPressed: () async {
+                                setState(() => selectedPayrollMonth = month);
+                                if (const ['EPF', 'SOCSO', 'EIS']
+                                    .contains(report)) {
+                                  await _exportRhbLayout(
+                                      only: report.toLowerCase());
+                                } else if (report == 'Salary') {
+                                  final all = await SupabaseService.getPayroll();
+                                  final filtered = all
+                                      .where((r) => _payrollPeriodMatchesMonth(
+                                          r['period'], month))
+                                      .toList();
+                                  final branches = await SupabaseService.getBranches();
+                                  await _exportPayrollAllBranchesExcel(
+                                    filtered,
+                                    {
+                                      for (final b in branches)
+                                        _normalizeBranchValue(
+                                                b['id'] ?? b['branch_id']):
+                                            (b['name'] ?? b['branch_name'] ?? '')
+                                                .toString()
+                                    },
+                                  );
+                                } else {
+                                  await _exportDashboardSummaryExcel(
+                                      report, month, rows);
+                                }
+                              },
+                              icon: const Icon(Icons.download_outlined),
+                              label: const Text('Export Excel'),
+                            ),
+                          ]),
+                        ]);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _reportDescription(String report) => report == 'HRDF'
+      ? 'Malaysian employee count, basic salary, levy wage base, and both 0.5% and 1% levy options. Fixed service and diligence allowances are included; overtime and variable attendance allowance are excluded.'
+      : report == 'Payroll Summary'
+          ? 'Branch totals for earnings, statutory contributions, deductions and net payroll.'
+          : '$report records use the same payroll calculations and eligibility rules as RHB Layout.';
+
+  List<String> _dashboardReportHeaders(String report) {
+    if (report == 'HRDF') {
+      return const ['BRANCH', 'MALAYSIAN STAFF', 'BASIC SALARY', 'LEVY BASE', 'LEVY 0.5%', 'LEVY 1%'];
+    }
+    if (report == 'Payroll Summary') {
+      return const ['BRANCH', 'STAFF', 'BASIC', 'GROSS', 'EPF EE', 'EPF ER', 'SOCSO EE', 'SOCSO ER', 'EIS EE', 'EIS ER', 'DEDUCTIONS', 'NET PAY'];
+    }
+    return const ['BRANCH', 'EMPLOYEES', 'BASIC SALARY', 'GROSS PAY', 'DEDUCTIONS', 'NET PAY'];
+  }
+
+  List<dynamic> _dashboardReportValues(
+      String report, Map<String, dynamic> row) {
+    if (report == 'HRDF') {
+      final base = _number(row['hrdfBase']);
+      return [row['branch'], row['malaysianEmployees'], row['basic'], base, base * .005, base * .01];
+    }
+    if (report == 'Payroll Summary') {
+      return [row['branch'], row['employees'], row['basic'], row['gross'], row['epfEmployee'], row['epfEmployer'], row['socsoEmployee'], row['socsoEmployer'], row['eisEmployee'], row['eisEmployer'], row['deductions'], row['net']];
+    }
+    return [row['branch'], row['employees'], row['basic'], row['gross'], row['deductions'], row['net']];
+  }
+
+  Widget _dashboardReportPreview(
+      String report, List<Map<String, dynamic>> rows) {
+    final headers = _dashboardReportHeaders(report);
+    return Scrollbar(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SingleChildScrollView(
+          child: DataTable(
+            headingRowColor: WidgetStatePropertyAll(Colors.grey.shade100),
+            columns: headers
+                .map((header) => DataColumn(label: Text(header,
+                    style: const TextStyle(fontWeight: FontWeight.w700))))
+                .toList(),
+            rows: rows.map((row) {
+              final values = _dashboardReportValues(report, row);
+              return DataRow(cells: values.map((value) {
+                final text = value is num && value is! int
+                    ? NumberFormat('#,##0.00').format(value)
+                    : value.toString();
+                return DataCell(Text(text));
+              }).toList());
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportDashboardSummaryExcel(String report, DateTime month,
+      List<Map<String, dynamic>> rows) async {
+    final excel = xls.Excel.createExcel();
+    final defaultName = excel.getDefaultSheet();
+    final sheetName = report == 'Payroll Summary' ? 'Payroll Summary' : report;
+    if (defaultName != null) excel.rename(defaultName, sheetName);
+    final sheet = excel[sheetName];
+    final headers = _dashboardReportHeaders(report);
+    for (var column = 0; column < headers.length; column++) {
+      sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 0)).value =
+          xls.TextCellValue(headers[column]);
+    }
+    for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      final values = _dashboardReportValues(report, rows[rowIndex]);
+      for (var column = 0; column < values.length; column++) {
+        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
+            columnIndex: column, rowIndex: rowIndex + 1));
+        final value = values[column];
+        cell.value = value is num
+            ? xls.DoubleCellValue(value.toDouble())
+            : xls.TextCellValue(value.toString());
+      }
+    }
+    final output = excel.encode();
+    if (output == null) throw Exception('Excel file could not be generated.');
+    await FileSaver.instance.saveFile(
+      name: '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}',
+      bytes: Uint8List.fromList(output),
+      ext: 'xlsx',
+      mimeType: MimeType.microsoftExcel,
+    );
+    _message('$report Excel exported successfully.');
+  }
+
+  Future<void> _printDashboardReport(String report, DateTime month,
+      List<Map<String, dynamic>> rows) async {
+    final headers = _dashboardReportHeaders(report);
+    final data = rows
+        .map((row) => _dashboardReportValues(report, row)
+            .map((value) => value is num && value is! int
+                ? NumberFormat('#,##0.00').format(value)
+                : value.toString())
+            .toList())
+        .toList();
+    final document = pw.Document();
+    document.addPage(pw.Page(
+      pageFormat: PdfPageFormat.a4.landscape,
+      margin: const pw.EdgeInsets.all(18),
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          pw.Text('$report - ${DateFormat('MMMM yyyy').format(month)}',
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 10),
+          pw.TableHelper.fromTextArray(
+            headers: headers,
+            data: data,
+            headerStyle: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+            cellStyle: const pw.TextStyle(fontSize: 5.5),
+            cellPadding: const pw.EdgeInsets.all(3),
+          ),
+        ],
+      ),
+    ));
+    await Printing.layoutPdf(
+      name: '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}.pdf',
+      format: PdfPageFormat.a4.landscape,
+      onLayout: (_) => document.save(),
+    );
+  }
+
+  Future<void> _exportRhbLayout({String? only}) async {
     try {
       _message(
         'Preparing RHB, EPF, EIS and SOCSO layouts...',
@@ -10875,7 +11431,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // CREATE RHB EXCEL
       // ============================================================
 
-      saveExcel(
+      if (only == null || only == 'rhb') saveExcel(
         'RHB_Layout_${monthFile}_$exportStamp.xlsx',
         'RHB Layout',
         const [
@@ -10892,7 +11448,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // CREATE EPF EXCEL
       // ============================================================
 
-      saveExcel(
+      if (only == null || only == 'epf') saveExcel(
         'EPF_${monthFile}_$exportStamp.xlsx',
         'EPF',
         const [
@@ -10916,7 +11472,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // CREATE EIS EXCEL
       // ============================================================
 
-      saveExcel(
+      if (only == null || only == 'eis') saveExcel(
         'EIS_${monthFile}_$exportStamp.xlsx',
         'EIS',
         const [
@@ -10935,7 +11491,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // CREATE SOCSO EXCEL
       // ============================================================
 
-      saveExcel(
+      if (only == null || only == 'socso') saveExcel(
         'SOCSO_${monthFile}_$exportStamp.xlsx',
         'SOCSO',
         const [
@@ -10954,14 +11510,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // SUCCESS
       // ============================================================
 
-      _message(
-        'Generated 4 Excel files for $selectedMonth: '
+      _message(only == null
+          ? 'Generated 4 Excel files for $selectedMonth: '
         'RHB Layout, EPF, EIS and SOCSO (export $exportStamp). '
         'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
         'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
         'SOCSO exported ${socsoLocal.length} local and '
-        '${socsoForeign.length} foreign employee(s).',
-      );
+        '${socsoForeign.length} foreign employee(s).'
+          : '${only.toUpperCase()} Excel exported for $selectedMonth.');
     } catch (e) {
       _message(
         'RHB / statutory Excel export failed: $e',
