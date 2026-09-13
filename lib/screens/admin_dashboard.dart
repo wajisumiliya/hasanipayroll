@@ -9721,6 +9721,36 @@ class _AdminDashboardState extends State<AdminDashboard> {
         if (id.isNotEmpty) employeeMap[id] = Map<String, dynamic>.from(row);
       }
 
+      const sungaiPetaniForeignerGroup = '__SUNGAI_PETANI_FOREIGNER__';
+
+      String canonicalBranchKey(String branchId) {
+        final raw = (branchNames[branchId] ?? branchId)
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]'), '');
+        const aliases = <String, String>{
+          'hbsp': 'sungaipetani',
+          'hpspfrn': 'sungaipetani',
+          'hbspfrn': 'sungaipetani',
+          'hbperai': 'prai',
+          'hbperaifrn': 'prai',
+          'hbas': 'alorsetar',
+          'hbasfrn': 'alorsetar',
+          'hbjitra': 'jitra',
+          'hbjitrafrn': 'jitra',
+          'hbkulim': 'kulim',
+          'hbkulimfrn': 'kulim',
+          'hbastana': 'astana',
+          'hbastanafrn': 'astana',
+          'hbamj': 'amanjaya',
+          'hbamjfrn': 'amanjaya',
+          'hbgurun': 'gurun',
+          'hbgurunfrn': 'gurun',
+          'hblkw': 'langkawi',
+          'hblkwfrn': 'langkawi',
+        };
+        return aliases[raw] ?? raw;
+      }
+
       final grouped = <String, List<Map<String, dynamic>>>{};
       for (final row in records) {
         final employeeId = _normalizeBranchValue(row['employee_id']);
@@ -9729,7 +9759,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ? _normalizeBranchValue(row['branch_id'])
             : _payrollBranchIdFromEmployee(employee);
         if (branchId.isEmpty) continue;
-        grouped.putIfAbsent(branchId, () => []).add(row);
+        final isSungaiPetani = canonicalBranchKey(branchId) == 'sungaipetani';
+        final isForeigner = employee?['address']
+                ?.toString()
+                .toUpperCase()
+                .contains('FRN') ==
+            true;
+        final groupId = isSungaiPetani && isForeigner
+            ? sungaiPetaniForeignerGroup
+            : branchId;
+        grouped.putIfAbsent(groupId, () => []).add(row);
       }
 
       if (grouped.isEmpty) {
@@ -9781,10 +9820,48 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
 
       final usedNames = <String>{};
+      const branchOrder = <String>[
+        'sungaipetani',
+        sungaiPetaniForeignerGroup,
+        'prai',
+        'alorsetar',
+        'jitra',
+        'kulim',
+        'astana',
+        'amanjaya',
+        'gurun',
+        'langkawi',
+      ];
+      const preferredSheetNames = <String, String>{
+        'sungaipetani': 'Sungai Petani',
+        'prai': 'Prai',
+        'alorsetar': 'AlorSetar',
+        'jitra': 'Jitra',
+        'kulim': 'Kulim',
+        'astana': 'Astana',
+        'amanjaya': 'Amanjaya',
+        'gurun': 'Gurun',
+        'langkawi': 'Langkawi',
+      };
+
+      String orderingKey(String branchId) =>
+          branchId == sungaiPetaniForeignerGroup
+              ? sungaiPetaniForeignerGroup
+              : canonicalBranchKey(branchId);
+
       final sortedBranchIds = grouped.keys.toList()
-        ..sort((a, b) => (branchNames[a] ?? a)
-            .toLowerCase()
-            .compareTo((branchNames[b] ?? b).toLowerCase()));
+        ..sort((a, b) {
+          final aIndex = branchOrder.indexOf(orderingKey(a));
+          final bIndex = branchOrder.indexOf(orderingKey(b));
+          final normalizedA = aIndex < 0 ? branchOrder.length : aIndex;
+          final normalizedB = bIndex < 0 ? branchOrder.length : bIndex;
+          if (normalizedA != normalizedB) {
+            return normalizedA.compareTo(normalizedB);
+          }
+          return (branchNames[a] ?? a)
+              .toLowerCase()
+              .compareTo((branchNames[b] ?? b).toLowerCase());
+        });
 
       double money(dynamic value) => _payrollNumber(value);
 
@@ -9806,7 +9883,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       var isFirstSheet = true;
       for (final branchId in sortedBranchIds) {
-        final branchName = branchNames[branchId] ?? branchId;
+        final branchName = branchId == sungaiPetaniForeignerGroup
+            ? 'Sungai Petani-Foreigner'
+            : preferredSheetNames[canonicalBranchKey(branchId)] ??
+                branchNames[branchId] ??
+                branchId;
         final sheetName = safeSheetName(branchName, usedNames);
 
         xls.Sheet sheet;
