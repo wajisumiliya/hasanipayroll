@@ -11420,9 +11420,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final headers = _dashboardReportHeaders(report);
     final data = rows
         .map((row) => _dashboardReportValues(report, row)
-            .map((value) => value is num && value is! int
-                ? NumberFormat('#,##0.00').format(value)
-                : value.toString())
+            .asMap()
+            .entries
+            .map((entry) => entry.value is num && entry.key != 1
+                ? NumberFormat('#,##0.00').format(entry.value)
+                : entry.value.toString())
             .toList())
         .toList();
     final document = pw.Document();
