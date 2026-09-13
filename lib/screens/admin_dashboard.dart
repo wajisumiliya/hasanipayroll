@@ -3055,6 +3055,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final elaunKedatangan = TextEditingController(text: '0');
     final elaunPerkhidmatan = TextEditingController(text: '0');
     final elaunKerajinan = TextEditingController(text: '0');
+    final zakat = TextEditingController(text: '0');
 
     String branchId =
         service.branches.isNotEmpty ? service.branches.first.id : '';
@@ -3122,6 +3123,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true)),
                         _dialogField(elaunKerajinan, 'Elaun Kerajinan (RM)',
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
+                        _dialogField(zakat, 'Zakat (RM)',
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true)),
                       ]),
@@ -3305,12 +3309,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     final parsedElaunPerkhidmatan =
                         salaryValue(elaunPerkhidmatan);
                     final parsedElaunKerajinan = salaryValue(elaunKerajinan);
+                    final parsedZakat = salaryValue(zakat);
                     final salaryValues = [
                       parsedBasicSalary,
                       parsedFwSalary,
                       parsedElaunKedatangan,
                       parsedElaunPerkhidmatan,
                       parsedElaunKerajinan,
+                      parsedZakat,
                     ];
 
                     if (salaryValues.any(
@@ -3349,6 +3355,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'elaun_kedatangan': parsedElaunKedatangan!,
                         'elaun_perkhidmatan': parsedElaunPerkhidmatan!,
                         'elaun_kerajinan': parsedElaunKerajinan!,
+                        'zakat': parsedZakat!,
                         'epf_category': epfCategory,
                         'eis_applicable': eisApplicable,
                         'address': address.text.trim(),
@@ -4158,6 +4165,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       'Elaun Kedatangan (RM)': makeSalary('elaun_kedatangan'),
       'Elaun Perkhidmatan (RM)': makeSalary('elaun_perkhidmatan'),
       'Elaun Kerajinan (RM)': makeSalary('elaun_kerajinan'),
+      'Zakat (RM)': makeSalary('zakat'),
     };
     var epfCategory = salaryDefault['epf_category']?.toString().trim() ?? '';
     if (!const {'normal', 'normal1'}.contains(epfCategory)) {
@@ -4439,6 +4447,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 salaryValues['Elaun Perkhidmatan (RM)'],
                             'elaun_kerajinan':
                                 salaryValues['Elaun Kerajinan (RM)'],
+                            'zakat': salaryValues['Zakat (RM)'],
                             'epf_category': epfCategory,
                             'eis_applicable': eisApplicable,
                             'address': fields['Address']!.text.trim(),
@@ -7274,6 +7283,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'Approved OT ${item.overtimeDuration.toStringAsFixed(2)} hours / '
                             'RM ${item.overtimeAmount.toStringAsFixed(2)} • '
                             'Cuti Umum RM ${item.cutiUmum.toStringAsFixed(2)} • '
+                            'Zakat RM ${item.zakat.toStringAsFixed(2)} • '
+                            'Advance RM ${item.advance.toStringAsFixed(2)} • '
                             'Unpaid ${item.unpaidDays} day(s) / '
                             'RM ${item.unpaidDeduction.toStringAsFixed(2)}',
                           ),
@@ -7391,6 +7402,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ('eis_employee', 'EIS Employee', 'Deductions'),
       ('pcb', 'PCB', 'Deductions'),
       ('zakat', 'Zakat', 'Deductions'),
+      ('advance', 'Advance', 'Deductions'),
       ('epf_employer', 'EPF Employer', 'Employer Contributions'),
       ('socso_employer', 'SOCSO Employer', 'Employer Contributions'),
       ('eis_employer', 'EIS Employer', 'Employer Contributions'),
@@ -9610,6 +9622,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'eis_employee': 'EIS Employee',
         'pcb': 'PCB',
         'zakat': 'Zakat',
+        'advance': 'Advance',
         'epf_employer': 'EPF Employer',
         'socso_employer': 'SOCSO Employer',
         'eis_employer': 'EIS Employer',
@@ -9649,6 +9662,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       'eis_employee',
       'pcb',
       'zakat',
+      'advance',
       'epf_employer',
       'socso_employer',
       'eis_employer',
@@ -10034,7 +10048,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final cutiTanpaGaji = unpaidDeduction + lateDeduction;
 
         // POTONGAN contains only PCB + Zakat. Late deduction is already in M01.
-        final otherDeductions = money(payroll['pcb']) + money(payroll['zakat']);
+        final otherDeductions = money(payroll['pcb']) +
+            money(payroll['zakat']) +
+            money(payroll['advance']);
 
         final net =
             jumlah - cutiTanpaGaji - epf - socso - eis - otherDeductions;
@@ -10456,7 +10472,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           final epf = money(payroll['epf_employee']);
           final socso = money(payroll['socso_employee']);
           final eis = money(payroll['eis_employee']);
-          final potongan = money(payroll['pcb']) + money(payroll['zakat']);
+          final potongan = money(payroll['pcb']) +
+              money(payroll['zakat']) +
+              money(payroll['advance']);
           final net = jumlah - cutiTanpaGaji - epf - socso - eis - potongan;
 
           final lastIncrement = firstValue(employee, [
@@ -10651,6 +10669,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'eisEmployer': 0.0,
                 'unpaid': 0.0,
                 'pcb': 0.0,
+                'zakat': 0.0,
+                'advance': 0.0,
                 'deductions': 0.0,
                 'net': 0.0,
                 'hrdfBasic': 0.0,
@@ -10669,6 +10689,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final unpaid = _number(row['unpaid_deduction']);
       final late = _number(row['late_deduction']);
       final pcb = _number(row['pcb']);
+      final zakat = _number(row['zakat']);
+      final advance = _number(row['advance']);
       final epfEmployee = _number(row['epf_employee']);
       final epfEmployer = _number(row['epf_employer']);
       final socsoEmployee = _number(row['socso_employee']);
@@ -10681,7 +10703,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           socsoEmployee +
           eisEmployee +
           pcb +
-          _number(row['zakat']);
+          zakat +
+          advance;
       final net = _number(row['net_pay'] ?? row['net_salary']);
       summary['basic'] = (summary['basic'] as double) + basic;
       summary['overtime'] = (summary['overtime'] as double) + overtime;
@@ -10699,6 +10722,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       summary['eisEmployer'] = (summary['eisEmployer'] as double) + eisEmployer;
       summary['unpaid'] = (summary['unpaid'] as double) + unpaid;
       summary['pcb'] = (summary['pcb'] as double) + pcb;
+      summary['zakat'] = (summary['zakat'] as double) + zakat;
+      summary['advance'] = (summary['advance'] as double) + advance;
       summary['deductions'] = (summary['deductions'] as double) + deductions;
       summary['net'] =
           (summary['net'] as double) + (net == 0 ? gross - deductions : net);
@@ -10746,6 +10771,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'eisEmployer': 0.0,
         'unpaid': 0.0,
         'pcb': 0.0,
+        'zakat': 0.0,
+        'advance': 0.0,
         'deductions': 0.0,
         'net': 0.0,
         'hrdfBasic': 0.0,
@@ -10767,6 +10794,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'eisEmployer',
         'unpaid',
         'pcb',
+        'zakat',
+        'advance',
         'deductions',
         'net',
         'hrdfBasic',
@@ -11219,16 +11248,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'STAFF',
         'BASIC',
         'OVERTIME',
-        'OTHER ALLOWANCE',
+        'ALLOWANCE',
         'GROSS PAY',
         'EPF EE',
         'EPF ER',
+        'TOTAL EPF',
         'SOCSO EE',
         'SOCSO ER',
+        'TOTAL SOCSO',
         'EIS EE',
         'EIS ER',
+        'TOTAL EIS',
         'UNPAID LEAVE',
         'PCB',
+        'ZAKAT',
+        'ADVANCE',
         'HRDF',
         'GROSS DEDUCTION',
         'NET PAY'
@@ -11268,12 +11302,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
         row['gross'],
         row['epfEmployee'],
         row['epfEmployer'],
+        _number(row['epfEmployee']) + _number(row['epfEmployer']),
         row['socsoEmployee'],
         row['socsoEmployer'],
+        _number(row['socsoEmployee']) + _number(row['socsoEmployer']),
         row['eisEmployee'],
         row['eisEmployer'],
+        _number(row['eisEmployee']) + _number(row['eisEmployer']),
         row['unpaid'],
         row['pcb'],
+        row['zakat'],
+        row['advance'],
         _number(row['hrdfBase']) * .01,
         row['deductions'],
         row['net']
@@ -11306,13 +11345,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 .toList(),
             rows: rows.map((row) {
               final values = _dashboardReportValues(report, row);
+              final isGrandTotal = row['branch'] == 'GRAND TOTAL';
+              const payrollTotalColumns = {8, 11, 14};
               return DataRow(
                   cells: values.asMap().entries.map((entry) {
                 final value = entry.value;
                 final text = entry.key >= 2 && value is num
                     ? NumberFormat('#,##0.00').format(value)
                     : value.toString();
-                return DataCell(Text(text));
+                final bold = isGrandTotal ||
+                    (report == 'Payroll Summary' &&
+                        (entry.key == 0 ||
+                            payrollTotalColumns.contains(entry.key)));
+                return DataCell(Text(
+                  text,
+                  style: bold
+                      ? const TextStyle(fontWeight: FontWeight.w800)
+                      : null,
+                ));
               }).toList());
             }).toList(),
           ),
@@ -11330,13 +11380,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final sheet = excel[sheetName];
     final headers = _dashboardReportHeaders(report);
     for (var column = 0; column < headers.length; column++) {
-      sheet
-          .cell(
-              xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 0))
-          .value = xls.TextCellValue(headers[column]);
+      final cell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 0));
+      cell.value = xls.TextCellValue(headers[column]);
+      cell.cellStyle = xls.CellStyle(bold: true);
     }
+    const payrollTotalColumns = {8, 11, 14};
     for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       final values = _dashboardReportValues(report, rows[rowIndex]);
+      final isGrandTotal = rows[rowIndex]['branch'] == 'GRAND TOTAL';
       for (var column = 0; column < values.length; column++) {
         final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
             columnIndex: column, rowIndex: rowIndex + 1));
@@ -11344,6 +11396,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         cell.value = value is num
             ? xls.DoubleCellValue(value.toDouble())
             : xls.TextCellValue(value.toString());
+        if (isGrandTotal ||
+            (report == 'Payroll Summary' &&
+                (column == 0 || payrollTotalColumns.contains(column)))) {
+          cell.cellStyle = xls.CellStyle(bold: true);
+        }
       }
     }
     final output = excel.encode();
@@ -11380,14 +11437,84 @@ class _AdminDashboardState extends State<AdminDashboard> {
               style:
                   pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 10),
-          pw.TableHelper.fromTextArray(
-            headers: headers,
-            data: data,
-            headerStyle:
-                pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
-            cellStyle: const pw.TextStyle(fontSize: 5.5),
-            cellPadding: const pw.EdgeInsets.all(3),
-          ),
+          if (report == 'Payroll Summary')
+            pw.Table(
+              border: pw.TableBorder.all(
+                color: PdfColors.grey500,
+                width: .35,
+              ),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(1.9),
+                1: const pw.FlexColumnWidth(.7),
+                for (var i = 2; i < headers.length; i++)
+                  i: const pw.FlexColumnWidth(1),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: headers
+                      .map((header) => pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 2,
+                              vertical: 8,
+                            ),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              header,
+                              textAlign: pw.TextAlign.center,
+                              style: pw.TextStyle(
+                                fontSize: 4.6,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                ),
+                ...data.asMap().entries.map((rowEntry) {
+                  final isGrandTotal =
+                      rows[rowEntry.key]['branch'] == 'GRAND TOTAL';
+                  const totalColumns = {8, 11, 14};
+                  return pw.TableRow(
+                    decoration: isGrandTotal
+                        ? const pw.BoxDecoration(color: PdfColors.grey200)
+                        : null,
+                    children: rowEntry.value.asMap().entries.map((entry) {
+                      final bold = isGrandTotal ||
+                          entry.key == 0 ||
+                          totalColumns.contains(entry.key);
+                      return pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 8,
+                        ),
+                        alignment: entry.key < 2
+                            ? pw.Alignment.centerLeft
+                            : pw.Alignment.centerRight,
+                        child: pw.Text(
+                          entry.value,
+                          maxLines: 1,
+                          style: pw.TextStyle(
+                            fontSize: 4.8,
+                            fontWeight: bold
+                                ? pw.FontWeight.bold
+                                : pw.FontWeight.normal,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                }),
+              ],
+            )
+          else
+            pw.TableHelper.fromTextArray(
+              headers: headers,
+              data: data,
+              headerStyle:
+                  pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+              cellStyle: const pw.TextStyle(fontSize: 5.5),
+              cellPadding: const pw.EdgeInsets.all(3),
+            ),
         ],
       ),
     ));
@@ -11623,6 +11750,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             money(row['eisEmployee']) +
             money(row['pcb']) +
             money(row['zakat']) +
+            money(row['advance']) +
             money(row['late_deduction']) +
             money(row['lateDeduction']) +
             money(row['unpaid_deduction']) +

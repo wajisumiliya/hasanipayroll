@@ -715,7 +715,9 @@ class AppService extends ChangeNotifier {
         data['zakat'],
       ),
       advanceDeduction: _doubleValue(
-        data['advance_deduction'] ?? data['advanceDeduction'],
+        data['advance'] ??
+            data['advance_deduction'] ??
+            data['advanceDeduction'],
       ),
       loanDeduction: _doubleValue(
         data['loan_deduction'] ?? data['loanDeduction'],
@@ -1529,10 +1531,7 @@ class AppService extends ChangeNotifier {
         }
       } catch (salaryError) {
         try {
-          await _supabase
-              .from('employees')
-              .delete()
-              .eq('employee_id', cleanId);
+          await _supabase.from('employees').delete().eq('employee_id', cleanId);
         } catch (rollbackError) {
           return 'Employee $cleanId was added, but salary defaults failed: '
               '$salaryError. Employee rollback also failed: $rollbackError';
@@ -3675,6 +3674,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'eis_employee': record.eisEmployee,
       'pcb': record.pcb,
       'zakat': record.zakat,
+      'advance': record.advanceDeduction,
       'epf_employer': record.epfEmployer,
       'socso_employer': record.socsoEmployer,
       'eis_employer': record.eisEmployer,

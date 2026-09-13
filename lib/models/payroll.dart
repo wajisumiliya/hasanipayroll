@@ -291,6 +291,7 @@ class PayrollRecord {
       'eisEmployee': eisEmployee,
       'pcb': pcb,
       'zakat': zakat,
+      'advance': advanceDeduction,
       'lateDeduction': lateDeduction,
       'epfEmployer': epfEmployer,
       'socsoEmployer': socsoEmployer,
@@ -350,7 +351,9 @@ class PayrollRecord {
       pcb: _doubleValue(json['pcb']),
       zakat: _doubleValue(json['zakat']),
       advanceDeduction: _doubleValue(
-        json['advanceDeduction'] ?? json['advance_deduction'],
+        json['advance'] ??
+            json['advanceDeduction'] ??
+            json['advance_deduction'],
       ),
       loanDeduction: _doubleValue(
         json['loanDeduction'] ?? json['loan_deduction'],
@@ -543,8 +546,7 @@ class Employee {
         json['isManagementStaff'] ?? json['is_management_staff'],
       ),
       isTempStaff: _boolValue(json['isTempStaff'] ?? json['is_temp_staff']),
-      isOtherStaff:
-          _boolValue(json['isOtherStaff'] ?? json['is_other_staff']),
+      isOtherStaff: _boolValue(json['isOtherStaff'] ?? json['is_other_staff']),
       branchId: _stringValue(json['branchId']),
     );
   }

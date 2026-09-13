@@ -267,6 +267,7 @@ class AttendancePayrollService {
     final elaunKedatangan = _number(salaryDefault['elaun_kedatangan']);
     final elaunPerkhidmatan = _number(salaryDefault['elaun_perkhidmatan']);
     final elaunKerajinan = _number(salaryDefault['elaun_kerajinan']);
+    final zakat = _number(salaryDefault['zakat']);
 
     // Employee-specific statutory settings.
     //
@@ -551,7 +552,8 @@ class AttendancePayrollService {
 
       // Future deductions
       'pcb': 0,
-      'zakat': 0,
+      'zakat': zakat,
+      'advance': 0,
 
       // Employee information
       'new_ic_no': _text(employee['new_ic_no']),
@@ -622,6 +624,8 @@ class AttendancePayrollService {
           socsoEmployer: socso.employer,
           eisEmployee: eis.employee,
           eisEmployer: eis.employer,
+          zakat: zakat,
+          advance: 0,
           statutoryWage: statutoryWage,
         );
       }
@@ -666,6 +670,8 @@ class AttendancePayrollService {
       socsoEmployer: socso.employer,
       eisEmployee: eis.employee,
       eisEmployer: eis.employer,
+      zakat: zakat,
+      advance: 0,
       statutoryWage: statutoryWage,
     );
   }
@@ -711,6 +717,7 @@ class AttendancePayrollService {
             'elaun_kedatangan,'
             'elaun_perkhidmatan,'
             'elaun_kerajinan,'
+            'zakat,'
             'epf_category,'
             'eis_applicable',
           )
@@ -1692,6 +1699,8 @@ class PayrollGenerationItem {
 
   final double eisEmployee;
   final double eisEmployer;
+  final double zakat;
+  final double advance;
 
   const PayrollGenerationItem({
     required this.employeeId,
@@ -1718,5 +1727,7 @@ class PayrollGenerationItem {
     this.socsoEmployer = 0.0,
     this.eisEmployee = 0.0,
     this.eisEmployer = 0.0,
+    this.zakat = 0.0,
+    this.advance = 0.0,
   });
 }
