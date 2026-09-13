@@ -428,6 +428,11 @@ class SupabaseService {
             management?.toString().toLowerCase() == 'true') {
           return false;
         }
+        final temporary = employee['is_temp_staff'];
+        if (temporary == true ||
+            temporary?.toString().toLowerCase() == 'true') {
+          return false;
+        }
         final isFrn =
             employee['address']?.toString().toUpperCase().contains('FRN') ==
                 true;
@@ -479,6 +484,7 @@ class SupabaseService {
           .eq('branch_id', branchId.trim())
           .eq('is_active', true)
           .neq('is_management_staff', true)
+          .neq('is_temp_staff', true)
           .order('name', ascending: true);
 
       return _mapList(response);

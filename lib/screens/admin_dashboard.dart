@@ -2931,6 +2931,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     DateTime joiningDate = DateTime.now();
     bool active = true;
     bool managementStaff = false;
+    bool tempStaff = false;
     String epfCategory = 'normal1';
     bool eisApplicable = true;
 
@@ -3133,6 +3134,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         onChanged: (value) =>
                             setDialogState(() => managementStaff = value),
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Temporary Staff'),
+                        subtitle: const Text(
+                          'Payroll only; hidden from branch attendance.',
+                        ),
+                        value: tempStaff,
+                        onChanged: (value) =>
+                            setDialogState(() => tempStaff = value),
+                      ),
                     ],
                   ),
                 ),
@@ -3208,6 +3219,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         joiningDate: joiningDate,
                         isActive: active,
                         isManagementStaff: managementStaff,
+                        isTempStaff: tempStaff,
                       ),
                       branchId: branchId,
                       salaryDefaults: {
@@ -3277,6 +3289,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     bool active = employee.isActive;
     bool managementStaff = employee.isManagementStaff;
+    bool tempStaff = employee.isTempStaff;
 
     showDialog(
       context: context,
@@ -3412,6 +3425,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         onChanged: (value) =>
                             setDialogState(() => managementStaff = value),
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Temporary Staff'),
+                        subtitle: const Text(
+                          'Payroll only; hidden from branch attendance.',
+                        ),
+                        value: tempStaff,
+                        onChanged: (value) =>
+                            setDialogState(() => tempStaff = value),
+                      ),
                     ],
                   ),
                 ),
@@ -3438,6 +3461,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       joiningDate: joiningDate,
                       isActive: active,
                       isManagementStaff: managementStaff,
+                      isTempStaff: tempStaff,
                       branchId: branchId,
                     );
 
@@ -3753,6 +3777,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         : employee['payroll_branch_id'],
                   ),
                   _employeeDetail(
+                    'Employee Category',
+                    employee['is_management_staff'] == true
+                        ? 'Management Staff'
+                        : employee['is_temp_staff'] == true
+                            ? 'Temporary Staff'
+                            : 'Regular Staff',
+                  ),
+                  _employeeDetail(
                     'Active',
                     employee['is_active'] == true ? 'Yes' : 'No',
                   ),
@@ -3953,6 +3985,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     var active = _isActive(employee);
     var managementStaff = employee['is_management_staff'] == true ||
         employee['is_management_staff']?.toString().toLowerCase() == 'true';
+    var tempStaff = employee['is_temp_staff'] == true ||
+        employee['is_temp_staff']?.toString().toLowerCase() == 'true';
     String payrollBranchId =
         _normalizeBranchValue(employee['payroll_branch_id']);
     var saving = false;
@@ -4054,6 +4088,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               () => managementStaff = value ?? false,
                             ),
                   ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: tempStaff,
+                    title: const Text('Temporary Staff'),
+                    subtitle: const Text(
+                      'Payroll only; hidden from branch attendance.',
+                    ),
+                    onChanged: saving
+                        ? null
+                        : (value) => setDialogState(
+                              () => tempStaff = value ?? false,
+                            ),
+                  ),
                 ]),
               )),
           actions: [
@@ -4089,6 +4136,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 joiningDate?.toIso8601String().split('T').first,
                             'is_active': active,
                             'is_management_staff': managementStaff,
+                            'is_temp_staff': tempStaff,
                             'payroll_branch_id': payrollBranchId.isEmpty
                                 ? null
                                 : payrollBranchId,
@@ -6249,7 +6297,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         .from('employees')
         .select(
           'employee_id,name,branch_id,payroll_branch_id,'
-          'is_active,is_management_staff',
+          'is_active,is_management_staff,is_temp_staff',
         )
         .eq('is_active', true)
         .order('employee_id');

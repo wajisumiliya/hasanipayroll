@@ -234,6 +234,8 @@ class AttendancePayrollService {
     final employeeId = _normalizeId(employee['employee_id']);
     final employeeName = _text(employee['name']);
     final isManagementStaff = _toBool(employee['is_management_staff']);
+    final isTempStaff = _toBool(employee['is_temp_staff']);
+    final isPayrollOnlyStaff = isManagementStaff || isTempStaff;
 
     if (employeeId.isEmpty) {
       return PayrollGenerationItem(
@@ -303,7 +305,7 @@ class AttendancePayrollService {
     // Public holiday and unpaid days are explicit attendance flags.
     // ------------------------------------------------------------------------
 
-    final attendance = isManagementStaff
+    final attendance = isPayrollOnlyStaff
         ? <Map<String, dynamic>>[]
         : await _getSubmittedAttendanceForMonth(
             employeeId,
@@ -311,7 +313,7 @@ class AttendancePayrollService {
           );
 
     final branchId = _text(employee['branch_id'] ?? employee['branch']).trim();
-    final rosterRows = isManagementStaff || branchId.isEmpty
+    final rosterRows = isPayrollOnlyStaff || branchId.isEmpty
         ? <Map<String, dynamic>>[]
         : await SupabaseService.getMonthlyRosters(
             branchId: branchId,
@@ -557,8 +559,8 @@ class AttendancePayrollService {
       'bank_account': _text(employee['bank_account']),
 
       // Debug / audit information
-      'remarks': isManagementStaff
-          ? 'Generated management payroll from salary defaults only; attendance and roster calculations were excluded.'
+      'remarks': isPayrollOnlyStaff
+          ? 'Generated payroll-only staff payroll from salary defaults; attendance and roster calculations were excluded.'
           : 'Generated payroll. '
               'Attendance rows used: ${attendance.length}. '
               'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
@@ -679,7 +681,7 @@ class AttendancePayrollService {
         .from('employees')
         .select(
           'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,'
-          'payroll_branch_id,is_active,is_management_staff',
+          'payroll_branch_id,is_active,is_management_staff,is_temp_staff',
         )
         .inFilter('employee_id', employeeIds);
 
