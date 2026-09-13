@@ -2943,50 +2943,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
             return AlertDialog(
               title: const Text('Add Employee'),
               content: SizedBox(
-                width: 550,
+                width: (MediaQuery.sizeOf(dialogContext).width - 80)
+                    .clamp(320.0, 1500.0)
+                    .toDouble(),
+                height: (MediaQuery.sizeOf(dialogContext).height * .78)
+                    .clamp(360.0, 900.0)
+                    .toDouble(),
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      _dialogField(
-                        employeeId,
-                        'Employee ID',
-                      ),
-                      _dialogField(
-                        name,
-                        'Full Name',
-                      ),
-                      _dialogField(
-                        designation,
-                        'Designation',
-                      ),
-                      _dialogField(
-                        department,
-                        'Department',
-                      ),
-                      _dialogField(
-                        email,
-                        'Email',
-                      ),
-                      _dialogField(
-                        ic,
-                        'New IC No',
-                      ),
-                      _dialogField(
-                        bank,
-                        'Bank Code',
-                      ),
-                      _dialogField(
-                        account,
-                        'Bank Account',
-                      ),
-                      _dialogField(
-                        phone,
-                        'Phone',
-                      ),
-                      _dialogField(
-                        address,
-                        'Address',
-                      ),
+                      _responsiveFormGrid(children: [
+                        _dialogField(employeeId, 'Employee ID'),
+                        _dialogField(name, 'Full Name'),
+                        _dialogField(designation, 'Designation'),
+                        _dialogField(department, 'Department'),
+                        _dialogField(email, 'Email'),
+                        _dialogField(ic, 'New IC No'),
+                        _dialogField(bank, 'Bank Code'),
+                        _dialogField(account, 'Bank Account'),
+                        _dialogField(phone, 'Phone'),
+                        _dialogField(address, 'Address'),
+                      ]),
                       const Divider(height: 28),
                       const Align(
                         alignment: Alignment.centerLeft,
@@ -2996,41 +2973,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _dialogField(
-                        basicSalary,
-                        'Basic Salary (RM)',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                      ),
-                      _dialogField(
-                        fwSalary,
-                        'FW Salary (RM)',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                      ),
-                      _dialogField(
-                        elaunKedatangan,
-                        'Elaun Kedatangan (RM)',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                      ),
-                      _dialogField(
-                        elaunPerkhidmatan,
-                        'Elaun Perkhidmatan (RM)',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                      ),
-                      _dialogField(
-                        elaunKerajinan,
-                        'Elaun Kerajinan (RM)',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                      ),
+                      _responsiveFormGrid(children: [
+                        _dialogField(basicSalary, 'Basic Salary (RM)',
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true)),
+                        _dialogField(fwSalary, 'FW Salary (RM)',
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true)),
+                        _dialogField(
+                            elaunKedatangan, 'Elaun Kedatangan (RM)',
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true)),
+                        _dialogField(
+                            elaunPerkhidmatan, 'Elaun Perkhidmatan (RM)',
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true)),
+                        _dialogField(elaunKerajinan, 'Elaun Kerajinan (RM)',
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true)),
+                      ]),
                       DropdownButtonFormField<String>(
                         initialValue: epfCategory,
                         decoration: const InputDecoration(
@@ -3996,24 +3962,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Edit Employee - All Information'),
           content: SizedBox(
-              width: 600,
+              width: (MediaQuery.sizeOf(dialogContext).width - 80)
+                  .clamp(320.0, 1500.0)
+                  .toDouble(),
+              height: (MediaQuery.sizeOf(dialogContext).height * .78)
+                  .clamp(360.0, 900.0)
+                  .toDouble(),
               child: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextFormField(
-                      initialValue: employee['employee_id']?.toString() ?? '',
-                      enabled: false,
-                      decoration:
-                          const InputDecoration(labelText: 'Employee ID')),
-                  ...fields.entries.map((field) => Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: TextField(
-                            controller: field.value,
-                            enabled: !saving,
-                            maxLines: field.key == 'Address' ? 2 : 1,
-                            decoration: InputDecoration(
-                                labelText: field.key,
-                                border: const OutlineInputBorder())),
-                      )),
+                  _responsiveFormGrid(children: [
+                    TextFormField(
+                        initialValue:
+                            employee['employee_id']?.toString() ?? '',
+                        enabled: false,
+                        decoration:
+                            const InputDecoration(labelText: 'Employee ID')),
+                    ...fields.entries.map((field) => TextField(
+                        controller: field.value,
+                        enabled: !saving,
+                        maxLines: 1,
+                        decoration: InputDecoration(
+                            labelText: field.key,
+                            border: const OutlineInputBorder()))),
+                  ]),
                   ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Joining Date'),
@@ -7239,10 +7210,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
             final earnings = totalFor('Earnings');
             final deductions = totalFor('Deductions');
             final net = earnings - deductions;
+            final dialogWidth =
+                (MediaQuery.sizeOf(dialogContext).width - 60)
+                    .clamp(680.0, 1600.0)
+                    .toDouble();
+            final amountFieldWidth = dialogWidth >= 1350
+                ? (dialogWidth - 48) / 5
+                : dialogWidth >= 1050
+                    ? (dialogWidth - 36) / 4
+                    : dialogWidth >= 760
+                        ? (dialogWidth - 24) / 3
+                        : (dialogWidth - 12) / 2;
 
             Widget amountField((String, String, String) field) {
               return SizedBox(
-                width: 205,
+                width: amountFieldWidth,
                 child: TextField(
                   controller: controllers[field.$1],
                   enabled: employeeId != null && !loading && !saving,
@@ -7343,7 +7325,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ],
               ),
               content: SizedBox(
-                width: 900,
+                width: dialogWidth,
+                height: (MediaQuery.sizeOf(dialogContext).height * .78)
+                    .clamp(420.0, 920.0)
+                    .toDouble(),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -10983,6 +10968,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+  Widget _responsiveFormGrid({
+    required List<Widget> children,
+    double minimumFieldWidth = 250,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final availableWidth = constraints.maxWidth;
+        final columns = ((availableWidth + spacing) /
+                (minimumFieldWidth + spacing))
+            .floor()
+            .clamp(1, 5)
+            .toInt();
+        final fieldWidth =
+            (availableWidth - (spacing * (columns - 1))) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: children
+              .map((child) => SizedBox(width: fieldWidth, child: child))
+              .toList(),
+        );
+      },
+    );
+  }
 
   Widget _dialogField(
     TextEditingController controller,
