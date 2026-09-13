@@ -376,7 +376,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: IgnorePointer(
               child: Center(
                 child: Opacity(
-                  opacity: .065,
+                  opacity: .09,
                   child: FractionallySizedBox(
                     widthFactor: .92,
                     heightFactor: .78,
@@ -767,12 +767,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _topBar() {
     final theme = _portalTheme;
-    final lightDashboard = selectedPage == 0;
     return Container(
       height: 78,
       decoration: BoxDecoration(
-        color: lightDashboard ? Colors.transparent : null,
-        gradient: lightDashboard ? null : LinearGradient(colors: theme.header),
+        color: Colors.transparent,
         boxShadow: [
           BoxShadow(
             color: theme.headerShadow,
@@ -782,12 +780,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
         border: Border(
           bottom: BorderSide(
-            color: lightDashboard ? const Color(0xFFE2E5EA) : theme.glassBorder,
+            color: Colors.white.withValues(alpha: .20),
           ),
         ),
       ),
       child: CustomPaint(
-        painter: lightDashboard ? const _DashboardHeaderPainter() : null,
+        painter: const _DashboardHeaderPainter(),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Row(
@@ -806,12 +804,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const SizedBox(width: 24),
               CircleAvatar(
                 radius: 18,
-                backgroundColor: lightDashboard
-                    ? Colors.white.withValues(alpha: .22)
-                    : theme.accent.withValues(alpha: .16),
+                backgroundColor: Colors.white.withValues(alpha: .22),
                 child: Icon(
                   Icons.admin_panel_settings,
-                  color: lightDashboard ? Colors.white : theme.accent,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(width: 10),
@@ -830,7 +826,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     'Administrator',
                     style: TextStyle(
                       fontSize: 11,
-                      color: lightDashboard ? Colors.white70 : theme.mutedText,
+                      color: Colors.white70,
                     ),
                   ),
                 ],
@@ -839,8 +835,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               IconButton(
                 tooltip: 'Logout',
                 onPressed: logout,
-                icon: Icon(Icons.logout,
-                    color: lightDashboard ? Colors.white : theme.mutedText),
+                icon: const Icon(Icons.logout, color: Colors.white),
               ),
             ],
           ),
@@ -1644,7 +1639,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 16 : 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .96),
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(26),
         border: Border.all(color: const Color(0xFFE2E5EA)),
         boxShadow: [
@@ -1804,7 +1799,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Ink(
           padding: const EdgeInsets.all(17),
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F8FA),
+            color: Colors.white.withValues(alpha: .18),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0xFFE1E4E8)),
           ),
@@ -1892,7 +1887,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Ink(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .96),
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFE2E5EA)),
             ),
@@ -6255,6 +6250,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Uint8List? imageBytes,
     String? fallbackLabel,
   }) {
+    final usesLargeBrandLogo =
+        const {'EPF', 'SOCSO', 'EIS', 'HRDF'}.contains(title);
     Widget fallbackIcon() => fallbackLabel == null
         ? Icon(icon, color: accent, size: 21)
         : FittedBox(
@@ -6312,18 +6309,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .96),
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFE2E5EA)),
             ),
             child: Row(
               children: [
                 Container(
-                  width: imageBytes != null ||
-                          imageUrl != null ||
-                          assetName != null
+                  width: usesLargeBrandLogo
                       ? 94
-                      : 40,
+                      : imageBytes != null ||
+                              imageUrl != null ||
+                              assetName != null
+                          ? 44
+                          : 40,
                   height: 72,
                   decoration: BoxDecoration(
                     color: imageBytes != null ||
@@ -6345,10 +6344,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: const TextStyle(
-                              color: Color(0xFF20242D),
-                              fontWeight: FontWeight.w800)),
+                      Text(
+                        title,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF20242D),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -10645,6 +10650,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'deductions': 0.0,
                 'net': 0.0,
                 'hrdfBasic': 0.0,
+                'hrdfDeduction': 0.0,
                 'hrdfBase': 0.0,
               });
       summary['employees'] = (summary['employees'] as int) + 1;
@@ -10699,11 +10705,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         summary['malaysianEmployees'] =
             (summary['malaysianEmployees'] as int) + 1;
         summary['hrdfBasic'] = (summary['hrdfBasic'] as double) + basic;
-        final fixedAllowances = _number(row['elaun_perkhidmatan']) +
-            _number(row['elaun_kerajinan']);
+        final hrdfDeduction = unpaid + late;
+        summary['hrdfDeduction'] =
+            (summary['hrdfDeduction'] as double) + hrdfDeduction;
         summary['hrdfBase'] = (summary['hrdfBase'] as double) +
-            (basic - unpaid).clamp(0, double.infinity).toDouble() +
-            fixedAllowances;
+            (basic - hrdfDeduction).clamp(0, double.infinity).toDouble();
       }
     }
     final rows = grouped.values.toList()
@@ -10726,6 +10732,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'deductions': 0.0,
         'net': 0.0,
         'hrdfBasic': 0.0,
+        'hrdfDeduction': 0.0,
         'hrdfBase': 0.0,
       };
       const integerKeys = ['employees', 'malaysianEmployees'];
@@ -10742,6 +10749,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'deductions',
         'net',
         'hrdfBasic',
+        'hrdfDeduction',
         'hrdfBase',
       ];
       for (final row in rows) {
@@ -11142,27 +11150,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       await _exportRhbLayout(
                                           only: report.toLowerCase());
                                     } else if (report == 'Payroll') {
-                                      final all =
-                                          await SupabaseService.getPayroll();
-                                      final filtered = all
-                                          .where((r) =>
-                                              _payrollPeriodMatchesMonth(
-                                                  r['period'], month))
-                                          .toList();
-                                      final branches =
-                                          await SupabaseService.getBranches();
-                                      await _exportPayrollAllBranchesExcel(
-                                        filtered,
-                                        {
-                                          for (final b in branches)
-                                            _normalizeBranchValue(
-                                                    b['id'] ?? b['branch_id']):
-                                                (b['name'] ??
-                                                        b['branch_name'] ??
-                                                        '')
-                                                    .toString()
-                                        },
-                                      );
+                                      await _exportRhbLayout(only: 'rhb');
                                     } else {
                                       await _exportDashboardSummaryExcel(
                                           report, month, rows);
@@ -11186,7 +11174,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   String _reportDescription(String report) => report == 'HRDF'
-      ? 'Malaysian employee count, basic salary, levy wage base, and both 0.5% and 1% levy options. Fixed service and diligence allowances are included; overtime and variable attendance allowance are excluded.'
+      ? 'Eligible Malaysian employee count, basic salary, attendance deductions, levy base after deductions, and the 1% HRDF levy.'
       : report == 'Payroll Summary'
           ? 'Branch totals for earnings, statutory contributions, deductions and net payroll.'
           : report == 'Payroll'
@@ -11199,8 +11187,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'BRANCH',
         'MALAYSIAN STAFF',
         'BASIC SALARY',
+        'DEDUCTION',
         'LEVY BASE',
-        'LEVY 0.5%',
         'LEVY 1%'
       ];
     }
@@ -11239,8 +11227,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         row['branch'],
         row['malaysianEmployees'],
         row['hrdfBasic'],
+        row['hrdfDeduction'],
         base,
-        base * .005,
         base * .01
       ];
     }
@@ -12309,7 +12297,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: isDashboard ? .96 : 1),
+        color: isDashboard ? Colors.transparent : Colors.white,
         borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
         border: isDashboard ? Border.all(color: const Color(0xFFE2E5EA)) : null,
         boxShadow: const [
@@ -12433,7 +12421,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         width: 150,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7F8FA),
+          color: isDashboard
+              ? Colors.white.withValues(alpha: .18)
+              : const Color(0xFFF7F8FA),
           borderRadius: BorderRadius.circular(
             12,
           ),
