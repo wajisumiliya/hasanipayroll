@@ -1476,7 +1476,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Employee and employer shares',
                               Icons.savings_outlined,
                               const Color(0xFFE8C778),
-                              assetName: 'assets/official_epf_logo.gif',
+                              assetName: 'assets/official_epf_logo.png',
                             ),
                             _dashboardReportCard(
                               width,
@@ -6135,7 +6135,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             };
             final exportType = statutory[title];
             if (exportType != null) {
-              _exportRhbLayout(only: exportType);
+              _showStatutoryReport(title, exportType);
               return;
             }
             _showDashboardReport(title);
@@ -10583,6 +10583,241 @@ class _AdminDashboardState extends State<AdminDashboard> {
       rows.add(total);
     }
     return rows;
+  }
+
+  Future<Map<String, dynamic>> _loadStatutoryReport(
+      String report, DateTime month) async {
+    final payrollResponse = await SupabaseService.getPayroll();
+    final payrollRows = payrollResponse
+        .where((row) => _payrollPeriodMatchesMonth(row['period'], month))
+        .toList();
+    if (payrollRows.isEmpty) {
+      return {'headers': <String>[], 'rows': <List<dynamic>>[]};
+    }
+
+    final employeeIds = payrollRows
+        .map((row) => _normalizeBranchValue(row['employee_id']))
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final responses = await Future.wait([
+      SupabaseService.client
+          .from('employees')
+          .select()
+          .inFilter('employee_id', employeeIds),
+      SupabaseService.client
+          .from('employee_salary_defaults')
+          .select()
+          .inFilter('employee_id', employeeIds),
+    ]);
+    final employees = <String, Map<String, dynamic>>{};
+    for (final row in List<Map<String, dynamic>>.from(responses[0])) {
+      employees[_normalizeBranchValue(row['employee_id'])] = row;
+    }
+    final defaults = <String, Map<String, dynamic>>{};
+    for (final row in List<Map<String, dynamic>>.from(responses[1])) {
+      defaults[_normalizeBranchValue(row['employee_id'])] = row;
+    }
+
+    String firstText(Map<String, dynamic> row, List<String> keys) {
+      for (final key in keys) {
+        final text = row[key]?.toString().trim() ?? '';
+        if (text.isNotEmpty) return text;
+      }
+      return '';
+    }
+
+    final local = <List<dynamic>>[];
+    final foreign = <List<dynamic>>[];
+    for (final payroll in payrollRows) {
+      final id = _normalizeBranchValue(payroll['employee_id']);
+      final employee = employees[id] ?? <String, dynamic>{};
+      final salaryDefault = defaults[id] ?? <String, dynamic>{};
+      final name = firstText(employee, const ['name', 'employee_name']).isNotEmpty
+          ? firstText(employee, const ['name', 'employee_name'])
+          : firstText(payroll, const ['name', 'employee_name']);
+      final rawIc = firstText(employee, const ['new_ic_no', 'newIcNo']).isNotEmpty
+          ? firstText(employee, const ['new_ic_no', 'newIcNo'])
+          : firstText(payroll, const ['new_ic_no', 'newIcNo']);
+      final defaultAddress =
+          firstText(salaryDefault, const ['address', 'Address', 'ADDRESS']);
+      final address = defaultAddress.isNotEmpty
+          ? defaultAddress
+          : firstText(employee, const ['address', 'Address', 'ADDRESS']);
+      final isForeign = address.toUpperCase().contains('FRN');
+      final icDigits = rawIc.replaceAll(RegExp(r'[^0-9]'), '');
+      final digitsOnly = RegExp(r'^\d+$').hasMatch(rawIc);
+      final exportIc = !isForeign && digitsOnly && rawIc.length < 12
+          ? rawIc.padLeft(12, '0')
+          : (icDigits.length == 12 ? icDigits : rawIc.replaceAll('-', ''));
+      final epfNo = firstText(employee,
+          const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']);
+      final socsoNo = firstText(employee,
+          const ['socso_no', 'socsoNo', 'socso_number', 'SOCSO_NO']);
+      final epfEmployee = _number(payroll['epf_employee'] ?? payroll['epfEmployee']);
+      final epfEmployer = _number(payroll['epf_employer'] ?? payroll['epfEmployer']);
+      final socsoEmployee =
+          _number(payroll['socso_employee'] ?? payroll['socsoEmployee']);
+      final socsoEmployer =
+          _number(payroll['socso_employer'] ?? payroll['socsoEmployer']);
+      final eisEmployee = _number(payroll['eis_employee'] ?? payroll['eisEmployee']);
+      final eisEmployer = _number(payroll['eis_employer'] ?? payroll['eisEmployer']);
+
+      List<dynamic>? row;
+      if (report == 'EPF' && epfEmployee + epfEmployer > 0) {
+        row = [name, exportIc, epfNo, epfEmployee, epfEmployer,
+          _payrollTotalEarnings(payroll)];
+      } else if (report == 'SOCSO') {
+        final total = socsoEmployee + socsoEmployer;
+        final identifier = isForeign && socsoNo.isNotEmpty
+            ? socsoNo.replaceAll('-', '')
+            : exportIc;
+        final eligible = total > 0 &&
+            (isForeign ? socsoNo.isNotEmpty : icDigits.length == 12);
+        if (eligible) row = [name, identifier, socsoEmployee, socsoEmployer, total];
+      } else if (report == 'EIS' && eisEmployee + eisEmployer > 0) {
+        row = [name, exportIc, eisEmployee, eisEmployer,
+          eisEmployee + eisEmployer];
+      }
+      if (row != null) {
+        (isForeign ? foreign : local).add(row);
+      }
+    }
+    int byName(List<dynamic> a, List<dynamic> b) =>
+        a.first.toString().toLowerCase().compareTo(
+            b.first.toString().toLowerCase());
+    local.sort(byName);
+    foreign.sort(byName);
+    final headers = report == 'EPF'
+        ? <String>['NAME', 'IC NO', 'EPF NO', 'EMPLOYEE SHARE',
+            'EMPLOYER SHARE', 'TOTAL SALARY']
+        : report == 'SOCSO'
+            ? <String>['NAME', 'IC / SOCSO NO', 'EMPLOYEE SHARE',
+                'EMPLOYER SHARE', 'TOTAL AMOUNT']
+            : <String>['NAME', 'IC NO', 'EMPLOYEE SHARE',
+                'EMPLOYER SHARE', 'TOTAL AMOUNT'];
+    return {'headers': headers, 'rows': [...local, ...foreign]};
+  }
+
+  Future<void> _showStatutoryReport(String report, String exportType) async {
+    var month = selectedPayrollMonth;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: 1120,
+            height: MediaQuery.sizeOf(context).height * .82,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text('$report Employee Details',
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.w800)),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_month_outlined),
+                      label: Text(DateFormat('MMMM yyyy').format(month)),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: month,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                          helpText: 'Select payroll month',
+                        );
+                        if (picked != null) {
+                          setDialogState(
+                              () => month = DateTime(picked.year, picked.month));
+                        }
+                      },
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ]),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Local employees are listed first, followed by foreign employees.',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: FutureBuilder<Map<String, dynamic>>(
+                      key: ValueKey('${report}_${month.year}_${month.month}'),
+                      future: _loadStatutoryReport(report, month),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(child: Text(
+                              'Unable to load $report details: ${snapshot.error}'));
+                        }
+                        final headers =
+                            List<String>.from(snapshot.data?['headers'] ?? const []);
+                        final rows = List<List<dynamic>>.from(
+                            snapshot.data?['rows'] ?? const []);
+                        if (rows.isEmpty) {
+                          return Center(child: Text(
+                              'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
+                        }
+                        return Column(children: [
+                          Expanded(
+                            child: Scrollbar(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: SingleChildScrollView(
+                                  child: DataTable(
+                                    headingRowColor: WidgetStatePropertyAll(
+                                        Colors.grey.shade100),
+                                    columns: headers.map((header) => DataColumn(
+                                      label: Text(header, style: const TextStyle(
+                                          fontWeight: FontWeight.w700)),
+                                    )).toList(),
+                                    rows: rows.map((row) => DataRow(
+                                      cells: row.map((value) => DataCell(Text(
+                                        value is num
+                                            ? NumberFormat('#,##0.00').format(value)
+                                            : value.toString(),
+                                      ))).toList(),
+                                    )).toList(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(children: [
+                            Text('${rows.length} employee(s)',
+                                style: const TextStyle(fontWeight: FontWeight.w700)),
+                            const Spacer(),
+                            FilledButton.icon(
+                              onPressed: () async {
+                                setState(() => selectedPayrollMonth = month);
+                                await _exportRhbLayout(only: exportType);
+                              },
+                              icon: const Icon(Icons.download_outlined),
+                              label: Text('Export $report Excel'),
+                            ),
+                          ]),
+                        ]);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showDashboardReport(String report) async {
