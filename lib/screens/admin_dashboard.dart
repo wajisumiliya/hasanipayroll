@@ -10639,6 +10639,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'employees': 0,
                 'malaysianEmployees': 0,
                 'basic': 0.0,
+                'overtime': 0.0,
+                'otherAllowances': 0.0,
                 'allowances': 0.0,
                 'gross': 0.0,
                 'epfEmployee': 0.0,
@@ -10647,6 +10649,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'socsoEmployer': 0.0,
                 'eisEmployee': 0.0,
                 'eisEmployer': 0.0,
+                'unpaid': 0.0,
+                'pcb': 0.0,
                 'deductions': 0.0,
                 'net': 0.0,
                 'hrdfBasic': 0.0,
@@ -10659,8 +10663,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _number(row['elaun_perkhidmatan']) +
           _number(row['elaun_kerajinan']);
       final gross = _payrollTotalEarnings(row);
+      final overtime = _number(row['overtime']);
+      final otherAllowances =
+          (gross - basic - overtime).clamp(0, double.infinity).toDouble();
       final unpaid = _number(row['unpaid_deduction']);
       final late = _number(row['late_deduction']);
+      final pcb = _number(row['pcb']);
       final epfEmployee = _number(row['epf_employee']);
       final epfEmployer = _number(row['epf_employer']);
       final socsoEmployee = _number(row['socso_employee']);
@@ -10672,10 +10680,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           epfEmployee +
           socsoEmployee +
           eisEmployee +
-          _number(row['pcb']) +
+          pcb +
           _number(row['zakat']);
       final net = _number(row['net_pay'] ?? row['net_salary']);
       summary['basic'] = (summary['basic'] as double) + basic;
+      summary['overtime'] = (summary['overtime'] as double) + overtime;
+      summary['otherAllowances'] =
+          (summary['otherAllowances'] as double) + otherAllowances;
       summary['allowances'] = (summary['allowances'] as double) + allowances;
       summary['gross'] = (summary['gross'] as double) + gross;
       summary['epfEmployee'] = (summary['epfEmployee'] as double) + epfEmployee;
@@ -10686,6 +10697,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           (summary['socsoEmployer'] as double) + socsoEmployer;
       summary['eisEmployee'] = (summary['eisEmployee'] as double) + eisEmployee;
       summary['eisEmployer'] = (summary['eisEmployer'] as double) + eisEmployer;
+      summary['unpaid'] = (summary['unpaid'] as double) + unpaid;
+      summary['pcb'] = (summary['pcb'] as double) + pcb;
       summary['deductions'] = (summary['deductions'] as double) + deductions;
       summary['net'] =
           (summary['net'] as double) + (net == 0 ? gross - deductions : net);
@@ -10721,6 +10734,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'employees': 0,
         'malaysianEmployees': 0,
         'basic': 0.0,
+        'overtime': 0.0,
+        'otherAllowances': 0.0,
         'allowances': 0.0,
         'gross': 0.0,
         'epfEmployee': 0.0,
@@ -10729,6 +10744,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'socsoEmployer': 0.0,
         'eisEmployee': 0.0,
         'eisEmployer': 0.0,
+        'unpaid': 0.0,
+        'pcb': 0.0,
         'deductions': 0.0,
         'net': 0.0,
         'hrdfBasic': 0.0,
@@ -10738,6 +10755,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       const integerKeys = ['employees', 'malaysianEmployees'];
       const moneyKeys = [
         'basic',
+        'overtime',
+        'otherAllowances',
         'allowances',
         'gross',
         'epfEmployee',
@@ -10746,6 +10765,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'socsoEmployer',
         'eisEmployee',
         'eisEmployer',
+        'unpaid',
+        'pcb',
         'deductions',
         'net',
         'hrdfBasic',
@@ -11197,14 +11218,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'BRANCH',
         'STAFF',
         'BASIC',
-        'GROSS',
+        'OVERTIME',
+        'OTHER ALLOWANCE',
+        'GROSS PAY',
         'EPF EE',
         'EPF ER',
         'SOCSO EE',
         'SOCSO ER',
         'EIS EE',
         'EIS ER',
-        'DEDUCTIONS',
+        'UNPAID LEAVE',
+        'PCB',
+        'HRDF',
+        'GROSS DEDUCTION',
         'NET PAY'
       ];
     }
@@ -11237,6 +11263,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         row['branch'],
         row['employees'],
         row['basic'],
+        row['overtime'],
+        row['otherAllowances'],
         row['gross'],
         row['epfEmployee'],
         row['epfEmployer'],
@@ -11244,6 +11272,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         row['socsoEmployer'],
         row['eisEmployee'],
         row['eisEmployer'],
+        row['unpaid'],
+        row['pcb'],
+        _number(row['hrdfBase']) * .01,
         row['deductions'],
         row['net']
       ];
