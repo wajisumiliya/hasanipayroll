@@ -3723,6 +3723,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     employee['bank_account'],
                   ),
                   _employeeDetail(
+                    'EPF No.',
+                    employee['epf_no'],
+                  ),
+                  _employeeDetail(
+                    'SOCSO No.',
+                    employee['socso_no'],
+                  ),
+                  _employeeDetail(
                     'Phone',
                     employee['phone'],
                   ),
@@ -3935,6 +3943,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       'IC No.': make('new_ic_no'),
       'Bank Code': make('bank_code'),
       'Bank Account': make('bank_account'),
+      'EPF No.': make('epf_no'),
+      'SOCSO No.': make('socso_no'),
       'Phone': make('phone'),
       'Address': make('address'),
     };
@@ -4071,6 +4081,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'new_ic_no': fields['IC No.']!.text.trim(),
                             'bank_code': fields['Bank Code']!.text.trim(),
                             'bank_account': fields['Bank Account']!.text.trim(),
+                            'epf_no': fields['EPF No.']!.text.trim(),
+                            'socso_no': fields['SOCSO No.']!.text.trim(),
                             'phone': fields['Phone']!.text.trim(),
                             'address': fields['Address']!.text.trim(),
                             'joining_date':
