@@ -11428,7 +11428,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final document = pw.Document();
     document.addPage(pw.Page(
       pageFormat: PdfPageFormat.a4.landscape,
-      margin: const pw.EdgeInsets.all(18),
+      margin: report == 'Payroll Summary'
+          ? const pw.EdgeInsets.all(6)
+          : const pw.EdgeInsets.all(18),
       build: (_) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
@@ -11444,10 +11446,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 width: .35,
               ),
               columnWidths: {
-                0: const pw.FlexColumnWidth(1.9),
-                1: const pw.FlexColumnWidth(.7),
-                for (var i = 2; i < headers.length; i++)
-                  i: const pw.FlexColumnWidth(1),
+                0: const pw.FlexColumnWidth(1.8),
+                1: const pw.FlexColumnWidth(.55),
+                2: const pw.FlexColumnWidth(1),
+                3: const pw.FlexColumnWidth(.9),
+                4: const pw.FlexColumnWidth(1.15),
+                5: const pw.FlexColumnWidth(1.15),
+                6: const pw.FlexColumnWidth(.85),
+                7: const pw.FlexColumnWidth(.85),
+                8: const pw.FlexColumnWidth(.95),
+                9: const pw.FlexColumnWidth(.85),
+                10: const pw.FlexColumnWidth(.85),
+                11: const pw.FlexColumnWidth(.95),
+                12: const pw.FlexColumnWidth(.8),
+                13: const pw.FlexColumnWidth(.8),
+                14: const pw.FlexColumnWidth(.9),
+                15: const pw.FlexColumnWidth(1),
+                16: const pw.FlexColumnWidth(.75),
+                17: const pw.FlexColumnWidth(.8),
+                18: const pw.FlexColumnWidth(.8),
+                19: const pw.FlexColumnWidth(.8),
+                20: const pw.FlexColumnWidth(1.15),
+                21: const pw.FlexColumnWidth(1.1),
               },
               children: [
                 pw.TableRow(
@@ -11456,14 +11476,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       .map((header) => pw.Container(
                             padding: const pw.EdgeInsets.symmetric(
                               horizontal: 2,
-                              vertical: 8,
+                              vertical: 10,
                             ),
                             alignment: pw.Alignment.center,
                             child: pw.Text(
                               header,
                               textAlign: pw.TextAlign.center,
                               style: pw.TextStyle(
-                                fontSize: 4.6,
+                                fontSize: 5.8,
                                 fontWeight: pw.FontWeight.bold,
                               ),
                             ),
@@ -11485,7 +11505,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       return pw.Container(
                         padding: const pw.EdgeInsets.symmetric(
                           horizontal: 2,
-                          vertical: 8,
+                          vertical: 11,
                         ),
                         alignment: entry.key < 2
                             ? pw.Alignment.centerLeft
@@ -11494,7 +11514,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           entry.value,
                           maxLines: 1,
                           style: pw.TextStyle(
-                            fontSize: 4.8,
+                            fontSize: 6.2,
                             fontWeight: bold
                                 ? pw.FontWeight.bold
                                 : pw.FontWeight.normal,
