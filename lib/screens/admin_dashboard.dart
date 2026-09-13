@@ -22,6 +22,7 @@ import 'dart:typed_data';
 import '../screens/supabase_service.dart';
 import '../screens/attendance_dialog.dart';
 import 'monthly_roster_page.dart';
+import '../dashboard_brand_logos.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -1505,7 +1506,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Employee and employer shares',
                               Icons.savings_outlined,
                               const Color(0xFFE8C778),
-                              assetName: 'assets/dashboard_epf_kwsp.png',
+                              imageBytes: dashboardEpfLogoBytes,
                               fallbackLabel: 'KWSP',
                             ),
                             _dashboardReportCard(
@@ -1514,7 +1515,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Eligible local and foreign staff',
                               Icons.health_and_safety_outlined,
                               const Color(0xFF73D6AE),
-                              assetName: 'assets/official_socso_logo.png',
+                              imageBytes: dashboardSocsoLogoBytes,
                               fallbackLabel: 'SOCSO',
                             ),
                             _dashboardReportCard(
@@ -1523,7 +1524,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Monthly insurance contribution',
                               Icons.shield_outlined,
                               const Color(0xFF84B6F4),
-                              assetName: 'assets/dashboard_eis_icon.png',
+                              imageBytes: dashboardEisLogoBytes,
                               fallbackLabel: 'EIS',
                             ),
                             _dashboardReportCard(
@@ -1532,7 +1533,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Salary, headcount and levy',
                               Icons.account_balance_outlined,
                               const Color(0xFFF0A46B),
-                              assetName: 'assets/dashboard_hrdf_corp.png',
+                              imageBytes: dashboardHrdfLogoBytes,
                               fallbackLabel: 'HRD',
                             ),
                             _dashboardReportCard(
@@ -6234,6 +6235,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Color accent, {
     String? imageUrl,
     String? assetName,
+    Uint8List? imageBytes,
     String? fallbackLabel,
   }) {
     Widget fallbackIcon() => fallbackLabel == null
@@ -6250,7 +6252,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           );
 
-    final logo = imageUrl != null
+    final logo = imageBytes != null
+        ? Image.memory(
+            imageBytes,
+            fit: BoxFit.contain,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => fallbackIcon(),
+          )
+        : imageUrl != null
         ? Image.network(
             imageUrl,
             fit: BoxFit.contain,
@@ -6293,10 +6302,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Row(
               children: [
                 Container(
-                  width: imageUrl != null || assetName != null ? 66 : 40,
+                  width: imageBytes != null || imageUrl != null || assetName != null
+                      ? 66
+                      : 40,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: imageUrl != null || assetName != null
+                    color: imageBytes != null || imageUrl != null || assetName != null
                         ? Colors.white
                         : accent.withValues(alpha: .14),
                     borderRadius: BorderRadius.circular(12),
