@@ -1464,6 +1464,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           children: [
                             _dashboardReportCard(
                               width,
+                              'Payroll',
+                              'Branch payroll worksheets',
+                              Icons.payments_outlined,
+                              const Color(0xFFB79AE2),
+                              assetName: 'assets/hb_payroll_icon.png',
+                            ),
+                            _dashboardReportCard(
+                              width,
                               'EPF',
                               'Employee and employer shares',
                               Icons.savings_outlined,
@@ -1478,9 +1486,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               const Color(0xFF73D6AE),
                               assetName: 'assets/official_socso_logo.png',
                             ),
-                            _dashboardReportCard(width, 'EIS',
-                                'Monthly insurance contribution', Icons.shield_outlined,
-                                const Color(0xFF84B6F4)),
+                            _dashboardReportCard(
+                              width,
+                              'EIS',
+                              'Monthly insurance contribution',
+                              Icons.shield_outlined,
+                              const Color(0xFF84B6F4),
+                              assetName: 'assets/official_socso_logo.png',
+                            ),
                             _dashboardReportCard(
                               width,
                               'HRDF',
@@ -1488,14 +1501,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               Icons.account_balance_outlined,
                               const Color(0xFFF0A46B),
                               assetName: 'assets/official_hrdf_logo.png',
-                            ),
-                            _dashboardReportCard(
-                              width,
-                              'Salary',
-                              'Branch payroll worksheets',
-                              Icons.payments_outlined,
-                              const Color(0xFFB79AE2),
-                              assetName: 'assets/hasani_books_logo.jpg',
                             ),
                             _dashboardReportCard(
                               width,
@@ -6122,7 +6127,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showDashboardReport(title),
+          onTap: () {
+            final statutory = const {
+              'EPF': 'epf',
+              'SOCSO': 'socso',
+              'EIS': 'eis',
+            };
+            final exportType = statutory[title];
+            if (exportType != null) {
+              _exportRhbLayout(only: exportType);
+              return;
+            }
+            _showDashboardReport(title);
+          },
           borderRadius: BorderRadius.circular(16),
           child: Ink(
             padding: const EdgeInsets.all(14),
@@ -6134,8 +6151,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: imageUrl != null || assetName != null ? 56 : 40,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: imageUrl != null || assetName != null
                         ? Colors.white
@@ -10653,7 +10670,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                     .contains(report)) {
                                   await _exportRhbLayout(
                                       only: report.toLowerCase());
-                                } else if (report == 'Salary') {
+                                } else if (report == 'Payroll') {
                                   final all = await SupabaseService.getPayroll();
                                   final filtered = all
                                       .where((r) => _payrollPeriodMatchesMonth(
