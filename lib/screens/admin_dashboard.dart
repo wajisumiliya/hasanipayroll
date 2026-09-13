@@ -11475,15 +11475,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   children: headers
                       .map((header) => pw.Container(
                             padding: const pw.EdgeInsets.symmetric(
-                              horizontal: 2,
-                              vertical: 10,
+                              horizontal: .5,
+                              vertical: 13,
                             ),
                             alignment: pw.Alignment.center,
                             child: pw.Text(
                               header,
                               textAlign: pw.TextAlign.center,
                               style: pw.TextStyle(
-                                fontSize: 5.8,
+                                fontSize: 6.5,
                                 fontWeight: pw.FontWeight.bold,
                               ),
                             ),
@@ -11504,8 +11504,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           totalColumns.contains(entry.key);
                       return pw.Container(
                         padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 11,
+                          horizontal: .5,
+                          vertical: 14,
                         ),
                         alignment: entry.key < 2
                             ? pw.Alignment.centerLeft
@@ -11514,7 +11514,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           entry.value,
                           maxLines: 1,
                           style: pw.TextStyle(
-                            fontSize: 6.2,
+                            fontSize: 7.2,
                             fontWeight: bold
                                 ? pw.FontWeight.bold
                                 : pw.FontWeight.normal,
