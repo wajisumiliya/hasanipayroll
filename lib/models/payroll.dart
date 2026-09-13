@@ -409,6 +409,8 @@ class Employee {
   final String newIcNo;
   final String bankCode;
   final String bankAccount;
+  final String epfNo;
+  final String socsoNo;
 
   final String phone;
   final String address;
@@ -428,6 +430,8 @@ class Employee {
     required this.newIcNo,
     required this.bankCode,
     required this.bankAccount,
+    this.epfNo = '',
+    this.socsoNo = '',
     this.phone = '',
     this.address = '',
     this.joiningDate,
@@ -450,6 +454,8 @@ class Employee {
     String? newIcNo,
     String? bankCode,
     String? bankAccount,
+    String? epfNo,
+    String? socsoNo,
     String? phone,
     String? address,
     DateTime? joiningDate,
@@ -467,6 +473,8 @@ class Employee {
       newIcNo: newIcNo ?? this.newIcNo,
       bankCode: bankCode ?? this.bankCode,
       bankAccount: bankAccount ?? this.bankAccount,
+      epfNo: epfNo ?? this.epfNo,
+      socsoNo: socsoNo ?? this.socsoNo,
       phone: phone ?? this.phone,
       address: address ?? this.address,
       joiningDate: joiningDate ?? this.joiningDate,
@@ -491,6 +499,8 @@ class Employee {
       'newIcNo': newIcNo,
       'bankCode': bankCode,
       'bankAccount': bankAccount,
+      'epfNo': epfNo,
+      'socsoNo': socsoNo,
       'phone': phone,
       'address': address,
       'joiningDate': joiningDate?.toIso8601String(),
@@ -513,6 +523,8 @@ class Employee {
       newIcNo: _stringValue(json['newIcNo']),
       bankCode: _stringValue(json['bankCode']),
       bankAccount: _stringValue(json['bankAccount']),
+      epfNo: _stringValue(json['epfNo']),
+      socsoNo: _stringValue(json['socsoNo']),
       phone: _stringValue(json['phone']),
       address: _stringValue(json['address']),
       joiningDate: _parseNullableDate(
@@ -522,8 +534,10 @@ class Employee {
         json['isActive'],
         defaultValue: true,
       ),
-      isManagementStaff: _boolValue(json['isManagementStaff']),
-      isTempStaff: _boolValue(json['isTempStaff']),
+      isManagementStaff: _boolValue(
+        json['isManagementStaff'] ?? json['is_management_staff'],
+      ),
+      isTempStaff: _boolValue(json['isTempStaff'] ?? json['is_temp_staff']),
       branchId: _stringValue(json['branchId']),
     );
   }

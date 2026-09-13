@@ -2917,6 +2917,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final ic = TextEditingController();
     final bank = TextEditingController();
     final account = TextEditingController();
+    final epfNo = TextEditingController();
+    final socsoNo = TextEditingController();
     final phone = TextEditingController();
     final address = TextEditingController();
     final basicSalary = TextEditingController();
@@ -2961,6 +2963,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         _dialogField(ic, 'New IC No'),
                         _dialogField(bank, 'Bank Code'),
                         _dialogField(account, 'Bank Account'),
+                        _dialogField(epfNo, 'EPF No.'),
+                        _dialogField(socsoNo, 'SOCSO No.'),
                         _dialogField(phone, 'Phone'),
                         _dialogField(address, 'Address'),
                       ]),
@@ -3180,6 +3184,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         newIcNo: ic.text.trim(),
                         bankCode: bank.text.trim(),
                         bankAccount: account.text.trim(),
+                        epfNo: epfNo.text.trim(),
+                        socsoNo: socsoNo.text.trim(),
                         phone: phone.text.trim(),
                         address: address.text.trim(),
                         joiningDate: joiningDate,
@@ -3196,6 +3202,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'elaun_kerajinan': parsedElaunKerajinan!,
                         'epf_category': epfCategory,
                         'eis_applicable': eisApplicable,
+                        'address': address.text.trim(),
                       },
                     );
 
@@ -3930,9 +3937,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ).whenComplete(reason.dispose);
   }
 
-  void _showSupabaseEmployeeEdit(Map<String, dynamic> employee) {
+  Future<void> _showSupabaseEmployeeEdit(
+      Map<String, dynamic> employee) async {
+    final employeeId = employee['employee_id']?.toString().trim() ?? '';
+    Map<String, dynamic> salaryDefault = <String, dynamic>{};
+    try {
+      final response = await SupabaseService.client
+          .from('employee_salary_defaults')
+          .select()
+          .eq('employee_id', employeeId)
+          .maybeSingle();
+      if (response != null) {
+        salaryDefault = Map<String, dynamic>.from(response);
+      }
+    } catch (error) {
+      if (mounted) {
+        _message('Unable to load employee salary defaults: $error');
+      }
+      return;
+    }
+    if (!mounted) return;
+
     TextEditingController make(String key) =>
         TextEditingController(text: employee[key]?.toString() ?? '');
+    TextEditingController makeSalary(String key) => TextEditingController(
+        text: salaryDefault[key]?.toString() ?? '0');
     final fields = <String, TextEditingController>{
       'Name': make('name'),
       'Designation': make('designation'),
@@ -3946,6 +3975,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
       'Phone': make('phone'),
       'Address': make('address'),
     };
+    final salaryFields = <String, TextEditingController>{
+      'Basic Salary (RM)': makeSalary('basic_salary'),
+      'FW Salary (RM)': makeSalary('fw_salary'),
+      'Elaun Kedatangan (RM)': makeSalary('elaun_kedatangan'),
+      'Elaun Perkhidmatan (RM)': makeSalary('elaun_perkhidmatan'),
+      'Elaun Kerajinan (RM)': makeSalary('elaun_kerajinan'),
+    };
+    var epfCategory = salaryDefault['epf_category']?.toString().trim() ?? '';
+    if (!const {'normal', 'normal1'}.contains(epfCategory)) {
+      epfCategory = 'normal1';
+    }
+    var eisApplicable = salaryDefault['eis_applicable'] == null ||
+        salaryDefault['eis_applicable'] == true ||
+        salaryDefault['eis_applicable'].toString().toLowerCase() == 'true';
     DateTime? joiningDate =
         DateTime.tryParse(employee['joining_date']?.toString() ?? '');
     var active = _isActive(employee);
@@ -3985,6 +4028,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             labelText: field.key,
                             border: const OutlineInputBorder()))),
                   ]),
+                  const Divider(height: 28),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Default Salary',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _responsiveFormGrid(children: [
+                    ...salaryFields.entries.map((field) => TextField(
+                          controller: field.value,
+                          enabled: !saving,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: field.key,
+                            border: const OutlineInputBorder(),
+                          ),
+                        )),
+                    DropdownButtonFormField<String>(
+                      initialValue: epfCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'EPF Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'normal1',
+                          child: Text('Normal 1 (statutory schedule)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'normal',
+                          child: Text('Normal (2% employee + employer)'),
+                        ),
+                      ],
+                      onChanged: saving
+                          ? null
+                          : (value) => setDialogState(
+                                () => epfCategory = value ?? 'normal1',
+                              ),
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('EIS Applicable'),
+                      value: eisApplicable,
+                      onChanged: saving
+                          ? null
+                          : (value) =>
+                              setDialogState(() => eisApplicable = value),
+                    ),
+                  ]),
+                  const Divider(height: 28),
                   ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Joining Date'),
@@ -4082,6 +4179,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 onPressed: saving
                     ? null
                     : () async {
+                        final salaryValues = <String, double>{};
+                        for (final field in salaryFields.entries) {
+                          final value = double.tryParse(
+                            field.value.text.trim().replaceAll(',', ''),
+                          );
+                          if (value == null || value < 0) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    '${field.key} must be a valid amount of 0 or more.'),
+                              ),
+                            );
+                            return;
+                          }
+                          salaryValues[field.key] = value;
+                        }
                         setDialogState(() => saving = true);
                         try {
                           if (active != _isActive(employee)) {
@@ -4112,6 +4225,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ? null
                                 : payrollBranchId,
                           });
+                          await SupabaseService.client
+                              .from('employee_salary_defaults')
+                              .upsert({
+                            'employee_id': employeeId,
+                            'basic_salary':
+                                salaryValues['Basic Salary (RM)'],
+                            'fw_salary': salaryValues['FW Salary (RM)'],
+                            'elaun_kedatangan':
+                                salaryValues['Elaun Kedatangan (RM)'],
+                            'elaun_perkhidmatan':
+                                salaryValues['Elaun Perkhidmatan (RM)'],
+                            'elaun_kerajinan':
+                                salaryValues['Elaun Kerajinan (RM)'],
+                            'epf_category': epfCategory,
+                            'eis_applicable': eisApplicable,
+                            'address': fields['Address']!.text.trim(),
+                          }, onConflict: 'employee_id');
                           if (!mounted) return;
                           Navigator.pop(dialogContext);
                           setState(() => _adminEmployeesFuture = null);
@@ -4134,6 +4264,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     ).whenComplete(() {
       for (final item in fields.values) {
+        item.dispose();
+      }
+      for (final item in salaryFields.values) {
         item.dispose();
       }
     });

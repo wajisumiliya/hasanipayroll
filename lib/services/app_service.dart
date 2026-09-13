@@ -575,6 +575,9 @@ class AppService extends ChangeNotifier {
       bankAccount: data['bank_account']?.toString() ??
           data['bankAccount']?.toString() ??
           '',
+      epfNo: data['epf_no']?.toString() ?? data['epfNo']?.toString() ?? '',
+      socsoNo:
+          data['socso_no']?.toString() ?? data['socsoNo']?.toString() ?? '',
       phone: data['phone']?.toString() ?? '',
       address: data['address']?.toString() ?? '',
       joiningDate: _supabaseDate(
@@ -3598,6 +3601,8 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'new_ic_no': employee.newIcNo,
       'bank_code': employee.bankCode,
       'bank_account': employee.bankAccount,
+      'epf_no': employee.epfNo,
+      'socso_no': employee.socsoNo,
       'phone': employee.phone,
       'address': employee.address,
       'joining_date': _dateOnlyString(
