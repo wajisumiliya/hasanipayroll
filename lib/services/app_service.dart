@@ -1501,10 +1501,29 @@ class AppService extends ChangeNotifier {
           );
 
       try {
-        await _supabase.from('employee_salary_defaults').insert({
+        final salaryPayload = <String, dynamic>{
           'employee_id': cleanId,
           ...salaryDefaults,
-        });
+        };
+        try {
+          await _supabase
+              .from('employee_salary_defaults')
+              .insert(salaryPayload);
+        } catch (error) {
+          final text = error.toString().toLowerCase();
+          final addressColumnMissing = text.contains('pgrst204') &&
+              text.contains("'address'") &&
+              text.contains('employee_salary_defaults');
+          if (!addressColumnMissing) rethrow;
+
+          // Compatibility for deployments where the address migration has
+          // not run yet. The employee table still retains the address, and
+          // statutory exports already use it as their fallback.
+          salaryPayload.remove('address');
+          await _supabase
+              .from('employee_salary_defaults')
+              .insert(salaryPayload);
+        }
       } catch (salaryError) {
         try {
           await _supabase

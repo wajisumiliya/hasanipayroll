@@ -4301,9 +4301,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ? null
                                 : payrollBranchId,
                           });
-                          await SupabaseService.client
-                              .from('employee_salary_defaults')
-                              .upsert({
+                          final salaryDefaultsPayload = <String, dynamic>{
                             'employee_id': employeeId,
                             'basic_salary':
                                 salaryValues['Basic Salary (RM)'],
@@ -4317,7 +4315,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'epf_category': epfCategory,
                             'eis_applicable': eisApplicable,
                             'address': fields['Address']!.text.trim(),
-                          }, onConflict: 'employee_id');
+                          };
+                          try {
+                            await SupabaseService.client
+                                .from('employee_salary_defaults')
+                                .upsert(salaryDefaultsPayload,
+                                    onConflict: 'employee_id');
+                          } catch (error) {
+                            final text = error.toString().toLowerCase();
+                            final addressColumnMissing =
+                                text.contains('pgrst204') &&
+                                    text.contains("'address'") &&
+                                    text.contains('employee_salary_defaults');
+                            if (!addressColumnMissing) rethrow;
+                            salaryDefaultsPayload.remove('address');
+                            await SupabaseService.client
+                                .from('employee_salary_defaults')
+                                .upsert(salaryDefaultsPayload,
+                                    onConflict: 'employee_id');
+                          }
                           if (!mounted) return;
                           Navigator.pop(dialogContext);
                           setState(() => _adminEmployeesFuture = null);
