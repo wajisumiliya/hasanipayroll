@@ -24,6 +24,39 @@ import '../screens/attendance_dialog.dart';
 import 'monthly_roster_page.dart';
 import '../dashboard_brand_logos.dart';
 
+class _DashboardHeaderPainter extends CustomPainter {
+  const _DashboardHeaderPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final blue = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF123C8C), Color(0xFF2368C4)],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, blue);
+
+    final red = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFE72D3B), Color(0xFFB9152A)],
+      ).createShader(Offset.zero & size);
+    final redArea = Path()
+      ..moveTo(size.width * .54, 0)
+      ..quadraticBezierTo(
+        size.width * .46,
+        size.height * .5,
+        size.width * .54,
+        size.height,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(redArea, red);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
@@ -343,11 +376,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: IgnorePointer(
               child: Center(
                 child: Opacity(
-                  opacity: .045,
-                  child: Image.asset(
-                    'assets/hasani_books_logo.jpg',
-                    width: 620,
-                    fit: BoxFit.contain,
+                  opacity: .065,
+                  child: FractionallySizedBox(
+                    widthFactor: .92,
+                    heightFactor: .78,
+                    child: Image.asset(
+                      'assets/hasani_books_logo.jpg',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
@@ -735,9 +771,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       height: 78,
       decoration: BoxDecoration(
-        color: lightDashboard ? Colors.white : null,
-        gradient:
-            lightDashboard ? null : LinearGradient(colors: theme.header),
+        color: lightDashboard ? Colors.transparent : null,
+        gradient: lightDashboard ? null : LinearGradient(colors: theme.header),
         boxShadow: [
           BoxShadow(
             color: theme.headerShadow,
@@ -747,70 +782,69 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
         border: Border(
           bottom: BorderSide(
-            color: lightDashboard
-                ? const Color(0xFFE2E5EA)
-                : theme.glassBorder,
+            color: lightDashboard ? const Color(0xFFE2E5EA) : theme.glassBorder,
           ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 28,
-      ),
-      child: Row(
-        children: [
-          Text(
-            _pageTitle().toUpperCase(),
-            style: TextStyle(
-              color: lightDashboard
-                  ? const Color(0xFF20242D)
-                  : Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.4,
-            ),
-          ),
-          const Spacer(),
-          PortalDayIndicator(theme: theme),
-          const SizedBox(width: 24),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: theme.accent.withValues(alpha: .16),
-            child: Icon(
-              Icons.admin_panel_settings,
-              color: theme.accent,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: CustomPaint(
+        painter: lightDashboard ? const _DashboardHeaderPainter() : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Row(
             children: [
               Text(
-                'Admin User',
+                _pageTitle().toUpperCase(),
                 style: TextStyle(
-                  color: lightDashboard
-                      ? const Color(0xFF20242D)
-                      : Colors.white,
-                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
                 ),
               ),
-              Text(
-                'Administrator',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: lightDashboard ? Colors.black54 : theme.mutedText,
+              const Spacer(),
+              PortalDayIndicator(theme: theme),
+              const SizedBox(width: 24),
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: lightDashboard
+                    ? Colors.white.withValues(alpha: .22)
+                    : theme.accent.withValues(alpha: .16),
+                child: Icon(
+                  Icons.admin_panel_settings,
+                  color: lightDashboard ? Colors.white : theme.accent,
                 ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Admin User',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Administrator',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: lightDashboard ? Colors.white70 : theme.mutedText,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 20),
+              IconButton(
+                tooltip: 'Logout',
+                onPressed: logout,
+                icon: Icon(Icons.logout,
+                    color: lightDashboard ? Colors.white : theme.mutedText),
               ),
             ],
           ),
-          const SizedBox(width: 20),
-          IconButton(
-            tooltip: 'Logout',
-            onPressed: logout,
-            icon: Icon(Icons.logout,
-                color: lightDashboard ? Colors.black54 : theme.mutedText),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1495,7 +1529,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _dashboardReportCard(
                               width,
                               'Payroll',
-                              'Branch payroll worksheets',
                               Icons.payments_outlined,
                               const Color(0xFFB79AE2),
                               assetName: 'assets/hb_payroll_icon.png',
@@ -1503,7 +1536,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _dashboardReportCard(
                               width,
                               'EPF',
-                              'Employee and employer shares',
                               Icons.savings_outlined,
                               const Color(0xFFE8C778),
                               imageBytes: dashboardEpfLogoBytes,
@@ -1512,7 +1544,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _dashboardReportCard(
                               width,
                               'SOCSO',
-                              'Eligible local and foreign staff',
                               Icons.health_and_safety_outlined,
                               const Color(0xFF73D6AE),
                               imageBytes: dashboardSocsoLogoBytes,
@@ -1521,7 +1552,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _dashboardReportCard(
                               width,
                               'EIS',
-                              'Monthly insurance contribution',
                               Icons.shield_outlined,
                               const Color(0xFF84B6F4),
                               imageBytes: dashboardEisLogoBytes,
@@ -1530,7 +1560,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _dashboardReportCard(
                               width,
                               'HRDF',
-                              'Salary, headcount and levy',
                               Icons.account_balance_outlined,
                               const Color(0xFFF0A46B),
                               imageBytes: dashboardHrdfLogoBytes,
@@ -1539,7 +1568,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             _dashboardReportCard(
                               width,
                               'Payroll Summary',
-                              'Branch totals on landscape A4',
                               Icons.summarize_outlined,
                               const Color(0xFFE58AAE),
                               assetName: 'assets/hb_payroll_icon.png',
@@ -3086,27 +3114,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: 12),
                       _responsiveFormGrid(children: [
                         _dialogField(basicSalary, 'Basic Salary (RM)',
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true)),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
                         _dialogField(fwSalary, 'FW Salary (RM)',
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true)),
-                        _dialogField(
-                            elaunKedatangan, 'Elaun Kedatangan (RM)',
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true)),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
+                        _dialogField(elaunKedatangan, 'Elaun Kedatangan (RM)',
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
                         _dialogField(
                             elaunPerkhidmatan, 'Elaun Perkhidmatan (RM)',
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true)),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
                         _dialogField(elaunKerajinan, 'Elaun Kerajinan (RM)',
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true)),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
                       ]),
                       DropdownButtonFormField<String>(
                         initialValue: epfCategory,
@@ -3284,8 +3306,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
                     final parsedBasicSalary = salaryValue(basicSalary);
                     final parsedFwSalary = salaryValue(fwSalary);
-                    final parsedElaunKedatangan =
-                        salaryValue(elaunKedatangan);
+                    final parsedElaunKedatangan = salaryValue(elaunKedatangan);
                     final parsedElaunPerkhidmatan =
                         salaryValue(elaunPerkhidmatan);
                     final parsedElaunKerajinan = salaryValue(elaunKerajinan);
@@ -4099,8 +4120,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     ).whenComplete(reason.dispose);
   }
 
-  Future<void> _showSupabaseEmployeeEdit(
-      Map<String, dynamic> employee) async {
+  Future<void> _showSupabaseEmployeeEdit(Map<String, dynamic> employee) async {
     final employeeId = employee['employee_id']?.toString().trim() ?? '';
     Map<String, dynamic> salaryDefault = <String, dynamic>{};
     try {
@@ -4122,8 +4142,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     TextEditingController make(String key) =>
         TextEditingController(text: employee[key]?.toString() ?? '');
-    TextEditingController makeSalary(String key) => TextEditingController(
-        text: salaryDefault[key]?.toString() ?? '0');
+    TextEditingController makeSalary(String key) =>
+        TextEditingController(text: salaryDefault[key]?.toString() ?? '0');
     final fields = <String, TextEditingController>{
       'Name': make('name'),
       'Designation': make('designation'),
@@ -4179,8 +4199,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   _responsiveFormGrid(children: [
                     TextFormField(
-                        initialValue:
-                            employee['employee_id']?.toString() ?? '',
+                        initialValue: employee['employee_id']?.toString() ?? '',
                         enabled: false,
                         decoration:
                             const InputDecoration(labelText: 'Employee ID')),
@@ -4417,8 +4436,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           });
                           final salaryDefaultsPayload = <String, dynamic>{
                             'employee_id': employeeId,
-                            'basic_salary':
-                                salaryValues['Basic Salary (RM)'],
+                            'basic_salary': salaryValues['Basic Salary (RM)'],
                             'fw_salary': salaryValues['FW Salary (RM)'],
                             'elaun_kedatangan':
                                 salaryValues['Elaun Kedatangan (RM)'],
@@ -6230,7 +6248,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _dashboardReportCard(
     double width,
     String title,
-    String subtitle,
     IconData icon,
     Color accent, {
     String? imageUrl,
@@ -6260,21 +6277,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
             errorBuilder: (_, __, ___) => fallbackIcon(),
           )
         : imageUrl != null
-        ? Image.network(
-            imageUrl,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => fallbackIcon(),
-          )
-        : assetName != null
-            ? Image.asset(
-                assetName,
+            ? Image.network(
+                imageUrl,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => fallbackIcon(),
               )
-            : fallbackIcon();
+            : assetName != null
+                ? Image.asset(
+                    assetName,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => fallbackIcon(),
+                  )
+                : fallbackIcon();
     return SizedBox(
       width: width,
-      height: 102,
+      height: 116,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -6293,7 +6310,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           },
           borderRadius: BorderRadius.circular(16),
           child: Ink(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: .96),
               borderRadius: BorderRadius.circular(16),
@@ -6302,17 +6319,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Row(
               children: [
                 Container(
-                  width: imageBytes != null || imageUrl != null || assetName != null
-                      ? 66
+                  width: imageBytes != null ||
+                          imageUrl != null ||
+                          assetName != null
+                      ? 94
                       : 40,
-                  height: 48,
+                  height: 72,
                   decoration: BoxDecoration(
-                    color: imageBytes != null || imageUrl != null || assetName != null
+                    color: imageBytes != null ||
+                            imageUrl != null ||
+                            assetName != null
                         ? Colors.white
                         : accent.withValues(alpha: .14),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(2),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: logo,
@@ -6328,12 +6349,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           style: const TextStyle(
                               color: Color(0xFF20242D),
                               fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 4),
-                      Text(subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.black54, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -7314,8 +7329,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   String _payrollBranchIdFromEmployee(Map<String, dynamic> employee) {
-    final payrollBranch =
-        _normalizeBranchValue(employee['payroll_branch_id']);
+    final payrollBranch = _normalizeBranchValue(employee['payroll_branch_id']);
     return payrollBranch.isNotEmpty
         ? payrollBranch
         : _normalizeBranchValue(employee['branch_id']);
@@ -7668,10 +7682,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             final earnings = totalFor('Earnings');
             final deductions = totalFor('Deductions');
             final net = earnings - deductions;
-            final dialogWidth =
-                (MediaQuery.sizeOf(dialogContext).width - 60)
-                    .clamp(680.0, 1600.0)
-                    .toDouble();
+            final dialogWidth = (MediaQuery.sizeOf(dialogContext).width - 60)
+                .clamp(680.0, 1600.0)
+                .toDouble();
             final amountFieldWidth = dialogWidth >= 1350
                 ? (dialogWidth - 48) / 5
                 : dialogWidth >= 1050
@@ -7700,12 +7713,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               .replaceAll(',', ''),
                         );
                         if (employeeShare == null || employeeShare < 0) {
-                          statutoryInfo =
-                              '${field.$2} must be a valid amount.';
+                          statutoryInfo = '${field.$2} must be a valid amount.';
                         } else {
-                          final contribution = field.$1 == 'socso_employee'
-                              ? 'socso'
-                              : 'eis';
+                          final contribution =
+                              field.$1 == 'socso_employee' ? 'socso' : 'eis';
                           final employerShare = AttendancePayrollService
                               .employerShareForEmployeeContribution(
                             contribution: contribution,
@@ -7740,10 +7751,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   decoration: InputDecoration(
                     labelText: field.$2,
                     prefixText: 'RM ',
-                    helperText:
-                        automaticContributionFields.contains(field.$1)
-                            ? 'Auto-calculated; editable'
-                            : null,
+                    helperText: automaticContributionFields.contains(field.$1)
+                        ? 'Auto-calculated; editable'
+                        : null,
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -8048,10 +8058,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
         SupabaseService.getBranches(),
-        SupabaseService.client
-            .from('employees')
-            .select()
-            .order('employee_id'),
+        SupabaseService.client.from('employees').select().order('employee_id'),
         SupabaseService.client
             .from('payroll')
             .select()
@@ -10263,11 +10270,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             : _payrollBranchIdFromEmployee(employee);
         if (branchId.isEmpty) continue;
         final isSungaiPetani = canonicalBranchKey(branchId) == 'sungaipetani';
-        final isForeigner = employee?['address']
-                ?.toString()
-                .toUpperCase()
-                .contains('FRN') ==
-            true;
+        final isForeigner =
+            employee?['address']?.toString().toUpperCase().contains('FRN') ==
+                true;
         final groupId = isSungaiPetani && isForeigner
             ? sungaiPetaniForeignerGroup
             : branchId;
@@ -10622,24 +10627,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final fallbackBranch = branchId.isEmpty ? 'Unassigned' : branchId;
       final branch = branchNames[branchId] ??
           (row['branch_name'] ?? fallbackBranch).toString();
-      final summary = grouped.putIfAbsent(branch, () => <String, dynamic>{
-            'branch': branch,
-            'employees': 0,
-            'malaysianEmployees': 0,
-            'basic': 0.0,
-            'allowances': 0.0,
-            'gross': 0.0,
-            'epfEmployee': 0.0,
-            'epfEmployer': 0.0,
-            'socsoEmployee': 0.0,
-            'socsoEmployer': 0.0,
-            'eisEmployee': 0.0,
-            'eisEmployer': 0.0,
-            'deductions': 0.0,
-            'net': 0.0,
-            'hrdfBasic': 0.0,
-            'hrdfBase': 0.0,
-          });
+      final summary = grouped.putIfAbsent(
+          branch,
+          () => <String, dynamic>{
+                'branch': branch,
+                'employees': 0,
+                'malaysianEmployees': 0,
+                'basic': 0.0,
+                'allowances': 0.0,
+                'gross': 0.0,
+                'epfEmployee': 0.0,
+                'epfEmployer': 0.0,
+                'socsoEmployee': 0.0,
+                'socsoEmployer': 0.0,
+                'eisEmployee': 0.0,
+                'eisEmployer': 0.0,
+                'deductions': 0.0,
+                'net': 0.0,
+                'hrdfBasic': 0.0,
+                'hrdfBase': 0.0,
+              });
       summary['employees'] = (summary['employees'] as int) + 1;
       final basic = _number(row['basic_salary']);
       final allowances = _number(row['elaun_kedatangan']) +
@@ -10663,24 +10670,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _number(row['zakat']);
       final net = _number(row['net_pay'] ?? row['net_salary']);
       summary['basic'] = (summary['basic'] as double) + basic;
-      summary['allowances'] =
-          (summary['allowances'] as double) + allowances;
+      summary['allowances'] = (summary['allowances'] as double) + allowances;
       summary['gross'] = (summary['gross'] as double) + gross;
-      summary['epfEmployee'] =
-          (summary['epfEmployee'] as double) + epfEmployee;
-      summary['epfEmployer'] =
-          (summary['epfEmployer'] as double) + epfEmployer;
+      summary['epfEmployee'] = (summary['epfEmployee'] as double) + epfEmployee;
+      summary['epfEmployer'] = (summary['epfEmployer'] as double) + epfEmployer;
       summary['socsoEmployee'] =
           (summary['socsoEmployee'] as double) + socsoEmployee;
       summary['socsoEmployer'] =
           (summary['socsoEmployer'] as double) + socsoEmployer;
-      summary['eisEmployee'] =
-          (summary['eisEmployee'] as double) + eisEmployee;
-      summary['eisEmployer'] =
-          (summary['eisEmployer'] as double) + eisEmployer;
+      summary['eisEmployee'] = (summary['eisEmployee'] as double) + eisEmployee;
+      summary['eisEmployer'] = (summary['eisEmployer'] as double) + eisEmployer;
       summary['deductions'] = (summary['deductions'] as double) + deductions;
-      summary['net'] = (summary['net'] as double) +
-          (net == 0 ? gross - deductions : net);
+      summary['net'] =
+          (summary['net'] as double) + (net == 0 ? gross - deductions : net);
 
       final foreign = employee['address']
               ?.toString()
@@ -10689,22 +10691,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
               .contains('FRN') ==
           true;
       final management = employee['is_management_staff'] == true ||
-          employee['is_management_staff']
-                  ?.toString()
-                  .trim()
-                  .toLowerCase() ==
+          employee['is_management_staff']?.toString().trim().toLowerCase() ==
               'true';
       final temporary = employee['is_temp_staff'] == true ||
-          employee['is_temp_staff']
-                  ?.toString()
-                  .trim()
-                  .toLowerCase() ==
-              'true';
+          employee['is_temp_staff']?.toString().trim().toLowerCase() == 'true';
       if (!foreign && !management && !temporary) {
         summary['malaysianEmployees'] =
             (summary['malaysianEmployees'] as int) + 1;
-        summary['hrdfBasic'] =
-            (summary['hrdfBasic'] as double) + basic;
+        summary['hrdfBasic'] = (summary['hrdfBasic'] as double) + basic;
         final fixedAllowances = _number(row['elaun_perkhidmatan']) +
             _number(row['elaun_kerajinan']);
         summary['hrdfBase'] = (summary['hrdfBase'] as double) +
@@ -10713,8 +10707,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
     }
     final rows = grouped.values.toList()
-      ..sort((a, b) =>
-          a['branch'].toString().compareTo(b['branch'].toString()));
+      ..sort(
+          (a, b) => a['branch'].toString().compareTo(b['branch'].toString()));
     if (rows.isNotEmpty) {
       final total = <String, dynamic>{
         'branch': 'GRAND TOTAL',
@@ -10811,12 +10805,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final id = _normalizeBranchValue(payroll['employee_id']);
       final employee = employees[id] ?? <String, dynamic>{};
       final salaryDefault = defaults[id] ?? <String, dynamic>{};
-      final name = firstText(employee, const ['name', 'employee_name']).isNotEmpty
-          ? firstText(employee, const ['name', 'employee_name'])
-          : firstText(payroll, const ['name', 'employee_name']);
-      final rawIc = firstText(employee, const ['new_ic_no', 'newIcNo']).isNotEmpty
-          ? firstText(employee, const ['new_ic_no', 'newIcNo'])
-          : firstText(payroll, const ['new_ic_no', 'newIcNo']);
+      final name =
+          firstText(employee, const ['name', 'employee_name']).isNotEmpty
+              ? firstText(employee, const ['name', 'employee_name'])
+              : firstText(payroll, const ['name', 'employee_name']);
+      final rawIc =
+          firstText(employee, const ['new_ic_no', 'newIcNo']).isNotEmpty
+              ? firstText(employee, const ['new_ic_no', 'newIcNo'])
+              : firstText(payroll, const ['new_ic_no', 'newIcNo']);
       final defaultAddress =
           firstText(salaryDefault, const ['address', 'Address', 'ADDRESS']);
       final address = defaultAddress.isNotEmpty
@@ -10828,25 +10824,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final exportIc = !isForeign && digitsOnly && rawIc.length < 12
           ? rawIc.padLeft(12, '0')
           : (icDigits.length == 12 ? icDigits : rawIc.replaceAll('-', ''));
-      final epfNo = firstText(employee,
-          const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']);
-      final socsoNo = firstText(employee,
-          const ['socso_no', 'socsoNo', 'socso_number', 'SOCSO_NO']);
-      final epfEmployee = _number(payroll['epf_employee'] ?? payroll['epfEmployee']);
-      final epfEmployer = _number(payroll['epf_employer'] ?? payroll['epfEmployer']);
+      final epfNo =
+          firstText(employee, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']);
+      final socsoNo = firstText(
+          employee, const ['socso_no', 'socsoNo', 'socso_number', 'SOCSO_NO']);
+      final epfEmployee =
+          _number(payroll['epf_employee'] ?? payroll['epfEmployee']);
+      final epfEmployer =
+          _number(payroll['epf_employer'] ?? payroll['epfEmployer']);
       final socsoEmployee =
           _number(payroll['socso_employee'] ?? payroll['socsoEmployee']);
       final socsoEmployer =
           _number(payroll['socso_employer'] ?? payroll['socsoEmployer']);
-      final eisEmployee = _number(payroll['eis_employee'] ?? payroll['eisEmployee']);
-      final eisEmployer = _number(payroll['eis_employer'] ?? payroll['eisEmployer']);
+      final eisEmployee =
+          _number(payroll['eis_employee'] ?? payroll['eisEmployee']);
+      final eisEmployer =
+          _number(payroll['eis_employer'] ?? payroll['eisEmployer']);
 
       List<dynamic>? row;
-      final eligibleForEpf = epfEmployee + epfEmployer > 0 &&
-          (!isForeign || epfNo.isNotEmpty);
+      final eligibleForEpf =
+          epfEmployee + epfEmployer > 0 && (!isForeign || epfNo.isNotEmpty);
       if (report == 'EPF' && eligibleForEpf) {
-        row = [name, exportIc, epfNo, epfEmployee, epfEmployer,
-          _payrollTotalEarnings(payroll)];
+        row = [
+          name,
+          exportIc,
+          epfNo,
+          epfEmployee,
+          epfEmployer,
+          _payrollTotalEarnings(payroll)
+        ];
       } else if (report == 'SOCSO') {
         final total = socsoEmployee + socsoEmployer;
         final identifier = isForeign && socsoNo.isNotEmpty
@@ -10854,29 +10860,55 @@ class _AdminDashboardState extends State<AdminDashboard> {
             : exportIc;
         final eligible = total > 0 &&
             (isForeign ? socsoNo.isNotEmpty : icDigits.length == 12);
-        if (eligible) row = [name, identifier, socsoEmployee, socsoEmployer, total];
+        if (eligible)
+          row = [name, identifier, socsoEmployee, socsoEmployer, total];
       } else if (report == 'EIS' && eisEmployee + eisEmployer > 0) {
-        row = [name, exportIc, eisEmployee, eisEmployer,
-          eisEmployee + eisEmployer];
+        row = [
+          name,
+          exportIc,
+          eisEmployee,
+          eisEmployer,
+          eisEmployee + eisEmployer
+        ];
       }
       if (row != null) {
         (isForeign ? foreign : local).add(row);
       }
     }
-    int byName(List<dynamic> a, List<dynamic> b) =>
-        a.first.toString().toLowerCase().compareTo(
-            b.first.toString().toLowerCase());
+    int byName(List<dynamic> a, List<dynamic> b) => a.first
+        .toString()
+        .toLowerCase()
+        .compareTo(b.first.toString().toLowerCase());
     local.sort(byName);
     foreign.sort(byName);
     final headers = report == 'EPF'
-        ? <String>['NAME', 'IC NO', 'EPF NO', 'EMPLOYEE SHARE',
-            'EMPLOYER SHARE', 'TOTAL SALARY']
+        ? <String>[
+            'NAME',
+            'IC NO',
+            'EPF NO',
+            'EMPLOYEE SHARE',
+            'EMPLOYER SHARE',
+            'TOTAL SALARY'
+          ]
         : report == 'SOCSO'
-            ? <String>['NAME', 'IC / SOCSO NO', 'EMPLOYEE SHARE',
-                'EMPLOYER SHARE', 'TOTAL AMOUNT']
-            : <String>['NAME', 'IC NO', 'EMPLOYEE SHARE',
-                'EMPLOYER SHARE', 'TOTAL AMOUNT'];
-    return {'headers': headers, 'rows': [...local, ...foreign]};
+            ? <String>[
+                'NAME',
+                'IC / SOCSO NO',
+                'EMPLOYEE SHARE',
+                'EMPLOYER SHARE',
+                'TOTAL AMOUNT'
+              ]
+            : <String>[
+                'NAME',
+                'IC NO',
+                'EMPLOYEE SHARE',
+                'EMPLOYER SHARE',
+                'TOTAL AMOUNT'
+              ];
+    return {
+      'headers': headers,
+      'rows': [...local, ...foreign]
+    };
   }
 
   Future<void> _showStatutoryReport(String report, String exportType) async {
@@ -10912,8 +10944,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           helpText: 'Select payroll month',
                         );
                         if (picked != null) {
-                          setDialogState(
-                              () => month = DateTime(picked.year, picked.month));
+                          setDialogState(() =>
+                              month = DateTime(picked.year, picked.month));
                         }
                       },
                     ),
@@ -10933,20 +10965,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       key: ValueKey('${report}_${month.year}_${month.month}'),
                       future: _loadStatutoryReport(report, month),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
                         }
                         if (snapshot.hasError) {
-                          return Center(child: Text(
-                              'Unable to load $report details: ${snapshot.error}'));
+                          return Center(
+                              child: Text(
+                                  'Unable to load $report details: ${snapshot.error}'));
                         }
-                        final headers =
-                            List<String>.from(snapshot.data?['headers'] ?? const []);
+                        final headers = List<String>.from(
+                            snapshot.data?['headers'] ?? const []);
                         final rows = List<List<dynamic>>.from(
                             snapshot.data?['rows'] ?? const []);
                         if (rows.isEmpty) {
-                          return Center(child: Text(
-                              'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
+                          return Center(
+                              child: Text(
+                                  'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
                         }
                         return Column(children: [
                           Expanded(
@@ -10957,17 +10993,27 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   child: DataTable(
                                     headingRowColor: WidgetStatePropertyAll(
                                         Colors.grey.shade100),
-                                    columns: headers.map((header) => DataColumn(
-                                      label: Text(header, style: const TextStyle(
-                                          fontWeight: FontWeight.w700)),
-                                    )).toList(),
-                                    rows: rows.map((row) => DataRow(
-                                      cells: row.map((value) => DataCell(Text(
-                                        value is num
-                                            ? NumberFormat('#,##0.00').format(value)
-                                            : value.toString(),
-                                      ))).toList(),
-                                    )).toList(),
+                                    columns: headers
+                                        .map((header) => DataColumn(
+                                              label: Text(header,
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w700)),
+                                            ))
+                                        .toList(),
+                                    rows: rows
+                                        .map((row) => DataRow(
+                                              cells: row
+                                                  .map((value) => DataCell(Text(
+                                                        value is num
+                                                            ? NumberFormat(
+                                                                    '#,##0.00')
+                                                                .format(value)
+                                                            : value.toString(),
+                                                      )))
+                                                  .toList(),
+                                            ))
+                                        .toList(),
                                   ),
                                 ),
                               ),
@@ -10976,7 +11022,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           const SizedBox(height: 12),
                           Row(children: [
                             Text('${rows.length} employee(s)',
-                                style: const TextStyle(fontWeight: FontWeight.w700)),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
                             const Spacer(),
                             FilledButton.icon(
                               onPressed: () async {
@@ -11033,8 +11080,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           helpText: 'Select report month',
                         );
                         if (picked != null) {
-                          setDialogState(
-                              () => month = DateTime(picked.year, picked.month));
+                          setDialogState(() =>
+                              month = DateTime(picked.year, picked.month));
                         }
                       },
                     ),
@@ -11054,63 +11101,77 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(
+                              child: CircularProgressIndicator());
                         }
                         if (snapshot.hasError) {
                           return Center(
-                              child: Text('Unable to load report: ${snapshot.error}'));
+                              child: Text(
+                                  'Unable to load report: ${snapshot.error}'));
                         }
                         final rows = snapshot.data ?? const [];
                         if (rows.isEmpty) {
                           return const Center(
-                              child: Text('No payroll records for this month.'));
+                              child:
+                                  Text('No payroll records for this month.'));
                         }
                         return Column(children: [
-                          Expanded(child: _dashboardReportPreview(report, rows)),
+                          Expanded(
+                              child: _dashboardReportPreview(report, rows)),
                           const SizedBox(height: 12),
-                          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                            if (report == 'HRDF' || report == 'Payroll Summary')
-                              OutlinedButton.icon(
-                                onPressed: () => _printDashboardReport(
-                                    report, month, rows),
-                                icon: const Icon(Icons.print_outlined),
-                                label: const Text('Print Landscape A4'),
-                              ),
-                            if (report == 'HRDF' || report == 'Payroll Summary')
-                              const SizedBox(width: 10),
-                            FilledButton.icon(
-                              onPressed: () async {
-                                setState(() => selectedPayrollMonth = month);
-                                if (const ['EPF', 'SOCSO', 'EIS']
-                                    .contains(report)) {
-                                  await _exportRhbLayout(
-                                      only: report.toLowerCase());
-                                } else if (report == 'Payroll') {
-                                  final all = await SupabaseService.getPayroll();
-                                  final filtered = all
-                                      .where((r) => _payrollPeriodMatchesMonth(
-                                          r['period'], month))
-                                      .toList();
-                                  final branches = await SupabaseService.getBranches();
-                                  await _exportPayrollAllBranchesExcel(
-                                    filtered,
-                                    {
-                                      for (final b in branches)
-                                        _normalizeBranchValue(
-                                                b['id'] ?? b['branch_id']):
-                                            (b['name'] ?? b['branch_name'] ?? '')
-                                                .toString()
-                                    },
-                                  );
-                                } else {
-                                  await _exportDashboardSummaryExcel(
-                                      report, month, rows);
-                                }
-                              },
-                              icon: const Icon(Icons.download_outlined),
-                              label: const Text('Export Excel'),
-                            ),
-                          ]),
+                          Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (report == 'HRDF' ||
+                                    report == 'Payroll Summary')
+                                  OutlinedButton.icon(
+                                    onPressed: () => _printDashboardReport(
+                                        report, month, rows),
+                                    icon: const Icon(Icons.print_outlined),
+                                    label: const Text('Print Landscape A4'),
+                                  ),
+                                if (report == 'HRDF' ||
+                                    report == 'Payroll Summary')
+                                  const SizedBox(width: 10),
+                                FilledButton.icon(
+                                  onPressed: () async {
+                                    setState(
+                                        () => selectedPayrollMonth = month);
+                                    if (const ['EPF', 'SOCSO', 'EIS']
+                                        .contains(report)) {
+                                      await _exportRhbLayout(
+                                          only: report.toLowerCase());
+                                    } else if (report == 'Payroll') {
+                                      final all =
+                                          await SupabaseService.getPayroll();
+                                      final filtered = all
+                                          .where((r) =>
+                                              _payrollPeriodMatchesMonth(
+                                                  r['period'], month))
+                                          .toList();
+                                      final branches =
+                                          await SupabaseService.getBranches();
+                                      await _exportPayrollAllBranchesExcel(
+                                        filtered,
+                                        {
+                                          for (final b in branches)
+                                            _normalizeBranchValue(
+                                                    b['id'] ?? b['branch_id']):
+                                                (b['name'] ??
+                                                        b['branch_name'] ??
+                                                        '')
+                                                    .toString()
+                                        },
+                                      );
+                                    } else {
+                                      await _exportDashboardSummaryExcel(
+                                          report, month, rows);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.download_outlined),
+                                  label: const Text('Export Excel'),
+                                ),
+                              ]),
                         ]);
                       },
                     ),
@@ -11134,24 +11195,80 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   List<String> _dashboardReportHeaders(String report) {
     if (report == 'HRDF') {
-      return const ['BRANCH', 'MALAYSIAN STAFF', 'BASIC SALARY', 'LEVY BASE', 'LEVY 0.5%', 'LEVY 1%'];
+      return const [
+        'BRANCH',
+        'MALAYSIAN STAFF',
+        'BASIC SALARY',
+        'LEVY BASE',
+        'LEVY 0.5%',
+        'LEVY 1%'
+      ];
     }
     if (report == 'Payroll Summary') {
-      return const ['BRANCH', 'STAFF', 'BASIC', 'GROSS', 'EPF EE', 'EPF ER', 'SOCSO EE', 'SOCSO ER', 'EIS EE', 'EIS ER', 'DEDUCTIONS', 'NET PAY'];
+      return const [
+        'BRANCH',
+        'STAFF',
+        'BASIC',
+        'GROSS',
+        'EPF EE',
+        'EPF ER',
+        'SOCSO EE',
+        'SOCSO ER',
+        'EIS EE',
+        'EIS ER',
+        'DEDUCTIONS',
+        'NET PAY'
+      ];
     }
-    return const ['BRANCH', 'EMPLOYEES', 'BASIC SALARY', 'ALLOWANCES', 'GROSS PAY', 'DEDUCTIONS', 'NET PAY'];
+    return const [
+      'BRANCH',
+      'EMPLOYEES',
+      'BASIC SALARY',
+      'ALLOWANCES',
+      'GROSS PAY',
+      'DEDUCTIONS',
+      'NET PAY'
+    ];
   }
 
   List<dynamic> _dashboardReportValues(
       String report, Map<String, dynamic> row) {
     if (report == 'HRDF') {
       final base = _number(row['hrdfBase']);
-      return [row['branch'], row['malaysianEmployees'], row['hrdfBasic'], base, base * .005, base * .01];
+      return [
+        row['branch'],
+        row['malaysianEmployees'],
+        row['hrdfBasic'],
+        base,
+        base * .005,
+        base * .01
+      ];
     }
     if (report == 'Payroll Summary') {
-      return [row['branch'], row['employees'], row['basic'], row['gross'], row['epfEmployee'], row['epfEmployer'], row['socsoEmployee'], row['socsoEmployer'], row['eisEmployee'], row['eisEmployer'], row['deductions'], row['net']];
+      return [
+        row['branch'],
+        row['employees'],
+        row['basic'],
+        row['gross'],
+        row['epfEmployee'],
+        row['epfEmployer'],
+        row['socsoEmployee'],
+        row['socsoEmployer'],
+        row['eisEmployee'],
+        row['eisEmployer'],
+        row['deductions'],
+        row['net']
+      ];
     }
-    return [row['branch'], row['employees'], row['basic'], row['allowances'], row['gross'], row['deductions'], row['net']];
+    return [
+      row['branch'],
+      row['employees'],
+      row['basic'],
+      row['allowances'],
+      row['gross'],
+      row['deductions'],
+      row['net']
+    ];
   }
 
   Widget _dashboardReportPreview(
@@ -11164,12 +11281,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: DataTable(
             headingRowColor: WidgetStatePropertyAll(Colors.grey.shade100),
             columns: headers
-                .map((header) => DataColumn(label: Text(header,
-                    style: const TextStyle(fontWeight: FontWeight.w700))))
+                .map((header) => DataColumn(
+                    label: Text(header,
+                        style: const TextStyle(fontWeight: FontWeight.w700))))
                 .toList(),
             rows: rows.map((row) {
               final values = _dashboardReportValues(report, row);
-              return DataRow(cells: values.asMap().entries.map((entry) {
+              return DataRow(
+                  cells: values.asMap().entries.map((entry) {
                 final value = entry.value;
                 final text = entry.key >= 2 && value is num
                     ? NumberFormat('#,##0.00').format(value)
@@ -11183,8 +11302,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Future<void> _exportDashboardSummaryExcel(String report, DateTime month,
-      List<Map<String, dynamic>> rows) async {
+  Future<void> _exportDashboardSummaryExcel(
+      String report, DateTime month, List<Map<String, dynamic>> rows) async {
     final excel = xls.Excel.createExcel();
     final defaultName = excel.getDefaultSheet();
     final sheetName = report == 'Payroll Summary' ? 'Payroll Summary' : report;
@@ -11192,8 +11311,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final sheet = excel[sheetName];
     final headers = _dashboardReportHeaders(report);
     for (var column = 0; column < headers.length; column++) {
-      sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 0)).value =
-          xls.TextCellValue(headers[column]);
+      sheet
+          .cell(
+              xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 0))
+          .value = xls.TextCellValue(headers[column]);
     }
     for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       final values = _dashboardReportValues(report, rows[rowIndex]);
@@ -11209,7 +11330,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final output = excel.encode();
     if (output == null) throw Exception('Excel file could not be generated.');
     await FileSaver.instance.saveFile(
-      name: '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}',
+      name:
+          '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}',
       bytes: Uint8List.fromList(output),
       ext: 'xlsx',
       mimeType: MimeType.microsoftExcel,
@@ -11217,8 +11339,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _message('$report Excel exported successfully.');
   }
 
-  Future<void> _printDashboardReport(String report, DateTime month,
-      List<Map<String, dynamic>> rows) async {
+  Future<void> _printDashboardReport(
+      String report, DateTime month, List<Map<String, dynamic>> rows) async {
     final headers = _dashboardReportHeaders(report);
     final data = rows
         .map((row) => _dashboardReportValues(report, row)
@@ -11236,12 +11358,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           pw.Text('$report - ${DateFormat('MMMM yyyy').format(month)}',
               textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
+              style:
+                  pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
             headers: headers,
             data: data,
-            headerStyle: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+            headerStyle:
+                pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
             cellStyle: const pw.TextStyle(fontSize: 5.5),
             cellPadding: const pw.EdgeInsets.all(3),
           ),
@@ -11249,7 +11373,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     ));
     await Printing.layoutPdf(
-      name: '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}.pdf',
+      name:
+          '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}.pdf',
       format: PdfPageFormat.a4.landscape,
       onLayout: (_) => document.save(),
     );
@@ -11265,8 +11390,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           DateFormat('MMMM yyyy').format(selectedPayrollMonth);
 
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
-      final exportStamp =
-          DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final exportStamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
 
       // ============================================================
       // LOAD PAYROLL
@@ -11613,8 +11737,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
 
         final employee = employeeMap[id] ?? <String, dynamic>{};
-        final salaryDefault =
-            salaryDefaultsMap[id] ?? <String, dynamic>{};
+        final salaryDefault = salaryDefaultsMap[id] ?? <String, dynamic>{};
 
         // ----------------------------------------------------------
         // EMPLOYEE NAME
@@ -11691,9 +11814,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ? ic.padLeft(12, '0')
             : (icDigitCount == 12 ? icDigits : ic.replaceAll('-', ''));
         final useForeignSocsoNo = isForeign && socsoNo.isNotEmpty;
-        final socsoIdentifier = useForeignSocsoNo
-            ? socsoNo.replaceAll('-', '')
-            : exportIc;
+        final socsoIdentifier =
+            useForeignSocsoNo ? socsoNo.replaceAll('-', '') : exportIc;
 
         // ----------------------------------------------------------
         // BANK ACCOUNT
@@ -11804,8 +11926,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // JUMLAH = GROSS SALARY
         // ----------------------------------------------------------
 
-        final eligibleForEpfExport = epfEmployee + epfEmployer > 0 &&
-            (!isForeign || epfNo.isNotEmpty);
+        final eligibleForEpfExport =
+            epfEmployee + epfEmployer > 0 && (!isForeign || epfNo.isNotEmpty);
         if (eligibleForEpfExport) {
           final epfRow = <dynamic>[
             name,
@@ -11868,80 +11990,84 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // CREATE RHB EXCEL
       // ============================================================
 
-      if (only == null || only == 'rhb') saveExcel(
-        'RHB_Layout_${monthFile}_$exportStamp.xlsx',
-        'RHB Layout',
-        const [
-          'NAME',
-          'NEW_IC_NO',
-          'BANK_ACCOUNT',
-          'JUMLAH',
-          'SELECTED PAYROLL MONTH',
-        ],
-        rhb,
-      );
+      if (only == null || only == 'rhb')
+        saveExcel(
+          'RHB_Layout_${monthFile}_$exportStamp.xlsx',
+          'RHB Layout',
+          const [
+            'NAME',
+            'NEW_IC_NO',
+            'BANK_ACCOUNT',
+            'JUMLAH',
+            'SELECTED PAYROLL MONTH',
+          ],
+          rhb,
+        );
 
       // ============================================================
       // CREATE EPF EXCEL
       // ============================================================
 
-      if (only == null || only == 'epf') saveExcel(
-        'EPF_${monthFile}_$exportStamp.xlsx',
-        'EPF',
-        const [
-          'NAME',
-          '',
-          '',
-          'IC_NO',
-          'EPF_NO',
-          'EMPLOYEE EPF AMOUNT',
-          'EMPLOYER EPF AMOUNT',
-          '',
-          'TOTAL AMOUNT',
-        ],
-        [
-          ...epfLocal,
-          ...epfForeign,
-        ],
-      );
+      if (only == null || only == 'epf')
+        saveExcel(
+          'EPF_${monthFile}_$exportStamp.xlsx',
+          'EPF',
+          const [
+            'NAME',
+            '',
+            '',
+            'IC_NO',
+            'EPF_NO',
+            'EMPLOYEE EPF AMOUNT',
+            'EMPLOYER EPF AMOUNT',
+            '',
+            'TOTAL AMOUNT',
+          ],
+          [
+            ...epfLocal,
+            ...epfForeign,
+          ],
+        );
 
       // ============================================================
       // CREATE EIS EXCEL
       // ============================================================
 
-      if (only == null || only == 'eis') saveExcel(
-        'EIS_${monthFile}_$exportStamp.xlsx',
-        'EIS',
-        const [
-          'NAME',
-          'IC_NO',
-          '',
-          'EIS TOTAL AMOUNT',
-        ],
-        [
-          ...eisLocal,
-          ...eisForeign,
-        ],
-      );
+      if (only == null || only == 'eis')
+        saveExcel(
+          'EIS_${monthFile}_$exportStamp.xlsx',
+          'EIS',
+          const [
+            'NAME',
+            'IC_NO',
+            '',
+            'EIS TOTAL AMOUNT',
+          ],
+          [
+            ...eisLocal,
+            ...eisForeign,
+          ],
+        );
 
       // ============================================================
       // CREATE SOCSO EXCEL
       // ============================================================
 
-      if (only == null || only == 'socso') saveExcel(
-        'SOCSO_${monthFile}_$exportStamp.xlsx',
-        'SOCSO',
-        const [
-          'NAME',
-          'IC_NO',
-          '',
-          'SOCSO TOTAL AMOUNT',
-        ],
-        [
-          ...socsoLocal,
-          ...socsoForeign,
-        ],
-      );
+      if (only == null || only == 'socso')
+        saveExcel(
+          'SOCSO_${monthFile}_$exportStamp.xlsx',
+          'SOCSO',
+          const [
+            'NAME',
+            'IC_NO',
+            '',
+            'SOCSO TOTAL AMOUNT',
+          ],
+          [
+            ...socsoLocal,
+            ...socsoForeign,
+          ],
+        );
 
       // ============================================================
       // SUCCESS
@@ -11949,11 +12075,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       _message(only == null
           ? 'Generated 4 Excel files for $selectedMonth: '
-        'RHB Layout, EPF, EIS and SOCSO (export $exportStamp). '
-        'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
-        'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
-        'SOCSO exported ${socsoLocal.length} local and '
-        '${socsoForeign.length} foreign employee(s).'
+              'RHB Layout, EPF, EIS and SOCSO (export $exportStamp). '
+              'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
+              'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
+              'SOCSO exported ${socsoLocal.length} local and '
+              '${socsoForeign.length} foreign employee(s).'
           : '${only.toUpperCase()} Excel exported for $selectedMonth.');
     } catch (e) {
       _message(
@@ -12103,11 +12229,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       builder: (context, constraints) {
         const spacing = 12.0;
         final availableWidth = constraints.maxWidth;
-        final columns = ((availableWidth + spacing) /
-                (minimumFieldWidth + spacing))
-            .floor()
-            .clamp(1, 5)
-            .toInt();
+        final columns =
+            ((availableWidth + spacing) / (minimumFieldWidth + spacing))
+                .floor()
+                .clamp(1, 5)
+                .toInt();
         final fieldWidth =
             (availableWidth - (spacing * (columns - 1))) / columns;
         return Wrap(
@@ -12185,9 +12311,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: isDashboard ? .96 : 1),
         borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
-        border: isDashboard
-            ? Border.all(color: const Color(0xFFE2E5EA))
-            : null,
+        border: isDashboard ? Border.all(color: const Color(0xFFE2E5EA)) : null,
         boxShadow: const [
           BoxShadow(
             color: Color(0x08000000),
