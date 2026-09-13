@@ -592,6 +592,9 @@ class AppService extends ChangeNotifier {
       isTempStaff: _supabaseBool(
         data['is_temp_staff'] ?? data['isTempStaff'],
       ),
+      isOtherStaff: _supabaseBool(
+        data['is_other_staff'] ?? data['isOtherStaff'],
+      ),
       branchId:
           data['branch_id']?.toString() ?? data['branchId']?.toString() ?? '',
     );
@@ -3630,6 +3633,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'is_active': employee.isActive,
       'is_management_staff': employee.isManagementStaff,
       'is_temp_staff': employee.isTempStaff,
+      'is_other_staff': employee.isOtherStaff,
       'branch_id': employee.branchId,
     };
   }

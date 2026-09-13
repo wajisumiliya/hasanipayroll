@@ -3010,6 +3010,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool active = true;
     bool managementStaff = false;
     bool tempStaff = false;
+    bool otherStaff = false;
     String epfCategory = 'normal1';
     bool eisApplicable = true;
 
@@ -3177,8 +3178,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           'Hidden from branch attendance; payroll uses salary defaults only.',
                         ),
                         value: managementStaff,
-                        onChanged: (value) =>
-                            setDialogState(() => managementStaff = value),
+                        onChanged: (value) => setDialogState(() {
+                          managementStaff = value;
+                          if (value) {
+                            tempStaff = false;
+                            otherStaff = false;
+                          }
+                        }),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
@@ -3187,8 +3193,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           'Payroll only; hidden from branch attendance.',
                         ),
                         value: tempStaff,
-                        onChanged: (value) =>
-                            setDialogState(() => tempStaff = value),
+                        onChanged: (value) => setDialogState(() {
+                          tempStaff = value;
+                          if (value) {
+                            managementStaff = false;
+                            otherStaff = false;
+                          }
+                        }),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Other Staff'),
+                        subtitle: const Text(
+                          'Regular attendance and payroll; included in HRDF when eligible.',
+                        ),
+                        value: otherStaff,
+                        onChanged: (value) => setDialogState(() {
+                          otherStaff = value;
+                          if (value) {
+                            managementStaff = false;
+                            tempStaff = false;
+                          }
+                        }),
                       ),
                     ],
                   ),
@@ -3268,6 +3294,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         isActive: active,
                         isManagementStaff: managementStaff,
                         isTempStaff: tempStaff,
+                        isOtherStaff: otherStaff,
                       ),
                       branchId: branchId,
                       salaryDefaults: {
@@ -3339,6 +3366,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool active = employee.isActive;
     bool managementStaff = employee.isManagementStaff;
     bool tempStaff = employee.isTempStaff;
+    bool otherStaff = employee.isOtherStaff;
 
     showDialog(
       context: context,
@@ -3471,8 +3499,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           'Hidden from branch attendance; salary-default payroll only.',
                         ),
                         value: managementStaff,
-                        onChanged: (value) =>
-                            setDialogState(() => managementStaff = value),
+                        onChanged: (value) => setDialogState(() {
+                          managementStaff = value;
+                          if (value) {
+                            tempStaff = false;
+                            otherStaff = false;
+                          }
+                        }),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
@@ -3481,8 +3514,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           'Payroll only; hidden from branch attendance.',
                         ),
                         value: tempStaff,
-                        onChanged: (value) =>
-                            setDialogState(() => tempStaff = value),
+                        onChanged: (value) => setDialogState(() {
+                          tempStaff = value;
+                          if (value) {
+                            managementStaff = false;
+                            otherStaff = false;
+                          }
+                        }),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Other Staff'),
+                        subtitle: const Text(
+                          'Regular attendance and payroll; included in HRDF when eligible.',
+                        ),
+                        value: otherStaff,
+                        onChanged: (value) => setDialogState(() {
+                          otherStaff = value;
+                          if (value) {
+                            managementStaff = false;
+                            tempStaff = false;
+                          }
+                        }),
                       ),
                     ],
                   ),
@@ -3511,6 +3564,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       isActive: active,
                       isManagementStaff: managementStaff,
                       isTempStaff: tempStaff,
+                      isOtherStaff: otherStaff,
                       branchId: branchId,
                     );
 
@@ -3831,7 +3885,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ? 'Management Staff'
                         : employee['is_temp_staff'] == true
                             ? 'Temporary Staff'
-                            : 'Regular Staff',
+                            : employee['is_other_staff'] == true
+                                ? 'Other Staff'
+                                : 'Regular Staff',
                   ),
                   _employeeDetail(
                     'Active',
@@ -4072,6 +4128,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         employee['is_management_staff']?.toString().toLowerCase() == 'true';
     var tempStaff = employee['is_temp_staff'] == true ||
         employee['is_temp_staff']?.toString().toLowerCase() == 'true';
+    var otherStaff = employee['is_other_staff'] == true ||
+        employee['is_other_staff']?.toString().toLowerCase() == 'true';
     String payrollBranchId =
         _normalizeBranchValue(employee['payroll_branch_id']);
     var saving = false;
@@ -4228,9 +4286,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     onChanged: saving
                         ? null
-                        : (value) => setDialogState(
-                              () => managementStaff = value ?? false,
-                            ),
+                        : (value) => setDialogState(() {
+                              managementStaff = value ?? false;
+                              if (managementStaff) {
+                                tempStaff = false;
+                                otherStaff = false;
+                              }
+                            }),
                   ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
@@ -4241,9 +4303,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     onChanged: saving
                         ? null
-                        : (value) => setDialogState(
-                              () => tempStaff = value ?? false,
-                            ),
+                        : (value) => setDialogState(() {
+                              tempStaff = value ?? false;
+                              if (tempStaff) {
+                                managementStaff = false;
+                                otherStaff = false;
+                              }
+                            }),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: otherStaff,
+                    title: const Text('Other Staff'),
+                    subtitle: const Text(
+                      'Regular attendance and payroll; included in HRDF when eligible.',
+                    ),
+                    onChanged: saving
+                        ? null
+                        : (value) => setDialogState(() {
+                              otherStaff = value ?? false;
+                              if (otherStaff) {
+                                managementStaff = false;
+                                tempStaff = false;
+                              }
+                            }),
                   ),
                 ]),
               )),
@@ -4297,6 +4380,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'is_active': active,
                             'is_management_staff': managementStaff,
                             'is_temp_staff': tempStaff,
+                            'is_other_staff': otherStaff,
                             'payroll_branch_id': payrollBranchId.isEmpty
                                 ? null
                                 : payrollBranchId,
@@ -10499,6 +10583,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             'eisEmployer': 0.0,
             'deductions': 0.0,
             'net': 0.0,
+            'hrdfBasic': 0.0,
             'hrdfBase': 0.0,
           });
       summary['employees'] = (summary['employees'] as int) + 1;
@@ -10544,9 +10629,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
               .toUpperCase()
               .contains('FRN') ==
           true;
-      if (!foreign) {
+      final management = employee['is_management_staff'] == true ||
+          employee['is_management_staff']
+                  ?.toString()
+                  .trim()
+                  .toLowerCase() ==
+              'true';
+      final temporary = employee['is_temp_staff'] == true ||
+          employee['is_temp_staff']
+                  ?.toString()
+                  .trim()
+                  .toLowerCase() ==
+              'true';
+      if (!foreign && !management && !temporary) {
         summary['malaysianEmployees'] =
             (summary['malaysianEmployees'] as int) + 1;
+        summary['hrdfBasic'] =
+            (summary['hrdfBasic'] as double) + basic;
         final fixedAllowances = _number(row['elaun_perkhidmatan']) +
             _number(row['elaun_kerajinan']);
         summary['hrdfBase'] = (summary['hrdfBase'] as double) +
@@ -10572,6 +10671,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'eisEmployer': 0.0,
         'deductions': 0.0,
         'net': 0.0,
+        'hrdfBasic': 0.0,
         'hrdfBase': 0.0,
       };
       const integerKeys = ['employees', 'malaysianEmployees'];
@@ -10586,6 +10686,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'eisEmployer',
         'deductions',
         'net',
+        'hrdfBasic',
         'hrdfBase',
       ];
       for (final row in rows) {
@@ -10980,7 +11081,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       String report, Map<String, dynamic> row) {
     if (report == 'HRDF') {
       final base = _number(row['hrdfBase']);
-      return [row['branch'], row['malaysianEmployees'], row['basic'], base, base * .005, base * .01];
+      return [row['branch'], row['malaysianEmployees'], row['hrdfBasic'], base, base * .005, base * .01];
     }
     if (report == 'Payroll Summary') {
       return [row['branch'], row['employees'], row['basic'], row['gross'], row['epfEmployee'], row['epfEmployer'], row['socsoEmployee'], row['socsoEmployer'], row['eisEmployee'], row['eisEmployer'], row['deductions'], row['net']];
