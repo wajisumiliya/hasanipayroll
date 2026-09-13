@@ -3739,6 +3739,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     employee['branch_id'],
                   ),
                   _employeeDetail(
+                    'Payroll Branch',
+                    _normalizeBranchValue(employee['payroll_branch_id']).isEmpty
+                        ? 'Same as attendance branch'
+                        : employee['payroll_branch_id'],
+                  ),
+                  _employeeDetail(
                     'Active',
                     employee['is_active'] == true ? 'Yes' : 'No',
                   ),
@@ -3937,6 +3943,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     var active = _isActive(employee);
     var managementStaff = employee['is_management_staff'] == true ||
         employee['is_management_staff']?.toString().toLowerCase() == 'true';
+    String payrollBranchId =
+        _normalizeBranchValue(employee['payroll_branch_id']);
     var saving = false;
     showDialog(
       context: context,
@@ -3988,6 +3996,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           labelText: 'Branch',
                           helperText:
                               'Use Transfer Staff to change branch and retain history.')),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: payrollBranchId,
+                    decoration: const InputDecoration(
+                      labelText: 'Payroll Branch',
+                      helperText:
+                          'Used for payroll lists and exports only. Attendance branch is unchanged.',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: '',
+                        child: Text('Same as attendance branch'),
+                      ),
+                      ...service.branches.map(
+                        (branch) => DropdownMenuItem<String>(
+                          value: _normalizeBranchValue(branch.id),
+                          child: Text(branch.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: saving
+                        ? null
+                        : (value) => setDialogState(
+                              () => payrollBranchId = value ?? '',
+                            ),
+                  ),
                   CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: active,
@@ -4042,6 +4077,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 joiningDate?.toIso8601String().split('T').first,
                             'is_active': active,
                             'is_management_staff': managementStaff,
+                            'payroll_branch_id': payrollBranchId.isEmpty
+                                ? null
+                                : payrollBranchId,
                           });
                           if (!mounted) return;
                           Navigator.pop(dialogContext);
@@ -6198,7 +6236,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final employeesFuture = SupabaseService.client
         .from('employees')
         .select(
-          'employee_id,name,branch_id,is_active,is_management_staff',
+          'employee_id,name,branch_id,payroll_branch_id,'
+          'is_active,is_management_staff',
         )
         .eq('is_active', true)
         .order('employee_id');
@@ -6263,9 +6302,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 }
 
                 for (final employee in employees) {
-                  final branchId = _normalizeBranchValue(
-                    employee['branch_id'],
-                  );
+                  final branchId = _payrollBranchIdFromEmployee(employee);
                   if (branchId.isEmpty) continue;
                   branchGroups.putIfAbsent(branchId, () => []).add(employee);
                   branchNames.putIfAbsent(
@@ -6787,6 +6824,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return value?.toString().trim().toUpperCase() ?? '';
   }
 
+  String _payrollBranchIdFromEmployee(Map<String, dynamic> employee) {
+    final payrollBranch =
+        _normalizeBranchValue(employee['payroll_branch_id']);
+    return payrollBranch.isNotEmpty
+        ? payrollBranch
+        : _normalizeBranchValue(employee['branch_id']);
+  }
+
 // ============================================================================
 // EDIT PAYROLL
 // ============================================================================
@@ -6867,7 +6912,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (id.isNotEmpty) branchNames[id] = _branchNameFromMap(branch, id);
     }
     for (final employee in employees) {
-      final id = _normalizeBranchValue(employee['branch_id']);
+      final id = _payrollBranchIdFromEmployee(employee);
       if (id.isNotEmpty) branchNames.putIfAbsent(id, () => id);
     }
     final branchIds = branchNames.keys.toList()
@@ -7049,8 +7094,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 : employees
                     .where(
                       (employee) =>
-                          _normalizeBranchValue(employee['branch_id']) ==
-                          branchId,
+                          _payrollBranchIdFromEmployee(employee) == branchId,
                     )
                     .toList()
               ..sort(
@@ -7563,7 +7607,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final employeeBranchById = <String, String>{};
         for (final employee in employees) {
           final employeeId = _normalizeBranchValue(employee['employee_id']);
-          final branchId = _normalizeBranchValue(employee['branch_id']);
+          final branchId = _payrollBranchIdFromEmployee(employee);
           if (employeeId.isNotEmpty) employeeBranchById[employeeId] = branchId;
         }
 
@@ -7580,7 +7624,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         }
 
         for (final employee in employees) {
-          final branchId = _normalizeBranchValue(employee['branch_id']);
+          final branchId = _payrollBranchIdFromEmployee(employee);
           if (branchId.isEmpty) continue;
           branchGroups.putIfAbsent(branchId, () => []).add(employee);
           branchNames.putIfAbsent(branchId, () => branchId);
@@ -7596,9 +7640,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final payrollRecords = rawPayrollRecords.map((record) {
           final copy = Map<String, dynamic>.from(record);
           final employeeId = _normalizeBranchValue(record['employee_id']);
-          final branchId = _normalizeBranchValue(
-            record['branch_id'] ?? employeeBranchById[employeeId],
-          );
+          final branchId = employeeBranchById[employeeId] ??
+              _normalizeBranchValue(record['branch_id']);
           if (branchId.isNotEmpty) {
             copy['branch_id'] = branchId;
             copy['branch_name'] = branchNames[branchId] ?? branchId;
@@ -9679,9 +9722,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       for (final row in records) {
         final employeeId = _normalizeBranchValue(row['employee_id']);
         final employee = employeeMap[employeeId];
-        final branchId = _normalizeBranchValue(
-          row['branch_id'] ?? employee?['branch_id'],
-        );
+        final branchId = employee == null
+            ? _normalizeBranchValue(row['branch_id'])
+            : _payrollBranchIdFromEmployee(employee);
         if (branchId.isEmpty) continue;
         grouped.putIfAbsent(branchId, () => []).add(row);
       }

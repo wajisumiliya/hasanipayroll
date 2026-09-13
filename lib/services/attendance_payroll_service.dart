@@ -678,7 +678,8 @@ class AttendancePayrollService {
     final response = await SupabaseService.client
         .from('employees')
         .select(
-          'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,is_active,is_management_staff',
+          'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,'
+          'payroll_branch_id,is_active,is_management_staff',
         )
         .inFilter('employee_id', employeeIds);
 
