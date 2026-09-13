@@ -7548,7 +7548,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         SupabaseService.client
             .from('employees')
             .select()
-            .eq('is_active', true)
             .order('employee_id'),
         SupabaseService.client
             .from('payroll')
@@ -7624,6 +7623,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         }
 
         for (final employee in employees) {
+          // Inactive employees are loaded so their existing historical payroll
+          // records can still resolve branch/name details. They must not appear
+          // in the employee picker used to generate new payroll.
+          if (!_isActive(employee)) continue;
           final branchId = _payrollBranchIdFromEmployee(employee);
           if (branchId.isEmpty) continue;
           branchGroups.putIfAbsent(branchId, () => []).add(employee);

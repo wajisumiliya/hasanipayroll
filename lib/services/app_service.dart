@@ -1643,16 +1643,13 @@ class AppService extends ChangeNotifier {
     final id = employeeId.toString().trim();
     if (id.isEmpty) throw Exception('Employee ID was not found.');
 
-    final response = await _postAuth(
-      '/api/admin/employees/${Uri.encodeComponent(id)}/status',
-      {'isActive': isActive},
-      authenticated: true,
+    await _supabase.rpc(
+      'set_employee_active_status',
+      params: {
+        'p_employee_id': id,
+        'p_is_active': isActive,
+      },
     );
-    if (response['ok'] != true) {
-      throw Exception(
-        response['message']?.toString() ?? 'Unable to update employee status.',
-      );
-    }
 
     final employee = findEmployee(id);
     if (employee != null) {
