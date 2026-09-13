@@ -327,16 +327,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: dashboard
-                  ? theme.background
-                  : [theme.surfaceTint, const Color(0xFFF5F7FB)],
-            ),
+            color: dashboard ? Colors.white : null,
+            gradient: dashboard
+                ? null
+                : LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [theme.surfaceTint, const Color(0xFFF5F7FB)],
+                  ),
           ),
         ),
-        if (dashboard) PortalAtmosphere(theme: theme),
+        if (dashboard)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: Opacity(
+                  opacity: .045,
+                  child: Image.asset(
+                    'assets/hasani_books_logo.jpg',
+                    width: 620,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ),
         Positioned.fill(child: child),
       ],
     );
@@ -349,8 +364,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _mobileLayout() {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: _portalTheme.header.first,
-        foregroundColor: Colors.white,
+        backgroundColor:
+            selectedPage == 0 ? Colors.white : _portalTheme.header.first,
+        foregroundColor:
+            selectedPage == 0 ? const Color(0xFF20242D) : Colors.white,
         elevation: 0,
         title: Text(
           _pageTitle(),
@@ -713,10 +730,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _topBar() {
     final theme = _portalTheme;
+    final lightDashboard = selectedPage == 0;
     return Container(
       height: 78,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: theme.header),
+        color: lightDashboard ? Colors.white : null,
+        gradient:
+            lightDashboard ? null : LinearGradient(colors: theme.header),
         boxShadow: [
           BoxShadow(
             color: theme.headerShadow,
@@ -725,7 +745,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ],
         border: Border(
-          bottom: BorderSide(color: theme.glassBorder),
+          bottom: BorderSide(
+            color: lightDashboard
+                ? const Color(0xFFE2E5EA)
+                : theme.glassBorder,
+          ),
         ),
       ),
       padding: const EdgeInsets.symmetric(
@@ -735,8 +759,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           Text(
             _pageTitle().toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: lightDashboard
+                  ? const Color(0xFF20242D)
+                  : Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.4,
@@ -760,8 +786,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             children: [
               Text(
                 'Admin User',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: lightDashboard
+                      ? const Color(0xFF20242D)
+                      : Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -769,7 +797,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'Administrator',
                 style: TextStyle(
                   fontSize: 11,
-                  color: theme.mutedText,
+                  color: lightDashboard ? Colors.black54 : theme.mutedText,
                 ),
               ),
             ],
@@ -778,7 +806,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           IconButton(
             tooltip: 'Logout',
             onPressed: logout,
-            icon: Icon(Icons.logout, color: theme.mutedText),
+            icon: Icon(Icons.logout,
+                color: lightDashboard ? Colors.black54 : theme.mutedText),
           ),
         ],
       ),
@@ -1476,7 +1505,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Employee and employer shares',
                               Icons.savings_outlined,
                               const Color(0xFFE8C778),
-                              assetName: 'assets/official_epf_logo.png',
+                              assetName: 'assets/dashboard_epf_kwsp.png',
+                              fallbackLabel: 'KWSP',
                             ),
                             _dashboardReportCard(
                               width,
@@ -1485,6 +1515,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               Icons.health_and_safety_outlined,
                               const Color(0xFF73D6AE),
                               assetName: 'assets/official_socso_logo.png',
+                              fallbackLabel: 'SOCSO',
                             ),
                             _dashboardReportCard(
                               width,
@@ -1492,7 +1523,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Monthly insurance contribution',
                               Icons.shield_outlined,
                               const Color(0xFF84B6F4),
-                              assetName: 'assets/official_socso_logo.png',
+                              assetName: 'assets/dashboard_eis_icon.png',
+                              fallbackLabel: 'EIS',
                             ),
                             _dashboardReportCard(
                               width,
@@ -1500,7 +1532,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               'Salary, headcount and levy',
                               Icons.account_balance_outlined,
                               const Color(0xFFF0A46B),
-                              assetName: 'assets/official_hrdf_logo.png',
+                              assetName: 'assets/dashboard_hrdf_corp.png',
+                              fallbackLabel: 'HRD',
                             ),
                             _dashboardReportCard(
                               width,
@@ -1582,18 +1615,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 16 : 20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [theme.glassStrong, const Color(0xFF36204A)],
-        ),
+        color: Colors.white.withValues(alpha: .96),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: theme.glassBorder),
+        border: Border.all(color: const Color(0xFFE2E5EA)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF08040D).withValues(alpha: .32),
-            blurRadius: 30,
-            offset: const Offset(0, 16),
+            color: Colors.black.withValues(alpha: .07),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
@@ -1659,7 +1688,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   Text(
                     '$period · $payrollRecords payroll records',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: Colors.black54, fontSize: 12),
                   ),
                 ],
               ),
@@ -1667,7 +1696,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Text(
                 'Payroll command centre',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: const Color(0xFF20242D),
                   fontSize: compact ? 27 : 34,
                   height: 1.05,
                   fontWeight: FontWeight.w900,
@@ -1677,7 +1706,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const SizedBox(height: 8),
               const Text(
                 'Your workforce, payroll and operations — unified in real time.',
-                style: TextStyle(color: Colors.white60, height: 1.4),
+                style: TextStyle(color: Colors.black54, height: 1.4),
               ),
               SizedBox(height: compact ? 22 : 28),
               if (compact)
@@ -1746,9 +1775,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Ink(
           padding: const EdgeInsets.all(17),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .055),
+            color: const Color(0xFFF7F8FA),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: .10)),
+            border: Border.all(color: const Color(0xFFE1E4E8)),
           ),
           child: Row(
             children: [
@@ -1769,7 +1798,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Text(
                       label.toUpperCase(),
                       style: const TextStyle(
-                        color: Colors.white54,
+                        color: Colors.black54,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         letterSpacing: .8,
@@ -1781,7 +1810,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: const Color(0xFF20242D),
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
@@ -1789,7 +1818,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_outward, color: Colors.white38, size: 18),
+              const Icon(Icons.arrow_outward, color: Colors.black38, size: 18),
             ],
           ),
         ),
@@ -1804,13 +1833,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Text(
           title,
           style: const TextStyle(
-            color: Colors.white,
+            color: Color(0xFF20242D),
             fontSize: 19,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 3),
-        Text(subtitle, style: const TextStyle(color: Colors.white54)),
+        Text(subtitle, style: const TextStyle(color: Colors.black54)),
       ],
     );
   }
@@ -1834,9 +1863,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Ink(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: _portalTheme.glass,
+              color: Colors.white.withValues(alpha: .96),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withValues(alpha: .08)),
+              border: Border.all(color: const Color(0xFFE2E5EA)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1866,7 +1895,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: const Color(0xFF20242D),
                     fontSize: 23,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -.6,
@@ -1876,7 +1905,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: const Color(0xFF20242D),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1885,7 +1914,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   detail,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(color: Colors.black54, fontSize: 12),
                 ),
               ],
             ),
@@ -1986,18 +2015,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             const SizedBox(width: 11),
             Expanded(
-              child: Text(label, style: const TextStyle(color: Colors.white60)),
+              child: Text(label, style: const TextStyle(color: Colors.black54)),
             ),
             Text(
               value,
               style: const TextStyle(
-                color: Colors.white,
+                color: Color(0xFF20242D),
                 fontWeight: FontWeight.w800,
               ),
             ),
             if (onTap != null) ...[
               const SizedBox(width: 5),
-              const Icon(Icons.chevron_right, color: Colors.white30, size: 18),
+              const Icon(Icons.chevron_right, color: Colors.black38, size: 18),
             ],
           ],
         ),
@@ -6205,8 +6234,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Color accent, {
     String? imageUrl,
     String? assetName,
+    String? fallbackLabel,
   }) {
-    Widget fallbackIcon() => Icon(icon, color: accent, size: 21);
+    Widget fallbackIcon() => fallbackLabel == null
+        ? Icon(icon, color: accent, size: 21)
+        : FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              fallbackLabel,
+              style: TextStyle(
+                color: accent,
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
+              ),
+            ),
+          );
 
     final logo = imageUrl != null
         ? Image.network(
@@ -6244,15 +6286,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Ink(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: _portalTheme.glass,
+              color: Colors.white.withValues(alpha: .96),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: .08)),
+              border: Border.all(color: const Color(0xFFE2E5EA)),
             ),
             child: Row(
               children: [
                 Container(
-                  width: imageUrl != null || assetName != null ? 56 : 40,
-                  height: 44,
+                  width: imageUrl != null || assetName != null ? 66 : 40,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: imageUrl != null || assetName != null
                         ? Colors.white
@@ -6273,14 +6315,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     children: [
                       Text(title,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF20242D),
                               fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
                       Text(subtitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              color: Colors.white54, fontSize: 11)),
+                              color: Colors.black54, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -10574,6 +10616,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             'employees': 0,
             'malaysianEmployees': 0,
             'basic': 0.0,
+            'allowances': 0.0,
             'gross': 0.0,
             'epfEmployee': 0.0,
             'epfEmployer': 0.0,
@@ -10588,6 +10631,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           });
       summary['employees'] = (summary['employees'] as int) + 1;
       final basic = _number(row['basic_salary']);
+      final allowances = _number(row['elaun_kedatangan']) +
+          _number(row['elaun_perkhidmatan']) +
+          _number(row['elaun_kerajinan']);
       final gross = _payrollTotalEarnings(row);
       final unpaid = _number(row['unpaid_deduction']);
       final late = _number(row['late_deduction']);
@@ -10606,6 +10652,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _number(row['zakat']);
       final net = _number(row['net_pay'] ?? row['net_salary']);
       summary['basic'] = (summary['basic'] as double) + basic;
+      summary['allowances'] =
+          (summary['allowances'] as double) + allowances;
       summary['gross'] = (summary['gross'] as double) + gross;
       summary['epfEmployee'] =
           (summary['epfEmployee'] as double) + epfEmployee;
@@ -10662,6 +10710,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'employees': 0,
         'malaysianEmployees': 0,
         'basic': 0.0,
+        'allowances': 0.0,
         'gross': 0.0,
         'epfEmployee': 0.0,
         'epfEmployer': 0.0,
@@ -10677,6 +10726,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       const integerKeys = ['employees', 'malaysianEmployees'];
       const moneyKeys = [
         'basic',
+        'allowances',
         'gross',
         'epfEmployee',
         'epfEmployer',
@@ -10781,7 +10831,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final eisEmployer = _number(payroll['eis_employer'] ?? payroll['eisEmployer']);
 
       List<dynamic>? row;
-      if (report == 'EPF' && epfEmployee + epfEmployer > 0) {
+      final eligibleForEpf = epfEmployee + epfEmployer > 0 &&
+          (!isForeign || epfNo.isNotEmpty);
+      if (report == 'EPF' && eligibleForEpf) {
         row = [name, exportIc, epfNo, epfEmployee, epfEmployer,
           _payrollTotalEarnings(payroll)];
       } else if (report == 'SOCSO') {
@@ -11065,7 +11117,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ? 'Malaysian employee count, basic salary, levy wage base, and both 0.5% and 1% levy options. Fixed service and diligence allowances are included; overtime and variable attendance allowance are excluded.'
       : report == 'Payroll Summary'
           ? 'Branch totals for earnings, statutory contributions, deductions and net payroll.'
-          : '$report records use the same payroll calculations and eligibility rules as RHB Layout.';
+          : report == 'Payroll'
+              ? 'Branch employee count, basic salary, allowances, gross pay, deductions and net pay.'
+              : '$report records use the same payroll calculations and eligibility rules as RHB Layout.';
 
   List<String> _dashboardReportHeaders(String report) {
     if (report == 'HRDF') {
@@ -11074,7 +11128,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (report == 'Payroll Summary') {
       return const ['BRANCH', 'STAFF', 'BASIC', 'GROSS', 'EPF EE', 'EPF ER', 'SOCSO EE', 'SOCSO ER', 'EIS EE', 'EIS ER', 'DEDUCTIONS', 'NET PAY'];
     }
-    return const ['BRANCH', 'EMPLOYEES', 'BASIC SALARY', 'GROSS PAY', 'DEDUCTIONS', 'NET PAY'];
+    return const ['BRANCH', 'EMPLOYEES', 'BASIC SALARY', 'ALLOWANCES', 'GROSS PAY', 'DEDUCTIONS', 'NET PAY'];
   }
 
   List<dynamic> _dashboardReportValues(
@@ -11086,7 +11140,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (report == 'Payroll Summary') {
       return [row['branch'], row['employees'], row['basic'], row['gross'], row['epfEmployee'], row['epfEmployer'], row['socsoEmployee'], row['socsoEmployer'], row['eisEmployee'], row['eisEmployer'], row['deductions'], row['net']];
     }
-    return [row['branch'], row['employees'], row['basic'], row['gross'], row['deductions'], row['net']];
+    return [row['branch'], row['employees'], row['basic'], row['allowances'], row['gross'], row['deductions'], row['net']];
   }
 
   Widget _dashboardReportPreview(
@@ -11104,8 +11158,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 .toList(),
             rows: rows.map((row) {
               final values = _dashboardReportValues(report, row);
-              return DataRow(cells: values.map((value) {
-                final text = value is num && value is! int
+              return DataRow(cells: values.asMap().entries.map((entry) {
+                final value = entry.value;
+                final text = entry.key >= 2 && value is num
                     ? NumberFormat('#,##0.00').format(value)
                     : value.toString();
                 return DataCell(Text(text));
@@ -11738,7 +11793,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // JUMLAH = GROSS SALARY
         // ----------------------------------------------------------
 
-        if (epfEmployee + epfEmployer > 0) {
+        final eligibleForEpfExport = epfEmployee + epfEmployer > 0 &&
+            (!isForeign || epfNo.isNotEmpty);
+        if (eligibleForEpfExport) {
           final epfRow = <dynamic>[
             name,
             '',
@@ -12111,14 +12168,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     Widget child,
   ) {
     final isDashboard = selectedPage == 0;
-    final theme = _portalTheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDashboard ? theme.glass : Colors.white,
+        color: Colors.white.withValues(alpha: isDashboard ? .96 : 1),
         borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
-        border: isDashboard ? Border.all(color: theme.glassBorder) : null,
+        border: isDashboard
+            ? Border.all(color: const Color(0xFFE2E5EA))
+            : null,
         boxShadow: const [
           BoxShadow(
             color: Color(0x08000000),
@@ -12152,7 +12210,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     VoidCallback? onTap,
   ]) {
     final isDashboard = selectedPage == 0;
-    final theme = _portalTheme;
     return SizedBox(
       width: 220,
       child: InkWell(
@@ -12163,7 +12220,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isDashboard ? theme.glass : Colors.white,
+            color: Colors.white.withValues(alpha: isDashboard ? .96 : 1),
             borderRadius: BorderRadius.circular(
               isDashboard ? 18 : 14,
             ),
@@ -12202,7 +12259,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 title,
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDashboard ? Colors.white60 : Colors.black54,
+                  color: Colors.black54,
                 ),
               ),
               const SizedBox(
@@ -12213,7 +12270,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isDashboard ? Colors.white : Colors.black87,
+                  color: Colors.black87,
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                 ),
@@ -12241,12 +12298,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
         width: 150,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDashboard ? theme.glassStrong : const Color(0xFFF5F7FB),
+          color: const Color(0xFFF7F8FA),
           borderRadius: BorderRadius.circular(
             12,
           ),
           border: Border.all(
-            color: isDashboard ? theme.glassBorder : Colors.black12,
+            color: isDashboard ? const Color(0xFFE1E4E8) : Colors.black12,
           ),
         ),
         child: Column(
@@ -12259,7 +12316,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Text(
               title,
               style: TextStyle(
-                color: isDashboard ? Colors.white : Colors.black87,
+                color: Colors.black87,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -12273,7 +12330,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String title,
     String value,
   ) {
-    final isDashboard = selectedPage == 0;
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: 6,
@@ -12284,7 +12340,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Text(
               title,
               style: TextStyle(
-                color: isDashboard ? Colors.white60 : Colors.black54,
+                color: Colors.black54,
                 fontSize: 13,
               ),
             ),
