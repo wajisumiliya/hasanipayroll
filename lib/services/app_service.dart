@@ -215,35 +215,6 @@ class AppService extends ChangeNotifier {
 
   String? get currentEmployeeId => _currentUser?.employeeId;
 
-  Future<Map<String, dynamic>> getCompanyLoginTree() async {
-    try {
-      final response = await _supabase.rpc('get_company_login_tree');
-      return response is Map
-          ? Map<String, dynamic>.from(response)
-          : <String, dynamic>{};
-    } catch (e) {
-      debugPrint('Company login tree load error: $e');
-      return <String, dynamic>{};
-    }
-  }
-
-  Future<Map<String, dynamic>> recordCompanyTreeLogin() async {
-    final user = _currentUser;
-    if (user == null || !user.isEmployee) {
-      return getCompanyLoginTree();
-    }
-
-    try {
-      final response = await _supabase.rpc('record_company_tree_login');
-      return response is Map
-          ? Map<String, dynamic>.from(response)
-          : <String, dynamic>{};
-    } catch (e) {
-      debugPrint('Company login tree update error: $e');
-      return <String, dynamic>{};
-    }
-  }
-
   Employee? get employee => currentEmployee;
 
   // ==========================================================================

@@ -28,8 +28,6 @@ class _LoginScreenState extends State<LoginScreen>
   bool loading = false;
 
   String? errorMessage;
-  int _treeTotalGrowth = 0;
-  int _treeTodayGrowth = 0;
 
   late final AnimationController _entranceController;
   late final AnimationController _ambientController;
@@ -56,21 +54,8 @@ class _LoginScreenState extends State<LoginScreen>
       curve: const Interval(.18, 1, curve: Curves.easeOutCubic),
     );
     _entranceController.forward();
-    _loadCompanyTree();
     _restoreSession();
   }
-
-  Future<void> _loadCompanyTree() async {
-    final stats = await service.getCompanyLoginTree();
-    if (!mounted || stats.isEmpty) return;
-    setState(() {
-      _treeTotalGrowth = _intValue(stats['totalGrowth']);
-      _treeTodayGrowth = _intValue(stats['todayGrowth']);
-    });
-  }
-
-  int _intValue(dynamic value) =>
-      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 
   Future<void> _restoreSession() async {
     try {
@@ -366,14 +351,6 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() {
         loading = false;
       });
-
-      final treeStats = await service.recordCompanyTreeLogin();
-      if (mounted && treeStats.isNotEmpty) {
-        setState(() {
-          _treeTotalGrowth = _intValue(treeStats['totalGrowth']);
-          _treeTodayGrowth = _intValue(treeStats['todayGrowth']);
-        });
-      }
 
       _openCorrectPortal(user);
     } catch (e) {
@@ -788,8 +765,10 @@ class _LoginScreenState extends State<LoginScreen>
                                       height: (constraints.maxHeight - 90)
                                           .clamp(480.0, 720.0),
                                       bottomExtension: 95,
-                                      totalGrowth: _treeTotalGrowth,
-                                      todayGrowth: _treeTodayGrowth,
+                                      screenRightGap: math.max(
+                                        0,
+                                        (constraints.maxWidth - 1180) / 2,
+                                      ),
                                     ),
                                     _heroEntrance,
                                     42,
@@ -812,9 +791,13 @@ class _LoginScreenState extends State<LoginScreen>
     _DailyLoginTheme theme, {
     required double height,
     required double bottomExtension,
-    required int totalGrowth,
-    required int todayGrowth,
+    required double screenRightGap,
   }) {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year);
+    final dayNumber = now.difference(firstDay).inDays + 1;
+    final daysInYear = DateTime(now.year + 1).difference(firstDay).inDays;
+
     return Transform.translate(
       offset: Offset(0, bottomExtension),
       child: SizedBox(
@@ -823,33 +806,37 @@ class _LoginScreenState extends State<LoginScreen>
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Positioned(
-              left: 0,
-              top: 45,
-              width: 230,
-              height: 270,
-              child: _companyTreeCard(
-                theme,
-                totalGrowth: totalGrowth,
-                todayGrowth: todayGrowth,
-              ),
-            ),
             Align(
-              alignment: Alignment.bottomRight,
-              child: Image.asset(
-                'assets/login_cat_cutout.png',
-                width: double.infinity,
-                height: height,
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomRight,
-                filterQuality: FilterQuality.high,
-                errorBuilder: (_, error, __) => Center(
-                  child: Icon(
-                    Icons.pets_rounded,
-                    size: 180,
-                    color: theme.accent1.withValues(alpha: .8),
+              alignment: Alignment.bottomLeft,
+              child: Transform.translate(
+                offset: const Offset(-90, 0),
+                child: Image.asset(
+                  'assets/login_cat_cutout.png',
+                  width: double.infinity,
+                  height: height,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomRight,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (_, error, __) => Center(
+                    child: Icon(
+                      Icons.pets_rounded,
+                      size: 180,
+                      color: theme.accent1.withValues(alpha: .8),
+                    ),
                   ),
                 ),
+              ),
+            ),
+            Positioned(
+              right: -screenRightGap,
+              bottom: 0,
+              width: 300,
+              height: math.min(height, 520),
+              child: _companyTreeCard(
+                theme,
+                dayNumber: dayNumber,
+                daysInYear: daysInYear,
+                year: now.year,
               ),
             ),
           ],
@@ -860,37 +847,52 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _companyTreeCard(
     _DailyLoginTheme theme, {
-    required int totalGrowth,
-    required int todayGrowth,
+    required int dayNumber,
+    required int daysInYear,
+    required int year,
   }) {
-    final progress = (totalGrowth / 120).clamp(.08, 1.0);
-    return Column(
+    final progress = (dayNumber / daysInYear).clamp(.01, 1.0);
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        Expanded(
-          child: CustomPaint(
-            painter: _CompanyTreePainter(
-              progress: progress,
-              accent: theme.accent1,
+        CustomPaint(
+          painter: _CompanyTreePainter(
+            progress: progress,
+            accent: theme.accent1,
+          ),
+        ),
+        if (loading)
+          CustomPaint(
+            painter: _WateringPainter(
+              animation: _ambientController,
+              color: const Color(0xFF74D7FF),
             ),
-            child: const SizedBox.expand(),
           ),
-        ),
-        Text(
-          'GROWING TOGETHER',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: .92),
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$totalGrowth growth days  •  $todayGrowth today',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: .72),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+        Positioned(
+          top: 12,
+          left: 0,
+          right: 0,
+          child: Column(
+            children: [
+              Text(
+                'GROWING TOGETHER',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: .92),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'DAY $dayNumber / $daysInYear  •  TREE $year',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: .72),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1436,6 +1438,47 @@ class _LoginScreenState extends State<LoginScreen>
   }
 }
 
+class _WateringPainter extends CustomPainter {
+  _WateringPainter({required this.animation, required this.color})
+      : super(repaint: animation);
+
+  final Animation<double> animation;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color.withValues(alpha: .82);
+    final streamX = size.width * .5;
+    for (var i = 0; i < 12; i++) {
+      final phase = (animation.value * 12 + i / 12) % 1.0;
+      final sway = math.sin((phase * math.pi * 4) + i) * 13;
+      final center = Offset(
+        streamX + sway,
+        -18 + phase * size.height * .68,
+      );
+      final drop = Path()
+        ..moveTo(center.dx, center.dy - 8)
+        ..quadraticBezierTo(
+          center.dx - 6,
+          center.dy + 1,
+          center.dx,
+          center.dy + 7,
+        )
+        ..quadraticBezierTo(
+          center.dx + 6,
+          center.dy + 1,
+          center.dx,
+          center.dy - 8,
+        );
+      canvas.drawPath(drop, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WateringPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 class _CompanyTreePainter extends CustomPainter {
   const _CompanyTreePainter({required this.progress, required this.accent});
 
@@ -1444,7 +1487,7 @@ class _CompanyTreePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final groundY = size.height * .91;
+    final groundY = size.height * .985;
     final centerX = size.width * .5;
     final treeHeight = size.height * (.38 + progress * .46);
     final topY = groundY - treeHeight;
@@ -1464,8 +1507,8 @@ class _CompanyTreePainter extends CustomPainter {
     for (var i = 0; i < branchCount; i++) {
       final side = i.isEven ? -1.0 : 1.0;
       final startY = groundY - treeHeight * (.35 + i * .075);
-      final length = size.width * (.16 + progress * .13) *
-          (1 - i / (branchCount * 2.2));
+      final length =
+          size.width * (.16 + progress * .13) * (1 - i / (branchCount * 2.2));
       final end = Offset(centerX + side * length, startY - treeHeight * .18);
       final branch = Path()
         ..moveTo(centerX, startY)
