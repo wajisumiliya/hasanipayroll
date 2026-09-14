@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -27,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen>
   bool loading = false;
 
   String? errorMessage;
+  int _treeTotalGrowth = 0;
+  int _treeTodayGrowth = 0;
 
   late final AnimationController _entranceController;
   late final AnimationController _ambientController;
@@ -53,8 +56,21 @@ class _LoginScreenState extends State<LoginScreen>
       curve: const Interval(.18, 1, curve: Curves.easeOutCubic),
     );
     _entranceController.forward();
+    _loadCompanyTree();
     _restoreSession();
   }
+
+  Future<void> _loadCompanyTree() async {
+    final stats = await service.getCompanyLoginTree();
+    if (!mounted || stats.isEmpty) return;
+    setState(() {
+      _treeTotalGrowth = _intValue(stats['totalGrowth']);
+      _treeTodayGrowth = _intValue(stats['todayGrowth']);
+    });
+  }
+
+  int _intValue(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 
   Future<void> _restoreSession() async {
     try {
@@ -350,6 +366,14 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() {
         loading = false;
       });
+
+      final treeStats = await service.recordCompanyTreeLogin();
+      if (mounted && treeStats.isNotEmpty) {
+        setState(() {
+          _treeTotalGrowth = _intValue(treeStats['totalGrowth']);
+          _treeTodayGrowth = _intValue(treeStats['todayGrowth']);
+        });
+      }
 
       _openCorrectPortal(user);
     } catch (e) {
@@ -764,6 +788,8 @@ class _LoginScreenState extends State<LoginScreen>
                                       height: (constraints.maxHeight - 90)
                                           .clamp(480.0, 720.0),
                                       bottomExtension: 95,
+                                      totalGrowth: _treeTotalGrowth,
+                                      todayGrowth: _treeTodayGrowth,
                                     ),
                                     _heroEntrance,
                                     42,
@@ -786,31 +812,88 @@ class _LoginScreenState extends State<LoginScreen>
     _DailyLoginTheme theme, {
     required double height,
     required double bottomExtension,
+    required int totalGrowth,
+    required int todayGrowth,
   }) {
     return Transform.translate(
       offset: Offset(0, bottomExtension),
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: Align(
-          alignment: Alignment.bottomRight,
-          child: Image.asset(
-            'assets/login_cat_cutout.png',
-            width: double.infinity,
-            height: height,
-            fit: BoxFit.contain,
-            alignment: Alignment.bottomRight,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (_, error, __) => Center(
-              child: Icon(
-                Icons.pets_rounded,
-                size: 180,
-                color: theme.accent1.withValues(alpha: .8),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 0,
+              top: 45,
+              width: 230,
+              height: 270,
+              child: _companyTreeCard(
+                theme,
+                totalGrowth: totalGrowth,
+                todayGrowth: todayGrowth,
               ),
             ),
-          ),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Image.asset(
+                'assets/login_cat_cutout.png',
+                width: double.infinity,
+                height: height,
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomRight,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (_, error, __) => Center(
+                  child: Icon(
+                    Icons.pets_rounded,
+                    size: 180,
+                    color: theme.accent1.withValues(alpha: .8),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _companyTreeCard(
+    _DailyLoginTheme theme, {
+    required int totalGrowth,
+    required int todayGrowth,
+  }) {
+    final progress = (totalGrowth / 120).clamp(.08, 1.0);
+    return Column(
+      children: [
+        Expanded(
+          child: CustomPaint(
+            painter: _CompanyTreePainter(
+              progress: progress,
+              accent: theme.accent1,
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+        Text(
+          'GROWING TOGETHER',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: .92),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$totalGrowth growth days  •  $todayGrowth today',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: .72),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1351,6 +1434,96 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+}
+
+class _CompanyTreePainter extends CustomPainter {
+  const _CompanyTreePainter({required this.progress, required this.accent});
+
+  final double progress;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final groundY = size.height * .91;
+    final centerX = size.width * .5;
+    final treeHeight = size.height * (.38 + progress * .46);
+    final topY = groundY - treeHeight;
+    final trunk = Paint()
+      ..color = const Color(0xFF8C5B38)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 7 + progress * 5;
+
+    final trunkPath = Path()
+      ..moveTo(centerX, groundY)
+      ..cubicTo(centerX - 5, groundY - treeHeight * .35, centerX + 7,
+          groundY - treeHeight * .68, centerX, topY);
+    canvas.drawPath(trunkPath, trunk);
+
+    final branchCount = 3 + (progress * 5).floor();
+    for (var i = 0; i < branchCount; i++) {
+      final side = i.isEven ? -1.0 : 1.0;
+      final startY = groundY - treeHeight * (.35 + i * .075);
+      final length = size.width * (.16 + progress * .13) *
+          (1 - i / (branchCount * 2.2));
+      final end = Offset(centerX + side * length, startY - treeHeight * .18);
+      final branch = Path()
+        ..moveTo(centerX, startY)
+        ..quadraticBezierTo(
+          centerX + side * length * .42,
+          startY - treeHeight * .04,
+          end.dx,
+          end.dy,
+        );
+      canvas.drawPath(
+        branch,
+        trunk
+          ..strokeWidth = 3.2 + progress * 2
+          ..color = const Color(0xFF96613B),
+      );
+    }
+
+    final leafCount = 5 + (progress * 34).floor();
+    for (var i = 0; i < leafCount; i++) {
+      final angle = i * 2.399963;
+      final radius = math.sqrt((i + 1) / leafCount);
+      final crownWidth = size.width * (.17 + progress * .27);
+      final crownHeight = treeHeight * (.20 + progress * .25);
+      final leafCenter = Offset(
+        centerX + math.cos(angle) * crownWidth * radius,
+        topY + crownHeight * .56 + math.sin(angle) * crownHeight * radius,
+      );
+      final leafRadius = 4.0 + progress * 3.2;
+      final leafPaint = Paint()
+        ..color = Color.lerp(
+          const Color(0xFF69B96B),
+          accent,
+          (i % 5) * .055,
+        )!
+            .withValues(alpha: .92);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: leafCenter,
+          width: leafRadius * 1.55,
+          height: leafRadius * 2.15,
+        ),
+        leafPaint,
+      );
+    }
+
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(centerX, groundY + 3),
+        width: size.width * .55,
+        height: 9,
+      ),
+      Paint()..color = Colors.black.withValues(alpha: .18),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CompanyTreePainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.accent != accent;
 }
 
 class _DailyLoginTheme {
