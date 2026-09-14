@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
 
@@ -26,6 +27,9 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool obscurePassword = true;
   bool loading = false;
+  bool _idleCatAwake = false;
+  Timer? _idleStartTimer;
+  Timer? _idleBlinkTimer;
 
   String? errorMessage;
 
@@ -60,7 +64,27 @@ class _LoginScreenState extends State<LoginScreen>
       curve: const Interval(.18, 1, curve: Curves.easeOutCubic),
     );
     _entranceController.forward();
+    _startIdleCatCycle();
     _restoreSession();
+  }
+
+  void _startIdleCatCycle() {
+    _idleStartTimer?.cancel();
+    _idleBlinkTimer?.cancel();
+    _idleStartTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted || loading) return;
+      setState(() => _idleCatAwake = true);
+      _idleBlinkTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (!mounted || loading) return;
+        setState(() => _idleCatAwake = !_idleCatAwake);
+      });
+    });
+  }
+
+  void _stopIdleCatCycle() {
+    _idleStartTimer?.cancel();
+    _idleBlinkTimer?.cancel();
+    _idleCatAwake = false;
   }
 
   @override
@@ -94,6 +118,8 @@ class _LoginScreenState extends State<LoginScreen>
     _entranceController.dispose();
     _ambientController.dispose();
     _rainController.dispose();
+    _idleStartTimer?.cancel();
+    _idleBlinkTimer?.cancel();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -285,6 +311,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
+    _stopIdleCatCycle();
 
     final username = usernameController.text.trim();
     final password = passwordController.text;
@@ -293,6 +320,7 @@ class _LoginScreenState extends State<LoginScreen>
       _showError(
         'Please enter your username or Employee ID.',
       );
+      _startIdleCatCycle();
       return;
     }
 
@@ -300,6 +328,7 @@ class _LoginScreenState extends State<LoginScreen>
       _showError(
         'Please enter your password.',
       );
+      _startIdleCatCycle();
       return;
     }
 
@@ -328,6 +357,8 @@ class _LoginScreenState extends State<LoginScreen>
           errorMessage = result;
         });
 
+        _startIdleCatCycle();
+
         return;
       }
 
@@ -345,6 +376,8 @@ class _LoginScreenState extends State<LoginScreen>
 
         await _showFirstLoginPasswordDialog();
 
+        if (mounted) _startIdleCatCycle();
+
         return;
       }
 
@@ -361,6 +394,8 @@ class _LoginScreenState extends State<LoginScreen>
           errorMessage =
               'Login succeeded, but your account information could not be loaded.';
         });
+
+        _startIdleCatCycle();
 
         return;
       }
@@ -381,6 +416,7 @@ class _LoginScreenState extends State<LoginScreen>
         errorMessage = 'Unable to connect to the payroll server. '
             'Please check your connection and try again.';
       });
+      _startIdleCatCycle();
     }
   }
 
@@ -842,10 +878,10 @@ class _LoginScreenState extends State<LoginScreen>
               child: Transform.translate(
                 offset: const Offset(-155, 0),
                 child: Image.asset(
-                  loading
+                  loading || _idleCatAwake
                       ? 'assets/login_cat_open_eyes.png'
                       : 'assets/login_cat_cutout.png',
-                  key: ValueKey(loading),
+                  key: ValueKey(loading || _idleCatAwake),
                   width: double.infinity,
                   height: height,
                   fit: BoxFit.contain,
