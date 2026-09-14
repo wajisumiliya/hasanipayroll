@@ -10888,7 +10888,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         };
         document.addPage(pw.MultiPage(
           pageFormat: PdfPageFormat.a3.landscape,
-          margin: const pw.EdgeInsets.fromLTRB(14, 10, 14, 18),
+          margin: const pw.EdgeInsets.fromLTRB(6, 8, 6, 14),
           header: (_) => pw.Column(children: [
             _brandedPdfHeader(
                 'Payroll - $branchName', selectedPayrollMonth, printedAt, logo),
@@ -10901,13 +10901,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
               data: data,
               columnWidths: columnWidths,
               headerStyle:
-                  pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold),
+                  pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold),
               headerDecoration:
                   const pw.BoxDecoration(color: PdfColors.grey200),
-              cellStyle: const pw.TextStyle(fontSize: 7),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              textStyleBuilder: (_, __, rowNumber) => rowNumber == data.length
+                  ? pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                    )
+                  : null,
               cellPadding:
-                  const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2.5),
-              border: pw.TableBorder.all(color: PdfColors.grey500, width: .35),
+                  const pw.EdgeInsets.symmetric(horizontal: 1.5, vertical: 3),
+              border: pw.TableBorder.all(color: PdfColors.grey700, width: .7),
             ),
           ],
         ));
