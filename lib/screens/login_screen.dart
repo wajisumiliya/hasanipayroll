@@ -31,8 +31,10 @@ class _LoginScreenState extends State<LoginScreen>
 
   late final AnimationController _entranceController;
   late final AnimationController _ambientController;
+  late final AnimationController _rainController;
   late final Animation<double> _heroEntrance;
   late final Animation<double> _formEntrance;
+  bool _loginImagesPrecached = false;
 
   @override
   void initState() {
@@ -45,6 +47,10 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(seconds: 9),
     )..repeat(reverse: true);
+    _rainController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
     _heroEntrance = CurvedAnimation(
       parent: _entranceController,
       curve: const Interval(0, .72, curve: Curves.easeOutCubic),
@@ -55,6 +61,16 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _entranceController.forward();
     _restoreSession();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loginImagesPrecached) return;
+    _loginImagesPrecached = true;
+    precacheImage(const AssetImage('assets/login_cat_cutout.png'), context);
+    precacheImage(const AssetImage('assets/login_cat_open_eyes.png'), context);
+    precacheImage(const AssetImage('assets/login_natural_tree.png'), context);
   }
 
   Future<void> _restoreSession() async {
@@ -77,6 +93,7 @@ class _LoginScreenState extends State<LoginScreen>
   void dispose() {
     _entranceController.dispose();
     _ambientController.dispose();
+    _rainController.dispose();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -718,6 +735,15 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
+              if (!compact)
+                Positioned(
+                  right: 18,
+                  bottom: 0,
+                  width: 390,
+                  height: math.min(constraints.maxHeight - 20, 650),
+                  child: _companyTreeForToday(theme),
+                ),
+
               SafeArea(
                 child: Center(
                   child: SingleChildScrollView(
@@ -765,10 +791,6 @@ class _LoginScreenState extends State<LoginScreen>
                                       height: (constraints.maxHeight - 90)
                                           .clamp(480.0, 720.0),
                                       bottomExtension: 95,
-                                      screenRightGap: math.max(
-                                        0,
-                                        (constraints.maxWidth - 1180) / 2,
-                                      ),
                                     ),
                                     _heroEntrance,
                                     42,
@@ -780,6 +802,21 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
+              if (!compact && loading)
+                Positioned(
+                  width: 390,
+                  top: 0,
+                  right: 18,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _WateringPainter(
+                        animation: _rainController,
+                        color: const Color(0xFF74D7FF),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           );
         },
@@ -791,13 +828,7 @@ class _LoginScreenState extends State<LoginScreen>
     _DailyLoginTheme theme, {
     required double height,
     required double bottomExtension,
-    required double screenRightGap,
   }) {
-    final now = DateTime.now();
-    final firstDay = DateTime(now.year);
-    final dayNumber = now.difference(firstDay).inDays + 1;
-    final daysInYear = DateTime(now.year + 1).difference(firstDay).inDays;
-
     return Transform.translate(
       offset: Offset(0, bottomExtension),
       child: SizedBox(
@@ -810,59 +841,40 @@ class _LoginScreenState extends State<LoginScreen>
               alignment: Alignment.bottomLeft,
               child: Transform.translate(
                 offset: const Offset(-155, 0),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: Image.asset(
-                    loading
-                        ? 'assets/login_cat_open_eyes.png'
-                        : 'assets/login_cat_cutout.png',
-                    key: ValueKey(loading),
-                    width: double.infinity,
-                    height: height,
-                    fit: BoxFit.contain,
-                    alignment: Alignment.bottomRight,
-                    filterQuality: FilterQuality.high,
-                    errorBuilder: (_, error, __) => Center(
-                      child: Icon(
-                        Icons.pets_rounded,
-                        size: 180,
-                        color: theme.accent1.withValues(alpha: .8),
-                      ),
+                child: Image.asset(
+                  loading
+                      ? 'assets/login_cat_open_eyes.png'
+                      : 'assets/login_cat_cutout.png',
+                  key: ValueKey(loading),
+                  width: double.infinity,
+                  height: height,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomRight,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (_, error, __) => Center(
+                    child: Icon(
+                      Icons.pets_rounded,
+                      size: 180,
+                      color: theme.accent1.withValues(alpha: .8),
                     ),
                   ),
                 ),
               ),
             ),
-            Positioned(
-              right: -screenRightGap + 18,
-              bottom: 0,
-              width: 400,
-              height: math.min(height, 590),
-              child: _companyTreeCard(
-                theme,
-                dayNumber: dayNumber,
-                daysInYear: daysInYear,
-                year: now.year,
-              ),
-            ),
-            if (loading)
-              Positioned(
-                left: -40,
-                right: -screenRightGap,
-                top: -bottomExtension,
-                bottom: 0,
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: _WateringPainter(
-                      animation: _ambientController,
-                      color: const Color(0xFF74D7FF),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _companyTreeForToday(_DailyLoginTheme theme) {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year);
+    return _companyTreeCard(
+      theme,
+      dayNumber: now.difference(firstDay).inDays + 1,
+      daysInYear: DateTime(now.year + 1).difference(firstDay).inDays,
+      year: now.year,
     );
   }
 
