@@ -1454,7 +1454,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           title: 'Total workforce',
                           value: employees.length.toString(),
                           icon: Icons.groups_2_outlined,
-                          accent: const Color(0xFFE8C778),
+                          accent: const Color(0xFF243B8F),
                           detail: '$departments departments',
                           onTap: () => _showEmployeeDetails(
                             'All Employees',
@@ -1466,7 +1466,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           title: 'Active employees',
                           value: activeEmployees.toString(),
                           icon: Icons.verified_user_outlined,
-                          accent: const Color(0xFF73D6AE),
+                          accent: const Color(0xFFED1C24),
                           detail: employees.isEmpty
                               ? 'No workforce data'
                               : '${(activeEmployees / employees.length * 100).round()}% of workforce',
@@ -1480,7 +1480,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           title: 'Attention needed',
                           value: inactiveEmployees.toString(),
                           icon: Icons.radar_outlined,
-                          accent: const Color(0xFFF0A46B),
+                          accent: const Color(0xFF243B8F),
                           detail: 'Inactive employee records',
                           onTap: () => _showEmployeeDetails(
                             'Inactive Employees',
@@ -1492,7 +1492,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           title: 'Organisation',
                           value: branches.toString(),
                           icon: Icons.account_tree_outlined,
-                          accent: const Color(0xFFB79AE2),
+                          accent: const Color(0xFFED1C24),
                           detail:
                               '$branches branches · $departments departments',
                           onTap: () => _showBranchFlow(employees),
@@ -1525,14 +1525,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               width,
                               'Payroll',
                               Icons.payments_outlined,
-                              const Color(0xFFB79AE2),
+                              const Color(0xFF243B8F),
                               assetName: 'assets/hb_payroll_icon.png',
                             ),
                             _dashboardReportCard(
                               width,
                               'EPF',
                               Icons.savings_outlined,
-                              const Color(0xFFE8C778),
+                              const Color(0xFFED1C24),
                               imageBytes: dashboardEpfLogoBytes,
                               fallbackLabel: 'KWSP',
                             ),
@@ -1540,7 +1540,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               width,
                               'SOCSO',
                               Icons.health_and_safety_outlined,
-                              const Color(0xFF73D6AE),
+                              const Color(0xFF243B8F),
                               imageBytes: dashboardSocsoLogoBytes,
                               fallbackLabel: 'SOCSO',
                             ),
@@ -1548,7 +1548,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               width,
                               'EIS',
                               Icons.shield_outlined,
-                              const Color(0xFF84B6F4),
+                              const Color(0xFFED1C24),
                               imageBytes: dashboardEisLogoBytes,
                               fallbackLabel: 'EIS',
                             ),
@@ -1556,7 +1556,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               width,
                               'HRDF',
                               Icons.account_balance_outlined,
-                              const Color(0xFFF0A46B),
+                              const Color(0xFF243B8F),
                               imageBytes: dashboardHrdfLogoBytes,
                               fallbackLabel: 'HRD',
                             ),
@@ -1564,7 +1564,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               width,
                               'Payroll Summary',
                               Icons.summarize_outlined,
-                              const Color(0xFFE58AAE),
+                              const Color(0xFFED1C24),
                               assetName: 'assets/hb_payroll_icon.png',
                             ),
                           ],
@@ -1740,7 +1740,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'Gross payroll',
                       _money(totalGross),
                       Icons.account_balance_wallet_outlined,
-                      theme.accent,
+                      const Color(0xFF243B8F),
                       onGrossTap,
                     ),
                     const SizedBox(height: 10),
@@ -1748,7 +1748,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'Net payroll',
                       _money(totalNet),
                       Icons.payments_outlined,
-                      const Color(0xFF73D6AE),
+                      const Color(0xFFED1C24),
                       onNetTap,
                     ),
                   ],
@@ -1761,7 +1761,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'Gross payroll',
                         _money(totalGross),
                         Icons.account_balance_wallet_outlined,
-                        theme.accent,
+                        const Color(0xFF243B8F),
                         onGrossTap,
                       ),
                     ),
@@ -1771,7 +1771,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'Net payroll',
                         _money(totalNet),
                         Icons.payments_outlined,
-                        const Color(0xFF73D6AE),
+                        const Color(0xFFED1C24),
                         onNetTap,
                       ),
                     ),
@@ -1799,9 +1799,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Ink(
           padding: const EdgeInsets.all(17),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .18),
+            color: accent.withValues(alpha: .045),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE1E4E8)),
+            border: Border.all(color: accent, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: .12),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -1887,9 +1894,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Ink(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.transparent,
+              color: accent.withValues(alpha: .035),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E5EA)),
+              border: Border.all(color: accent, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: .11),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -6312,9 +6326,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.transparent,
+              color: accent.withValues(alpha: .035),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E5EA)),
+              border: Border.all(color: accent, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: .11),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Row(
               children: [
