@@ -1641,7 +1641,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFE2E5EA)),
+        border: _hasaniOuterBorder(2.2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .07),
@@ -2901,6 +2901,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             elevation: 0,
                             margin: const EdgeInsets.only(
                               bottom: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              side: const BorderSide(
+                                color: Color(0xFF243B8F),
+                                width: 1.8,
+                              ),
                             ),
                             child: ListTile(
                               leading: CircleAvatar(
@@ -5626,6 +5633,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     return Card(
                       elevation: 0,
                       margin: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: BorderSide(
+                          color: index.isEven
+                              ? const Color(0xFF243B8F)
+                              : const Color(0xFFED1C24),
+                          width: 1.8,
+                        ),
+                      ),
                       child: ListTile(
                         dense: true,
                         visualDensity: VisualDensity.compact,
@@ -5837,7 +5853,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                             side: BorderSide(
-                                color: Colors.blueGrey.withValues(alpha: .20)),
+                              color: index.isEven
+                                  ? const Color(0xFF243B8F)
+                                  : const Color(0xFFED1C24),
+                              width: 1.8,
+                            ),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(14),
@@ -8354,7 +8374,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: _hasaniOuterBorder(2),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -8401,7 +8421,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 side: BorderSide(
-                                  color: Colors.blueGrey.withValues(alpha: .20),
+                                  color: index.isEven
+                                      ? const Color(0xFF243B8F)
+                                      : const Color(0xFFED1C24),
+                                  width: 1.8,
                                 ),
                               ),
                               child: InkWell(
@@ -8500,7 +8523,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: _hasaniOuterBorder(2),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -8576,9 +8599,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.grey.shade200,
-        ),
+        border: _hasaniOuterBorder(1.8),
       ),
       child: Row(
         children: [
@@ -13157,6 +13178,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  Border _hasaniOuterBorder([double width = 2]) => Border(
+        top: BorderSide(color: const Color(0xFF243B8F), width: width),
+        left: BorderSide(color: const Color(0xFF243B8F), width: width),
+        right: BorderSide(color: const Color(0xFFED1C24), width: width),
+        bottom: BorderSide(color: const Color(0xFFED1C24), width: width),
+      );
+
   Widget _panel(
     String title,
     Widget child,
@@ -13168,7 +13196,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(
         color: isDashboard ? Colors.transparent : Colors.white,
         borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
-        border: isDashboard ? Border.all(color: const Color(0xFFE2E5EA)) : null,
+        border: _hasaniOuterBorder(2),
         boxShadow: const [
           BoxShadow(
             color: Color(0x08000000),
