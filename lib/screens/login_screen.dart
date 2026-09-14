@@ -778,52 +778,22 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _desktopCatHero(_DailyLoginTheme theme) {
-    return AspectRatio(
-      aspectRatio: 1.12,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(34),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: .38),
-            width: 1.3,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .24),
-              blurRadius: 60,
-              offset: const Offset(0, 28),
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: FractionallySizedBox(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: Image.asset(
+          'assets/login_cat_cutout.png',
+          fit: BoxFit.contain,
+          alignment: Alignment.bottomRight,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, error, __) => Center(
+            child: Icon(
+              Icons.pets_rounded,
+              size: 180,
+              color: theme.accent1.withValues(alpha: .8),
             ),
-            BoxShadow(
-              color: theme.accent1.withValues(alpha: .22),
-              blurRadius: 38,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(33),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset(
-                'assets/login_cat_hero.png',
-                fit: BoxFit.cover,
-                alignment: Alignment.centerRight,
-              ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.accent1.withValues(alpha: .12),
-                      Colors.transparent,
-                      theme.accent2.withValues(alpha: .10),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
