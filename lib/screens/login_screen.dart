@@ -809,29 +809,35 @@ class _LoginScreenState extends State<LoginScreen>
             Align(
               alignment: Alignment.bottomLeft,
               child: Transform.translate(
-                offset: const Offset(-90, 0),
-                child: Image.asset(
-                  'assets/login_cat_cutout.png',
-                  width: double.infinity,
-                  height: height,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomRight,
-                  filterQuality: FilterQuality.high,
-                  errorBuilder: (_, error, __) => Center(
-                    child: Icon(
-                      Icons.pets_rounded,
-                      size: 180,
-                      color: theme.accent1.withValues(alpha: .8),
+                offset: const Offset(-155, 0),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: Image.asset(
+                    loading
+                        ? 'assets/login_cat_open_eyes.png'
+                        : 'assets/login_cat_cutout.png',
+                    key: ValueKey(loading),
+                    width: double.infinity,
+                    height: height,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.bottomRight,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (_, error, __) => Center(
+                      child: Icon(
+                        Icons.pets_rounded,
+                        size: 180,
+                        color: theme.accent1.withValues(alpha: .8),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
             Positioned(
-              right: -screenRightGap,
+              right: -screenRightGap + 18,
               bottom: 0,
-              width: 300,
-              height: math.min(height, 520),
+              width: 400,
+              height: math.min(height, 590),
               child: _companyTreeCard(
                 theme,
                 dayNumber: dayNumber,
@@ -855,10 +861,29 @@ class _LoginScreenState extends State<LoginScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        CustomPaint(
-          painter: _CompanyTreePainter(
-            progress: progress,
-            accent: theme.accent1,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 58, 8, 0),
+          child: Transform.scale(
+            scale: .30 + progress * .70,
+            alignment: Alignment.bottomCenter,
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (bounds) => const RadialGradient(
+                radius: .74,
+                colors: [
+                  Colors.white,
+                  Colors.white,
+                  Colors.transparent,
+                ],
+                stops: [0, .73, 1],
+              ).createShader(bounds),
+              child: Image.asset(
+                'assets/login_natural_tree.png',
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+                filterQuality: FilterQuality.high,
+              ),
+            ),
           ),
         ),
         if (loading)
