@@ -10066,6 +10066,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final lastIncrement = firstValue(
               salary,
               const [
+                'inc_details',
                 'last_increment',
                 'last_increament',
                 'last_increment_date',
@@ -10258,6 +10259,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
       for (final row in List<Map<String, dynamic>>.from(employeeResponse)) {
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) employeeMap[id] = Map<String, dynamic>.from(row);
+      }
+      final salaryResponse = await SupabaseService.client
+          .from('employee_salary_defaults')
+          .select()
+          .inFilter('employee_id', employeeIds);
+      final salaryMap = <String, Map<String, dynamic>>{};
+      for (final row in List<Map<String, dynamic>>.from(salaryResponse)) {
+        final id = _normalizeBranchValue(row['employee_id']);
+        if (id.isNotEmpty) salaryMap[id] = Map<String, dynamic>.from(row);
       }
 
       const sungaiPetaniForeignerGroup = '__SUNGAI_PETANI_FOREIGNER__';
@@ -10459,6 +10469,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           final row = i + 4;
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
           final employee = employeeMap[employeeId] ?? <String, dynamic>{};
+          final salary = salaryMap[employeeId] ?? <String, dynamic>{};
 
           final basic = money(payroll['basic_salary']);
           final fw = money(payroll['fw_salary']);
@@ -10485,12 +10496,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
               money(payroll['advance']);
           final net = jumlah - cutiTanpaGaji - epf - socso - eis - potongan;
 
-          final lastIncrement = firstValue(employee, [
-            'last_increment',
-            'last_increament',
-            'last_increment_date',
-            'last_increament_date',
-          ]);
+          final lastIncrement = firstValue(salary, ['inc_details']) ??
+              firstValue(employee, [
+                'last_increment',
+                'last_increament',
+                'last_increment_date',
+                'last_increament_date',
+              ]);
           final nextIncrement = firstValue(employee, [
             'next_increment',
             'next_increament',
@@ -10621,6 +10633,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) employeeMap[id] = row;
       }
+      final salaryResponse = await SupabaseService.client
+          .from('employee_salary_defaults')
+          .select()
+          .inFilter('employee_id', employeeIds);
+      final salaryMap = <String, Map<String, dynamic>>{};
+      for (final row in List<Map<String, dynamic>>.from(salaryResponse)) {
+        final id = _normalizeBranchValue(row['employee_id']);
+        if (id.isNotEmpty) salaryMap[id] = row;
+      }
 
       String canonicalBranchKey(String branchId) {
         final raw = (branchNames[branchId] ?? branchId)
@@ -10701,23 +10722,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       const headers = <String>[
         'NO',
-        'EMP ID',
-        'NAME',
-        'BASIC + FW',
-        'ATT.',
-        'SERVICE',
-        'DILIGENCE',
-        'OT',
-        'PUBLIC HOL.',
-        'GROSS',
-        'UNPAID/LATE',
-        'EPF',
-        'SOCSO',
-        'EIS',
-        'PCB/ZAKAT/ADV.',
-        'NET SALARY',
+        'ID STAF',
+        'TARIKH MASUK KERJA',
+        'KENAIKAN TERAKHIR',
+        'KENAIKAN SETERUSNYA',
+        'NAMA',
+        'NO IC / PASSPORT',
+        'GAJI',
+        'P05 ELAUN KEDATANGAN',
+        'P02 ELAUN PERKHIDMATAN',
+        'P07 ELAUN KERAJINAN',
+        'HV15 OT',
+        'P03 CUTI UMUM',
+        'JUMLAH',
+        'M01 CUTI TANPA GAJI',
+        'KVSP',
+        'PERKESO',
+        'SIP',
+        'POTONGAN',
+        'JUMLAH BERSIH',
       ];
       double money(dynamic value) => _payrollNumber(value);
+      String dateText(dynamic value) {
+        if (value == null) return '';
+        final text = value.toString().trim();
+        final parsed = DateTime.tryParse(text);
+        return parsed == null ? text : DateFormat('dd/MM/yyyy').format(parsed);
+      }
+
       final document = pw.Document();
       for (final key in keys) {
         final branchRecords =
@@ -10730,6 +10762,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           final payroll = branchRecords[index];
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
           final employee = employeeMap[employeeId] ?? <String, dynamic>{};
+          final salary = salaryMap[employeeId] ?? <String, dynamic>{};
           final basic =
               money(payroll['basic_salary']) + money(payroll['fw_salary']);
           final attendance = money(payroll['elaun_kedatangan']);
@@ -10768,12 +10801,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
             net,
           ];
           for (var i = 0; i < numbers.length; i++) {
-            totals[i + 3] += numbers[i];
+            totals[i + 7] += numbers[i];
           }
+          final lastIncrement = salary['inc_details'] ??
+              employee['last_increment'] ??
+              employee['last_increament'] ??
+              employee['last_increment_date'] ??
+              employee['last_increament_date'];
+          final nextIncrement = employee['next_increment'] ??
+              employee['next_increament'] ??
+              employee['next_increment_date'] ??
+              employee['next_increament_date'] ??
+              employee['month'];
           data.add([
             '${index + 1}',
             employeeId,
+            dateText(employee['joining_date']),
+            lastIncrement?.toString() ?? '',
+            dateText(nextIncrement),
             (employee['name'] ?? payroll['name'] ?? '').toString(),
+            (employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '').toString(),
             ...numbers.map((value) => NumberFormat('#,##0.00').format(value)),
           ]);
         }
@@ -10781,8 +10828,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           'TOTAL',
           '',
           '',
+          '',
+          '',
+          '',
+          '',
           ...totals
-              .skip(3)
+              .skip(7)
               .map((value) => NumberFormat('#,##0.00').format(value)),
         ]);
         final branchName = branchLabels[key] ?? key;
