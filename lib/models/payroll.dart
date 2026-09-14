@@ -408,6 +408,7 @@ class Employee {
   final String designation;
   final String department;
   final String email;
+  final String photoUrl;
 
   final String newIcNo;
   final String bankCode;
@@ -431,6 +432,7 @@ class Employee {
     required this.designation,
     required this.department,
     required this.email,
+    this.photoUrl = '',
     required this.newIcNo,
     required this.bankCode,
     required this.bankAccount,
@@ -456,6 +458,7 @@ class Employee {
     String? designation,
     String? department,
     String? email,
+    String? photoUrl,
     String? newIcNo,
     String? bankCode,
     String? bankAccount,
@@ -476,6 +479,7 @@ class Employee {
       designation: designation ?? this.designation,
       department: department ?? this.department,
       email: email ?? this.email,
+      photoUrl: photoUrl ?? this.photoUrl,
       newIcNo: newIcNo ?? this.newIcNo,
       bankCode: bankCode ?? this.bankCode,
       bankAccount: bankAccount ?? this.bankAccount,
@@ -503,6 +507,7 @@ class Employee {
       'designation': designation,
       'department': department,
       'email': email,
+      'photoUrl': photoUrl,
       'newIcNo': newIcNo,
       'bankCode': bankCode,
       'bankAccount': bankAccount,
@@ -528,6 +533,7 @@ class Employee {
       designation: _stringValue(json['designation']),
       department: _stringValue(json['department']),
       email: _stringValue(json['email']),
+      photoUrl: _stringValue(json['photoUrl'] ?? json['photo_url']),
       newIcNo: _stringValue(json['newIcNo']),
       bankCode: _stringValue(json['bankCode']),
       bankAccount: _stringValue(json['bankAccount']),

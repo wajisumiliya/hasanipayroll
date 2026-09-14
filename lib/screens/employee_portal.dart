@@ -9,6 +9,7 @@ import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
 import 'employee_ot_request_page.dart';
 import 'login_screen.dart';
+import '../widgets/employee_photo.dart';
 
 class EmployeePortal extends StatefulWidget {
   const EmployeePortal({super.key});
@@ -401,13 +402,12 @@ class _EmployeePortalState extends State<EmployeePortal> {
           const SizedBox(width: 8),
           PortalDayIndicator(theme: DailyPortalTheme.today()),
           const SizedBox(width: 22),
-          CircleAvatar(
-            radius: 18,
+          EmployeePhoto(
+            name: employee!.name,
+            photoUrl: employee!.photoUrl,
+            radius: 20,
             backgroundColor: _dailyTheme.accent.withValues(alpha: .20),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-            ),
+            foregroundColor: Colors.white,
           ),
           const SizedBox(width: 10),
           Column(
@@ -771,11 +771,6 @@ class _EmployeePortalState extends State<EmployeePortal> {
 
   Widget _welcome() {
     final dailyTheme = _dailyTheme;
-    final name = employee!.name.trim();
-    final parts =
-        name.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).take(2).toList();
-    final initials =
-        parts.isEmpty ? '?' : parts.map((e) => e[0].toUpperCase()).join();
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Good morning'
@@ -807,17 +802,12 @@ class _EmployeePortalState extends State<EmployeePortal> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 29,
+          EmployeePhoto(
+            name: employee!.name,
+            photoUrl: employee!.photoUrl,
+            radius: 31,
             backgroundColor: Colors.white.withValues(alpha: .16),
-            child: Text(
-              initials,
-              style: TextStyle(
-                color: dailyTheme.accent,
-                fontWeight: FontWeight.w900,
-                fontSize: 17,
-              ),
-            ),
+            foregroundColor: dailyTheme.accent,
           ),
           const SizedBox(width: 15),
           Expanded(
@@ -1118,20 +1108,12 @@ class _EmployeePortalState extends State<EmployeePortal> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 28,
+                      EmployeePhoto(
+                        name: currentEmployee.name,
+                        photoUrl: currentEmployee.photoUrl,
+                        radius: 30,
                         backgroundColor:
                             _dailyTheme.accent.withValues(alpha: .20),
-                        child: Text(
-                          currentEmployee.name.isEmpty
-                              ? '?'
-                              : currentEmployee.name[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Color(0xFF2D55D8),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
-                          ),
-                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -1210,6 +1192,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
                               'name': currentEmployee.name,
                               'department': currentEmployee.department,
                               'branch_id': currentEmployee.branchId,
+                              'photo_url': currentEmployee.photoUrl,
                             },
                             month: _attendanceMonth,
                             branchId: currentEmployee.branchId,
@@ -1244,14 +1227,11 @@ class _EmployeePortalState extends State<EmployeePortal> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const CircleAvatar(
-            radius: 45,
-            backgroundColor: Color(0xFFEAF0FF),
-            child: Icon(
-              Icons.person,
-              size: 45,
-              color: Color(0xFF2D55D8),
-            ),
+          EmployeePhoto(
+            name: employee!.name,
+            photoUrl: employee!.photoUrl,
+            radius: 48,
+            backgroundColor: const Color(0xFFEAF0FF),
           ),
           const SizedBox(height: 12),
           Text(

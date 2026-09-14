@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
+import '../widgets/employee_photo.dart';
 
 // ============================================================================
 // ATTENDANCE DIALOG
@@ -1256,14 +1257,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       color: const Color(0xFF15965D),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 23,
+          EmployeePhoto(
+            name: name,
+            photoUrl: widget.employee['photo_url']?.toString(),
+            radius: 25,
             backgroundColor: Colors.white,
-            child: Icon(
-              Icons.person,
-              color: Color(0xFF15965D),
-              size: 27,
-            ),
+            foregroundColor: const Color(0xFF15965D),
           ),
           const SizedBox(width: 12),
           Expanded(

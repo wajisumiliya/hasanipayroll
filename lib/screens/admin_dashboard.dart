@@ -11,6 +11,7 @@ import '../services/app_service.dart';
 import '../theme/daily_portal_theme.dart';
 import '../services/ot_request_pdf_service.dart';
 import '../services/attendance_payroll_service.dart';
+import '../services/pdf_service.dart';
 import 'login_screen.dart';
 import 'dart:convert';
 import 'package:csv/csv.dart';
@@ -23,6 +24,7 @@ import '../screens/supabase_service.dart';
 import '../screens/attendance_dialog.dart';
 import 'monthly_roster_page.dart';
 import '../dashboard_brand_logos.dart';
+import '../widgets/employee_photo.dart';
 
 class _DashboardHeaderPainter extends CustomPainter {
   const _DashboardHeaderPainter();
@@ -89,6 +91,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   DateTime selectedReportMonth =
       DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
+  String? selectedPayslipEmployeeId;
+  DateTime selectedPayslipMonth =
+      DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedLogBranchId;
   DateTime? selectedLogDate;
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
@@ -187,6 +192,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return 'Employee Requests';
       case 11:
         return 'OT Requests';
+      case 12:
+        return 'Employee Payslips';
       default:
         return 'Dashboard';
     }
@@ -281,6 +288,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       case 11:
         return _otRequestsPage();
+
+      case 12:
+        return _employeePayslipsPage();
 
       default:
         return _dashboardPage();
@@ -445,6 +455,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       Icons.payments_outlined,
                       2,
                     ),
+                    _drawerItem(
+                      'Employee Payslips',
+                      Icons.receipt_long_outlined,
+                      12,
+                    ),
                     ListTile(
                       leading: const Icon(
                         Icons.edit_note_outlined,
@@ -562,6 +577,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   'Payroll',
                   Icons.payments_outlined,
                   2,
+                ),
+                _sidebarItem(
+                  'Employee Payslips',
+                  Icons.receipt_long_outlined,
+                  12,
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -2910,17 +2930,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                             ),
                             child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: const Color(0xFFEAF0FF),
-                                child: Text(
-                                  name.isEmpty
-                                      ? '?'
-                                      : name.substring(0, 1).toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D55D8),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              leading: EmployeePhoto(
+                                name: name,
+                                photoUrl: employee['photo_url']?.toString(),
+                                radius: 22,
                               ),
                               title: Text(
                                 name.isEmpty ? 'Unnamed Employee' : name,
@@ -3878,110 +3891,236 @@ class _AdminDashboardState extends State<AdminDashboard> {
   ) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            employee['name']?.toString().isEmpty ?? true
-                ? 'Employee'
-                : employee['name'].toString(),
-          ),
-          content: SizedBox(
-            width: 500,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _employeeDetail(
-                    'Employee ID',
-                    employee['employee_id'],
-                  ),
-                  _employeeDetail(
-                    'Name',
-                    employee['name'],
-                  ),
-                  _employeeDetail(
-                    'Designation',
-                    employee['designation'],
-                  ),
-                  _employeeDetail(
-                    'Department',
-                    employee['department'],
-                  ),
-                  _employeeDetail(
-                    'Email',
-                    employee['email'],
-                  ),
-                  _employeeDetail(
-                    'IC No.',
-                    employee['new_ic_no'],
-                  ),
-                  _employeeDetail(
-                    'Bank Code',
-                    employee['bank_code'],
-                  ),
-                  _employeeDetail(
-                    'Bank Account',
-                    employee['bank_account'],
-                  ),
-                  _employeeDetail(
-                    'EPF No.',
-                    employee['epf_no'],
-                  ),
-                  _employeeDetail(
-                    'SOCSO No.',
-                    employee['socso_no'],
-                  ),
-                  _employeeDetail(
-                    'Phone',
-                    employee['phone'],
-                  ),
-                  _employeeDetail(
-                    'Address',
-                    employee['address'],
-                  ),
-                  _employeeDetail(
-                    'Joining Date',
-                    employee['joining_date'],
-                  ),
-                  _employeeDetail(
-                    'Branch',
-                    employee['branch_id'],
-                  ),
-                  _employeeDetail(
-                    'Payroll Branch',
-                    _normalizeBranchValue(employee['payroll_branch_id']).isEmpty
-                        ? 'Same as attendance branch'
-                        : employee['payroll_branch_id'],
-                  ),
-                  _employeeDetail(
-                    'Employee Category',
-                    employee['is_management_staff'] == true
-                        ? 'Management Staff'
-                        : employee['is_temp_staff'] == true
-                            ? 'Temporary Staff'
-                            : employee['is_other_staff'] == true
-                                ? 'Other Staff'
-                                : 'Regular Staff',
-                  ),
-                  _employeeDetail(
-                    'Active',
-                    employee['is_active'] == true ? 'Yes' : 'No',
-                  ),
-                ],
+      builder: (dialogContext) {
+        var changingPhoto = false;
+        return StatefulBuilder(builder: (context, setDialogState) {
+          final name = employee['name']?.toString() ?? '';
+          final photoUrl = employee['photo_url']?.toString() ?? '';
+          final employeeId = employee['employee_id']?.toString() ?? '';
+          return AlertDialog(
+            title: Text(
+              name.isEmpty ? 'Employee' : name,
+            ),
+            content: SizedBox(
+              width: 500,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          EmployeePhoto(
+                            name: name,
+                            photoUrl: photoUrl,
+                            radius: 58,
+                            borderColor: const Color(0xFF243B8F),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: changingPhoto
+                                    ? null
+                                    : () async {
+                                        changingPhoto = true;
+                                        setDialogState(() {});
+                                        try {
+                                          final uploaded =
+                                              await _uploadEmployeePhoto(
+                                                  employeeId);
+                                          if (uploaded != null) {
+                                            employee['photo_url'] = uploaded;
+                                          }
+                                        } finally {
+                                          changingPhoto = false;
+                                          if (dialogContext.mounted) {
+                                            setDialogState(() {});
+                                          }
+                                        }
+                                      },
+                                icon: Icon(photoUrl.isEmpty
+                                    ? Icons.add_a_photo_outlined
+                                    : Icons.photo_camera_outlined),
+                                label: Text(photoUrl.isEmpty
+                                    ? 'Add Photo'
+                                    : 'Change Photo'),
+                              ),
+                              if (photoUrl.isNotEmpty)
+                                TextButton.icon(
+                                  onPressed: changingPhoto
+                                      ? null
+                                      : () async {
+                                          changingPhoto = true;
+                                          setDialogState(() {});
+                                          try {
+                                            await SupabaseService
+                                                .removeEmployeePhoto(
+                                                    employeeId);
+                                            employee['photo_url'] = null;
+                                            _refreshEmployeePhotoData();
+                                          } catch (error) {
+                                            if (mounted) {
+                                              _message(
+                                                  'Unable to remove photo: $error');
+                                            }
+                                          } finally {
+                                            changingPhoto = false;
+                                            if (dialogContext.mounted) {
+                                              setDialogState(() {});
+                                            }
+                                          }
+                                        },
+                                  icon: const Icon(Icons.delete_outline),
+                                  label: const Text('Remove'),
+                                ),
+                            ],
+                          ),
+                          if (changingPhoto) ...[
+                            const SizedBox(height: 8),
+                            const LinearProgressIndicator(),
+                          ],
+                          const Divider(height: 28),
+                        ],
+                      ),
+                    ),
+                    _employeeDetail(
+                      'Employee ID',
+                      employee['employee_id'],
+                    ),
+                    _employeeDetail(
+                      'Name',
+                      employee['name'],
+                    ),
+                    _employeeDetail(
+                      'Designation',
+                      employee['designation'],
+                    ),
+                    _employeeDetail(
+                      'Department',
+                      employee['department'],
+                    ),
+                    _employeeDetail(
+                      'Email',
+                      employee['email'],
+                    ),
+                    _employeeDetail(
+                      'IC No.',
+                      employee['new_ic_no'],
+                    ),
+                    _employeeDetail(
+                      'Bank Code',
+                      employee['bank_code'],
+                    ),
+                    _employeeDetail(
+                      'Bank Account',
+                      employee['bank_account'],
+                    ),
+                    _employeeDetail(
+                      'EPF No.',
+                      employee['epf_no'],
+                    ),
+                    _employeeDetail(
+                      'SOCSO No.',
+                      employee['socso_no'],
+                    ),
+                    _employeeDetail(
+                      'Phone',
+                      employee['phone'],
+                    ),
+                    _employeeDetail(
+                      'Address',
+                      employee['address'],
+                    ),
+                    _employeeDetail(
+                      'Joining Date',
+                      employee['joining_date'],
+                    ),
+                    _employeeDetail(
+                      'Branch',
+                      employee['branch_id'],
+                    ),
+                    _employeeDetail(
+                      'Payroll Branch',
+                      _normalizeBranchValue(employee['payroll_branch_id'])
+                              .isEmpty
+                          ? 'Same as attendance branch'
+                          : employee['payroll_branch_id'],
+                    ),
+                    _employeeDetail(
+                      'Employee Category',
+                      employee['is_management_staff'] == true
+                          ? 'Management Staff'
+                          : employee['is_temp_staff'] == true
+                              ? 'Temporary Staff'
+                              : employee['is_other_staff'] == true
+                                  ? 'Other Staff'
+                                  : 'Regular Staff',
+                    ),
+                    _employeeDetail(
+                      'Active',
+                      employee['is_active'] == true ? 'Yes' : 'No',
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Close'),
-            ),
-          ],
-        );
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Close'),
+              ),
+            ],
+          );
+        });
       },
     );
+  }
+
+  Future<String?> _uploadEmployeePhoto(String employeeId) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return null;
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception('The selected photo could not be read.');
+      }
+      if (bytes.length > 5 * 1024 * 1024) {
+        throw Exception('Photo must be 5 MB or smaller.');
+      }
+      final extension = (file.extension ?? '').toLowerCase();
+      final contentType = extension == 'png'
+          ? 'image/png'
+          : extension == 'webp'
+              ? 'image/webp'
+              : 'image/jpeg';
+      final url = await SupabaseService.uploadEmployeePhoto(
+        employeeId: employeeId,
+        bytes: bytes,
+        contentType: contentType,
+      );
+      _refreshEmployeePhotoData();
+      if (mounted) _message('Employee photo uploaded successfully.');
+      return url;
+    } catch (error) {
+      if (mounted) _message('Unable to upload photo: $error');
+      return null;
+    }
+  }
+
+  void _refreshEmployeePhotoData() {
+    if (!mounted) return;
+    setState(() => _adminEmployeesFuture = null);
+    service.loadEmployeesFromSupabase();
   }
 
   Widget _employeeDetail(
@@ -8102,6 +8241,237 @@ class _AdminDashboardState extends State<AdminDashboard> {
       remarksController.dispose();
     }
   }
+// ============================================================================
+// EMPLOYEE PAYSLIPS
+// ============================================================================
+
+  Widget _employeePayslipsPage() {
+    final availableMonths = service.payroll
+        .map((record) => DateTime(record.period.year, record.period.month))
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+    if (availableMonths.isNotEmpty &&
+        !availableMonths.any((month) =>
+            month.year == selectedPayslipMonth.year &&
+            month.month == selectedPayslipMonth.month)) {
+      selectedPayslipMonth = availableMonths.first;
+    }
+
+    final monthRecords = service.payroll
+        .where((record) =>
+            record.period.year == selectedPayslipMonth.year &&
+            record.period.month == selectedPayslipMonth.month)
+        .toList();
+    final employees = monthRecords
+        .map((record) => service.findEmployee(record.employeeId))
+        .whereType<Employee>()
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final employeeIds =
+        employees.map((employee) => employee.employeeId).toSet();
+    final effectiveEmployeeId = employeeIds.contains(selectedPayslipEmployeeId)
+        ? selectedPayslipEmployeeId
+        : null;
+    final selectedEmployee = effectiveEmployeeId == null
+        ? null
+        : service.findEmployee(effectiveEmployeeId);
+    PayrollRecord? selectedRecord;
+    if (effectiveEmployeeId != null) {
+      for (final record in monthRecords) {
+        if (record.employeeId.trim().toLowerCase() ==
+            effectiveEmployeeId.trim().toLowerCase()) {
+          selectedRecord = record;
+          break;
+        }
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Employee Payslips',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          const Text(
+            'Select a payroll month and employee to view the official payslip.',
+            style: TextStyle(color: Colors.black54),
+          ),
+          const SizedBox(height: 22),
+          _panel(
+            'Payslip Viewer',
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 14,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  children: [
+                    SizedBox(
+                      width: 230,
+                      child: DropdownButtonFormField<DateTime>(
+                        initialValue: availableMonths.isEmpty
+                            ? null
+                            : selectedPayslipMonth,
+                        decoration: const InputDecoration(
+                          labelText: 'Payroll Month',
+                          prefixIcon: Icon(Icons.calendar_month_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: availableMonths
+                            .map((month) => DropdownMenuItem(
+                                  value: month,
+                                  child: Text(
+                                      DateFormat('MMMM yyyy').format(month)),
+                                ))
+                            .toList(),
+                        onChanged: availableMonths.isEmpty
+                            ? null
+                            : (month) {
+                                if (month == null) return;
+                                setState(() {
+                                  selectedPayslipMonth = month;
+                                  selectedPayslipEmployeeId = null;
+                                });
+                              },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 420,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: effectiveEmployeeId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Employee',
+                          prefixIcon: Icon(Icons.person_search_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        hint: Text(employees.isEmpty
+                            ? 'No payroll records for this month'
+                            : 'Select employee'),
+                        items: employees
+                            .map((employee) => DropdownMenuItem(
+                                  value: employee.employeeId,
+                                  child: Text(
+                                    '${employee.employeeId} - ${employee.name}',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: employees.isEmpty
+                            ? null
+                            : (employeeId) => setState(
+                                () => selectedPayslipEmployeeId = employeeId),
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed:
+                          selectedEmployee == null || selectedRecord == null
+                              ? null
+                              : () => _viewAdminPayslip(
+                                  selectedEmployee, selectedRecord!),
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      label: const Text('View Payslip'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 22, vertical: 18),
+                      ),
+                    ),
+                    IconButton.outlined(
+                      tooltip: 'Refresh payroll records',
+                      onPressed: () async {
+                        await service.loadPayrollFromSupabase();
+                        await service.loadEmployeesFromSupabase();
+                      },
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+                if (selectedEmployee != null && selectedRecord != null) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F7FF),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFF243B8F), width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        EmployeePhoto(
+                          name: selectedEmployee.name,
+                          photoUrl: selectedEmployee.photoUrl,
+                          radius: 34,
+                          borderColor: const Color(0xFF243B8F),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(selectedEmployee.name,
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${selectedEmployee.employeeId} • '
+                                '${selectedEmployee.department} • '
+                                '${selectedEmployee.branchId}',
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text('NET PAY',
+                                style: TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700)),
+                            Text(
+                              'RM ${NumberFormat('#,##0.00').format(selectedRecord.netPay)}',
+                              style: const TextStyle(
+                                  color: Color(0xFF243B8F),
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w900),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _viewAdminPayslip(
+      Employee employee, PayrollRecord payroll) async {
+    try {
+      final bytes = await PdfService.buildPayslip(
+        employee: employee,
+        p: payroll,
+        history: service.employeePayroll(employee.employeeId),
+        attendance: service.employeeAttendance(employee.employeeId),
+      );
+      await Printing.layoutPdf(onLayout: (_) async => bytes);
+    } catch (error) {
+      if (!mounted) return;
+      _message('Unable to generate payslip: $error');
+    }
+  }
+
 // ============================================================================
 // PAYROLL PAGE
 // ============================================================================

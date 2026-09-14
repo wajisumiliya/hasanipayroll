@@ -413,6 +413,7 @@ class AppService extends ChangeNotifier {
       _accessToken = token;
       _currentUser = app_user.fromJson(Map<String, dynamic>.from(savedUser));
       _supabase.rest.setAuth(token);
+      _supabase.storage.setAuth(token);
 
       try {
         final validation = await _getAuth('/api/auth/me');
@@ -568,6 +569,8 @@ class AppService extends ChangeNotifier {
       designation: data['designation']?.toString() ?? '',
       department: data['department']?.toString() ?? '',
       email: data['email']?.toString() ?? '',
+      photoUrl:
+          data['photo_url']?.toString() ?? data['photoUrl']?.toString() ?? '',
       newIcNo:
           data['new_ic_no']?.toString() ?? data['newIcNo']?.toString() ?? '',
       bankCode:
@@ -980,6 +983,7 @@ class AppService extends ChangeNotifier {
         return 'The server did not issue a valid session.';
       }
       _supabase.rest.setAuth(_accessToken);
+      _supabase.storage.setAuth(_accessToken!);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -1179,6 +1183,7 @@ class AppService extends ChangeNotifier {
         return 'The server did not issue a valid session.';
       }
       _supabase.rest.setAuth(_accessToken);
+      _supabase.storage.setAuth(_accessToken!);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -3619,6 +3624,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'designation': employee.designation,
       'department': employee.department,
       'email': employee.email,
+      'photo_url': employee.photoUrl,
       'new_ic_no': employee.newIcNo,
       'bank_code': employee.bankCode,
       'bank_account': employee.bankAccount,
