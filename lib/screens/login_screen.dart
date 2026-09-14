@@ -748,19 +748,19 @@ class _LoginScreenState extends State<LoginScreen>
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
-                                  flex: 11,
+                                  flex: 9,
                                   child: _entrance(
-                                    _desktopBranding(theme),
-                                    _heroEntrance,
+                                    _glassLoginCard(theme),
+                                    _formEntrance,
                                     -42,
                                   ),
                                 ),
                                 const SizedBox(width: 56),
                                 Expanded(
-                                  flex: 9,
+                                  flex: 11,
                                   child: _entrance(
-                                    _glassLoginCard(theme),
-                                    _formEntrance,
+                                    _desktopCatHero(theme),
+                                    _heroEntrance,
                                     42,
                                   ),
                                 ),
@@ -777,69 +777,55 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _desktopBranding(_DailyLoginTheme theme) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _dayPill(theme),
-          const SizedBox(height: 30),
-          Text(
-            theme.headline,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 55,
-              height: .99,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1.8,
-            ),
+  Widget _desktopCatHero(_DailyLoginTheme theme) {
+    return AspectRatio(
+      aspectRatio: 1.12,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(34),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: .38),
+            width: 1.3,
           ),
-          const SizedBox(height: 20),
-          Container(
-            width: 64,
-            height: 4,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(99),
-              gradient: LinearGradient(
-                colors: [theme.accent1, theme.accent2],
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .24),
+              blurRadius: 60,
+              offset: const Offset(0, 28),
             ),
-          ),
-          const SizedBox(height: 21),
-          Text(
-            theme.message,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: .88),
-              fontSize: 20,
-              height: 1.45,
-              fontWeight: FontWeight.w500,
+            BoxShadow(
+              color: theme.accent1.withValues(alpha: .22),
+              blurRadius: 38,
+              spreadRadius: 2,
             ),
-          ),
-          const SizedBox(height: 30),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(33),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              _GlassFeature(
-                Icons.people_alt_outlined,
-                'People',
-                theme.accent1,
+              Image.asset(
+                'assets/login_cat_hero.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.centerRight,
               ),
-              _GlassFeature(
-                Icons.calendar_month_outlined,
-                'Attendance',
-                theme.accent1,
-              ),
-              _GlassFeature(
-                Icons.account_balance_wallet_outlined,
-                'Payroll',
-                theme.accent1,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.accent1.withValues(alpha: .12),
+                      Colors.transparent,
+                      theme.accent2.withValues(alpha: .10),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1377,52 +1363,6 @@ class _LoginScreenState extends State<LoginScreen>
         borderSide: BorderSide(
           color: theme.accent1,
           width: 2,
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassFeature extends StatelessWidget {
-  const _GlassFeature(
-    this.icon,
-    this.label,
-    this.accent,
-  );
-
-  final IconData icon;
-  final String label;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .10),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: .18),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: accent),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
