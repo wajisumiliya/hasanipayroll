@@ -10895,12 +10895,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ]);
         }
         data.add([
+          '',
+          '',
+          '',
+          '',
+          '',
           'TOTAL',
-          '',
-          '',
-          '',
-          '',
-          '',
           '',
           ...totals.skip(7).map(pdfMoney),
         ]);
@@ -10929,7 +10929,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         };
         document.addPage(pw.Page(
           pageFormat: PdfPageFormat.a4.landscape,
-          margin: const pw.EdgeInsets.fromLTRB(6, 8, 6, 14),
+          margin: const pw.EdgeInsets.fromLTRB(7, 6, 7, 8),
           build: (_) => pw.Column(children: [
             logo == null
                 ? pw.Text(
@@ -10943,73 +10943,106 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 : pw.Center(
                     child: pw.Image(
                       logo,
-                      width: 125,
-                      height: 46,
+                      width: 112,
+                      height: 31,
                       fit: pw.BoxFit.contain,
                     ),
                   ),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 3),
             pw.Text(
               'PAYROLL - ${branchName.toUpperCase()} - ${DateFormat('MMMM yyyy').format(selectedPayrollMonth).toUpperCase()}',
               textAlign: pw.TextAlign.center,
               style: pw.TextStyle(
-                fontSize: 15,
+                fontSize: 13.5,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 5),
             pw.Expanded(
-              child: pw.FittedBox(
-                fit: pw.BoxFit.scaleDown,
-                alignment: pw.Alignment.topCenter,
-                child: pw.SizedBox(
-                  width: 829,
-                  child: pw.Column(children: [
-                    pw.TableHelper.fromTextArray(
-                      headers: headers,
-                      data: data,
-                      columnWidths: columnWidths,
-                      headerStyle: pw.TextStyle(
-                          fontSize: 8.5, fontWeight: pw.FontWeight.bold),
-                      headerDecoration:
-                          const pw.BoxDecoration(color: PdfColors.grey200),
-                      cellStyle: const pw.TextStyle(fontSize: 8),
-                      textStyleBuilder: (_, __, rowNumber) =>
-                          rowNumber == data.length
-                              ? pw.TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: pw.FontWeight.bold,
-                                )
-                              : null,
-                      cellPadding: const pw.EdgeInsets.symmetric(
-                          horizontal: 1.5, vertical: 3),
-                      border: pw.TableBorder.all(
-                          color: PdfColors.grey700, width: .7),
-                    ),
-                    pw.SizedBox(height: 20),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      children: [
-                        pw.Text(
-                          'PREPARED BY : ANWAR',
-                          style: pw.TextStyle(
-                            fontSize: 10,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(width: 55),
-                        pw.Text(
-                          'APPROVED BY: ____________________',
-                          style: pw.TextStyle(
-                            fontSize: 10,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ]),
-                ),
+              child: pw.Table(
+                columnWidths: columnWidths,
+                border:
+                    pw.TableBorder.all(color: PdfColors.grey700, width: .55),
+                children: [
+                  pw.TableRow(
+                    decoration:
+                        const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: headers
+                        .map((text) => pw.Container(
+                              height: 27,
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 1.2,
+                                vertical: 1,
+                              ),
+                              alignment: pw.Alignment.center,
+                              child: pw.FittedBox(
+                                fit: pw.BoxFit.scaleDown,
+                                child: pw.Text(
+                                  text,
+                                  maxLines: 1,
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                  ...data.asMap().entries.map((entry) {
+                    final isTotal = entry.key == data.length - 1;
+                    return pw.TableRow(
+                      decoration: isTotal
+                          ? const pw.BoxDecoration(color: PdfColors.grey200)
+                          : null,
+                      children: entry.value
+                          .map((text) => pw.Container(
+                                height: 9.25,
+                                padding: const pw.EdgeInsets.symmetric(
+                                  horizontal: 1,
+                                ),
+                                alignment: pw.Alignment.centerLeft,
+                                child: pw.FittedBox(
+                                  fit: pw.BoxFit.scaleDown,
+                                  alignment: pw.Alignment.centerLeft,
+                                  child: pw.Text(
+                                    text,
+                                    maxLines: 1,
+                                    style: pw.TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: isTotal
+                                          ? pw.FontWeight.bold
+                                          : pw.FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              ))
+                          .toList(),
+                    );
+                  }),
+                ],
               ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Text(
+                  'PREPARED BY : ANWAR',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(width: 48),
+                pw.Text(
+                  'APPROVED BY: ____________________',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ]),
         ));
