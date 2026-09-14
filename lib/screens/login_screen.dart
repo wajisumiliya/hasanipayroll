@@ -763,6 +763,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       theme,
                                       height: (constraints.maxHeight - 90)
                                           .clamp(480.0, 720.0),
+                                      bottomExtension: 95,
                                     ),
                                     _heroEntrance,
                                     42,
@@ -784,24 +785,28 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _desktopCatHero(
     _DailyLoginTheme theme, {
     required double height,
+    required double bottomExtension,
   }) {
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: Align(
-        alignment: Alignment.bottomRight,
-        child: Image.asset(
-          'assets/login_cat_cutout.png',
-          width: double.infinity,
-          height: height,
-          fit: BoxFit.contain,
+    return Transform.translate(
+      offset: Offset(0, bottomExtension),
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: Align(
           alignment: Alignment.bottomRight,
-          filterQuality: FilterQuality.high,
-          errorBuilder: (_, error, __) => Center(
-            child: Icon(
-              Icons.pets_rounded,
-              size: 180,
-              color: theme.accent1.withValues(alpha: .8),
+          child: Image.asset(
+            'assets/login_cat_cutout.png',
+            width: double.infinity,
+            height: height,
+            fit: BoxFit.contain,
+            alignment: Alignment.bottomRight,
+            filterQuality: FilterQuality.high,
+            errorBuilder: (_, error, __) => Center(
+              child: Icon(
+                Icons.pets_rounded,
+                size: 180,
+                color: theme.accent1.withValues(alpha: .8),
+              ),
             ),
           ),
         ),
