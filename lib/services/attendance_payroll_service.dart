@@ -1540,7 +1540,7 @@ class AttendancePayrollService {
             (row) => _ContributionRow(
               row.start,
               row.end,
-              row.employer,
+              row.employee,
               _roundMoney(row.employer - row.employee),
             ),
           )
