@@ -10916,45 +10916,58 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ),
             pw.SizedBox(height: 10),
-            pw.TableHelper.fromTextArray(
-              headers: headers,
-              data: data,
-              columnWidths: columnWidths,
-              headerStyle:
-                  pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey200),
-              cellStyle: const pw.TextStyle(fontSize: 8),
-              textStyleBuilder: (_, __, rowNumber) => rowNumber == data.length
-                  ? pw.TextStyle(
-                      fontSize: 8,
-                      fontWeight: pw.FontWeight.bold,
-                    )
-                  : null,
-              cellPadding:
-                  const pw.EdgeInsets.symmetric(horizontal: 1.5, vertical: 3),
-              border: pw.TableBorder.all(color: PdfColors.grey700, width: .7),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.end,
-              children: [
-                pw.Text(
-                  'PREPARED BY : ANWAR',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
+            pw.Expanded(
+              child: pw.FittedBox(
+                fit: pw.BoxFit.scaleDown,
+                alignment: pw.Alignment.topCenter,
+                child: pw.SizedBox(
+                  width: 829,
+                  child: pw.Column(children: [
+                    pw.TableHelper.fromTextArray(
+                      headers: headers,
+                      data: data,
+                      columnWidths: columnWidths,
+                      headerStyle: pw.TextStyle(
+                          fontSize: 8.5, fontWeight: pw.FontWeight.bold),
+                      headerDecoration:
+                          const pw.BoxDecoration(color: PdfColors.grey200),
+                      cellStyle: const pw.TextStyle(fontSize: 8),
+                      textStyleBuilder: (_, __, rowNumber) =>
+                          rowNumber == data.length
+                              ? pw.TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: pw.FontWeight.bold,
+                                )
+                              : null,
+                      cellPadding: const pw.EdgeInsets.symmetric(
+                          horizontal: 1.5, vertical: 3),
+                      border: pw.TableBorder.all(
+                          color: PdfColors.grey700, width: .7),
+                    ),
+                    pw.SizedBox(height: 20),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          'PREPARED BY : ANWAR',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(width: 55),
+                        pw.Text(
+                          'APPROVED BY: ____________________',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ]),
                 ),
-                pw.SizedBox(width: 55),
-                pw.Text(
-                  'APPROVED BY: ____________________',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ],
+              ),
             ),
           ]),
         ));
