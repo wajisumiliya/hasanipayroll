@@ -10958,70 +10958,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ),
             pw.SizedBox(height: 5),
-            pw.Expanded(
-              child: pw.Table(
-                columnWidths: columnWidths,
-                border:
-                    pw.TableBorder.all(color: PdfColors.grey700, width: .55),
-                children: [
-                  pw.TableRow(
-                    decoration:
-                        const pw.BoxDecoration(color: PdfColors.grey200),
-                    children: headers
-                        .map((text) => pw.Container(
-                              height: 27,
-                              padding: const pw.EdgeInsets.symmetric(
-                                horizontal: 1.2,
-                                vertical: 1,
-                              ),
-                              alignment: pw.Alignment.center,
-                              child: pw.FittedBox(
-                                fit: pw.BoxFit.scaleDown,
-                                child: pw.Text(
-                                  text,
-                                  maxLines: 1,
-                                  style: pw.TextStyle(
-                                    fontSize: 8.5,
-                                    fontWeight: pw.FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                  ...data.asMap().entries.map((entry) {
-                    final isTotal = entry.key == data.length - 1;
-                    return pw.TableRow(
-                      decoration: isTotal
-                          ? const pw.BoxDecoration(color: PdfColors.grey200)
-                          : null,
-                      children: entry.value
-                          .map((text) => pw.Container(
-                                height: 9.25,
-                                padding: const pw.EdgeInsets.symmetric(
-                                  horizontal: 1,
-                                ),
-                                alignment: pw.Alignment.centerLeft,
-                                child: pw.FittedBox(
-                                  fit: pw.BoxFit.scaleDown,
-                                  alignment: pw.Alignment.centerLeft,
-                                  child: pw.Text(
-                                    text,
-                                    maxLines: 1,
-                                    style: pw.TextStyle(
-                                      fontSize: 8,
-                                      fontWeight: isTotal
-                                          ? pw.FontWeight.bold
-                                          : pw.FontWeight.normal,
-                                    ),
-                                  ),
-                                ),
-                              ))
-                          .toList(),
-                    );
-                  }),
-                ],
+            pw.TableHelper.fromTextArray(
+              headers: headers,
+              data: data,
+              columnWidths: columnWidths,
+              headerStyle: pw.TextStyle(
+                fontSize: 6.2,
+                fontWeight: pw.FontWeight.bold,
               ),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey200),
+              cellStyle: pw.TextStyle(
+                fontSize: data.length > 48 ? 5.7 : 6.5,
+              ),
+              textStyleBuilder: (_, __, rowNumber) => rowNumber == data.length
+                  ? pw.TextStyle(
+                      fontSize: data.length > 48 ? 5.7 : 6.5,
+                      fontWeight: pw.FontWeight.bold,
+                    )
+                  : null,
+              cellPadding: const pw.EdgeInsets.symmetric(
+                horizontal: 1.1,
+                vertical: .65,
+              ),
+              border: pw.TableBorder.all(color: PdfColors.grey700, width: .55),
             ),
             pw.SizedBox(height: 8),
             pw.Row(
