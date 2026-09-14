@@ -10271,6 +10271,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
 
       const sungaiPetaniForeignerGroup = '__SUNGAI_PETANI_FOREIGNER__';
+      const temporaryStaffGroup = '__TEMPORARY_STAFF__';
 
       String canonicalBranchKey(String branchId) {
         final raw = (branchNames[branchId] ?? branchId)
@@ -10312,9 +10313,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final isForeigner =
             employee?['address']?.toString().toUpperCase().contains('FRN') ==
                 true;
-        final groupId = isSungaiPetani && isForeigner
-            ? sungaiPetaniForeignerGroup
-            : branchId;
+        final isTemporary = employee?['is_temp_staff'] == true ||
+            employee?['is_temp_staff']?.toString().trim().toLowerCase() ==
+                'true' ||
+            employeeId.toUpperCase().contains('TEMP');
+        final groupId = isTemporary
+            ? temporaryStaffGroup
+            : isSungaiPetani && isForeigner
+                ? sungaiPetaniForeignerGroup
+                : branchId;
         grouped.putIfAbsent(groupId, () => []).add(row);
       }
 
@@ -10370,6 +10377,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       const branchOrder = <String>[
         'sungaipetani',
         sungaiPetaniForeignerGroup,
+        temporaryStaffGroup,
         'prai',
         'alorsetar',
         'jitra',
@@ -10391,9 +10399,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'langkawi': 'Langkawi',
       };
 
-      String orderingKey(String branchId) =>
-          branchId == sungaiPetaniForeignerGroup
-              ? sungaiPetaniForeignerGroup
+      String orderingKey(String branchId) => const {
+            sungaiPetaniForeignerGroup,
+            temporaryStaffGroup
+          }.contains(branchId)
+              ? branchId
               : canonicalBranchKey(branchId);
 
       final sortedBranchIds = grouped.keys.toList()
@@ -10432,9 +10442,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
       for (final branchId in sortedBranchIds) {
         final branchName = branchId == sungaiPetaniForeignerGroup
             ? 'Sungai Petani-Foreigner'
-            : preferredSheetNames[canonicalBranchKey(branchId)] ??
-                branchNames[branchId] ??
-                branchId;
+            : branchId == temporaryStaffGroup
+                ? 'Temporary Staff'
+                : preferredSheetNames[canonicalBranchKey(branchId)] ??
+                    branchNames[branchId] ??
+                    branchId;
         final sheetName = safeSheetName(branchName, usedNames);
 
         xls.Sheet sheet;
@@ -10673,6 +10685,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       const branchOrder = <String>[
         'sungaipetani',
+        '__SUNGAI_PETANI_FOREIGNER__',
+        '__TEMPORARY_STAFF__',
         'prai',
         'alorsetar',
         'jitra',
@@ -10684,6 +10698,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ];
       const branchLabels = <String, String>{
         'sungaipetani': 'Sungai Petani',
+        '__SUNGAI_PETANI_FOREIGNER__': 'Sungai Petani - Foreign Staff',
+        '__TEMPORARY_STAFF__': 'Temporary Staff',
         'prai': 'Prai',
         'alorsetar': 'Alor Setar',
         'jitra': 'Jitra',
@@ -10701,9 +10717,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ? _normalizeBranchValue(payroll['branch_id'])
             : _payrollBranchIdFromEmployee(employee);
         if (branchId.isEmpty) continue;
-        grouped
-            .putIfAbsent(canonicalBranchKey(branchId), () => [])
-            .add(payroll);
+        final isForeign =
+            employee?['address']?.toString().toUpperCase().contains('FRN') ==
+                true;
+        final isTemporary = employee?['is_temp_staff'] == true ||
+            employee?['is_temp_staff']?.toString().trim().toLowerCase() ==
+                'true' ||
+            employeeId.toUpperCase().contains('TEMP');
+        final canonical = canonicalBranchKey(branchId);
+        final groupKey = isTemporary
+            ? '__TEMPORARY_STAFF__'
+            : canonical == 'sungaipetani' && isForeign
+                ? '__SUNGAI_PETANI_FOREIGNER__'
+                : canonical;
+        grouped.putIfAbsent(groupKey, () => []).add(payroll);
       }
       final keys = selectedPayrollBranchId == null
           ? List<String>.from(branchOrder)
@@ -10837,30 +10864,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
               .map((value) => NumberFormat('#,##0.00').format(value)),
         ]);
         final branchName = branchLabels[key] ?? key;
-        document.addPage(pw.Page(
+        const columnWidths = <int, pw.TableColumnWidth>{
+          0: pw.FlexColumnWidth(.35),
+          1: pw.FlexColumnWidth(.8),
+          2: pw.FlexColumnWidth(.9),
+          3: pw.FlexColumnWidth(.9),
+          4: pw.FlexColumnWidth(.9),
+          5: pw.FlexColumnWidth(2.2),
+          6: pw.FlexColumnWidth(1.15),
+          7: pw.FlexColumnWidth(.7),
+          8: pw.FlexColumnWidth(.65),
+          9: pw.FlexColumnWidth(.65),
+          10: pw.FlexColumnWidth(.65),
+          11: pw.FlexColumnWidth(.55),
+          12: pw.FlexColumnWidth(.55),
+          13: pw.FlexColumnWidth(.7),
+          14: pw.FlexColumnWidth(.7),
+          15: pw.FlexColumnWidth(.55),
+          16: pw.FlexColumnWidth(.55),
+          17: pw.FlexColumnWidth(.45),
+          18: pw.FlexColumnWidth(.65),
+          19: pw.FlexColumnWidth(.75),
+        };
+        document.addPage(pw.MultiPage(
           pageFormat: PdfPageFormat.a3.landscape,
           margin: const pw.EdgeInsets.fromLTRB(14, 10, 14, 18),
-          build: (_) => pw.Column(children: [
+          header: (_) => pw.Column(children: [
             _brandedPdfHeader(
                 'Payroll - $branchName', selectedPayrollMonth, printedAt, logo),
-            pw.SizedBox(height: 8),
-            pw.Expanded(
-              child: pw.TableHelper.fromTextArray(
-                headers: headers,
-                data: data,
-                headerStyle:
-                    pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold),
-                headerDecoration:
-                    const pw.BoxDecoration(color: PdfColors.grey200),
-                cellStyle: const pw.TextStyle(fontSize: 6.2),
-                cellPadding: const pw.EdgeInsets.all(3),
-                border:
-                    pw.TableBorder.all(color: PdfColors.grey500, width: .35),
-              ),
-            ),
             pw.SizedBox(height: 6),
-            _brandedPdfFooter(printedAt),
           ]),
+          footer: (_) => _brandedPdfFooter(printedAt),
+          build: (_) => [
+            pw.TableHelper.fromTextArray(
+              headers: headers,
+              data: data,
+              columnWidths: columnWidths,
+              headerStyle:
+                  pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey200),
+              cellStyle: const pw.TextStyle(fontSize: 7),
+              cellPadding:
+                  const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2.5),
+              border: pw.TableBorder.all(color: PdfColors.grey500, width: .35),
+            ),
+          ],
         ));
       }
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
