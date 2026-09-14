@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen>
     )..repeat(reverse: true);
     _rainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 2600),
     )..repeat();
     _heroEntrance = CurvedAnimation(
       parent: _entranceController,
@@ -805,7 +805,7 @@ class _LoginScreenState extends State<LoginScreen>
               if (!compact && loading)
                 Positioned(
                   width: 390,
-                  top: 0,
+                  top: constraints.maxHeight * .27,
                   right: 18,
                   bottom: 0,
                   child: IgnorePointer(
@@ -890,25 +890,30 @@ class _LoginScreenState extends State<LoginScreen>
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 58, 8, 0),
-          child: Transform.scale(
-            scale: .30 + progress * .70,
-            alignment: Alignment.bottomCenter,
-            child: ShaderMask(
-              blendMode: BlendMode.dstIn,
-              shaderCallback: (bounds) => const RadialGradient(
-                radius: .74,
-                colors: [
-                  Colors.white,
-                  Colors.white,
-                  Colors.transparent,
-                ],
-                stops: [0, .73, 1],
-              ).createShader(bounds),
-              child: Image.asset(
-                'assets/login_natural_tree.png',
-                fit: BoxFit.contain,
+          child: ClipRect(
+            child: Transform.translate(
+              offset: const Offset(0, 48),
+              child: Transform.scale(
+                scale: .30 + progress * .70,
                 alignment: Alignment.bottomCenter,
-                filterQuality: FilterQuality.high,
+                child: ShaderMask(
+                  blendMode: BlendMode.dstIn,
+                  shaderCallback: (bounds) => const RadialGradient(
+                    radius: .74,
+                    colors: [
+                      Colors.white,
+                      Colors.white,
+                      Colors.transparent,
+                    ],
+                    stops: [0, .73, 1],
+                  ).createShader(bounds),
+                  child: Image.asset(
+                    'assets/login_natural_tree.png',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.bottomCenter,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1493,23 +1498,22 @@ class _WateringPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rainPaint = Paint()
-      ..color = color.withValues(alpha: .68)
-      ..strokeWidth = 1.7
+      ..color = color.withValues(alpha: .48)
+      ..strokeWidth = 1.25
       ..strokeCap = StrokeCap.round;
     final glowPaint = Paint()
-      ..color = color.withValues(alpha: .16)
-      ..strokeWidth = 4
+      ..color = color.withValues(alpha: .10)
+      ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
 
-    for (var i = 0; i < 72; i++) {
+    for (var i = 0; i < 46; i++) {
       final column = ((i * 47) % 101) / 100;
-      final speed = .78 + (i % 7) * .065;
-      final phase = (animation.value * 10 * speed + i * .137) % 1.0;
+      final phase = (animation.value + i * .137) % 1.0;
       final x = column * size.width;
-      final y = phase * (size.height + 90) - 70;
-      final length = 12.0 + (i % 5) * 3.5;
+      final y = phase * (size.height + 60) - 45;
+      final length = 10.0 + (i % 5) * 2.4;
       final start = Offset(x, y);
-      final end = Offset(x - 4, y + length);
+      final end = Offset(x - 2.5, y + length);
       canvas.drawLine(start, end, glowPaint);
       canvas.drawLine(start, end, rainPaint);
     }
