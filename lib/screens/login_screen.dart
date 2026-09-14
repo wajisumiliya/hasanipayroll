@@ -759,7 +759,11 @@ class _LoginScreenState extends State<LoginScreen>
                                 Expanded(
                                   flex: 11,
                                   child: _entrance(
-                                    _desktopCatHero(theme),
+                                    _desktopCatHero(
+                                      theme,
+                                      height: (constraints.maxHeight - 90)
+                                          .clamp(480.0, 720.0),
+                                    ),
                                     _heroEntrance,
                                     42,
                                   ),
@@ -777,14 +781,19 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _desktopCatHero(_DailyLoginTheme theme) {
-    return Align(
-      alignment: Alignment.bottomRight,
-      child: FractionallySizedBox(
-        widthFactor: 1,
-        heightFactor: 1,
+  Widget _desktopCatHero(
+    _DailyLoginTheme theme, {
+    required double height,
+  }) {
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: Align(
+        alignment: Alignment.bottomRight,
         child: Image.asset(
           'assets/login_cat_cutout.png',
+          width: double.infinity,
+          height: height,
           fit: BoxFit.contain,
           alignment: Alignment.bottomRight,
           filterQuality: FilterQuality.high,
