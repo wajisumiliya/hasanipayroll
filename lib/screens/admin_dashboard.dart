@@ -10629,7 +10629,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     try {
       _message('Preparing payroll PDF by branch...');
-      final printedAt = DateTime.now();
       final logo = await _loadHasaniBooksPdfLogo();
       final employeeIds = records
           .map((row) => _normalizeBranchValue(row['employee_id']))
@@ -10756,13 +10755,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'NAMA',
         'NO IC / PASSPORT',
         'GAJI',
-        'P05 ELAUN KEDATANGAN',
-        'P02 ELAUN PERKHIDMATAN',
-        'P07 ELAUN KERAJINAN',
-        'HV15 OT',
-        'P03 CUTI UMUM',
+        'ELAUN KEDATANGAN',
+        'ELAUN PERKHIDMATAN',
+        'ELAUN KERAJINAN',
+        'OT',
+        'CUTI UMUM',
         'JUMLAH',
-        'M01 CUTI TANPA GAJI',
+        'CUTI TANPA GAJI',
         'KVSP',
         'PERKESO',
         'SIP',
@@ -10770,6 +10769,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'JUMLAH BERSIH',
       ];
       double money(dynamic value) => _payrollNumber(value);
+      String pdfMoney(double value) =>
+          value.abs() < .001 ? '' : NumberFormat('#,##0.00').format(value);
       String dateText(dynamic value) {
         if (value == null) return '';
         final text = value.toString().trim();
@@ -10848,7 +10849,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             dateText(nextIncrement),
             (employee['name'] ?? payroll['name'] ?? '').toString(),
             (employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '').toString(),
-            ...numbers.map((value) => NumberFormat('#,##0.00').format(value)),
+            ...numbers.map(pdfMoney),
           ]);
         }
         data.add([
@@ -10859,9 +10860,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           '',
           '',
           '',
-          ...totals
-              .skip(7)
-              .map((value) => NumberFormat('#,##0.00').format(value)),
+          ...totals.skip(7).map(pdfMoney),
         ]);
         final branchName = branchLabels[key] ?? key;
         const columnWidths = <int, pw.TableColumnWidth>{
@@ -10886,16 +10885,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
           18: pw.FlexColumnWidth(.65),
           19: pw.FlexColumnWidth(.75),
         };
-        document.addPage(pw.MultiPage(
-          pageFormat: PdfPageFormat.a3.landscape,
+        document.addPage(pw.Page(
+          pageFormat: PdfPageFormat.a4.landscape,
           margin: const pw.EdgeInsets.fromLTRB(6, 8, 6, 14),
-          header: (_) => pw.Column(children: [
-            _brandedPdfHeader(
-                'Payroll - $branchName', selectedPayrollMonth, printedAt, logo),
-            pw.SizedBox(height: 6),
-          ]),
-          footer: (_) => _brandedPdfFooter(printedAt),
-          build: (_) => [
+          build: (_) => pw.Column(children: [
+            logo == null
+                ? pw.Text(
+                    'hasani BOOKS',
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(
+                      fontSize: 17,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  )
+                : pw.Center(
+                    child: pw.Image(
+                      logo,
+                      width: 125,
+                      height: 46,
+                      fit: pw.BoxFit.contain,
+                    ),
+                  ),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              'PAYROLL - ${branchName.toUpperCase()} - ${DateFormat('MMMM yyyy').format(selectedPayrollMonth).toUpperCase()}',
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(
+                fontSize: 15,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 10),
             pw.TableHelper.fromTextArray(
               headers: headers,
               data: data,
@@ -10915,7 +10935,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   const pw.EdgeInsets.symmetric(horizontal: 1.5, vertical: 3),
               border: pw.TableBorder.all(color: PdfColors.grey700, width: .7),
             ),
-          ],
+            pw.SizedBox(height: 20),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Text(
+                  'PREPARED BY : ANWAR',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(width: 55),
+                pw.Text(
+                  'APPROVED BY: ____________________',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ]),
         ));
       }
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
