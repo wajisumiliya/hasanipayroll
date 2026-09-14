@@ -845,6 +845,21 @@ class _LoginScreenState extends State<LoginScreen>
                 year: now.year,
               ),
             ),
+            if (loading)
+              Positioned(
+                left: -40,
+                right: -screenRightGap,
+                top: -bottomExtension,
+                bottom: 0,
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _WateringPainter(
+                      animation: _ambientController,
+                      color: const Color(0xFF74D7FF),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -886,13 +901,6 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
         ),
-        if (loading)
-          CustomPaint(
-            painter: _WateringPainter(
-              animation: _ambientController,
-              color: const Color(0xFF74D7FF),
-            ),
-          ),
         Positioned(
           top: 12,
           left: 0,
@@ -1472,30 +1480,26 @@ class _WateringPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color.withValues(alpha: .82);
-    final streamX = size.width * .5;
-    for (var i = 0; i < 12; i++) {
-      final phase = (animation.value * 12 + i / 12) % 1.0;
-      final sway = math.sin((phase * math.pi * 4) + i) * 13;
-      final center = Offset(
-        streamX + sway,
-        -18 + phase * size.height * .68,
-      );
-      final drop = Path()
-        ..moveTo(center.dx, center.dy - 8)
-        ..quadraticBezierTo(
-          center.dx - 6,
-          center.dy + 1,
-          center.dx,
-          center.dy + 7,
-        )
-        ..quadraticBezierTo(
-          center.dx + 6,
-          center.dy + 1,
-          center.dx,
-          center.dy - 8,
-        );
-      canvas.drawPath(drop, paint);
+    final rainPaint = Paint()
+      ..color = color.withValues(alpha: .68)
+      ..strokeWidth = 1.7
+      ..strokeCap = StrokeCap.round;
+    final glowPaint = Paint()
+      ..color = color.withValues(alpha: .16)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    for (var i = 0; i < 72; i++) {
+      final column = ((i * 47) % 101) / 100;
+      final speed = .78 + (i % 7) * .065;
+      final phase = (animation.value * 10 * speed + i * .137) % 1.0;
+      final x = column * size.width;
+      final y = phase * (size.height + 90) - 70;
+      final length = 12.0 + (i % 5) * 3.5;
+      final start = Offset(x, y);
+      final end = Offset(x - 4, y + length);
+      canvas.drawLine(start, end, glowPaint);
+      canvas.drawLine(start, end, rainPaint);
     }
   }
 
