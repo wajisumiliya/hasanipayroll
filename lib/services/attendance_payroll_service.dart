@@ -85,6 +85,10 @@ class AttendancePayrollService {
 
     final epfCategory = _normalizeCategory(salaryDefault['epf_category']);
     final eisApplicable = _isApplicable(salaryDefault['eis_applicable']);
+    final epfEnabled = _enabledByDefault(salaryDefault['epf_enabled']);
+    final eisEnabled = _enabledByDefault(salaryDefault['eis_enabled']);
+    final socsoEnabled = _enabledByDefault(salaryDefault['socso_enabled']);
+    final socsoCategory = _socsoCategory(salaryDefault['socso_category']);
     final contributionEligibilityWage =
         _roundMoney(basicSalary - unpaidDeduction);
     final contributionsApplicable = contributionEligibilityWage >= 500;
@@ -95,7 +99,7 @@ class AttendancePayrollService {
     final socsoWage = eisApplicable ? statutoryWage : _roundMoney(basicSalary);
 
     final _ContributionRow epf;
-    if (!contributionsApplicable) {
+    if (!contributionsApplicable || !epfEnabled) {
       epf = const _ContributionRow(0, 0, 0, 0);
     } else if (epfCategory == 'normal') {
       final twoPercent = _roundMoney(epfWage * 0.02);
@@ -113,14 +117,18 @@ class AttendancePayrollService {
       );
     }
 
-    final socso = contributionsApplicable
+    final socso = contributionsApplicable && socsoEnabled
         ? _findContribution(
-            schedule: _socsoFirstCategorySchedule,
+            schedule: socsoCategory == 'type2'
+                ? _socsoSecondCategorySchedule
+                : _socsoFirstCategorySchedule,
             wage: socsoWage,
-            scheduleName: 'SOCSO First Category',
+            scheduleName: socsoCategory == 'type2'
+                ? 'SOCSO Second Category'
+                : 'SOCSO First Category',
           )
         : const _ContributionRow(0, 0, 0, 0);
-    final eis = contributionsApplicable && eisApplicable
+    final eis = contributionsApplicable && eisApplicable && eisEnabled
         ? _findContribution(
             schedule: _eisSchedule,
             wage: statutoryWage,
@@ -282,6 +290,10 @@ class AttendancePayrollService {
     final eisApplicable = _isApplicable(
       salaryDefault['eis_applicable'],
     );
+    final epfEnabled = _enabledByDefault(salaryDefault['epf_enabled']);
+    final eisEnabled = _enabledByDefault(salaryDefault['eis_enabled']);
+    final socsoEnabled = _enabledByDefault(salaryDefault['socso_enabled']);
+    final socsoCategory = _socsoCategory(salaryDefault['socso_category']);
 
     debugPrint('========================================');
     debugPrint('STATUTORY SETTINGS FOR $employeeId');
@@ -457,7 +469,7 @@ class AttendancePayrollService {
     final socsoWage = eisApplicable ? statutoryWage : basicSalary;
     final _ContributionRow epf;
 
-    if (!contributionsApplicable) {
+    if (!contributionsApplicable || !epfEnabled) {
       epf = const _ContributionRow(0, 0, 0, 0);
     } else if (epfCategory == 'normal') {
       // SPECIAL RULE:
@@ -482,11 +494,15 @@ class AttendancePayrollService {
     // 5. SOCSO - FIRST CATEGORY
     // ------------------------------------------------------------------------
 
-    final socso = contributionsApplicable
+    final socso = contributionsApplicable && socsoEnabled
         ? _findContribution(
-            schedule: _socsoFirstCategorySchedule,
+            schedule: socsoCategory == 'type2'
+                ? _socsoSecondCategorySchedule
+                : _socsoFirstCategorySchedule,
             wage: socsoWage,
-            scheduleName: 'SOCSO First Category',
+            scheduleName: socsoCategory == 'type2'
+                ? 'SOCSO Second Category'
+                : 'SOCSO First Category',
           )
         : const _ContributionRow(0, 0, 0, 0);
 
@@ -496,7 +512,7 @@ class AttendancePayrollService {
 
     final _ContributionRow eis;
 
-    if (contributionsApplicable && eisApplicable) {
+    if (contributionsApplicable && eisApplicable && eisEnabled) {
       eis = _findContribution(
         schedule: _eisSchedule,
         wage: statutoryWage,
@@ -719,7 +735,11 @@ class AttendancePayrollService {
             'elaun_kerajinan,'
             'zakat,'
             'epf_category,'
-            'eis_applicable',
+            'eis_applicable,'
+            'epf_enabled,'
+            'eis_enabled,'
+            'socso_enabled,'
+            'socso_category',
           )
           .eq('employee_id', wantedId);
 
@@ -1026,6 +1046,18 @@ class AttendancePayrollService {
 
     // Everything else is treated as applicable.
     return true;
+  }
+
+  // New statutory switches are enabled when the column is absent/null so
+  // existing employees retain their current contributions after deployment.
+  static bool _enabledByDefault(dynamic value) {
+    if (value == null) return true;
+    return _isApplicable(value);
+  }
+
+  static String _socsoCategory(dynamic value) {
+    final category = _normalizeCategory(value).replaceAll(' ', '');
+    return category == 'type2' || category == '2' ? 'type2' : 'type1';
   }
 
   static double _roundMoney(double value) {
@@ -1462,7 +1494,7 @@ class AttendancePayrollService {
   // The imported source rows contain total employer contribution followed by
   // the employer-only portion. Build the First Category employee share as the
   // difference between those two values. For example, 27.15 - 19.40 = 7.75.
-  // Second Category is intentionally NOT used.
+  // The source also carries the employer-only amount used by Type 2.
   // ==========================================================================
 
   static final List<_ContributionRow> _socsoFirstCategorySourceSchedule =
@@ -1542,6 +1574,20 @@ class AttendancePayrollService {
               row.end,
               row.employee,
               _roundMoney(row.employer - row.employee),
+            ),
+          )
+          .toList(growable: false);
+
+  // Second Category is paid by the employer only. The source schedule's
+  // employee field contains that employer-only amount.
+  static final List<_ContributionRow> _socsoSecondCategorySchedule =
+      _socsoFirstCategorySourceSchedule
+          .map(
+            (row) => _ContributionRow(
+              row.start,
+              row.end,
+              row.employee,
+              0,
             ),
           )
           .toList(growable: false);

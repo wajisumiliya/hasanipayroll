@@ -695,8 +695,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     int page,
   ) {
     final bool selected = selectedPage == page;
-    final accent =
-        page.isEven ? const Color(0xFF4F7DFF) : const Color(0xFFFF4B5C);
+    final accent = _navigationAccent(page);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -706,19 +705,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: .20) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected
-                ? accent.withValues(alpha: .70)
-                : Colors.white.withValues(alpha: .05),
-          ),
+          gradient: selected
+              ? LinearGradient(
+                  colors: [
+                    accent.withValues(alpha: .26),
+                    accent.withValues(alpha: .08),
+                  ],
+                )
+              : null,
+          color: selected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: accent.withValues(alpha: .16),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
+                    color: accent.withValues(alpha: .12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
                 ]
               : null,
@@ -728,10 +730,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
             if (selected)
               Positioned(
                 left: 0,
-                top: 12,
-                bottom: 12,
+                top: 10,
+                bottom: 10,
                 child: Container(
-                  width: 3,
+                  width: 4,
                   decoration: BoxDecoration(
                     color: accent,
                     borderRadius: BorderRadius.circular(6),
@@ -740,14 +742,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ListTile(
               dense: true,
-              minTileHeight: 50,
+              minTileHeight: 48,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12),
               leading: _navigationIcon(icon, accent, selected: selected),
               title: Text(
                 title,
                 style: TextStyle(
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected ? Colors.white : Colors.white70,
+                  color: selected ? Colors.white : Colors.white60,
                 ),
               ),
               trailing: selected
@@ -766,14 +768,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     IconData icon,
     VoidCallback onTap,
   ) {
-    const accent = Color(0xFFFFC857);
+    const accent = Color(0xFFFFB547);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: .10),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: accent.withValues(alpha: .25)),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
         ),
         child: ListTile(
           dense: true,
@@ -783,7 +785,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           title: Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.white70,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -801,15 +803,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool selected = false,
   }) {
     return Container(
-      width: 36,
-      height: 36,
+      width: 38,
+      height: 38,
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: selected ? .24 : .13),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withValues(alpha: .30)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accent.withValues(alpha: selected ? .38 : .24),
+            accent.withValues(alpha: selected ? .18 : .09),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: selected ? .20 : .10),
+            blurRadius: 9,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: Icon(icon, color: accent, size: 20),
+      child: Icon(icon, color: selected ? Colors.white : accent, size: 21),
     );
+  }
+
+  Color _navigationAccent(int page) {
+    const colors = <int, Color>{
+      0: Color(0xFF5B8CFF), // Dashboard
+      1: Color(0xFFFF5D7A), // Employees
+      2: Color(0xFF35C6F4), // Payroll
+      3: Color(0xFFFFB547), // Attendance
+      6: Color(0xFF54D6A3), // Reports
+      7: Color(0xFF9B8AFB), // Settings
+      8: Color(0xFF4EAFE8), // RHB Layout
+      9: Color(0xFFFF6B6B), // Branch logs
+      10: Color(0xFFCE7BFF), // Employee requests
+      11: Color(0xFF2FD3C4), // OT requests
+      12: Color(0xFF8B7CFF), // Payslips
+    };
+    return colors[page] ?? const Color(0xFF5B8CFF);
   }
 
   Widget _drawerItem(
@@ -818,23 +850,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
     int page,
   ) {
     final selected = selectedPage == page;
-    final accent =
-        page.isEven ? const Color(0xFF243B8F) : const Color(0xFFED1C24);
-    return ListTile(
-      selected: selectedPage == page,
-      selectedTileColor: accent.withValues(alpha: .10),
-      leading: _navigationIcon(icon, accent, selected: selected),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-          color: selected ? accent : Colors.black87,
+    final accent = _navigationAccent(page);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: .10) : Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: ListTile(
+          minTileHeight: 52,
+          leading: _navigationIcon(icon, accent, selected: selected),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              color: selected ? accent : const Color(0xFF343746),
+            ),
+          ),
+          trailing: selected
+              ? Icon(Icons.chevron_right_rounded, color: accent, size: 20)
+              : null,
+          onTap: () {
+            Navigator.pop(context);
+            changePage(page);
+          },
         ),
       ),
-      onTap: () {
-        Navigator.pop(context);
-        changePage(page);
-      },
     );
   }
 
@@ -843,7 +885,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     IconData icon, {
     required VoidCallback onTap,
   }) {
-    const accent = Color(0xFFD39100);
+    const accent = Color(0xFFFFA726);
     return ListTile(
       leading: _navigationIcon(icon, accent),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -3243,6 +3285,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool otherStaff = false;
     String epfCategory = 'normal1';
     bool eisApplicable = true;
+    bool epfEnabled = true;
+    bool eisEnabled = true;
+    bool socsoEnabled = true;
+    String socsoCategory = 'type1';
 
     showDialog(
       context: context,
@@ -3330,10 +3376,57 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: 5),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('EIS Applicable'),
-                        value: eisApplicable,
+                        secondary: const Icon(Icons.account_balance_wallet,
+                            color: Color(0xFF3957C5)),
+                        title: const Text('EPF Enabled'),
+                        subtitle: const Text(
+                            'Calculate employee and employer EPF contributions.'),
+                        value: epfEnabled,
                         onChanged: (value) =>
-                            setDialogState(() => eisApplicable = value),
+                            setDialogState(() => epfEnabled = value),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.health_and_safety,
+                            color: Color(0xFF16A36A)),
+                        title: const Text('SOCSO Enabled'),
+                        subtitle: const Text(
+                            'Calculate SOCSO using the selected category.'),
+                        value: socsoEnabled,
+                        onChanged: (value) =>
+                            setDialogState(() => socsoEnabled = value),
+                      ),
+                      DropdownButtonFormField<String>(
+                        initialValue: socsoCategory,
+                        decoration: const InputDecoration(
+                          labelText: 'SOCSO Category',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'type1',
+                            child: Text('Type 1 - Employer + Employee'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'type2',
+                            child: Text('Type 2 - Employer Only'),
+                          ),
+                        ],
+                        onChanged: socsoEnabled
+                            ? (value) => setDialogState(
+                                () => socsoCategory = value ?? 'type1')
+                            : null,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.verified_user,
+                            color: Color(0xFFFF8A34)),
+                        title: const Text('EIS Enabled'),
+                        subtitle: const Text(
+                            'Calculate employee and employer EIS contributions.'),
+                        value: eisEnabled,
+                        onChanged: (value) =>
+                            setDialogState(() => eisEnabled = value),
                       ),
                       if (service.branches.isNotEmpty)
                         DropdownButtonFormField<String>(
@@ -3534,6 +3627,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         'zakat': parsedZakat!,
                         'epf_category': epfCategory,
                         'eis_applicable': eisApplicable,
+                        'epf_enabled': epfEnabled,
+                        'eis_enabled': eisEnabled,
+                        'socso_enabled': socsoEnabled,
+                        'socso_category': socsoCategory,
                         'address': address.text.trim(),
                       },
                     );
@@ -4476,6 +4573,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
     var eisApplicable = salaryDefault['eis_applicable'] == null ||
         salaryDefault['eis_applicable'] == true ||
         salaryDefault['eis_applicable'].toString().toLowerCase() == 'true';
+    bool enabledByDefault(String key) => salaryDefault[key] == null ||
+        salaryDefault[key] == true ||
+        salaryDefault[key].toString().toLowerCase() == 'true';
+    var epfEnabled = enabledByDefault('epf_enabled');
+    var eisEnabled = enabledByDefault('eis_enabled');
+    var socsoEnabled = enabledByDefault('socso_enabled');
+    var socsoCategory =
+        salaryDefault['socso_category']?.toString().toLowerCase() == 'type2'
+            ? 'type2'
+            : 'type1';
     DateTime? joiningDate =
         DateTime.tryParse(employee['joining_date']?.toString() ?? '');
     var active = _isActive(employee);
@@ -4561,12 +4668,57 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('EIS Applicable'),
-                      value: eisApplicable,
+                      secondary: const Icon(Icons.account_balance_wallet,
+                          color: Color(0xFF3957C5)),
+                      title: const Text('EPF Enabled'),
+                      value: epfEnabled,
                       onChanged: saving
                           ? null
                           : (value) =>
-                              setDialogState(() => eisApplicable = value),
+                              setDialogState(() => epfEnabled = value),
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: const Icon(Icons.health_and_safety,
+                          color: Color(0xFF16A36A)),
+                      title: const Text('SOCSO Enabled'),
+                      value: socsoEnabled,
+                      onChanged: saving
+                          ? null
+                          : (value) =>
+                              setDialogState(() => socsoEnabled = value),
+                    ),
+                    DropdownButtonFormField<String>(
+                      initialValue: socsoCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'SOCSO Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'type1',
+                          child: Text('Type 1 - Employer + Employee'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'type2',
+                          child: Text('Type 2 - Employer Only'),
+                        ),
+                      ],
+                      onChanged: saving || !socsoEnabled
+                          ? null
+                          : (value) => setDialogState(
+                              () => socsoCategory = value ?? 'type1'),
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: const Icon(Icons.verified_user,
+                          color: Color(0xFFFF8A34)),
+                      title: const Text('EIS Enabled'),
+                      value: eisEnabled,
+                      onChanged: saving
+                          ? null
+                          : (value) =>
+                              setDialogState(() => eisEnabled = value),
                     ),
                   ]),
                   const Divider(height: 28),
@@ -4752,6 +4904,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'zakat': salaryValues['Zakat (RM)'],
                             'epf_category': epfCategory,
                             'eis_applicable': eisApplicable,
+                            'epf_enabled': epfEnabled,
+                            'eis_enabled': eisEnabled,
+                            'socso_enabled': socsoEnabled,
+                            'socso_category': socsoCategory,
                             'address': fields['Address']!.text.trim(),
                           };
                           try {
