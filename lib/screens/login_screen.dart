@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import '../services/app_service.dart';
 import '../theme/daily_portal_theme.dart';
@@ -30,6 +33,12 @@ class _LoginScreenState extends State<LoginScreen>
   bool _idleCatAwake = false;
   Timer? _idleStartTimer;
   Timer? _idleBlinkTimer;
+  Timer? _clockTimer;
+  Timer? _weatherTimer;
+  DateTime _now = DateTime.now();
+  double? _temperature;
+  int? _weatherCode;
+  bool _weatherLoading = true;
 
   String? errorMessage;
 
@@ -65,12 +74,50 @@ class _LoginScreenState extends State<LoginScreen>
     );
     _entranceController.forward();
     _startIdleCatCycle();
+    _startDateTimeAndWeather();
     _restoreSession();
+  }
+
+  void _startDateTimeAndWeather() {
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+    _loadWeather();
+    _weatherTimer =
+        Timer.periodic(const Duration(minutes: 30), (_) => _loadWeather());
+  }
+
+  Future<void> _loadWeather() async {
+    try {
+      final uri = Uri.https('api.open-meteo.com', '/v1/forecast', {
+        'latitude': '5.6436',
+        'longitude': '100.4890',
+        'current': 'temperature_2m,weather_code',
+        'timezone': 'Asia/Kuala_Lumpur',
+      });
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) {
+        throw Exception('Weather service returned ${response.statusCode}');
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final current = data['current'] as Map<String, dynamic>?;
+      if (!mounted || current == null) return;
+      setState(() {
+        _temperature = (current['temperature_2m'] as num?)?.toDouble();
+        _weatherCode = (current['weather_code'] as num?)?.round();
+        _weatherLoading = false;
+      });
+    } catch (error) {
+      debugPrint('Login weather error: $error');
+      if (mounted) setState(() => _weatherLoading = false);
+    }
   }
 
   void _startIdleCatCycle() {
     _idleStartTimer?.cancel();
     _idleBlinkTimer?.cancel();
+    _clockTimer?.cancel();
+    _weatherTimer?.cancel();
     _idleStartTimer = Timer(const Duration(seconds: 30), () {
       if (!mounted || loading) return;
       setState(() => _idleCatAwake = true);
@@ -1106,7 +1153,9 @@ class _LoginScreenState extends State<LoginScreen>
               // No generated book logo and no HB logo is used.
               _logo(compact: compact),
 
-              SizedBox(height: compact ? 19 : 24),
+              SizedBox(height: compact ? 14 : 18),
+              _dateTimeWeatherStrip(theme, compact: compact),
+              SizedBox(height: compact ? 17 : 21),
 
               const Text(
                 'Welcome Back',
@@ -1355,6 +1404,117 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       ),
     );
+  }
+
+  Widget _dateTimeWeatherStrip(
+    _DailyLoginTheme theme, {
+    required bool compact,
+  }) {
+    final weather = _weatherDescription(_weatherCode);
+    final weatherIcon = _weatherIcon(_weatherCode);
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 12 : 15,
+        vertical: compact ? 10 : 11,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF130B24).withValues(alpha: .32),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: .22)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.calendar_today_outlined,
+              color: theme.accent1, size: compact ? 18 : 20),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('EEEE').format(_now).toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .8,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${DateFormat('dd MMMM yyyy').format(_now)}  •  '
+                  '${DateFormat('hh:mm:ss a').format(_now)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .78),
+                    fontSize: compact ? 10 : 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 34,
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            color: Colors.white.withValues(alpha: .22),
+          ),
+          Icon(weatherIcon,
+              color: const Color(0xFFFFD56A), size: compact ? 21 : 24),
+          const SizedBox(width: 7),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _weatherLoading
+                    ? 'Loading...'
+                    : _temperature == null
+                        ? '--°C'
+                        : '${_temperature!.round()}°C',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
+              ),
+              Text(
+                weather,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: .72),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _weatherDescription(int? code) {
+    if (code == null) return _weatherLoading ? 'Sungai Petani' : 'Unavailable';
+    if (code == 0) return 'Clear sky';
+    if (code <= 3) return 'Partly cloudy';
+    if (code == 45 || code == 48) return 'Foggy';
+    if (code >= 51 && code <= 67) return 'Rain';
+    if (code >= 80 && code <= 82) return 'Rain showers';
+    if (code >= 95) return 'Thunderstorm';
+    return 'Cloudy';
+  }
+
+  IconData _weatherIcon(int? code) {
+    if (code == null) return Icons.cloud_outlined;
+    if (code == 0) return Icons.wb_sunny_outlined;
+    if (code <= 3) return Icons.cloud_queue;
+    if (code == 45 || code == 48) return Icons.blur_on;
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
+      return Icons.water_drop_outlined;
+    }
+    if (code >= 95) return Icons.thunderstorm_outlined;
+    return Icons.cloud_outlined;
   }
 
   Widget _logo({bool compact = false}) {
