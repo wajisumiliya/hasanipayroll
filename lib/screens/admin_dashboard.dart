@@ -460,18 +460,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       Icons.receipt_long_outlined,
                       12,
                     ),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.edit_note_outlined,
-                        color: Color(0xFF2D55D8),
-                      ),
-                      title: const Text(
-                        'Edit Payroll',
-                        style: TextStyle(
-                          color: Color(0xFF2D55D8),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    _drawerActionItem(
+                      'Edit Payroll',
+                      Icons.edit_note_rounded,
                       onTap: () {
                         Navigator.pop(context);
                         _showEditPayrollDialog();
@@ -583,29 +574,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   Icons.receipt_long_outlined,
                   12,
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 2,
-                  ),
-                  child: ListTile(
-                    tileColor: _portalTheme.accent.withValues(alpha: .12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    leading: Icon(
-                      Icons.edit_note_outlined,
-                      color: _portalTheme.accent,
-                    ),
-                    title: const Text(
-                      'Edit Payroll',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    onTap: _showEditPayrollDialog,
-                  ),
+                _sidebarActionItem(
+                  'Edit Payroll',
+                  Icons.edit_note_rounded,
+                  _showEditPayrollDialog,
                 ),
                 _sidebarItem(
                   'RHB Layout',
@@ -723,33 +695,120 @@ class _AdminDashboardState extends State<AdminDashboard> {
     int page,
   ) {
     final bool selected = selectedPage == page;
+    final accent =
+        page.isEven ? const Color(0xFF4F7DFF) : const Color(0xFFFF4B5C);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 2,
+        horizontal: 12,
+        vertical: 4,
       ),
-      child: ListTile(
-        selected: selected,
-        selectedTileColor: _portalTheme.accent.withValues(alpha: .18),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        leading: Icon(
-          icon,
-          color: selected ? _portalTheme.accent : Colors.white60,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? Colors.white : Colors.white70,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: .20) : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected
+                ? accent.withValues(alpha: .70)
+                : Colors.white.withValues(alpha: .05),
           ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: .16),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+              : null,
         ),
-        onTap: () {
-          changePage(page);
-        },
+        child: Stack(
+          children: [
+            if (selected)
+              Positioned(
+                left: 0,
+                top: 12,
+                bottom: 12,
+                child: Container(
+                  width: 3,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ListTile(
+              dense: true,
+              minTileHeight: 50,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              leading: _navigationIcon(icon, accent, selected: selected),
+              title: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected ? Colors.white : Colors.white70,
+                ),
+              ),
+              trailing: selected
+                  ? Icon(Icons.chevron_right_rounded, color: accent, size: 20)
+                  : null,
+              onTap: () => changePage(page),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _sidebarActionItem(
+    String title,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    const accent = Color(0xFFFFC857);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accent.withValues(alpha: .25)),
+        ),
+        child: ListTile(
+          dense: true,
+          minTileHeight: 50,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          leading: _navigationIcon(icon, accent),
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          trailing: const Icon(Icons.open_in_new_rounded,
+              color: Colors.white38, size: 16),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+
+  Widget _navigationIcon(
+    IconData icon,
+    Color accent, {
+    bool selected = false,
+  }) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: selected ? .24 : .13),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withValues(alpha: .30)),
+      ),
+      child: Icon(icon, color: accent, size: 20),
     );
   }
 
@@ -758,26 +817,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
     IconData icon,
     int page,
   ) {
+    final selected = selectedPage == page;
+    final accent =
+        page.isEven ? const Color(0xFF243B8F) : const Color(0xFFED1C24);
     return ListTile(
       selected: selectedPage == page,
-      selectedTileColor: _portalTheme.accent.withValues(alpha: .18),
-      leading: Icon(
-        icon,
-        color: selectedPage == page ? const Color(0xFF2D55D8) : Colors.black54,
-      ),
+      selectedTileColor: accent.withValues(alpha: .10),
+      leading: _navigationIcon(icon, accent, selected: selected),
       title: Text(
         title,
         style: TextStyle(
-          fontWeight:
-              selectedPage == page ? FontWeight.bold : FontWeight.normal,
-          color:
-              selectedPage == page ? const Color(0xFF2D55D8) : Colors.black87,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          color: selected ? accent : Colors.black87,
         ),
       ),
       onTap: () {
         Navigator.pop(context);
         changePage(page);
       },
+    );
+  }
+
+  Widget _drawerActionItem(
+    String title,
+    IconData icon, {
+    required VoidCallback onTap,
+  }) {
+    const accent = Color(0xFFD39100);
+    return ListTile(
+      leading: _navigationIcon(icon, accent),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+      trailing: const Icon(Icons.open_in_new_rounded, size: 17),
+      onTap: onTap,
     );
   }
 
@@ -2819,6 +2890,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // DATA
         // ----------------------------------------------------------
         final allEmployees = snapshot.data ?? [];
+        final compactEmployeeView = MediaQuery.sizeOf(context).width < 760;
         final search = _adminEmployeeSearch.trim().toLowerCase();
         final employees = search.isEmpty
             ? allEmployees
@@ -2947,66 +3019,136 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 '$branchId'
                                 '${designation.isEmpty ? '' : ' • $designation'}',
                               ),
-                              trailing: Wrap(
-                                children: [
-                                  // VIEW
-                                  IconButton(
-                                    tooltip: 'View',
-                                    icon: const Icon(
-                                      Icons.visibility_outlined,
-                                    ),
-                                    onPressed: () {
-                                      _showSupabaseEmployee(
-                                        employee,
-                                      );
-                                    },
-                                  ),
+                              trailing: compactEmployeeView
+                                  ? PopupMenuButton<String>(
+                                      tooltip: 'Employee actions',
+                                      icon: const Icon(Icons.more_vert),
+                                      onSelected: (action) {
+                                        switch (action) {
+                                          case 'view':
+                                            _showSupabaseEmployee(employee);
+                                            break;
+                                          case 'edit':
+                                            _showSupabaseEmployeeEdit(employee);
+                                            break;
+                                          case 'transfer':
+                                            _showTransferEmployee(employee);
+                                            break;
+                                          case 'login':
+                                            _createOrResetApplicationLogin(
+                                                employee);
+                                            break;
+                                          case 'delete':
+                                            _confirmSupabaseEmployeeDelete(
+                                                employeeId, name);
+                                            break;
+                                        }
+                                      },
+                                      itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                          value: 'view',
+                                          child: ListTile(
+                                            leading:
+                                                Icon(Icons.visibility_outlined),
+                                            title: Text('View'),
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          child: ListTile(
+                                            leading: Icon(Icons.edit,
+                                                color: Colors.blue),
+                                            title: Text('Edit'),
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'transfer',
+                                          child: ListTile(
+                                            leading: Icon(Icons.swap_horiz,
+                                                color: Colors.orange),
+                                            title: Text('Transfer'),
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'login',
+                                          child: ListTile(
+                                            leading: Icon(
+                                                Icons.manage_accounts_outlined,
+                                                color: Colors.purple),
+                                            title: Text('Application login'),
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: ListTile(
+                                            leading: Icon(Icons.delete_outline,
+                                                color: Colors.red),
+                                            title: Text('Delete'),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Wrap(
+                                      children: [
+                                        // VIEW
+                                        IconButton(
+                                          tooltip: 'View',
+                                          icon: const Icon(
+                                            Icons.visibility_outlined,
+                                          ),
+                                          onPressed: () {
+                                            _showSupabaseEmployee(
+                                              employee,
+                                            );
+                                          },
+                                        ),
 
-                                  // EDIT
-                                  IconButton(
-                                    tooltip: 'Edit',
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.blue,
-                                    ),
-                                    onPressed: () {
-                                      _showSupabaseEmployeeEdit(employee);
-                                    },
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Transfer staff',
-                                    icon: const Icon(Icons.swap_horiz,
-                                        color: Colors.orange),
-                                    onPressed: () =>
-                                        _showTransferEmployee(employee),
-                                  ),
+                                        // EDIT
+                                        IconButton(
+                                          tooltip: 'Edit',
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            color: Colors.blue,
+                                          ),
+                                          onPressed: () {
+                                            _showSupabaseEmployeeEdit(employee);
+                                          },
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Transfer staff',
+                                          icon: const Icon(Icons.swap_horiz,
+                                              color: Colors.orange),
+                                          onPressed: () =>
+                                              _showTransferEmployee(employee),
+                                        ),
 
-                                  IconButton(
-                                    tooltip: 'Create/reset application login',
-                                    icon: const Icon(
-                                      Icons.manage_accounts_outlined,
-                                      color: Colors.purple,
+                                        IconButton(
+                                          tooltip:
+                                              'Create/reset application login',
+                                          icon: const Icon(
+                                            Icons.manage_accounts_outlined,
+                                            color: Colors.purple,
+                                          ),
+                                          onPressed: () =>
+                                              _createOrResetApplicationLogin(
+                                                  employee),
+                                        ),
+                                        // DELETE
+                                        IconButton(
+                                          tooltip: 'Delete',
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () {
+                                            _confirmSupabaseEmployeeDelete(
+                                              employeeId,
+                                              name,
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ),
-                                    onPressed: () =>
-                                        _createOrResetApplicationLogin(
-                                            employee),
-                                  ),
-                                  // DELETE
-                                  IconButton(
-                                    tooltip: 'Delete',
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () {
-                                      _confirmSupabaseEmployeeDelete(
-                                        employeeId,
-                                        name,
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
                               onTap: () {
                                 _showSupabaseEmployee(
                                   employee,
@@ -6153,7 +6295,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       label: 'Submitted',
                       count: submittedCount,
                       icon: Icons.check_circle_outline,
-                      color: const Color(0xFF15965D),
+                      color: const Color(0xFF243B8F),
                       selected: _attendanceSubmissionFilter == 'submitted',
                       onTap: () => setState(
                         () => _attendanceSubmissionFilter = 'submitted',
@@ -6163,7 +6305,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       label: 'Pending',
                       count: pendingCount,
                       icon: Icons.schedule_outlined,
-                      color: const Color(0xFFF59E0B),
+                      color: const Color(0xFFED1C24),
                       selected: _attendanceSubmissionFilter == 'pending',
                       onTap: () => setState(
                         () => _attendanceSubmissionFilter = 'pending',
@@ -6183,7 +6325,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           setState(() => selectedAttendanceMonth = value),
                     ),
                     SizedBox(
-                      width: 300,
+                      width: (MediaQuery.sizeOf(context).width - 80)
+                          .clamp(220.0, 300.0),
                       child: TextField(
                         controller: _attendanceEmployeeSearchController,
                         onSubmitted: (value) =>
@@ -6245,6 +6388,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           const <Map<String, dynamic>>[];
                       final submitted = records
                           .any((r) => _attendanceBool(r['is_submitted']));
+                      final accent = index.isEven
+                          ? const Color(0xFF243B8F)
+                          : const Color(0xFFED1C24);
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(18),
@@ -6253,12 +6399,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           branchId,
                         ),
                         child: Card(
-                          elevation: 0,
+                          elevation: 2,
+                          color: accent.withValues(alpha: .10),
+                          shadowColor: accent.withValues(alpha: .18),
                           margin: EdgeInsets.zero,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                             side: BorderSide(
-                              color: Colors.blueGrey.withValues(alpha: .20),
+                              color: accent,
+                              width: 1.8,
                             ),
                           ),
                           child: Padding(
@@ -6268,18 +6417,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               children: [
                                 Row(
                                   children: [
-                                    CircleAvatar(
+                                    EmployeePhoto(
+                                      name: name,
+                                      photoUrl:
+                                          employee['photo_url']?.toString(),
                                       radius: 15,
-                                      backgroundColor: const Color(0xFFE7F7EF),
-                                      child: Text(
-                                        name.isEmpty
-                                            ? '?'
-                                            : name[0].toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Color(0xFF15965D),
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
+                                      backgroundColor:
+                                          accent.withValues(alpha: .13),
+                                      foregroundColor: accent,
+                                      borderColor: accent,
                                     ),
                                     const Spacer(),
                                     Container(
@@ -8246,6 +8392,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 // ============================================================================
 
   Widget _employeePayslipsPage() {
+    final mobileControlWidth =
+        (MediaQuery.sizeOf(context).width - 80).clamp(220.0, 420.0);
     final availableMonths = service.payroll
         .map((record) => DateTime(record.period.year, record.period.month))
         .toSet()
@@ -8311,7 +8459,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   crossAxisAlignment: WrapCrossAlignment.end,
                   children: [
                     SizedBox(
-                      width: 230,
+                      width: mobileControlWidth.clamp(220.0, 230.0),
                       child: DropdownButtonFormField<DateTime>(
                         initialValue: availableMonths.isEmpty
                             ? null
@@ -8340,7 +8488,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                     ),
                     SizedBox(
-                      width: 420,
+                      width: mobileControlWidth,
                       child: DropdownButtonFormField<String>(
                         initialValue: effectiveEmployeeId,
                         isExpanded: true,
