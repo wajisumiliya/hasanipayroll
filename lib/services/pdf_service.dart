@@ -86,7 +86,7 @@ class PdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-              _slipHeader(logo, month, employee, p),
+              _slipHeader(logo, month, employee),
               _ledger(income, deductions),
               _totalsRow(gross, totalDeductions),
               _paymentRow(net, employee, p),
@@ -126,8 +126,12 @@ class PdfService {
     pw.MemoryImage? logo,
     String month,
     Employee employee,
-    PayrollRecord payroll,
   ) {
+    final identityNumber = employee.newIcNo.trim();
+    final identityDigitCount =
+        identityNumber.replaceAll(RegExp(r'\D'), '').length;
+    final identityLabel = identityDigitCount > 10 ? 'I/C NO.' : 'PASSPORT NO.';
+
     return pw.Container(
       padding: const pw.EdgeInsets.all(7),
       decoration: const pw.BoxDecoration(
@@ -150,8 +154,11 @@ class PdfService {
               children: [
                 pw.Text(
                   'HASANI EDAR SDN BHD (199801000949 (457075-U))',
-                  style:
-                      pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                  maxLines: 1,
+                  style: pw.TextStyle(
+                    fontSize: 6.2,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
                 pw.SizedBox(height: 2),
                 pw.Text(
@@ -170,11 +177,15 @@ class PdfService {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                _headerPair('EMPLOYEE', employee.name, boldValue: true),
-                _headerPair('I/C NO.', employee.newIcNo),
+                _headerPair(
+                  'EMPLOYEE',
+                  employee.name,
+                  boldValue: true,
+                  maxLines: 2,
+                ),
+                _headerPair(identityLabel, identityNumber),
                 _headerPair('PERIOD', month.toUpperCase()),
                 _headerPair('EMPLOYEE ID', employee.employeeId),
-                _headerPair('STATUS', payroll.isPaid ? 'PAID' : 'UNPAID'),
               ],
             ),
           ),
@@ -187,6 +198,7 @@ class PdfService {
     String label,
     String value, {
     bool boldValue = false,
+    int maxLines = 1,
   }) {
     final displayValue = value.trim().isEmpty ? '-' : value.trim();
     return pw.RichText(
@@ -201,7 +213,7 @@ class PdfService {
           ),
         ],
       ),
-      maxLines: 1,
+      maxLines: maxLines,
     );
   }
 
