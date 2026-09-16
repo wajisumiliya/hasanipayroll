@@ -91,6 +91,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       DateTime(DateTime.now().year, DateTime.now().month);
   DateTime selectedDashboardMonth =
       DateTime(DateTime.now().year, DateTime.now().month);
+  String? selectedDashboardBranchId;
   DateTime selectedReportMonth =
       DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
@@ -1163,11 +1164,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final results = await Future.wait([
       SupabaseService.getEmployees(),
       SupabaseService.getPayroll(),
+      SupabaseService.getBranches(),
     ]);
 
     return {
       'employees': results[0],
       'payroll': results[1],
+      'branches': results[2],
     };
   }
 
@@ -1264,6 +1267,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'Unassigned';
     final text = value.toString().trim();
     return text.isEmpty ? 'Unassigned' : text;
+  }
+
+  String _dashboardBranchKey(dynamic value) {
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty) return '';
+    return service.getBranch(raw)?.id.toUpperCase() ?? raw.toUpperCase();
   }
 
   void _showBranchFlow(List<Map<String, dynamic>> employees) {
@@ -1498,12 +1507,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final employees =
             data['employees'] as List<Map<String, dynamic>>? ?? [];
         final payroll = data['payroll'] as List<Map<String, dynamic>>? ?? [];
+        final branchRows =
+            data['branches'] as List<Map<String, dynamic>>? ?? [];
+        final employeeBranchIds = <String, String>{
+          for (final employee in employees)
+            (employee['employee_id'] ?? employee['id'] ?? '').toString().trim():
+                _dashboardBranchKey(_payrollBranchIdFromEmployee(employee)),
+        };
+        final dashboardBranches = <String, String>{
+          for (final branch in service.branches)
+            _dashboardBranchKey(branch.id): branch.name,
+        };
+        for (final branch in branchRows) {
+          final id =
+              (branch['id'] ?? branch['branch_id'] ?? '').toString().trim();
+          if (id.isEmpty) continue;
+          final key = _dashboardBranchKey(id);
+          dashboardBranches[key] = service.getBranch(id)?.name ??
+              (branch['name'] ?? branch['branch_name'] ?? id).toString().trim();
+        }
+        for (final branchId in employeeBranchIds.values) {
+          if (branchId.isNotEmpty) {
+            dashboardBranches.putIfAbsent(branchId, () => branchId);
+          }
+        }
         final periodPayroll = payroll
             .where((row) => _payrollPeriodMatchesMonth(
                   row['period'],
                   selectedDashboardMonth,
                 ))
-            .toList();
+            .where((row) {
+          if (selectedDashboardBranchId == null) return true;
+          final payrollBranchId = _dashboardBranchKey(row['branch_id']);
+          final employeeId =
+              (row['employee_id'] ?? row['employeeId'] ?? '').toString().trim();
+          final branchId = payrollBranchId.isNotEmpty
+              ? payrollBranchId
+              : employeeBranchIds[employeeId] ?? '';
+          return branchId == selectedDashboardBranchId;
+        }).toList();
 
         final activeEmployees = employees.where(_isActive).length;
         final inactiveEmployees = employees.length - activeEmployees;
@@ -1606,6 +1648,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           .toSet()
                           .toList()
                         ..sort((a, b) => b.compareTo(a)),
+                      branchOptions: dashboardBranches,
                       compact: compact,
                       onGrossTap: () => _showPayrollFlow(
                         employees,
@@ -1819,6 +1862,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     required double employerContributions,
     required int payrollRecords,
     required List<int> availableYears,
+    required Map<String, String> branchOptions,
     required bool compact,
     required VoidCallback onGrossTap,
     required VoidCallback onNetTap,
@@ -1827,6 +1871,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final period = DateFormat('MMMM yyyy').format(selectedDashboardMonth);
     final years = {...availableYears, selectedDashboardMonth.year}.toList()
       ..sort((a, b) => b.compareTo(a));
+    final sortedBranches = branchOptions.entries.toList()
+      ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
+    final selectedBranchName = selectedDashboardBranchId == null
+        ? 'All branches'
+        : branchOptions[selectedDashboardBranchId] ??
+            selectedDashboardBranchId!;
 
     return Container(
       width: double.infinity,
@@ -1904,7 +1954,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ),
                   Text(
-                    '$period · $payrollRecords payroll records',
+                    '$period · $selectedBranchName · $payrollRecords payroll records',
                     style: const TextStyle(color: Colors.black54, fontSize: 12),
                   ),
                 ],
@@ -1952,6 +2002,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     }),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              _dashboardBranchCards(
+                value: selectedDashboardBranchId,
+                branches: sortedBranches,
+                onChanged: (branchId) => setState(
+                  () => selectedDashboardBranchId = branchId,
+                ),
               ),
               SizedBox(height: compact ? 16 : 20),
               LayoutBuilder(builder: (context, constraints) {
@@ -2117,6 +2175,78 @@ class _AdminDashboardState extends State<AdminDashboard> {
           if (next != null) onChanged(next);
         },
       ),
+    );
+  }
+
+  Widget _dashboardBranchCards({
+    required String? value,
+    required List<MapEntry<String, String>> branches,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final options = <MapEntry<String?, String>>[
+      const MapEntry(null, 'All branches'),
+      ...branches.map((branch) => MapEntry(branch.key, branch.value)),
+    ];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((branch) {
+        final selected = value == branch.key;
+        final accent =
+            selected ? const Color(0xFF243B8F) : const Color(0xFF667085);
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => onChanged(branch.key),
+            borderRadius: BorderRadius.circular(12),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected
+                    ? const Color(0xFF243B8F).withValues(alpha: .12)
+                    : Colors.white.withValues(alpha: .72),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xFF243B8F)
+                      : Colors.black.withValues(alpha: .14),
+                  width: selected ? 1.6 : 1,
+                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF243B8F).withValues(alpha: .12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    selected ? Icons.check_circle : Icons.storefront_outlined,
+                    size: 17,
+                    color: accent,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    branch.value,
+                    style: TextStyle(
+                      color:
+                          selected ? const Color(0xFF243B8F) : Colors.black87,
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
