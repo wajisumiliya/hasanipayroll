@@ -36,32 +36,31 @@ class PdfService {
         0, (sum, record) => sum + _overtimeHours(record));
     final earlyOutDays = monthlyAttendance.where(_earlyOut).length;
     final unpaidDays = monthlyAttendance.where(_unpaid).length;
+    final isForeignEmployee = _isForeignAddress(employee.address);
 
     final income = <String, double>{
       'BASIC PAY': p.basicSalary,
-      'FW SALARY': p.fwSalary,
       'ELAUN KEDATANGAN': p.elaunKedatangan,
       'ELAUN PERKHIDMATAN': p.elaunPerkhidmatan,
-      'ELAUN KERAJINAN': p.elaunKerajinan,
+      'ELAUN KERAJINAN': isForeignEmployee ? 0 : p.elaunKerajinan,
+      'ELAUN MAKANAN': isForeignEmployee ? p.elaunKerajinan : 0,
       'OVERTIME': p.overtime,
       'CUTI UMUM': p.cutiUmum,
       'BONUS': p.bonus,
-      'COMMISSION': p.commission,
     };
     final deductions = <String, double>{
       'ADVANCE': p.advanceDeduction,
       'LOAN': p.loanDeduction,
-      'UNPAID LEAVE': p.unpaidLeave,
-      'LATE DEDUCTION': p.lateDeduction,
+      'UNPAID LEAVE': p.unpaidLeave + p.lateDeduction,
       'EPF': p.epfEmployee,
       'SOCSO': p.socsoEmployee,
       'EIS': p.eisEmployee,
       'PCB': p.pcb,
       'ZAKAT': p.zakat,
-      'OTHER DEDUCTION': p.otherDeductionAmount,
     };
     final gross = income.values.fold<double>(0, (sum, value) => sum + value);
-    final totalDeductions = p.totalDeductions;
+    final totalDeductions =
+        deductions.values.fold<double>(0, (sum, value) => sum + value);
     final net = gross - totalDeductions;
 
     document.addPage(
@@ -440,4 +439,11 @@ class PdfService {
 
   static String _money(double value) =>
       value == 0 ? '' : value.toStringAsFixed(2);
+
+  static bool _isForeignAddress(String address) {
+    final normalized = address.trim().toUpperCase();
+    return normalized.contains('FRN') ||
+        normalized.contains('FOREIGN') ||
+        normalized.contains('FORGNER');
+  }
 }

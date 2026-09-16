@@ -515,16 +515,37 @@ class AppService extends ChangeNotifier {
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final response = await _supabase.from('employees').select();
+      final salaryDefaultAddresses = <String, String>{};
+
+      try {
+        final salaryDefaults = await _supabase
+            .from('employee_salary_defaults')
+            .select('employee_id,address');
+        for (final row in salaryDefaults) {
+          final employeeId = row['employee_id']?.toString().trim() ?? '';
+          final address = row['address']?.toString().trim() ?? '';
+          if (employeeId.isNotEmpty && address.isNotEmpty) {
+            salaryDefaultAddresses[employeeId] = address;
+          }
+        }
+      } catch (error) {
+        debugPrint('Salary-default addresses unavailable: $error');
+      }
 
       employees.clear();
 
       for (final row in response) {
         try {
-          final employee = _employeeFromSupabase(
+          var employee = _employeeFromSupabase(
             Map<String, dynamic>.from(
               row,
             ),
           );
+          final salaryDefaultAddress =
+              salaryDefaultAddresses[employee.employeeId];
+          if (salaryDefaultAddress != null) {
+            employee = employee.copyWith(address: salaryDefaultAddress);
+          }
 
           if (employee.employeeId.trim().isNotEmpty) {
             employees.add(employee);
