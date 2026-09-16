@@ -8,6 +8,11 @@ import 'package:pdf/widgets.dart' as pw;
 import '../models/payroll.dart';
 
 class PdfService {
+  static const payslipPageFormat = PdfPageFormat(
+    148 * PdfPageFormat.mm,
+    95 * PdfPageFormat.mm,
+  );
+
   static Future<Uint8List> buildPayslip({
     required Employee employee,
     required PayrollRecord p,
@@ -65,8 +70,8 @@ class PdfService {
 
     document.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a5,
-        margin: const pw.EdgeInsets.all(18),
+        pageFormat: payslipPageFormat,
+        margin: pw.EdgeInsets.zero,
         theme: pw.ThemeData.withFont(
           base: pw.Font.courier(),
           bold: pw.Font.courierBold(),

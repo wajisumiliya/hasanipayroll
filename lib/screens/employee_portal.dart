@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 import '../models/payroll.dart';
@@ -1425,8 +1424,9 @@ class _EmployeePortalState extends State<EmployeePortal> {
 
       await Printing.layoutPdf(
         onLayout: (_) async => bytes,
-        format: PdfPageFormat.a5,
+        format: PdfService.payslipPageFormat,
         dynamicLayout: false,
+        forceCustomPrintPaper: true,
       );
     } catch (e) {
       if (!mounted) return;
