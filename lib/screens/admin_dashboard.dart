@@ -8768,7 +8768,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         history: service.employeePayroll(employee.employeeId),
         attendance: service.employeeAttendance(employee.employeeId),
       );
-      await Printing.layoutPdf(onLayout: (_) async => bytes);
+      await Printing.layoutPdf(
+        onLayout: (_) async => bytes,
+        format: PdfPageFormat.a5.landscape,
+        dynamicLayout: false,
+      );
     } catch (error) {
       if (!mounted) return;
       _message('Unable to generate payslip: $error');
