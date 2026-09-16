@@ -4573,7 +4573,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     var eisApplicable = salaryDefault['eis_applicable'] == null ||
         salaryDefault['eis_applicable'] == true ||
         salaryDefault['eis_applicable'].toString().toLowerCase() == 'true';
-    bool enabledByDefault(String key) => salaryDefault[key] == null ||
+    bool enabledByDefault(String key) =>
+        salaryDefault[key] == null ||
         salaryDefault[key] == true ||
         salaryDefault[key].toString().toLowerCase() == 'true';
     var epfEnabled = enabledByDefault('epf_enabled');
@@ -4674,8 +4675,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       value: epfEnabled,
                       onChanged: saving
                           ? null
-                          : (value) =>
-                              setDialogState(() => epfEnabled = value),
+                          : (value) => setDialogState(() => epfEnabled = value),
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
@@ -4717,8 +4717,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       value: eisEnabled,
                       onChanged: saving
                           ? null
-                          : (value) =>
-                              setDialogState(() => eisEnabled = value),
+                          : (value) => setDialogState(() => eisEnabled = value),
                     ),
                   ]),
                   const Divider(height: 28),

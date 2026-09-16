@@ -84,10 +84,10 @@ class SupabaseService {
           fileOptions: FileOptions(contentType: contentType, upsert: true),
         );
     final publicUrl = client.storage.from('employee-photos').getPublicUrl(path);
-    final versionedUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
-    await client
-        .from('employees')
-        .update({'photo_url': versionedUrl}).eq('employee_id', employeeId.trim());
+    final versionedUrl =
+        '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+    await client.from('employees').update({'photo_url': versionedUrl}).eq(
+        'employee_id', employeeId.trim());
     return versionedUrl;
   }
 
