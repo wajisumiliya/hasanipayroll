@@ -71,7 +71,10 @@ class PdfService {
     document.addPage(
       pw.Page(
         pageFormat: payslipPageFormat,
-        margin: pw.EdgeInsets.zero,
+        margin: const pw.EdgeInsets.symmetric(
+          horizontal: 5 * PdfPageFormat.mm,
+          vertical: 3 * PdfPageFormat.mm,
+        ),
         theme: pw.ThemeData.withFont(
           base: pw.Font.courier(),
           bold: pw.Font.courierBold(),
