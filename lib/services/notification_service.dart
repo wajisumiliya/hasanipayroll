@@ -2,6 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../screens/supabase_service.dart';
+import 'notification_presenter.dart';
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -12,6 +13,7 @@ class NotificationService {
     String? branchId,
   }) async {
     try {
+      await NotificationPresenter.initialize();
       // ============================================================
       // REQUEST NOTIFICATION PERMISSION
       // ============================================================
@@ -71,7 +73,16 @@ class NotificationService {
       // ============================================================
 
       FirebaseMessaging.onMessage.listen(
-        (RemoteMessage message) {
+        (RemoteMessage message) async {
+          final title = message.notification?.title ??
+              message.data['title']?.toString() ??
+              'Hasani Payroll';
+          final body = message.notification?.body ??
+              message.data['body']?.toString() ??
+              '';
+          if (body.isNotEmpty) {
+            await NotificationPresenter.show(title: title, body: body);
+          }
           debugPrint('');
           debugPrint(
             '========================================',
