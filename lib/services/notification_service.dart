@@ -5,6 +5,7 @@ import '../screens/supabase_service.dart';
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static const String _sendFunctionName = 'dynamic-responder';
 
   static Future<void> initialize({
     String? employeeId,
@@ -181,7 +182,7 @@ class NotificationService {
     String? employeeId,
   }) async {
     final response = await SupabaseService.client.functions.invoke(
-      'send-notification',
+      _sendFunctionName,
       body: {
         'title': title.trim(),
         'body': body.trim(),

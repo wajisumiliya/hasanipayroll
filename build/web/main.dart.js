@@ -36021,7 +36021,7 @@ q===$&&A.a()
 q=q.as
 q===$&&A.a()
 s=2
-return A.l(q.qL("send-notification",A.a6(["title",B.k.D(e),"body",B.k.D(b),"type",f,"audience",a,"branch_id",c,"employee_id",d],t.N,t.u)),$async$a1Z)
+return A.l(q.qL("dynamic-responder",A.a6(["title",B.k.D(e),"body",B.k.D(b),"type",f,"audience",a,"branch_id",c,"employee_id",d],t.N,t.u)),$async$a1Z)
 case 2:q=h.b
 if(q<200||q>=300)throw A.c(A.bT("Notification service returned "+q+"."))
 return A.x(null,r)}})
