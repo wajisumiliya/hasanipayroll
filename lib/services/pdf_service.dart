@@ -156,9 +156,6 @@ class PdfService {
                   'TEL : 04-425 3699 / 04-425 3702',
                   style: const pw.TextStyle(fontSize: 5.5, lineSpacing: 1),
                 ),
-                pw.SizedBox(height: 3),
-                _headerPair('EMPLOYEE', employee.name, boldValue: true),
-                _headerPair('I/C NO.', employee.newIcNo),
               ],
             ),
           ),
@@ -168,6 +165,8 @@ class PdfService {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                _headerPair('EMPLOYEE', employee.name, boldValue: true),
+                _headerPair('I/C NO.', employee.newIcNo),
                 _headerPair('PERIOD', month.toUpperCase()),
                 _headerPair('EMPLOYEE ID', employee.employeeId),
                 _headerPair('STATUS', payroll.isPaid ? 'PAID' : 'UNPAID'),
