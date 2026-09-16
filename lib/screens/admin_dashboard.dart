@@ -88,6 +88,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       DateTime(DateTime.now().year, DateTime.now().month);
   DateTime selectedPayrollMonth =
       DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime selectedDashboardMonth =
+      DateTime(DateTime.now().year, DateTime.now().month);
   DateTime selectedReportMonth =
       DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
@@ -1495,6 +1497,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final employees =
             data['employees'] as List<Map<String, dynamic>>? ?? [];
         final payroll = data['payroll'] as List<Map<String, dynamic>>? ?? [];
+        final periodPayroll = payroll
+            .where((row) => _payrollPeriodMatchesMonth(
+                  row['period'],
+                  selectedDashboardMonth,
+                ))
+            .toList();
 
         final activeEmployees = employees.where(_isActive).length;
         final inactiveEmployees = employees.length - activeEmployees;
@@ -1511,17 +1519,46 @@ class _AdminDashboardState extends State<AdminDashboard> {
             .toSet()
             .length;
 
-        final totalGross = payroll.fold<double>(
+        double sumField(String key) => periodPayroll.fold<double>(
+              0,
+              (sum, row) => sum + _number(row[key]),
+            );
+        final basicPay = sumField('basic_salary') + sumField('fw_salary');
+        final allowances = periodPayroll.fold<double>(
           0,
-          (sum, p) =>
+          (sum, row) =>
               sum +
-              _number(p['total_earnings'] ??
-                  p['gross_salary'] ??
-                  p['gross_pay'] ??
-                  p['totalGross']),
+              _number(row['elaun_kedatangan']) +
+              _number(row['elaun_perkhidmatan']) +
+              _number(row['elaun_kerajinan']),
         );
-
-        final totalNet = payroll.fold<double>(
+        final overtime = sumField('overtime');
+        final bonus = sumField('bonus');
+        final epf = sumField('epf_employee');
+        final socso = sumField('socso_employee');
+        final eis = sumField('eis_employee');
+        final pcbAndZakat = sumField('pcb') + sumField('zakat');
+        final employerContributions = sumField('epf_employer') +
+            sumField('socso_employer') +
+            sumField('eis_employer');
+        final totalGross = periodPayroll.fold<double>(
+          0,
+          (sum, row) => sum + _payrollTotalEarnings(row),
+        );
+        final totalDeductions = periodPayroll.fold<double>(
+          0,
+          (sum, row) =>
+              sum +
+              _number(row['late_deduction']) +
+              _number(row['unpaid_deduction']) +
+              _number(row['epf_employee']) +
+              _number(row['socso_employee']) +
+              _number(row['eis_employee']) +
+              _number(row['pcb']) +
+              _number(row['zakat']) +
+              _number(row['advance']),
+        );
+        final totalNet = periodPayroll.fold<double>(
           0,
           (sum, p) =>
               sum +
@@ -1557,17 +1594,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     _dashboardCommandHero(
                       totalGross: totalGross,
                       totalNet: totalNet,
-                      payrollRecords: payroll.length,
+                      basicPay: basicPay,
+                      allowances: allowances,
+                      overtime: overtime,
+                      bonus: bonus,
+                      totalDeductions: totalDeductions,
+                      epf: epf,
+                      socso: socso,
+                      eis: eis,
+                      pcbAndZakat: pcbAndZakat,
+                      employerContributions: employerContributions,
+                      payrollRecords: periodPayroll.length,
+                      availableYears: payroll
+                          .map((row) => DateTime.tryParse(
+                              (row['period'] ?? '').toString()))
+                          .whereType<DateTime>()
+                          .map((date) => date.year)
+                          .toSet()
+                          .toList()
+                        ..sort((a, b) => b.compareTo(a)),
                       compact: compact,
                       onGrossTap: () => _showPayrollFlow(
                         employees,
-                        payroll,
+                        periodPayroll,
                         title: 'Gross Payroll',
                         metric: 'gross',
                       ),
                       onNetTap: () => _showPayrollFlow(
                         employees,
-                        payroll,
+                        periodPayroll,
                         title: 'Net Payroll',
                         metric: 'net',
                       ),
@@ -1711,12 +1766,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       _dashboardPulsePanel(
                         employees: employees.length,
                         activeEmployees: activeEmployees,
-                        payrollRecords: payroll.length,
+                        payrollRecords: periodPayroll.length,
                         departments: departments,
                         onDepartmentsTap: () => _showDepartmentFlow(employees),
                         onPayrollTap: () => _showPayrollFlow(
                           employees,
-                          payroll,
+                          periodPayroll,
                           title: 'Payroll Records',
                           metric: 'generate',
                         ),
@@ -1732,13 +1787,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             child: _dashboardPulsePanel(
                               employees: employees.length,
                               activeEmployees: activeEmployees,
-                              payrollRecords: payroll.length,
+                              payrollRecords: periodPayroll.length,
                               departments: departments,
                               onDepartmentsTap: () =>
                                   _showDepartmentFlow(employees),
                               onPayrollTap: () => _showPayrollFlow(
                                 employees,
-                                payroll,
+                                periodPayroll,
                                 title: 'Payroll Records',
                                 metric: 'generate',
                               ),
@@ -1759,14 +1814,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _dashboardCommandHero({
     required double totalGross,
     required double totalNet,
+    required double basicPay,
+    required double allowances,
+    required double overtime,
+    required double bonus,
+    required double totalDeductions,
+    required double epf,
+    required double socso,
+    required double eis,
+    required double pcbAndZakat,
+    required double employerContributions,
     required int payrollRecords,
+    required List<int> availableYears,
     required bool compact,
     required VoidCallback onGrossTap,
     required VoidCallback onNetTap,
   }) {
     final theme = _portalTheme;
-    final now = DateTime.now();
-    final period = DateFormat('MMMM yyyy').format(now);
+    final period = DateFormat('MMMM yyyy').format(selectedDashboardMonth);
+    final years = {...availableYears, selectedDashboardMonth.year}.toList()
+      ..sort((a, b) => b.compareTo(a));
 
     return Container(
       width: double.infinity,
@@ -1865,51 +1932,89 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 'Your workforce, payroll and operations — unified in real time.',
                 style: TextStyle(color: Colors.black54, height: 1.4),
               ),
-              SizedBox(height: compact ? 22 : 28),
-              if (compact)
-                Column(
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _dashboardPeriodDropdown(
+                    label: 'Month',
+                    value: selectedDashboardMonth.month,
+                    items: List.generate(12, (index) => index + 1),
+                    itemLabel: (month) =>
+                        DateFormat('MMMM').format(DateTime(2000, month)),
+                    onChanged: (month) => setState(() {
+                      selectedDashboardMonth =
+                          DateTime(selectedDashboardMonth.year, month);
+                    }),
+                  ),
+                  _dashboardPeriodDropdown(
+                    label: 'Year',
+                    value: selectedDashboardMonth.year,
+                    items: years,
+                    itemLabel: (year) => year.toString(),
+                    onChanged: (year) => setState(() {
+                      selectedDashboardMonth =
+                          DateTime(year, selectedDashboardMonth.month);
+                    }),
+                  ),
+                ],
+              ),
+              SizedBox(height: compact ? 16 : 20),
+              LayoutBuilder(builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 1050
+                    ? 4
+                    : constraints.maxWidth >= 620
+                        ? 3
+                        : 2;
+                final width =
+                    (constraints.maxWidth - (10 * (columns - 1))) / columns;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    _heroPayrollMetric(
-                      'Gross payroll',
-                      _money(totalGross),
-                      Icons.account_balance_wallet_outlined,
-                      const Color(0xFF243B8F),
-                      onGrossTap,
-                    ),
-                    const SizedBox(height: 10),
-                    _heroPayrollMetric(
-                      'Net payroll',
-                      _money(totalNet),
-                      Icons.payments_outlined,
-                      const Color(0xFFED1C24),
-                      onNetTap,
-                    ),
-                  ],
-                )
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: _heroPayrollMetric(
+                    _compactPayrollMetric(
+                        width,
                         'Gross payroll',
-                        _money(totalGross),
+                        totalGross,
                         Icons.account_balance_wallet_outlined,
                         const Color(0xFF243B8F),
-                        onGrossTap,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _heroPayrollMetric(
-                        'Net payroll',
-                        _money(totalNet),
-                        Icons.payments_outlined,
-                        const Color(0xFFED1C24),
-                        onNetTap,
-                      ),
+                        onTap: onGrossTap),
+                    _compactPayrollMetric(width, 'Net payroll', totalNet,
+                        Icons.payments_outlined, const Color(0xFFED1C24),
+                        onTap: onNetTap),
+                    _compactPayrollMetric(width, 'Basic pay', basicPay,
+                        Icons.badge_outlined, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(width, 'Allowances', allowances,
+                        Icons.add_card_outlined, const Color(0xFFED1C24)),
+                    _compactPayrollMetric(width, 'Deductions', totalDeductions,
+                        Icons.remove_circle_outline, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(width, 'EPF', epf,
+                        Icons.savings_outlined, const Color(0xFFED1C24)),
+                    _compactPayrollMetric(
+                        width,
+                        'SOCSO',
+                        socso,
+                        Icons.health_and_safety_outlined,
+                        const Color(0xFF243B8F)),
+                    _compactPayrollMetric(width, 'EIS', eis,
+                        Icons.shield_outlined, const Color(0xFFED1C24)),
+                    _compactPayrollMetric(width, 'Overtime', overtime,
+                        Icons.schedule_outlined, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(width, 'Bonus', bonus,
+                        Icons.card_giftcard_outlined, const Color(0xFFED1C24)),
+                    _compactPayrollMetric(width, 'PCB & Zakat', pcbAndZakat,
+                        Icons.receipt_long_outlined, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(
+                      width,
+                      'Employer contributions',
+                      employerContributions,
+                      Icons.business_center_outlined,
+                      const Color(0xFFED1C24),
                     ),
                   ],
-                ),
+                );
+              }),
             ],
           ),
         ],
@@ -1917,75 +2022,107 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _heroPayrollMetric(
+  Widget _compactPayrollMetric(
+    double width,
     String label,
-    String value,
+    double value,
     IconData icon,
-    Color accent,
-    VoidCallback onTap,
-  ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          padding: const EdgeInsets.all(17),
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: .045),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: accent, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: .12),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: .13),
-                  borderRadius: BorderRadius.circular(14),
+    Color accent, {
+    VoidCallback? onTap,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: .045),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accent.withValues(alpha: .7)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: .13),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: accent, size: 18),
                 ),
-                child: Icon(icon, color: accent, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: .8,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: .8,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF20242D),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
+                      const SizedBox(height: 2),
+                      Text(
+                        _money(value),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF20242D),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.arrow_outward, color: Colors.black38, size: 18),
-            ],
+                if (onTap != null)
+                  const Icon(Icons.arrow_outward,
+                      color: Colors.black38, size: 15),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _dashboardPeriodDropdown({
+    required String label,
+    required int value,
+    required List<int> items,
+    required String Function(int value) itemLabel,
+    required ValueChanged<int> onChanged,
+  }) {
+    return SizedBox(
+      width: 170,
+      child: DropdownButtonFormField<int>(
+        initialValue: value,
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: .7),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        items: items
+            .map((item) => DropdownMenuItem<int>(
+                  value: item,
+                  child: Text(itemLabel(item)),
+                ))
+            .toList(),
+        onChanged: (next) {
+          if (next != null) onChanged(next);
+        },
       ),
     );
   }
