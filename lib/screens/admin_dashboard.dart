@@ -1974,7 +1974,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: const Color(0xFF20242D),
+                        color: Color(0xFF20242D),
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
@@ -2066,7 +2066,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: const Color(0xFF20242D),
+                    color: Color(0xFF20242D),
                     fontSize: 23,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -.6,
@@ -2076,7 +2076,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: const Color(0xFF20242D),
+                    color: Color(0xFF20242D),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -12027,8 +12027,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             : exportIc;
         final eligible = total > 0 &&
             (isForeign ? socsoNo.isNotEmpty : icDigits.length == 12);
-        if (eligible)
+        if (eligible) {
           row = [name, identifier, socsoEmployee, socsoEmployer, total];
+        }
       } else if (report == 'EIS' && eisEmployee + eisEmployer > 0) {
         row = [
           name,
@@ -13534,7 +13535,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // CREATE RHB EXCEL
       // ============================================================
 
-      if (only == null || only == 'rhb')
+      if (only == null || only == 'rhb') {
         saveExcel(
           'RHB_Layout_${monthFile}_$exportStamp.xlsx',
           'RHB Layout',
@@ -13547,12 +13548,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
           rhb,
         );
+      }
 
       // ============================================================
       // CREATE EPF EXCEL
       // ============================================================
 
-      if (only == null || only == 'epf')
+      if (only == null || only == 'epf') {
         saveExcel(
           'EPF_${monthFile}_$exportStamp.xlsx',
           'EPF',
@@ -13572,12 +13574,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ...epfForeign,
           ],
         );
+      }
 
       // ============================================================
       // CREATE EIS EXCEL
       // ============================================================
 
-      if (only == null || only == 'eis')
+      if (only == null || only == 'eis') {
         saveExcel(
           'EIS_${monthFile}_$exportStamp.xlsx',
           'EIS',
@@ -13592,12 +13595,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ...eisForeign,
           ],
         );
+      }
 
       // ============================================================
       // CREATE SOCSO EXCEL
       // ============================================================
 
-      if (only == null || only == 'socso')
+      if (only == null || only == 'socso') {
         saveExcel(
           'SOCSO_${monthFile}_$exportStamp.xlsx',
           'SOCSO',
@@ -13612,6 +13616,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ...socsoForeign,
           ],
         );
+      }
 
       // ============================================================
       // SUCCESS
