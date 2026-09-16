@@ -23,7 +23,8 @@ class PdfService {
     pw.MemoryImage? logo;
 
     try {
-      final data = await rootBundle.load('assets/hasani_books_logo.jpg');
+      final data =
+          await rootBundle.load('assets/hasani_books_payslip_logo.jpeg');
       logo = pw.MemoryImage(
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
     } catch (_) {}
@@ -143,8 +144,8 @@ class PdfService {
         children: [
           if (logo != null)
             pw.Container(
-              width: 58,
-              height: 27,
+              width: 42,
+              height: 42,
               margin: const pw.EdgeInsets.only(right: 8),
               child: pw.Image(logo, fit: pw.BoxFit.contain),
             ),

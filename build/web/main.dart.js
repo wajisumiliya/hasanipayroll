@@ -35888,7 +35888,7 @@ a3=A.K5()
 a2.a=null
 p=4
 s=7
-return A.n($.wS().m3(0,"assets/hasani_books_logo.jpg"),$async$a2H)
+return A.n($.wS().m3(0,"assets/hasani_books_payslip_logo.jpeg"),$async$a2H)
 case 7:n=b0
 a2.a=A.bij(J.d7(J.Ia(n),n.byteOffset,n.byteLength))
 p=2
@@ -132126,7 +132126,7 @@ p=A.c_("\\D",!0,!1)
 o=A.bG(q,p,"").length>10?"I/C NO.":"PASSPORT NO."
 p=t.n_
 n=A.b([],p)
-if(s!=null)n.push(A.j5(f,new A.uy(s,B.ko,f,f),f,f,f,27,B.a6u,f,58))
+if(s!=null)n.push(A.j5(f,new A.uy(s,B.ko,f,f),f,f,f,42,B.a6u,f,42))
 n.push(new A.hc(5,B.cD,A.ll(A.b([A.cX("HASANI EDAR SDN BHD (199801000949 (457075-U))",1,A.dE(f,f,f,f,f,f,f,f,f,B.aH,f,f,6.2,f,B.aY,f,!0,f,f,f,f),f,f),new A.dO(f,2,f),A.cX("41A-44A JALAN PENGKALAN,\nTAMAN PEKAN BARU,\n08000 SUNGAI PETANI, KEDAH\nTEL : 04-425 3699 / 04-425 3702",f,B.bki,f,f)],p),B.fN,B.dv)))
 n.push(new A.dO(8,f,f))
 n.push(new A.hc(3,B.cD,A.ll(A.b([A.aBZ("EMPLOYEE",r.b,!0,2),A.aBZ(o,q,!1,1),A.aBZ("MONTH",g.b.toUpperCase(),!1,1),A.aBZ("EMPLOYEE ID",r.a,!1,1)],p),B.fN,B.dv)))

@@ -46,6 +46,7 @@ flutter:
 
   assets:
     - assets/hasani_books_logo.jpg
+    - assets/hasani_books_payslip_logo.jpeg
     - assets/hb_payroll_icon.png
     - assets/login_office_background.png
     - assets/login_cat_cutout.png
