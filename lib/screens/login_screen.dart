@@ -116,8 +116,6 @@ class _LoginScreenState extends State<LoginScreen>
   void _startIdleCatCycle() {
     _idleStartTimer?.cancel();
     _idleBlinkTimer?.cancel();
-    _clockTimer?.cancel();
-    _weatherTimer?.cancel();
     _idleStartTimer = Timer(const Duration(seconds: 30), () {
       if (!mounted || loading) return;
       setState(() => _idleCatAwake = true);
@@ -167,6 +165,8 @@ class _LoginScreenState extends State<LoginScreen>
     _rainController.dispose();
     _idleStartTimer?.cancel();
     _idleBlinkTimer?.cancel();
+    _clockTimer?.cancel();
+    _weatherTimer?.cancel();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
