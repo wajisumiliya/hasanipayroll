@@ -35,13 +35,17 @@ class PdfService {
             record.date.year == p.period.year &&
             record.date.month == p.period.month)
         .toList();
-    final calendarDays = DateTime(p.period.year, p.period.month + 1, 0).day;
-    final workedDays = monthlyAttendance.where(_worked).length;
     final overtimeHours = monthlyAttendance.fold<double>(
         0, (sum, record) => sum + _overtimeHours(record));
-    final earlyOutDays = monthlyAttendance.where(_earlyOut).length;
-    final unpaidDays = monthlyAttendance.where(_unpaid).length;
     final isForeignEmployee = _isForeignAddress(employee.address);
+    final requiredWorkMinutes = isForeignEmployee ? 630 : 450;
+    final unpaidMinutes = monthlyAttendance.fold<int>(0, (sum, record) {
+      if (_unpaid(record)) return sum + requiredWorkMinutes;
+      if (!_worked(record)) return sum;
+      final shortage = requiredWorkMinutes - _workMinutes(record);
+      return sum + (shortage > 0 ? shortage : 0);
+    });
+    final unpaidHours = unpaidMinutes / 60.0;
 
     final income = <String, double>{
       'BASIC PAY': p.basicSalary,
@@ -92,11 +96,8 @@ class PdfService {
               _paymentRow(net, employee, p),
               _contributionAndAttendance(
                 p: p,
-                calendarDays: calendarDays,
-                workedDays: workedDays,
                 overtimeHours: overtimeHours,
-                earlyOutDays: earlyOutDays,
-                unpaidDays: unpaidDays,
+                unpaidHours: unpaidHours,
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.fromLTRB(7, 5, 7, 6),
@@ -164,7 +165,7 @@ class PdfService {
                 pw.Text(
                   '41A-44A JALAN PENGKALAN,\n'
                   'TAMAN PEKAN BARU,\n'
-                  '08000 SUNGAI PEETANI, KEDAH\n'
+                  '08000 SUNGAI PETANI, KEDAH\n'
                   'TEL : 04-425 3699 / 04-425 3702',
                   style: const pw.TextStyle(fontSize: 5.5, lineSpacing: 1),
                 ),
@@ -184,7 +185,7 @@ class PdfService {
                   maxLines: 2,
                 ),
                 _headerPair(identityLabel, identityNumber),
-                _headerPair('PERIOD', month.toUpperCase()),
+                _headerPair('MONTH', month.toUpperCase()),
                 _headerPair('EMPLOYEE ID', employee.employeeId),
               ],
             ),
@@ -376,11 +377,8 @@ class PdfService {
 
   static pw.Widget _contributionAndAttendance({
     required PayrollRecord p,
-    required int calendarDays,
-    required int workedDays,
     required double overtimeHours,
-    required int earlyOutDays,
-    required int unpaidDays,
+    required double unpaidHours,
   }) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 5),
@@ -399,7 +397,7 @@ class PdfService {
           pw.SizedBox(width: 8),
           pw.Expanded(
             child: pw.Text(
-              ' OT ${overtimeHours.toStringAsFixed(2)} HRS  |  EARLY $earlyOutDays  |  UNPAID $unpaidDays',
+              'OT ${overtimeHours.toStringAsFixed(2)} HRS  |  UNPAID ${unpaidHours.toStringAsFixed(2)} HRS',
               textAlign: pw.TextAlign.right,
               style: const pw.TextStyle(fontSize: 5.8, height: 1.3),
             ),
@@ -424,15 +422,20 @@ class PdfService {
         status == 'unpaid leave';
   }
 
-  static bool _earlyOut(AttendanceRecord record) =>
-      _worked(record) &&
-      !_unpaid(record) &&
-      _workMinutes(record) > 0 &&
-      _workMinutes(record) < 630;
-
   static int _workMinutes(AttendanceRecord record) {
-    final start = _minutes(record.effectiveCheckIn);
-    final end = _minutes(record.effectiveCheckOut);
+    final morning = _timeRangeMinutes(record.morningIn, record.morningOut);
+    final afternoon =
+        _timeRangeMinutes(record.afternoonIn, record.afternoonOut);
+    if (morning + afternoon > 0) return morning + afternoon;
+    return _timeRangeMinutes(
+      record.effectiveCheckIn,
+      record.effectiveCheckOut,
+    );
+  }
+
+  static int _timeRangeMinutes(String startValue, String endValue) {
+    final start = _minutes(startValue);
+    final end = _minutes(endValue);
     return start == null || end == null || end <= start ? 0 : end - start;
   }
 
