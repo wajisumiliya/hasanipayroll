@@ -8770,7 +8770,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       );
       await Printing.layoutPdf(
         onLayout: (_) async => bytes,
-        format: PdfPageFormat.a5.landscape,
+        format: PdfPageFormat.a5,
         dynamicLayout: false,
       );
     } catch (error) {

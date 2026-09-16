@@ -65,7 +65,7 @@ class PdfService {
 
     document.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a5.landscape,
+        pageFormat: PdfPageFormat.a5,
         margin: const pw.EdgeInsets.all(18),
         theme: pw.ThemeData.withFont(
           base: pw.Font.courier(),
@@ -79,9 +79,7 @@ class PdfService {
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               _slipHeader(logo, month, employee, p),
-              pw.Expanded(
-                child: _ledger(income, deductions),
-              ),
+              _ledger(income, deductions),
               _totalsRow(gross, totalDeductions),
               _paymentRow(net, employee, p),
               _contributionAndAttendance(

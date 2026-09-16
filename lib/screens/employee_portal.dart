@@ -1425,7 +1425,7 @@ class _EmployeePortalState extends State<EmployeePortal> {
 
       await Printing.layoutPdf(
         onLayout: (_) async => bytes,
-        format: PdfPageFormat.a5.landscape,
+        format: PdfPageFormat.a5,
         dynamicLayout: false,
       );
     } catch (e) {
