@@ -157,9 +157,8 @@ class PdfService {
                   style: const pw.TextStyle(fontSize: 5.5, lineSpacing: 1),
                 ),
                 pw.SizedBox(height: 3),
-                _headerPair('EMPLOYEE', employee.name),
+                _headerPair('EMPLOYEE', employee.name, boldValue: true),
                 _headerPair('I/C NO.', employee.newIcNo),
-                //_headerPair('POSITION', employee.designation),
               ],
             ),
           ),
@@ -171,8 +170,6 @@ class PdfService {
               children: [
                 _headerPair('PERIOD', month.toUpperCase()),
                 _headerPair('EMPLOYEE ID', employee.employeeId),
-                //_headerPair('DEPARTMENT', employee.department),
-                //_headerPair('BRANCH', employee.branchId),
                 _headerPair('STATUS', payroll.isPaid ? 'PAID' : 'UNPAID'),
               ],
             ),
@@ -182,10 +179,24 @@ class PdfService {
     );
   }
 
-  static pw.Widget _headerPair(String label, String value) {
-    return pw.Text(
-      '$label : ${value.trim().isEmpty ? '-' : value.trim()}',
-      style: const pw.TextStyle(fontSize: 6.3, height: 1.25),
+  static pw.Widget _headerPair(
+    String label,
+    String value, {
+    bool boldValue = false,
+  }) {
+    final displayValue = value.trim().isEmpty ? '-' : value.trim();
+    return pw.RichText(
+      text: pw.TextSpan(
+        style: const pw.TextStyle(fontSize: 6.3, height: 1.25),
+        children: [
+          pw.TextSpan(text: '$label : '),
+          pw.TextSpan(
+            text: displayValue,
+            style:
+                boldValue ? pw.TextStyle(fontWeight: pw.FontWeight.bold) : null,
+          ),
+        ],
+      ),
       maxLines: 1,
     );
   }
@@ -267,32 +278,27 @@ class PdfService {
   }
 
   static pw.Widget _totalsRow(double gross, double deductions) {
-    return pw.Container(
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(
-          top: pw.BorderSide(width: .8),
-          bottom: pw.BorderSide(width: .8),
-        ),
+    return pw.Table(
+      border: const pw.TableBorder(
+        top: pw.BorderSide(width: .8),
+        bottom: pw.BorderSide(width: .8),
+        verticalInside: pw.BorderSide(width: .55),
       ),
-      padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-      child: pw.Row(
-        children: [
-          pw.Expanded(child: _amountPair('TOTAL EARNINGS', gross)),
-          pw.Container(width: .6, height: 12, color: PdfColors.black),
-          pw.Expanded(child: _amountPair('TOTAL DEDUCTIONS', deductions)),
-        ],
-      ),
-    );
-  }
-
-  static pw.Widget _amountPair(String label, double value) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.1),
+        1: pw.FlexColumnWidth(1.25),
+        2: pw.FlexColumnWidth(3.1),
+        3: pw.FlexColumnWidth(1.25),
+      },
       children: [
-        pw.Text(label,
-            style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold)),
-        pw.Text(_money(value),
-            style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+        pw.TableRow(
+          children: [
+            _ledgerCell('TOTAL EARNINGS', bold: true),
+            _ledgerCell(_money(gross), bold: true, right: true),
+            _ledgerCell('TOTAL DEDUCTIONS', bold: true),
+            _ledgerCell(_money(deductions), bold: true, right: true),
+          ],
+        ),
       ],
     );
   }
