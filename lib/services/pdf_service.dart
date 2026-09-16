@@ -47,9 +47,6 @@ class PdfService {
       'CUTI UMUM': p.cutiUmum,
       'BONUS': p.bonus,
       'COMMISSION': p.commission,
-      'HOUSING ALLOWANCE': p.housingAllowance,
-      'TRAVEL ALLOWANCE': p.travelAllowance,
-      'OTHER EARNINGS': p.otherEarnings,
     };
     final deductions = <String, double>{
       'ADVANCE': p.advanceDeduction,
@@ -147,9 +144,17 @@ class PdfService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'HASANI BOOKS EDAR SDN BHD',
+                  'HASANI EDAR SDN BHD (199801000949 (457075-U))',
                   style:
                       pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  '41A-44A JALAN PENGKALAN,\n'
+                  'TAMAN PEKAN BARU,\n'
+                  '08000 SUNGAI PEETANI, KEDAH\n'
+                  'TEL : 04-425 3699 / 04-425 3702',
+                  style: const pw.TextStyle(fontSize: 5.5, lineSpacing: 1),
                 ),
                 pw.SizedBox(height: 3),
                 _headerPair('EMPLOYEE', employee.name),
@@ -372,7 +377,7 @@ class PdfService {
           pw.SizedBox(width: 8),
           pw.Expanded(
             child: pw.Text(
-              'ATTENDANCE  DAYS $workedDays/$calendarDays  |  OT ${overtimeHours.toStringAsFixed(2)} HRS  |  EARLY $earlyOutDays  |  UNPAID $unpaidDays',
+              ' OT ${overtimeHours.toStringAsFixed(2)} HRS  |  EARLY $earlyOutDays  |  UNPAID $unpaidDays',
               textAlign: pw.TextAlign.right,
               style: const pw.TextStyle(fontSize: 5.8, height: 1.3),
             ),
