@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
@@ -1537,7 +1538,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         final epf = sumField('epf_employee');
         final socso = sumField('socso_employee');
         final eis = sumField('eis_employee');
-        final pcbAndZakat = sumField('pcb') + sumField('zakat');
+        final pcb = sumField('pcb');
         final employerContributions = sumField('epf_employer') +
             sumField('socso_employer') +
             sumField('eis_employer');
@@ -1558,15 +1559,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               _number(row['zakat']) +
               _number(row['advance']),
         );
-        final totalNet = periodPayroll.fold<double>(
-          0,
-          (sum, p) =>
-              sum +
-              _number(p['net_pay'] ??
-                  p['net_salary'] ??
-                  p['total_net'] ??
-                  p['netPay']),
-        );
+        final totalNet = totalGross - totalDeductions;
 
         return RefreshIndicator(
           onRefresh: () async => setState(() {}),
@@ -1602,7 +1595,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       epf: epf,
                       socso: socso,
                       eis: eis,
-                      pcbAndZakat: pcbAndZakat,
+                      pcb: pcb,
                       employerContributions: employerContributions,
                       payrollRecords: periodPayroll.length,
                       availableYears: payroll
@@ -1822,7 +1815,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     required double epf,
     required double socso,
     required double eis,
-    required double pcbAndZakat,
+    required double pcb,
     required double employerContributions,
     required int payrollRecords,
     required List<int> availableYears,
@@ -1973,38 +1966,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
+                    _compactPayrollMetric(width, 'Basic pay', basicPay,
+                        Icons.badge_outlined, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(width, 'Bonus', bonus,
+                        Icons.card_giftcard_outlined, const Color(0xFFED1C24)),
+                    _compactPayrollMetric(width, 'EPF', epf,
+                        Icons.savings_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(
                         width,
                         'Gross payroll',
                         totalGross,
                         Icons.account_balance_wallet_outlined,
-                        const Color(0xFF243B8F),
+                        const Color(0xFFED1C24),
                         onTap: onGrossTap),
-                    _compactPayrollMetric(width, 'Net payroll', totalNet,
-                        Icons.payments_outlined, const Color(0xFFED1C24),
-                        onTap: onNetTap),
-                    _compactPayrollMetric(width, 'Basic pay', basicPay,
-                        Icons.badge_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(width, 'Allowances', allowances,
-                        Icons.add_card_outlined, const Color(0xFFED1C24)),
+                        Icons.add_card_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(width, 'Deductions', totalDeductions,
-                        Icons.remove_circle_outline, const Color(0xFF243B8F)),
-                    _compactPayrollMetric(width, 'EPF', epf,
-                        Icons.savings_outlined, const Color(0xFFED1C24)),
+                        Icons.remove_circle_outline, const Color(0xFFED1C24)),
                     _compactPayrollMetric(
                         width,
                         'SOCSO',
                         socso,
                         Icons.health_and_safety_outlined,
                         const Color(0xFF243B8F)),
-                    _compactPayrollMetric(width, 'EIS', eis,
-                        Icons.shield_outlined, const Color(0xFFED1C24)),
+                    _compactPayrollMetric(width, 'Net payroll', totalNet,
+                        Icons.payments_outlined, const Color(0xFFED1C24),
+                        onTap: onNetTap),
                     _compactPayrollMetric(width, 'Overtime', overtime,
                         Icons.schedule_outlined, const Color(0xFF243B8F)),
-                    _compactPayrollMetric(width, 'Bonus', bonus,
-                        Icons.card_giftcard_outlined, const Color(0xFFED1C24)),
-                    _compactPayrollMetric(width, 'PCB & Zakat', pcbAndZakat,
-                        Icons.receipt_long_outlined, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(width, 'PCB', pcb,
+                        Icons.receipt_long_outlined, const Color(0xFFED1C24)),
+                    _compactPayrollMetric(width, 'EIS', eis,
+                        Icons.shield_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(
                       width,
                       'Employer contributions',
@@ -8905,12 +8898,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
         history: service.employeePayroll(employee.employeeId),
         attendance: service.employeeAttendance(employee.employeeId),
       );
-      await Printing.layoutPdf(
-        onLayout: (_) async => bytes,
-        format: PdfService.payslipPageFormat,
-        dynamicLayout: false,
-        forceCustomPrintPaper: true,
-      );
+      if (kIsWeb) {
+        final period = DateFormat('yyyy-MM').format(payroll.period);
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'payslip_${employee.employeeId}_$period.pdf',
+        );
+      } else {
+        await Printing.layoutPdf(
+          onLayout: (_) async => bytes,
+          format: PdfService.payslipPageFormat,
+          dynamicLayout: false,
+          forceCustomPrintPaper: true,
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       _message('Unable to generate payslip: $error');

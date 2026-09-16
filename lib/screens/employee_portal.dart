@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 
@@ -1422,12 +1423,20 @@ class _EmployeePortalState extends State<EmployeePortal> {
         attendance: service.employeeAttendance(employeeId),
       );
 
-      await Printing.layoutPdf(
-        onLayout: (_) async => bytes,
-        format: PdfService.payslipPageFormat,
-        dynamicLayout: false,
-        forceCustomPrintPaper: true,
-      );
+      if (kIsWeb) {
+        final period = DateFormat('yyyy-MM').format(payroll.period);
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'payslip_${payroll.employeeId}_$period.pdf',
+        );
+      } else {
+        await Printing.layoutPdf(
+          onLayout: (_) async => bytes,
+          format: PdfService.payslipPageFormat,
+          dynamicLayout: false,
+          forceCustomPrintPaper: true,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
 
