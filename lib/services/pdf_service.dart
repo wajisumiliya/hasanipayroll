@@ -150,7 +150,7 @@ class PdfService {
               child: pw.Image(logo, fit: pw.BoxFit.contain),
             ),
           pw.Expanded(
-            flex: 5,
+            flex: 9,
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -158,7 +158,7 @@ class PdfService {
                   'HASANI EDAR SDN BHD (199801000949 (457075-U))',
                   maxLines: 1,
                   style: pw.TextStyle(
-                    fontSize: 6.2,
+                    fontSize: 5.8,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -173,9 +173,9 @@ class PdfService {
               ],
             ),
           ),
-          pw.SizedBox(width: 8),
+          pw.SizedBox(width: 4),
           pw.Expanded(
-            flex: 3,
+            flex: 8,
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -203,19 +203,35 @@ class PdfService {
     int maxLines = 1,
   }) {
     final displayValue = value.trim().isEmpty ? '-' : value.trim();
-    return pw.RichText(
-      text: pw.TextSpan(
-        style: const pw.TextStyle(fontSize: 6.3, height: 1.25),
-        children: [
-          pw.TextSpan(text: '$label : '),
-          pw.TextSpan(
-            text: displayValue,
-            style:
-                boldValue ? pw.TextStyle(fontWeight: pw.FontWeight.bold) : null,
+    const style = pw.TextStyle(fontSize: 6, height: 1.25);
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(
+          width: 48,
+          child: pw.Text(label, style: style, maxLines: 1),
+        ),
+        pw.SizedBox(
+          width: 6,
+          child: pw.Text(':', style: style),
+        ),
+        pw.Expanded(
+          child: pw.RichText(
+            text: pw.TextSpan(
+              style: style,
+              children: [
+                pw.TextSpan(
+                  text: displayValue,
+                  style: boldValue
+                      ? pw.TextStyle(fontWeight: pw.FontWeight.bold)
+                      : null,
+                ),
+              ],
+            ),
+            maxLines: maxLines,
           ),
-        ],
-      ),
-      maxLines: maxLines,
+        ),
+      ],
     );
   }
 
