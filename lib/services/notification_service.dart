@@ -1,10 +1,15 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import '../screens/supabase_service.dart';
+
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  static Future<void> initialize() async {
+  static Future<void> initialize({
+    String? employeeId,
+    String? branchId,
+  }) async {
     try {
       // ============================================================
       // REQUEST NOTIFICATION PERMISSION
@@ -27,6 +32,10 @@ class NotificationService {
 
       final token = await _messaging.getToken();
 
+      if (token != null && token.isNotEmpty) {
+        await _registerToken(token, employeeId, branchId);
+      }
+
       debugPrint('');
       debugPrint(
         '========================================',
@@ -42,7 +51,8 @@ class NotificationService {
       // LISTEN FOR TOKEN CHANGES
       // ============================================================
 
-      _messaging.onTokenRefresh.listen((newToken) {
+      _messaging.onTokenRefresh.listen((newToken) async {
+        await _registerToken(newToken, employeeId, branchId);
         debugPrint('');
         debugPrint(
           '========================================',
@@ -133,6 +143,56 @@ class NotificationService {
       debugPrint(
         'Notification initialization error: $error',
       );
+    }
+  }
+
+  static Future<void> _registerToken(
+    String token,
+    String? employeeId,
+    String? branchId,
+  ) async {
+    await SupabaseService.client.rpc(
+      'register_notification_device',
+      params: {
+        'p_token': token,
+        'p_employee_id': employeeId?.trim(),
+        'p_branch_id': branchId?.trim(),
+        'p_platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+      },
+    );
+  }
+
+  static Future<void> registerCurrentDevice({
+    String? employeeId,
+    String? branchId,
+  }) async {
+    final token = await _messaging.getToken();
+    if (token != null && token.isNotEmpty) {
+      await _registerToken(token, employeeId, branchId);
+    }
+  }
+
+  static Future<void> send({
+    required String title,
+    required String body,
+    required String audience,
+    String type = 'information',
+    String? branchId,
+    String? employeeId,
+  }) async {
+    final response = await SupabaseService.client.functions.invoke(
+      'send-notification',
+      body: {
+        'title': title.trim(),
+        'body': body.trim(),
+        'type': type,
+        'audience': audience,
+        'branch_id': branchId,
+        'employee_id': employeeId,
+      },
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw Exception('Notification service returned ${response.status}.');
     }
   }
 }

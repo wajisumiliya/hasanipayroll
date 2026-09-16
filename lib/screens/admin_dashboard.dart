@@ -13,6 +13,7 @@ import '../theme/daily_portal_theme.dart';
 import '../services/ot_request_pdf_service.dart';
 import '../services/attendance_payroll_service.dart';
 import '../services/pdf_service.dart';
+import '../services/notification_service.dart';
 import 'login_screen.dart';
 import 'dart:convert';
 import 'package:csv/csv.dart';
@@ -157,7 +158,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void changePage(int page) {
     // RHB Layout is an export action, not a normal page.
     if (page == 8) {
-      _exportRhbLayout();
+      _showRhbPeriodDialog();
       return;
     }
 
@@ -168,6 +169,109 @@ class _AdminDashboardState extends State<AdminDashboard> {
         selectedDashboardCard = null;
       }
     });
+  }
+
+  Future<void> _showRhbPeriodDialog() async {
+    var year = selectedPayrollMonth.year;
+    var month = selectedPayrollMonth.month;
+    final currentYear = DateTime.now().year;
+    final years = <int>{
+      ...List.generate(currentYear - 2019, (index) => currentYear - index),
+      year,
+    }.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    final selectedPeriod = await showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.account_balance_outlined),
+              SizedBox(width: 10),
+              Text('Generate RHB Layout'),
+            ],
+          ),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select the payroll year and month before generating the Excel file.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        initialValue: year,
+                        decoration: const InputDecoration(
+                          labelText: 'Year',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: years
+                            .map((value) => DropdownMenuItem<int>(
+                                  value: value,
+                                  child: Text(value.toString()),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => year = value);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        initialValue: month,
+                        decoration: const InputDecoration(
+                          labelText: 'Month',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: List.generate(
+                          12,
+                          (index) => DropdownMenuItem<int>(
+                            value: index + 1,
+                            child: Text(DateFormat('MMMM')
+                                .format(DateTime(2000, index + 1))),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => month = value);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, DateTime(year, month)),
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Generate Excel'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedPeriod == null || !mounted) return;
+    setState(() => selectedPayrollMonth = selectedPeriod);
+    await _exportRhbLayout(only: 'rhb');
   }
 
   String _pageTitle() {
@@ -2377,9 +2481,160 @@ class _AdminDashboardState extends State<AdminDashboard> {
               'Import CSV', Icons.file_upload_outlined, () => changePage(4)),
           _actionButton(
               'Reports', Icons.insights_outlined, () => changePage(6)),
+          _actionButton('Notifications', Icons.notifications_active_outlined,
+              _showNotificationComposer),
         ],
       ),
     );
+  }
+
+  Future<void> _showNotificationComposer() async {
+    final employees = await SupabaseService.getEmployees();
+    if (!mounted) return;
+    final titleController = TextEditingController();
+    final bodyController = TextEditingController();
+    var audience = 'all';
+    var type = 'information';
+    String? branchId;
+    String? employeeId;
+    var sending = false;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Send notification'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: audience,
+                    decoration: const InputDecoration(labelText: 'Recipients'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'all', child: Text('All employees')),
+                      DropdownMenuItem(
+                          value: 'branch', child: Text('One branch')),
+                      DropdownMenuItem(
+                          value: 'employee', child: Text('One employee')),
+                    ],
+                    onChanged: (value) => setDialogState(() {
+                      audience = value ?? 'all';
+                      branchId = null;
+                      employeeId = null;
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  if (audience == 'branch')
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Branch'),
+                      items: service.branches
+                          .map((branch) => DropdownMenuItem(
+                                value: branch.id,
+                                child: Text(branch.name),
+                              ))
+                          .toList(),
+                      onChanged: (value) =>
+                          setDialogState(() => branchId = value),
+                    ),
+                  if (audience == 'employee')
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Employee'),
+                      items: employees
+                          .map((employee) => DropdownMenuItem(
+                                value: employee['employee_id'].toString(),
+                                child: Text(
+                                  '${employee['name'] ?? 'Employee'} (${employee['employee_id']})',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (value) =>
+                          setDialogState(() => employeeId = value),
+                    ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    decoration: const InputDecoration(labelText: 'Type'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'information', child: Text('Information')),
+                      DropdownMenuItem(
+                          value: 'wish', child: Text('Wish / Greeting')),
+                      DropdownMenuItem(
+                          value: 'payroll', child: Text('Payroll')),
+                    ],
+                    onChanged: (value) =>
+                        setDialogState(() => type = value ?? 'information'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Title'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: bodyController,
+                    minLines: 3,
+                    maxLines: 5,
+                    decoration: const InputDecoration(labelText: 'Message'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      if (titleController.text.trim().isEmpty ||
+                          bodyController.text.trim().isEmpty ||
+                          (audience == 'branch' && branchId == null) ||
+                          (audience == 'employee' && employeeId == null)) {
+                        _message('Complete all notification fields.');
+                        return;
+                      }
+                      setDialogState(() => sending = true);
+                      try {
+                        await NotificationService.send(
+                          title: titleController.text,
+                          body: bodyController.text,
+                          audience: audience,
+                          type: type,
+                          branchId: branchId,
+                          employeeId: employeeId,
+                        );
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext, true);
+                        }
+                      } catch (error) {
+                        setDialogState(() => sending = false);
+                        _message('Unable to send notification: $error');
+                      }
+                    },
+              icon: sending
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_outlined),
+              label: Text(sending ? 'Sending...' : 'Send'),
+            ),
+          ],
+        ),
+      ),
+    );
+    titleController.dispose();
+    bodyController.dispose();
+    if (result == true && mounted) _message('Notification sent.');
   }
 
   Widget _dashboardPulsePanel({
@@ -8324,6 +8579,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       record,
                       onConflict: 'employee_id,period',
                     );
+                try {
+                  await NotificationService.send(
+                    title: 'Payslip ready',
+                    body:
+                        'Your payroll for ${DateFormat('MMMM yyyy').format(month)} has been generated.',
+                    audience: 'employee',
+                    type: 'payroll',
+                    employeeId: employeeId,
+                  );
+                } catch (notificationError) {
+                  debugPrint(
+                      'Payroll saved, but notification failed: $notificationError');
+                }
                 await service.loadPayrollFromSupabase();
                 selectedPayrollMonth = month;
                 if (!dialogContext.mounted) return;
@@ -13200,7 +13468,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _exportRhbLayout({String? only}) async {
     try {
       _message(
-        'Preparing RHB, EPF, EIS and SOCSO layouts...',
+        only == 'rhb'
+            ? 'Preparing RHB layout...'
+            : 'Preparing RHB, EPF, EIS and SOCSO layouts...',
       );
 
       final selectedMonth =

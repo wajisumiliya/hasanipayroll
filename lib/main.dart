@@ -16,8 +16,11 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await NotificationService.initialize();
   await AppService.instance.restore();
+  await NotificationService.initialize(
+    employeeId: AppService.instance.currentEmployeeId,
+    branchId: AppService.instance.currentBranchId,
+  );
   runApp(const HasaniPayrollApp());
 }
 

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../services/app_service.dart';
+import '../services/notification_service.dart';
 import '../theme/daily_portal_theme.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
@@ -450,6 +451,11 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() {
         loading = false;
       });
+
+      await NotificationService.registerCurrentDevice(
+        employeeId: user.employeeId,
+        branchId: user.branchId,
+      );
 
       _openCorrectPortal(user);
     } catch (e) {
