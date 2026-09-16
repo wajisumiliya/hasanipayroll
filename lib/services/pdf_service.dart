@@ -132,7 +132,7 @@ class PdfService {
     final identityNumber = employee.newIcNo.trim();
     final identityDigitCount =
         identityNumber.replaceAll(RegExp(r'\D'), '').length;
-    final identityLabel = identityDigitCount > 10 ? 'I/C NO.' : 'PASSPORT NO.';
+    final identityLabel = identityDigitCount > 10 ? 'I/C NO' : 'PASSPORT NO';
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(7),
@@ -180,7 +180,7 @@ class PdfService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 _headerPair(
-                  'EMPLOYEE',
+                  'EMPLOYEE NAME',
                   employee.name,
                   boldValue: true,
                   maxLines: 2,
