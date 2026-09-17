@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
@@ -19,11 +21,28 @@ class EmployeePortal extends StatefulWidget {
   State<EmployeePortal> createState() => _EmployeePortalState();
 }
 
-class _EmployeePortalState extends State<EmployeePortal> {
+class _EmployeePortalState extends State<EmployeePortal>
+    with SingleTickerProviderStateMixin {
   final AppService service = AppService.instance;
 
   int tab = 0;
   bool _showFinancialDetails = false;
+  late final AnimationController _birthdayController;
+
+  @override
+  void initState() {
+    super.initState();
+    _birthdayController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 5200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _birthdayController.dispose();
+    super.dispose();
+  }
 
   void _toggleFinancialDetails() {
     setState(() => _showFinancialDetails = !_showFinancialDetails);
@@ -65,6 +84,13 @@ class _EmployeePortalState extends State<EmployeePortal> {
   /// =============================================================
 
   Employee? get employee => service.currentEmployee;
+
+  bool get _isBirthdayToday {
+    final birthday = employee?.birthday;
+    if (birthday == null) return false;
+    final today = DateTime.now();
+    return birthday.month == today.month && birthday.day == today.day;
+  }
 
   String get employeeId => service.currentUser?.employeeId ?? '';
 
@@ -138,13 +164,122 @@ class _EmployeePortalState extends State<EmployeePortal> {
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth >= 900) {
-            return _desktop();
-          }
-
-          return _mobile();
+          final portal = constraints.maxWidth >= 900 ? _desktop() : _mobile();
+          return _isBirthdayToday && tab == 0
+              ? _birthdayDashboardFrame(portal)
+              : portal;
         },
       ),
+    );
+  }
+
+  Widget _birthdayDashboardFrame(Widget portal) {
+    return AnimatedBuilder(
+      animation: _birthdayController,
+      child: portal,
+      builder: (context, child) {
+        final progress = _birthdayController.value;
+        final size = MediaQuery.sizeOf(context);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            child!,
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFFFFD166).withValues(alpha: .08),
+                      const Color(0xFFED1C24).withValues(alpha: .06),
+                      const Color(0xFF7C3AED).withValues(alpha: .08),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            IgnorePointer(
+              child: Stack(
+                children: [
+                  for (var index = 0; index < 42; index++)
+                    Positioned(
+                      left: (index * 97.0) % size.width,
+                      top: (((progress + index * .047) % 1) *
+                              (size.height + 90)) -
+                          60,
+                      child: Transform.rotate(
+                        angle: (progress * math.pi * 2) + index,
+                        child: Text(
+                          const ['🎉', '✨', '🎊', '⭐', '🎈', '🎁'][index % 6],
+                          style: TextStyle(
+                            fontSize: 16.0 + (index % 5) * 4,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: size.width >= 900 ? 88 : 74,
+                    left: size.width >= 900 ? 280 : 18,
+                    right: 18,
+                    child: Center(
+                      child: Transform.scale(
+                        scale: .97 +
+                            ((math.sin(progress * math.pi * 2) + 1) / 2) *
+                                .03,
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 560),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFED1C24), Color(0xFF7C3AED)],
+                            ),
+                            borderRadius: BorderRadius.circular(99),
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x44000000),
+                                blurRadius: 18,
+                                offset: Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🎂', style: TextStyle(fontSize: 26)),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  'Happy Birthday, ${employee!.name}!',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Text('🎈', style: TextStyle(fontSize: 26)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -159,7 +294,9 @@ class _EmployeePortalState extends State<EmployeePortal> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: dailyTheme.pageBackground,
+          colors: _isBirthdayToday
+              ? const [Color(0xFFFFF3D6), Color(0xFFFFE4EA), Color(0xFFEDE4FF)]
+              : dailyTheme.pageBackground,
         ),
       ),
       child: Row(
@@ -176,7 +313,13 @@ class _EmployeePortalState extends State<EmployeePortal> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: tab == 0
-                            ? dailyTheme.pageBackground
+                            ? (_isBirthdayToday
+                                ? const [
+                                    Color(0xFFFFF3D6),
+                                    Color(0xFFFFE4EA),
+                                    Color(0xFFEDE4FF),
+                                  ]
+                                : dailyTheme.pageBackground)
                             : [
                                 dailyTheme.surfaceTint.withValues(alpha: .96),
                                 const Color(0xFFF5F7FB),
@@ -773,7 +916,9 @@ class _EmployeePortalState extends State<EmployeePortal> {
   Widget _welcome() {
     final dailyTheme = _dailyTheme;
     final hour = DateTime.now().hour;
-    final greeting = hour < 12
+    final greeting = _isBirthdayToday
+        ? 'Happy Birthday'
+        : hour < 12
         ? 'Good morning'
         : hour < 18
             ? 'Good afternoon'
@@ -787,7 +932,9 @@ class _EmployeePortalState extends State<EmployeePortal> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: dailyTheme.hero,
+          colors: _isBirthdayToday
+              ? const [Color(0xFFED1C24), Color(0xFFFF8A34), Color(0xFF7C3AED)]
+              : dailyTheme.hero,
         ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
@@ -836,7 +983,9 @@ class _EmployeePortalState extends State<EmployeePortal> {
                 ),
                 const SizedBox(height: 13),
                 Text(
-                  '“${dailyTheme.quote}”',
+                  _isBirthdayToday
+                      ? '🎉 Wishing you happiness, success and a wonderful year ahead! 🎉'
+                      : '“${dailyTheme.quote}”',
                   style: TextStyle(
                     color: dailyTheme.accent,
                     fontWeight: FontWeight.w700,
