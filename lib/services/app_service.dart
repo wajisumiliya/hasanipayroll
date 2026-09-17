@@ -607,6 +607,7 @@ class AppService extends ChangeNotifier {
       joiningDate: _supabaseDate(
         data['joining_date'] ?? data['joiningDate'],
       ),
+      birthday: _supabaseDate(data['birthday'] ?? data['date_of_birth']),
       isActive: _supabaseBool(
         data['is_active'] ?? data['isActive'],
       ),
@@ -3656,6 +3657,9 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'joining_date': _dateOnlyString(
         joiningDate,
       ),
+      'birthday': employee.birthday == null
+          ? null
+          : _dateOnlyString(employee.birthday!),
       'is_active': employee.isActive,
       'is_management_staff': employee.isManagementStaff,
       'is_temp_staff': employee.isTempStaff,

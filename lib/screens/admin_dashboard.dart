@@ -1290,6 +1290,101 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return double.tryParse(value.toString().replaceAll(',', '')) ?? 0;
   }
 
+  List<Map<String, dynamic>> _upcomingEmployeeEvents(
+    List<Map<String, dynamic>> employees, {
+    required List<String> dateKeys,
+    bool anniversary = false,
+  }) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final events = <Map<String, dynamic>>[];
+    for (final employee in employees) {
+      DateTime? original;
+      for (final key in dateKeys) {
+        original = DateTime.tryParse(employee[key]?.toString() ?? '');
+        if (original != null) break;
+      }
+      if (original == null) continue;
+      if (anniversary && !original.isBefore(today)) continue;
+
+      DateTime occurrence(int year) {
+        final lastDay = DateTime(year, original!.month + 1, 0).day;
+        return DateTime(year, original.month,
+            original.day > lastDay ? lastDay : original.day);
+      }
+
+      var next = occurrence(today.year);
+      if (next.isBefore(today)) next = occurrence(today.year + 1);
+      final days = next.difference(today).inDays;
+      if (days > 3) continue;
+      events.add({
+        'employee_id':
+            (employee['employee_id'] ?? employee['id'] ?? '').toString(),
+        'name': (employee['name'] ?? employee['employee_name'] ?? 'Employee')
+            .toString(),
+        'date': next,
+        'days': days,
+        'years': anniversary ? next.year - original.year : null,
+      });
+    }
+    events.sort((a, b) => (a['date'] as DateTime).compareTo(b['date']));
+    return events;
+  }
+
+  Future<void> _sendCelebrationNotification(
+    Map<String, dynamic> event, {
+    required bool anniversary,
+  }) async {
+    final employeeId = event['employee_id']?.toString().trim() ?? '';
+    final name = event['name']?.toString().trim() ?? 'Employee';
+    if (employeeId.isEmpty) {
+      _message('Unable to send: employee ID is missing.');
+      return;
+    }
+    final days = event['days'] as int? ?? 0;
+    final years = event['years'] as int? ?? 0;
+    final title = anniversary ? 'Work Anniversary' : 'Birthday Wishes';
+    final body = anniversary
+        ? (days == 0
+            ? 'Congratulations $name on your $years-year work anniversary! Thank you for being part of our team.'
+            : 'Hi $name, your $years-year work anniversary is coming up in $days day${days == 1 ? '' : 's'}!')
+        : (days == 0
+            ? 'Happy Birthday, $name! Wishing you a wonderful day from everyone at Hasani.'
+            : 'Hi $name, your birthday is coming up in $days day${days == 1 ? '' : 's'}!');
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Send $title?'),
+        content: Text('$body\n\nThis will be sent directly to $name.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.send_outlined),
+            label: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await NotificationService.send(
+        title: title,
+        body: body,
+        audience: 'employee',
+        employeeId: employeeId,
+        type: anniversary ? 'work_anniversary' : 'birthday',
+      );
+      if (mounted) _message('$title sent to $name.');
+    } catch (error) {
+      if (mounted) _message('Unable to send notification: $error');
+    }
+  }
+
   void _showDepartmentFlow(List<Map<String, dynamic>> employees) {
     final groups = <String, List<Map<String, dynamic>>>{};
     for (final employee in employees) {
@@ -1659,14 +1754,39 @@ class _AdminDashboardState extends State<AdminDashboard> {
           return _dashboardBranchKey(_payrollBranchIdFromEmployee(employee)) ==
               selectedDashboardBranchId;
         }).toList();
-        final activeForeignEmployees = selectedActiveEmployees
-            .where((employee) => (employee['address'] ?? '')
+        bool isManagement(Map<String, dynamic> employee) {
+          final value = employee['is_management_staff'];
+          return value == true || value?.toString().toLowerCase() == 'true';
+        }
+
+        bool isTempId(Map<String, dynamic> employee) {
+          final employeeId = employee['employee_id'] ?? employee['id'] ?? '';
+          return employeeId.toString().toUpperCase().contains('TEMP');
+        }
+
+        bool isForeign(Map<String, dynamic> employee) =>
+            (employee['address'] ?? '')
                 .toString()
                 .toUpperCase()
-                .contains('FRN'))
+                .contains('FRN');
+
+        final activeManagementEmployees =
+            selectedActiveEmployees.where(isManagement).length;
+        final activeTempEmployees = selectedActiveEmployees
+            .where((employee) => !isManagement(employee) && isTempId(employee))
             .length;
-        final activeLocalEmployees =
-            selectedActiveEmployees.length - activeForeignEmployees;
+        final activeForeignEmployees = selectedActiveEmployees
+            .where((employee) =>
+                !isManagement(employee) &&
+                !isTempId(employee) &&
+                isForeign(employee))
+            .length;
+        final activeLocalEmployees = selectedActiveEmployees
+            .where((employee) =>
+                !isManagement(employee) &&
+                !isTempId(employee) &&
+                !isForeign(employee))
+            .length;
 
         final departments = employees
             .map((e) => e['department']?.toString().trim() ?? '')
@@ -1679,6 +1799,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
             .where((v) => v.isNotEmpty)
             .toSet()
             .length;
+        final upcomingBirthdays = _upcomingEmployeeEvents(
+          selectedActiveEmployees,
+          dateKeys: const ['birthday', 'date_of_birth'],
+        );
+        final upcomingAnniversaries = _upcomingEmployeeEvents(
+          selectedActiveEmployees,
+          dateKeys: const ['joining_date', 'joiningDate'],
+          anniversary: true,
+        );
 
         double sumField(String key) => periodPayroll.fold<double>(
               0,
@@ -1759,6 +1888,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       employerContributions: employerContributions,
                       payrollRecords: periodPayroll.length,
                       activeLocalEmployees: activeLocalEmployees,
+                      activeTempEmployees: activeTempEmployees,
+                      activeManagementEmployees: activeManagementEmployees,
                       activeForeignEmployees: activeForeignEmployees,
                       selectedActiveEmployees: selectedActiveEmployees.length,
                       availableYears: payroll
@@ -1790,49 +1921,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'Tap any metric to explore the live records',
                     ),
                     const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
+                    _dashboardWorkforceOverview(
+                      compact: compact,
+                      employees: employees,
+                      activeEmployees: activeEmployees,
+                      inactiveEmployees: inactiveEmployees,
+                      departments: departments,
+                      birthdays: upcomingBirthdays,
+                      anniversaries: upcomingAnniversaries,
+                    ),
+                    if (false) Wrap(
                       children: [
-                        _powerMetricCard(
-                          width: metricWidth,
-                          title: 'Total workforce',
-                          value: employees.length.toString(),
-                          icon: Icons.groups_2_outlined,
-                          accent: const Color(0xFF243B8F),
-                          detail: '$departments departments',
-                          onTap: () => _showEmployeeDetails(
-                            'All Employees',
-                            employees,
-                          ),
-                        ),
-                        _powerMetricCard(
-                          width: metricWidth,
-                          title: 'Active employees',
-                          value: activeEmployees.toString(),
-                          icon: Icons.verified_user_outlined,
-                          accent: const Color(0xFFED1C24),
-                          detail: employees.isEmpty
-                              ? 'No workforce data'
-                              : '${(activeEmployees / employees.length * 100).round()}% of workforce',
-                          onTap: () => _showEmployeeDetails(
-                            'Active Employees',
-                            employees.where(_isActive).toList(),
-                          ),
-                        ),
-                        _powerMetricCard(
-                          width: metricWidth,
-                          title: 'Attention needed',
-                          value: inactiveEmployees.toString(),
-                          icon: Icons.radar_outlined,
-                          accent: const Color(0xFF243B8F),
-                          detail: 'Inactive employee records',
-                          onTap: () => _showEmployeeDetails(
-                            'Inactive Employees',
-                            employees.where((e) => !_isActive(e)).toList(),
-                          ),
-                        ),
-                        _powerMetricCard(
+                        if (false) _powerMetricCard(
                           width: metricWidth,
                           title: 'Organisation',
                           value: branches.toString(),
@@ -1983,6 +2083,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     required double employerContributions,
     required int payrollRecords,
     required int activeLocalEmployees,
+    required int activeTempEmployees,
+    required int activeManagementEmployees,
     required int activeForeignEmployees,
     required int selectedActiveEmployees,
     required List<int> availableYears,
@@ -1992,6 +2094,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     required VoidCallback onNetTap,
   }) {
     final theme = _portalTheme;
+    final stackFlashCards =
+        !compact && MediaQuery.sizeOf(context).width >= 1050;
     final period = DateFormat('MMMM yyyy').format(selectedDashboardMonth);
     final years = {...availableYears, selectedDashboardMonth.year}.toList()
       ..sort((a, b) => b.compareTo(a));
@@ -2019,12 +2123,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       child: Stack(
         children: [
-          if (!compact)
+          if (stackFlashCards)
             Positioned(
               right: 0,
               top: 62,
               child: _dashboardWorkforceFlashCards(
                 local: activeLocalEmployees,
+                temp: activeTempEmployees,
+                management: activeManagementEmployees,
                 foreign: activeForeignEmployees,
                 total: selectedActiveEmployees,
               ),
@@ -2093,10 +2199,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
-              if (compact) ...[
+              if (!stackFlashCards) ...[
                 const SizedBox(height: 14),
                 _dashboardWorkforceFlashCards(
                   local: activeLocalEmployees,
+                  temp: activeTempEmployees,
+                  management: activeManagementEmployees,
                   foreign: activeForeignEmployees,
                   total: selectedActiveEmployees,
                 ),
@@ -2217,6 +2325,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _dashboardWorkforceFlashCards({
     required int local,
+    required int temp,
+    required int management,
     required int foreign,
     required int total,
   }) {
@@ -2274,6 +2384,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       runSpacing: 8,
       children: [
         card('Locals', local, Icons.person_outline, const Color(0xFF243B8F)),
+        card('TEMP', temp, Icons.badge_outlined, const Color(0xFFF59E0B)),
+        card('Management', management, Icons.business_center_outlined,
+            const Color(0xFF7C3AED)),
         card('Foreigners', foreign, Icons.public, const Color(0xFFED1C24)),
         card('Total', total, Icons.groups_2_outlined, const Color(0xFF169B71)),
       ],
@@ -2473,6 +2586,194 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Text(subtitle, style: const TextStyle(color: Colors.black54)),
       ],
     );
+  }
+
+  Widget _dashboardWorkforceOverview({
+    required bool compact,
+    required List<Map<String, dynamic>> employees,
+    required int activeEmployees,
+    required int inactiveEmployees,
+    required int departments,
+    required List<Map<String, dynamic>> birthdays,
+    required List<Map<String, dynamic>> anniversaries,
+  }) {
+    Widget metrics() => LayoutBuilder(builder: (context, constraints) {
+          final width = (constraints.maxWidth - 10) / 2;
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _compactWorkforceMetric(
+                width: width,
+                title: 'Total workforce',
+                value: employees.length,
+                icon: Icons.groups_2_outlined,
+                color: const Color(0xFF243B8F),
+                detail: '$departments departments',
+                onTap: () => _showEmployeeDetails('All Employees', employees),
+              ),
+              _compactWorkforceMetric(
+                width: width,
+                title: 'Active employees',
+                value: activeEmployees,
+                icon: Icons.verified_user_outlined,
+                color: const Color(0xFFED1C24),
+                detail: 'Currently active',
+                onTap: () => _showEmployeeDetails(
+                    'Active Employees', employees.where(_isActive).toList()),
+              ),
+              _compactWorkforceMetric(
+                width: width,
+                title: 'Attention needed',
+                value: inactiveEmployees,
+                icon: Icons.radar_outlined,
+                color: const Color(0xFF243B8F),
+                detail: 'Inactive records',
+                onTap: () => _showEmployeeDetails('Inactive Employees',
+                    employees.where((e) => !_isActive(e)).toList()),
+              ),
+            ],
+          );
+        });
+
+    final events = _dashboardUpcomingEvents(
+      birthdays: birthdays,
+      anniversaries: anniversaries,
+    );
+    if (compact) {
+      return Column(children: [metrics(), const SizedBox(height: 12), events]);
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: metrics()),
+        const SizedBox(width: 16),
+        Expanded(child: events),
+      ],
+    );
+  }
+
+  Widget _compactWorkforceMetric({
+    required double width,
+    required String title,
+    required int value,
+    required IconData icon,
+    required Color color,
+    required String detail,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: width,
+      height: 78,
+      child: Material(
+        color: color.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              border: Border.all(color: color.withValues(alpha: .65)),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('$value  $title',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 10, color: Colors.black54)),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dashboardUpcomingEvents({
+    required List<Map<String, dynamic>> birthdays,
+    required List<Map<String, dynamic>> anniversaries,
+  }) {
+    Widget panel(String title, IconData icon, Color color,
+        List<Map<String, dynamic>> items, bool anniversary) {
+      String timing(int days) => days == 0
+          ? 'Today'
+          : days == 1
+              ? 'Tomorrow'
+              : 'In $days days';
+      return Container(
+        constraints: const BoxConstraints(minHeight: 78),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: .45)),
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: color, size: 21),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                if (items.isEmpty)
+                  const Text('No events in the next 3 days',
+                      style: TextStyle(fontSize: 11, color: Colors.black54))
+                else
+                  ...items.map((item) => InkWell(
+                        onTap: () => _sendCelebrationNotification(
+                          item,
+                          anniversary: anniversary,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(children: [
+                            Expanded(
+                              child: Text(
+                                '${item['name']} · ${timing(item['days'] as int)}'
+                                '${anniversary ? ' · ${item['years']} years' : ''}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11.5),
+                              ),
+                            ),
+                            Icon(Icons.send_outlined, size: 15, color: color),
+                          ]),
+                        ),
+                      )),
+              ],
+            ),
+          ),
+        ]),
+      );
+    }
+
+    return Column(children: [
+      panel('Upcoming birthdays', Icons.cake_outlined,
+          const Color(0xFFED1C24), birthdays, false),
+      const SizedBox(height: 10),
+      panel('Upcoming work anniversaries', Icons.workspace_premium_outlined,
+          const Color(0xFF243B8F), anniversaries, true),
+    ]);
   }
 
   Widget _powerMetricCard({
@@ -3897,6 +4198,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         service.branches.isNotEmpty ? service.branches.first.id : '';
 
     DateTime joiningDate = DateTime.now();
+    DateTime? birthday;
     bool active = true;
     bool managementStaff = false;
     bool tempStaff = false;
@@ -4073,6 +4375,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: 15),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
+                        title: const Text('Birthday'),
+                        subtitle: Text(birthday == null
+                            ? 'Not set'
+                            : DateFormat('dd MMM yyyy').format(birthday!)),
+                        trailing: const Icon(Icons.cake_outlined),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            firstDate: DateTime(1940),
+                            lastDate: DateTime.now(),
+                            initialDate: birthday ?? DateTime(1990),
+                          );
+                          if (picked != null) {
+                            setDialogState(() => birthday = picked);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: const Text(
                           'Joining Date',
                         ),
@@ -4230,6 +4551,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         phone: phone.text.trim(),
                         address: address.text.trim(),
                         joiningDate: joiningDate,
+                        birthday: birthday,
                         isActive: active,
                         isManagementStaff: managementStaff,
                         isTempStaff: tempStaff,
@@ -4306,6 +4628,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String branchId = employee.branchId;
 
     DateTime joiningDate = employee.joiningDate ?? DateTime.now();
+    DateTime? birthday = employee.birthday;
 
     bool active = employee.isActive;
     bool managementStaff = employee.isManagementStaff;
@@ -4400,6 +4723,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             });
                           },
                         ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Birthday'),
+                        subtitle: Text(birthday == null
+                            ? 'Not set'
+                            : DateFormat('dd MMM yyyy').format(birthday!)),
+                        trailing: const Icon(Icons.cake_outlined),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            firstDate: DateTime(1940),
+                            lastDate: DateTime.now(),
+                            initialDate: birthday ?? DateTime(1990),
+                          );
+                          if (picked != null) {
+                            setDialogState(() => birthday = picked);
+                          }
+                        },
+                      ),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text(
@@ -4505,6 +4847,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       phone: phone.text.trim(),
                       address: address.text.trim(),
                       joiningDate: joiningDate,
+                      birthday: birthday,
                       isActive: active,
                       isManagementStaff: managementStaff,
                       isTempStaff: tempStaff,
@@ -5204,6 +5547,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             : 'type1';
     DateTime? joiningDate =
         DateTime.tryParse(employee['joining_date']?.toString() ?? '');
+    DateTime? birthday =
+        DateTime.tryParse(employee['birthday']?.toString() ?? '');
     var active = _isActive(employee);
     var managementStaff = employee['is_management_staff'] == true ||
         employee['is_management_staff']?.toString().toLowerCase() == 'true';
@@ -5339,6 +5684,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ]),
                   const Divider(height: 28),
+                  ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Birthday'),
+                      subtitle: Text(birthday == null
+                          ? 'Not set'
+                          : DateFormat('dd MMM yyyy').format(birthday!)),
+                      trailing: const Icon(Icons.cake_outlined),
+                      onTap: saving
+                          ? null
+                          : () async {
+                              final value = await showDatePicker(
+                                  context: dialogContext,
+                                  initialDate: birthday ?? DateTime(1990),
+                                  firstDate: DateTime(1940),
+                                  lastDate: DateTime.now());
+                              if (value != null) {
+                                setDialogState(() => birthday = value);
+                              }
+                            }),
                   ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Joining Date'),
@@ -5500,6 +5864,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'address': fields['Address']!.text.trim(),
                             'joining_date':
                                 joiningDate?.toIso8601String().split('T').first,
+                            'birthday':
+                                birthday?.toIso8601String().split('T').first,
                             'is_active': active,
                             'is_management_staff': managementStaff,
                             'is_temp_staff': tempStaff,

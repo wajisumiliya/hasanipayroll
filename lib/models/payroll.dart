@@ -419,6 +419,7 @@ class Employee {
   final String phone;
   final String address;
   final DateTime? joiningDate;
+  final DateTime? birthday;
   final bool isActive;
   final bool isManagementStaff;
   final bool isTempStaff;
@@ -441,6 +442,7 @@ class Employee {
     this.phone = '',
     this.address = '',
     this.joiningDate,
+    this.birthday,
     this.isActive = true,
     this.isManagementStaff = false,
     this.isTempStaff = false,
@@ -467,6 +469,7 @@ class Employee {
     String? phone,
     String? address,
     DateTime? joiningDate,
+    DateTime? birthday,
     bool? isActive,
     bool? isManagementStaff,
     bool? isTempStaff,
@@ -488,6 +491,7 @@ class Employee {
       phone: phone ?? this.phone,
       address: address ?? this.address,
       joiningDate: joiningDate ?? this.joiningDate,
+      birthday: birthday ?? this.birthday,
       isActive: isActive ?? this.isActive,
       isManagementStaff: isManagementStaff ?? this.isManagementStaff,
       isTempStaff: isTempStaff ?? this.isTempStaff,
@@ -516,6 +520,7 @@ class Employee {
       'phone': phone,
       'address': address,
       'joiningDate': joiningDate?.toIso8601String(),
+      'birthday': birthday?.toIso8601String(),
       'isActive': isActive,
       'isManagementStaff': isManagementStaff,
       'isTempStaff': isTempStaff,
@@ -544,6 +549,7 @@ class Employee {
       joiningDate: _parseNullableDate(
         json['joiningDate'],
       ),
+      birthday: _parseNullableDate(json['birthday'] ?? json['date_of_birth']),
       isActive: _boolValue(
         json['isActive'],
         defaultValue: true,
