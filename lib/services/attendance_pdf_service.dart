@@ -77,9 +77,12 @@ class AttendancePdfService {
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.fromLTRB(24, 22, 24, 20),
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-          children: [
+        build: (_) => _watermarkedPage(
+          logo: logo,
+          branchName: branchId,
+          content: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
             _header(logo, 'WORK ATTENDANCE', month),
             pw.SizedBox(height: 7),
             _employeeInfo(
@@ -107,7 +110,8 @@ class AttendancePdfService {
             pw.Spacer(),
             _signatures(),
             _pageFooter(1, 'Front - Work attendance and monthly totals'),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -116,9 +120,12 @@ class AttendancePdfService {
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.fromLTRB(24, 22, 24, 20),
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-          children: [
+        build: (_) => _watermarkedPage(
+          logo: logo,
+          branchName: branchId,
+          content: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
             _header(logo, 'BREAK ATTENDANCE', month),
             pw.SizedBox(height: 7),
             _employeeInfo(
@@ -128,7 +135,8 @@ class AttendancePdfService {
             pw.Spacer(),
             _signatures(),
             _pageFooter(2, 'Back - Morning, afternoon and evening breaks'),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -156,7 +164,7 @@ class AttendancePdfService {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('HASANI BOOKS EDAR SDN BHD',
+                pw.Text('HASANI EDAR SDN BHD',
                     style: pw.TextStyle(
                         fontSize: 12,
                         fontWeight: pw.FontWeight.bold,
@@ -175,6 +183,72 @@ class AttendancePdfService {
                   fontSize: 11, fontWeight: pw.FontWeight.bold, color: _ink)),
         ],
       ),
+    );
+  }
+
+  static pw.Widget _watermarkedPage({
+    required pw.MemoryImage? logo,
+    required String branchName,
+    required pw.Widget content,
+  }) {
+    return pw.Stack(
+      children: [
+        content,
+        pw.Positioned(
+          left: 45,
+          right: 45,
+          top: 245,
+          child: pw.Center(
+            child: pw.Transform.rotate(
+              angle: -.42,
+              child: pw.Opacity(
+                opacity: .065,
+                child: pw.Column(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      if (logo != null)
+                        pw.Image(logo, width: 260, fit: pw.BoxFit.contain)
+                      else
+                        pw.Text(
+                          'HASANI BOOKS',
+                          style: pw.TextStyle(
+                            fontSize: 34,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.black,
+                          ),
+                        ),
+                      pw.SizedBox(height: 10),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 7,
+                        ),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(
+                            color: PdfColors.black,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: pw.Text(
+                          branchName.trim().isEmpty
+                              ? 'BRANCH'
+                              : branchName.toUpperCase(),
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                            fontSize: 24,
+                            fontWeight: pw.FontWeight.bold,
+                            letterSpacing: 2.5,
+                            color: PdfColors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

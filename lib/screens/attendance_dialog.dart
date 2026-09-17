@@ -219,7 +219,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       }
 
       final rosterRows = await SupabaseService.getMonthlyRosters(
-        branchId: widget.branchId,
+        branchId: _watermarkBranchName,
         year: widget.month.year,
         month: widget.month.month,
         employeeId: employeeId,
