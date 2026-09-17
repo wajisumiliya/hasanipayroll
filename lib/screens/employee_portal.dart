@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -28,6 +29,8 @@ class _EmployeePortalState extends State<EmployeePortal>
   int tab = 0;
   bool _showFinancialDetails = false;
   late final AnimationController _birthdayController;
+  Timer? _birthdayCelebrationTimer;
+  bool _showBirthdayCelebration = false;
 
   @override
   void initState() {
@@ -35,11 +38,21 @@ class _EmployeePortalState extends State<EmployeePortal>
     _birthdayController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 5200),
-    )..repeat();
+    );
+    if (_isBirthdayToday) {
+      _showBirthdayCelebration = true;
+      _birthdayController.repeat();
+      _birthdayCelebrationTimer = Timer(const Duration(seconds: 15), () {
+        if (!mounted) return;
+        _birthdayController.stop();
+        setState(() => _showBirthdayCelebration = false);
+      });
+    }
   }
 
   @override
   void dispose() {
+    _birthdayCelebrationTimer?.cancel();
     _birthdayController.dispose();
     super.dispose();
   }
@@ -165,7 +178,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       body: LayoutBuilder(
         builder: (context, constraints) {
           final portal = constraints.maxWidth >= 900 ? _desktop() : _mobile();
-          return _isBirthdayToday && tab == 0
+          return _showBirthdayCelebration && tab == 0
               ? _birthdayDashboardFrame(portal)
               : portal;
         },
@@ -256,12 +269,13 @@ class _EmployeePortalState extends State<EmployeePortal>
                               Flexible(
                                 child: Text(
                                   'Happy Birthday, ${employee!.name}!',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: size.width < 600 ? 3 : 2,
+                                  overflow: TextOverflow.visible,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 18,
+                                    fontSize: size.width < 600 ? 14 : 18,
+                                    height: 1.15,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
