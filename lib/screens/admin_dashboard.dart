@@ -22,6 +22,7 @@ import 'package:excel/excel.dart' as xls;
 import 'package:archive/archive.dart';
 import 'package:file_saver/file_saver.dart';
 import 'dart:typed_data';
+import 'dart:math' as math;
 import '../screens/supabase_service.dart';
 import '../screens/attendance_dialog.dart';
 import 'monthly_roster_page.dart';
@@ -68,7 +69,8 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> {
+class _AdminDashboardState extends State<AdminDashboard>
+    with SingleTickerProviderStateMixin {
   final AppService service = AppService.instance;
 
   DailyPortalTheme get _portalTheme => DailyPortalTheme.today();
@@ -113,6 +115,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String _attendanceEmployeeSearch = '';
   String _attendanceSubmissionFilter = 'submitted';
   final Map<String, String> _approvedOtInputs = {};
+  late final AnimationController _flagAnimationController;
 
   final List<String> months = const [
     'Jan',
@@ -132,12 +135,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void initState() {
     super.initState();
+    _flagAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
     service.addListener(_refresh);
   }
 
   @override
   void dispose() {
     service.removeListener(_refresh);
+    _flagAnimationController.dispose();
     _adminEmployeeSearchController.dispose();
     _attendanceEmployeeSearchController.dispose();
     super.dispose();
@@ -189,7 +197,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             children: [
               Icon(Icons.account_balance_outlined),
               SizedBox(width: 10),
-              Text('Generate RHB Layout'),
+              Text('Generate Payroll Excel Files'),
             ],
           ),
           content: SizedBox(
@@ -199,7 +207,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Select the payroll year and month before generating the Excel file.',
+                  'Select the payroll year and month. Four Excel files will be generated: RHB, EPF, EIS and SOCSO.',
                   style: TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 18),
@@ -262,7 +270,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onPressed: () =>
                   Navigator.pop(dialogContext, DateTime(year, month)),
               icon: const Icon(Icons.download_outlined),
-              label: const Text('Generate Excel'),
+              label: const Text('Generate 4 Excel Files'),
             ),
           ],
         ),
@@ -271,7 +279,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     if (selectedPeriod == null || !mounted) return;
     setState(() => selectedPayrollMonth = selectedPeriod);
-    await _exportRhbLayout(only: 'rhb');
+    await _exportRhbLayout();
   }
 
   String _pageTitle() {
@@ -2152,6 +2160,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ),
           ),
+          if (stackFlashCards)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: _dashboardCountryFlags(),
+            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2201,6 +2215,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               if (!stackFlashCards) ...[
                 const SizedBox(height: 14),
+                _dashboardCountryFlags(),
+                const SizedBox(height: 10),
                 _dashboardWorkforceFlashCards(
                   local: activeLocalEmployees,
                   temp: activeTempEmployees,
@@ -2319,6 +2335,84 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _dashboardCountryFlags() {
+    const countries = <(String, String, String)>[
+      ('🇲🇾', 'MY', 'Malaysia'),
+      ('🇮🇳', 'IN', 'India'),
+      ('🇮🇩', 'ID', 'Indonesia'),
+      ('🇧🇩', 'BD', 'Bangladesh'),
+      ('🇳🇵', 'NP', 'Nepal'),
+      ('🇲🇲', 'MM', 'Myanmar (Burma)'),
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .78),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withValues(alpha: .10)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Wrap(
+        spacing: 7,
+        runSpacing: 7,
+        children: countries.indexed
+            .map(
+              (entry) => Tooltip(
+                message: entry.$2.$3,
+                child: AnimatedBuilder(
+                  animation: _flagAnimationController,
+                  builder: (context, child) {
+                    final phase = (_flagAnimationController.value * math.pi * 2) +
+                        (entry.$1 * .72);
+                    return Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, .002)
+                        ..translateByDouble(0, math.sin(phase) * 1.8, 0, 1)
+                        ..rotateY(math.sin(phase) * .16)
+                        ..rotateZ(math.sin(phase + .6) * .035),
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    width: 43,
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF243B8F).withValues(alpha: .045),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(entry.$2.$1,
+                            style: const TextStyle(fontSize: 22, height: 1.05)),
+                        const SizedBox(height: 2),
+                        Text(
+                          entry.$2.$2,
+                          style: const TextStyle(
+                            color: Color(0xFF667085),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
