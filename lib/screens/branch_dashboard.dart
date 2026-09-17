@@ -175,15 +175,8 @@ class _BranchPortalState extends State<BranchPortal> {
   // ==========================================================================
 
   Widget _desktop() {
-    final theme = _portalTheme;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: theme.background,
-        ),
-      ),
+      decoration: const BoxDecoration(color: Color(0xFFF7F8FC)),
       child: Row(
         children: [
           _sidebar(),
@@ -201,23 +194,12 @@ class _BranchPortalState extends State<BranchPortal> {
   }
 
   Widget _portalPage(Widget child) {
-    final theme = _portalTheme;
-    final dashboard = selectedPage == 0;
     return Stack(
       fit: StackFit.expand,
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: dashboard
-                  ? theme.background
-                  : [theme.surfaceTint, const Color(0xFFF5F7FB)],
-            ),
-          ),
+        const DecoratedBox(
+          decoration: BoxDecoration(color: Color(0xFFF7F8FC)),
         ),
-        if (dashboard) PortalAtmosphere(theme: theme),
         Positioned.fill(child: child),
       ],
     );
@@ -301,15 +283,9 @@ class _BranchPortalState extends State<BranchPortal> {
   Widget _sidebar() {
     return Container(
       width: 250,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _portalTheme.sidebar,
-        ),
-        border: Border(
-          right: BorderSide(color: _portalTheme.glassBorder),
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Color(0xFFD7DDEA))),
       ),
       child: Column(
         children: [
@@ -465,19 +441,19 @@ class _BranchPortalState extends State<BranchPortal> {
       ),
       child: ListTile(
         selected: selected,
-        selectedTileColor: _portalTheme.accent.withValues(alpha: .18),
+        selectedTileColor: const Color(0xFF243B8F).withValues(alpha: .10),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
         leading: Icon(
           icon,
-          color: selected ? _portalTheme.accent : Colors.white60,
+          color: selected ? const Color(0xFF243B8F) : const Color(0xFF667085),
         ),
         title: Text(
           title,
           style: TextStyle(
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? Colors.white : Colors.white70,
+            color: selected ? const Color(0xFF243B8F) : const Color(0xFF344054),
           ),
         ),
         onTap: () {
@@ -518,16 +494,24 @@ class _BranchPortalState extends State<BranchPortal> {
     return Container(
       height: 78,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: theme.header),
+        gradient: const LinearGradient(
+          stops: [0, .48, .58, 1],
+          colors: [
+            Color(0xFF123C8C),
+            Color(0xFF2368C4),
+            Color(0xFFE72D3B),
+            Color(0xFFB9152A),
+          ],
+        ),
         boxShadow: [
-          BoxShadow(
-            color: theme.headerShadow,
+          const BoxShadow(
+            color: Color(0x22000000),
             blurRadius: 22,
             offset: const Offset(0, 8),
           ),
         ],
         border: Border(
-          bottom: BorderSide(color: theme.glassBorder),
+          bottom: const BorderSide(color: Color(0x22FFFFFF)),
         ),
       ),
       padding: const EdgeInsets.symmetric(
@@ -637,26 +621,43 @@ class _BranchPortalState extends State<BranchPortal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Branch Operations',
-            style: const TextStyle(
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
               color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF243B8F), width: 1.6),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x12000000),
+                  blurRadius: 18,
+                  offset: Offset(0, 7),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            branchDisplayName,
-            style: const TextStyle(
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Branch Operations',
+                  style: TextStyle(
+                    color: Color(0xFF20242D),
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -.8,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$branchDisplayName · Live attendance overview',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
               _statCard(
                 'Employees',
                 totalEmployees.toString(),
@@ -681,7 +682,10 @@ class _BranchPortalState extends State<BranchPortal> {
                 Icons.cancel,
                 Colors.red,
               ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           _panel(
@@ -2051,34 +2055,39 @@ class _BranchPortalState extends State<BranchPortal> {
     return SizedBox(
       width: 220,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: color.withValues(alpha: .06),
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: .65)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .13),
+                borderRadius: BorderRadius.circular(11),
               ),
+              child: Icon(icon, color: color, size: 21),
             ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
+            const SizedBox(width: 11),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value,
+                    style: const TextStyle(
+                        color: Color(0xFF20242D),
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900)),
+                Text(title.toUpperCase(),
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .6)),
+              ],
             ),
           ],
         ),
@@ -2094,15 +2103,16 @@ class _BranchPortalState extends State<BranchPortal> {
     String title,
     Widget child,
   ) {
-    final isDashboard = selectedPage == 0;
-    final theme = _portalTheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDashboard ? theme.glass : Colors.white,
-        borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
-        border: isDashboard ? Border.all(color: theme.glassBorder) : null,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF243B8F).withValues(alpha: .3)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x0D000000), blurRadius: 14, offset: Offset(0, 5)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2130,8 +2140,6 @@ class _BranchPortalState extends State<BranchPortal> {
     IconData icon,
     VoidCallback onTap,
   ) {
-    final isDashboard = selectedPage == 0;
-    final theme = _portalTheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -2139,24 +2147,24 @@ class _BranchPortalState extends State<BranchPortal> {
         width: 180,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDashboard ? theme.glassStrong : const Color(0xFFF5F7FB),
+          color: const Color(0xFF243B8F).withValues(alpha: .06),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDashboard ? theme.glassBorder : Colors.black12,
+            color: const Color(0xFF243B8F).withValues(alpha: .55),
           ),
         ),
         child: Column(
           children: [
             Icon(
               icon,
-              color: isDashboard ? theme.accent : const Color(0xFF15965D),
+              color: const Color(0xFFED1C24),
             ),
             const SizedBox(height: 8),
             Text(
               title,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: isDashboard ? Colors.white : Colors.black87,
+                color: const Color(0xFF20242D),
                 fontWeight: FontWeight.bold,
               ),
             ),
