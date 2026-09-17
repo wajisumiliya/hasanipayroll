@@ -1,5 +1,7 @@
 // ignore_for_file: unused_element
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -49,7 +51,7 @@ class _BranchPortalState extends State<BranchPortal>
     _celebrationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
+    )..repeat();
   }
 
   @override
@@ -1011,7 +1013,9 @@ class _BranchPortalState extends State<BranchPortal>
       animation: _celebrationController,
       child: content,
       builder: (context, child) => Transform.scale(
-        scale: .995 + (_celebrationController.value * .005),
+        scale: .995 +
+            ((math.sin(_celebrationController.value * math.pi * 2) + 1) / 2) *
+                .005,
         child: child,
       ),
     );
@@ -1069,7 +1073,18 @@ class _BranchPortalState extends State<BranchPortal>
               ),
               const SizedBox(height: 20),
               FilledButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Future<void>.delayed(const Duration(milliseconds: 120), () {
+                    if (mounted) {
+                      _showFullScreenCelebration(
+                        employee,
+                        birthday: birthday,
+                        years: years,
+                      );
+                    }
+                  });
+                },
                 child: const Text('Celebrate'),
               ),
             ]),
@@ -1078,6 +1093,175 @@ class _BranchPortalState extends State<BranchPortal>
       ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: curved, child: child),
+        );
+      },
+    );
+  }
+
+  Future<void> _showFullScreenCelebration(
+    Employee employee, {
+    required bool birthday,
+    int? years,
+  }) {
+    final colors = birthday
+        ? const [Color(0xFFED1C24), Color(0xFFFF8A34), Color(0xFFFFD166)]
+        : const [Color(0xFF243B8F), Color(0xFF315AD9), Color(0xFF73D6AE)];
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close celebration',
+      barrierColor: Colors.black87,
+      transitionDuration: const Duration(milliseconds: 500),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) => Material(
+        color: Colors.transparent,
+        child: AnimatedBuilder(
+          animation: _celebrationController,
+          builder: (context, _) {
+            final progress = _celebrationController.value;
+            return LayoutBuilder(builder: (context, constraints) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        radius: 1.15,
+                        colors: [
+                          colors[1].withValues(alpha: .92),
+                          colors[0].withValues(alpha: .96),
+                          const Color(0xFF170B2B),
+                        ],
+                      ),
+                    ),
+                  ),
+                  for (var index = 0; index < 36; index++)
+                    Positioned(
+                      left: ((index * 83.0) % constraints.maxWidth),
+                      top: (((progress + (index * .071)) % 1) *
+                              (constraints.maxHeight + 80)) -
+                          50,
+                      child: Transform.rotate(
+                        angle: progress * math.pi * 2 + index,
+                        child: Text(
+                          const ['🎉', '✨', '🎊', '⭐', '🎈'][index % 5],
+                          style: TextStyle(fontSize: 18.0 + (index % 4) * 5),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    left: 24,
+                    top: 24,
+                    child: Transform.translate(
+                      offset: Offset(0, math.sin(progress * math.pi * 2) * 12),
+                      child: const Text('🎈', style: TextStyle(fontSize: 72)),
+                    ),
+                  ),
+                  Positioned(
+                    right: 24,
+                    top: 50,
+                    child: Transform.translate(
+                      offset:
+                          Offset(0, math.sin((progress * math.pi * 2) + 2) * 12),
+                      child: const Text('🎈', style: TextStyle(fontSize: 72)),
+                    ),
+                  ),
+                  Center(
+                    child: Transform.scale(
+                      scale: .98 +
+                          ((math.sin(progress * math.pi * 2) + 1) / 2) * .02,
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        margin: const EdgeInsets.all(28),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 34, vertical: 38),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: .94),
+                          borderRadius: BorderRadius.circular(36),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: .8), width: 2),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Color(0x55000000),
+                                blurRadius: 40,
+                                offset: Offset(0, 18)),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(birthday ? '🎂' : '🏆',
+                                style: const TextStyle(fontSize: 76)),
+                            const SizedBox(height: 14),
+                            Text(
+                              birthday
+                                  ? 'HAPPY BIRTHDAY'
+                                  : 'HAPPY WORK ANNIVERSARY',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: colors[0],
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              employee.name.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF20242D),
+                                fontSize: 32,
+                                height: 1.1,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              birthday
+                                  ? 'Wishing you happiness, success and a wonderful year ahead!'
+                                  : 'Celebrating ${years ?? ''} amazing year${years == 1 ? '' : 's'} together. Thank you for being part of Hasani Books!',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 16,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: colors[0],
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 14),
+                              ),
+                              onPressed: () => Navigator.pop(dialogContext),
+                              icon: const Icon(Icons.favorite),
+                              label: const Text('Thank You'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 18,
+                    top: 18,
+                    child: IconButton.filledTonal(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ),
+                ],
+              );
+            });
+          },
+        ),
+      ),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
         return FadeTransition(
           opacity: animation,
           child: ScaleTransition(scale: curved, child: child),
