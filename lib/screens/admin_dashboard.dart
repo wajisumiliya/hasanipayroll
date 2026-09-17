@@ -4202,6 +4202,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool active = true;
     bool managementStaff = false;
     bool tempStaff = false;
+    bool supportStaff = false;
     bool otherStaff = false;
     String epfCategory = 'normal1';
     bool eisApplicable = true;
@@ -4441,6 +4442,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           managementStaff = value;
                           if (value) {
                             tempStaff = false;
+                            supportStaff = false;
                             otherStaff = false;
                           }
                         }),
@@ -4456,6 +4458,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           tempStaff = value;
                           if (value) {
                             managementStaff = false;
+                            supportStaff = false;
+                            otherStaff = false;
+                          }
+                        }),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Support Staff'),
+                        subtitle: const Text(
+                          'Payroll only; hidden from branch attendance.',
+                        ),
+                        value: supportStaff,
+                        onChanged: (value) => setDialogState(() {
+                          supportStaff = value;
+                          if (value) {
+                            managementStaff = false;
+                            tempStaff = false;
                             otherStaff = false;
                           }
                         }),
@@ -4472,6 +4491,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           if (value) {
                             managementStaff = false;
                             tempStaff = false;
+                            supportStaff = false;
                           }
                         }),
                       ),
@@ -4555,6 +4575,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         isActive: active,
                         isManagementStaff: managementStaff,
                         isTempStaff: tempStaff,
+                        isSupportStaff: supportStaff,
                         isOtherStaff: otherStaff,
                       ),
                       branchId: branchId,
@@ -4633,6 +4654,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     bool active = employee.isActive;
     bool managementStaff = employee.isManagementStaff;
     bool tempStaff = employee.isTempStaff;
+    bool supportStaff = employee.isSupportStaff;
     bool otherStaff = employee.isOtherStaff;
 
     showDialog(
@@ -4789,6 +4811,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           managementStaff = value;
                           if (value) {
                             tempStaff = false;
+                            supportStaff = false;
                             otherStaff = false;
                           }
                         }),
@@ -4804,6 +4827,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           tempStaff = value;
                           if (value) {
                             managementStaff = false;
+                            supportStaff = false;
+                            otherStaff = false;
+                          }
+                        }),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Support Staff'),
+                        subtitle: const Text(
+                          'Payroll only; hidden from branch attendance.',
+                        ),
+                        value: supportStaff,
+                        onChanged: (value) => setDialogState(() {
+                          supportStaff = value;
+                          if (value) {
+                            managementStaff = false;
+                            tempStaff = false;
                             otherStaff = false;
                           }
                         }),
@@ -4820,6 +4860,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           if (value) {
                             managementStaff = false;
                             tempStaff = false;
+                            supportStaff = false;
                           }
                         }),
                       ),
@@ -4851,6 +4892,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       isActive: active,
                       isManagementStaff: managementStaff,
                       isTempStaff: tempStaff,
+                      isSupportStaff: supportStaff,
                       isOtherStaff: otherStaff,
                       branchId: branchId,
                     );
@@ -5255,9 +5297,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ? 'Management Staff'
                           : employee['is_temp_staff'] == true
                               ? 'Temporary Staff'
-                              : employee['is_other_staff'] == true
-                                  ? 'Other Staff'
-                                  : 'Regular Staff',
+                              : employee['is_support_staff'] == true
+                                  ? 'Support Staff'
+                                  : employee['is_other_staff'] == true
+                                      ? 'Other Staff'
+                                      : 'Regular Staff',
                     ),
                     _employeeDetail(
                       'Active',
@@ -5554,6 +5598,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         employee['is_management_staff']?.toString().toLowerCase() == 'true';
     var tempStaff = employee['is_temp_staff'] == true ||
         employee['is_temp_staff']?.toString().toLowerCase() == 'true';
+    var supportStaff = employee['is_support_staff'] == true ||
+        employee['is_support_staff']?.toString().toLowerCase() == 'true';
     var otherStaff = employee['is_other_staff'] == true ||
         employee['is_other_staff']?.toString().toLowerCase() == 'true';
     String payrollBranchId =
@@ -5777,6 +5823,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               managementStaff = value ?? false;
                               if (managementStaff) {
                                 tempStaff = false;
+                                supportStaff = false;
                                 otherStaff = false;
                               }
                             }),
@@ -5794,6 +5841,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               tempStaff = value ?? false;
                               if (tempStaff) {
                                 managementStaff = false;
+                                supportStaff = false;
+                                otherStaff = false;
+                              }
+                            }),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: supportStaff,
+                    title: const Text('Support Staff'),
+                    subtitle: const Text(
+                      'Payroll only; hidden from branch attendance.',
+                    ),
+                    onChanged: saving
+                        ? null
+                        : (value) => setDialogState(() {
+                              supportStaff = value ?? false;
+                              if (supportStaff) {
+                                managementStaff = false;
+                                tempStaff = false;
                                 otherStaff = false;
                               }
                             }),
@@ -5812,6 +5878,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               if (otherStaff) {
                                 managementStaff = false;
                                 tempStaff = false;
+                                supportStaff = false;
                               }
                             }),
                   ),
@@ -5869,6 +5936,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             'is_active': active,
                             'is_management_staff': managementStaff,
                             'is_temp_staff': tempStaff,
+                            'is_support_staff': supportStaff,
                             'is_other_staff': otherStaff,
                             'payroll_branch_id': payrollBranchId.isEmpty
                                 ? null
@@ -8214,7 +8282,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         .from('employees')
         .select(
           'employee_id,name,branch_id,payroll_branch_id,'
-          'is_active,is_management_staff,is_temp_staff',
+          'is_active,is_management_staff,is_temp_staff,is_support_staff',
         )
         .eq('is_active', true)
         .order('employee_id');
@@ -12858,7 +12926,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
               'true';
       final temporary = employee['is_temp_staff'] == true ||
           employee['is_temp_staff']?.toString().trim().toLowerCase() == 'true';
-      if (!foreign && !management && !temporary) {
+      final support = employee['is_support_staff'] == true ||
+          employee['is_support_staff']?.toString().trim().toLowerCase() ==
+              'true';
+      if (!foreign && !management && !temporary && !support) {
         summary['malaysianEmployees'] =
             (summary['malaysianEmployees'] as int) + 1;
         summary['hrdfBasic'] = (summary['hrdfBasic'] as double) + basic;

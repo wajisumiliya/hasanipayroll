@@ -243,7 +243,9 @@ class AttendancePayrollService {
     final employeeName = _text(employee['name']);
     final isManagementStaff = _toBool(employee['is_management_staff']);
     final isTempStaff = _toBool(employee['is_temp_staff']);
-    final isPayrollOnlyStaff = isManagementStaff || isTempStaff;
+    final isSupportStaff = _toBool(employee['is_support_staff']);
+    final isPayrollOnlyStaff =
+        isManagementStaff || isTempStaff || isSupportStaff;
 
     if (employeeId.isEmpty) {
       return PayrollGenerationItem(
@@ -703,7 +705,8 @@ class AttendancePayrollService {
         .from('employees')
         .select(
           'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,'
-          'payroll_branch_id,is_active,is_management_staff,is_temp_staff',
+          'payroll_branch_id,is_active,is_management_staff,is_temp_staff,'
+          'is_support_staff',
         )
         .inFilter('employee_id', employeeIds);
 

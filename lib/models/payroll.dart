@@ -423,6 +423,7 @@ class Employee {
   final bool isActive;
   final bool isManagementStaff;
   final bool isTempStaff;
+  final bool isSupportStaff;
   final bool isOtherStaff;
 
   final String branchId;
@@ -446,6 +447,7 @@ class Employee {
     this.isActive = true,
     this.isManagementStaff = false,
     this.isTempStaff = false,
+    this.isSupportStaff = false,
     this.isOtherStaff = false,
     this.branchId = '',
   });
@@ -473,6 +475,7 @@ class Employee {
     bool? isActive,
     bool? isManagementStaff,
     bool? isTempStaff,
+    bool? isSupportStaff,
     bool? isOtherStaff,
     String? branchId,
   }) {
@@ -495,6 +498,7 @@ class Employee {
       isActive: isActive ?? this.isActive,
       isManagementStaff: isManagementStaff ?? this.isManagementStaff,
       isTempStaff: isTempStaff ?? this.isTempStaff,
+      isSupportStaff: isSupportStaff ?? this.isSupportStaff,
       isOtherStaff: isOtherStaff ?? this.isOtherStaff,
       branchId: branchId ?? this.branchId,
     );
@@ -524,6 +528,7 @@ class Employee {
       'isActive': isActive,
       'isManagementStaff': isManagementStaff,
       'isTempStaff': isTempStaff,
+      'isSupportStaff': isSupportStaff,
       'isOtherStaff': isOtherStaff,
       'branchId': branchId,
     };
@@ -558,6 +563,8 @@ class Employee {
         json['isManagementStaff'] ?? json['is_management_staff'],
       ),
       isTempStaff: _boolValue(json['isTempStaff'] ?? json['is_temp_staff']),
+      isSupportStaff:
+          _boolValue(json['isSupportStaff'] ?? json['is_support_staff']),
       isOtherStaff: _boolValue(json['isOtherStaff'] ?? json['is_other_staff']),
       branchId: _stringValue(json['branchId']),
     );

@@ -617,6 +617,9 @@ class AppService extends ChangeNotifier {
       isTempStaff: _supabaseBool(
         data['is_temp_staff'] ?? data['isTempStaff'],
       ),
+      isSupportStaff: _supabaseBool(
+        data['is_support_staff'] ?? data['isSupportStaff'],
+      ),
       isOtherStaff: _supabaseBool(
         data['is_other_staff'] ?? data['isOtherStaff'],
       ),
@@ -1458,6 +1461,7 @@ class AppService extends ChangeNotifier {
           (employee) =>
               !employee.isManagementStaff &&
               !employee.isTempStaff &&
+              !employee.isSupportStaff &&
               _normalise(
                     employee.branchId,
                   ) ==
@@ -3663,6 +3667,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'is_active': employee.isActive,
       'is_management_staff': employee.isManagementStaff,
       'is_temp_staff': employee.isTempStaff,
+      'is_support_staff': employee.isSupportStaff,
       'is_other_staff': employee.isOtherStaff,
       'branch_id': employee.branchId,
     };
