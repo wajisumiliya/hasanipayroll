@@ -1653,6 +1653,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         final activeEmployees = employees.where(_isActive).length;
         final inactiveEmployees = employees.length - activeEmployees;
+        final selectedActiveEmployees = employees.where((employee) {
+          if (!_isActive(employee)) return false;
+          if (selectedDashboardBranchId == null) return true;
+          return _dashboardBranchKey(_payrollBranchIdFromEmployee(employee)) ==
+              selectedDashboardBranchId;
+        }).toList();
+        final activeForeignEmployees = selectedActiveEmployees
+            .where((employee) => (employee['address'] ?? '')
+                .toString()
+                .toUpperCase()
+                .contains('FRN'))
+            .length;
+        final activeLocalEmployees =
+            selectedActiveEmployees.length - activeForeignEmployees;
 
         final departments = employees
             .map((e) => e['department']?.toString().trim() ?? '')
@@ -1744,6 +1758,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       pcb: pcb,
                       employerContributions: employerContributions,
                       payrollRecords: periodPayroll.length,
+                      activeLocalEmployees: activeLocalEmployees,
+                      activeForeignEmployees: activeForeignEmployees,
+                      selectedActiveEmployees: selectedActiveEmployees.length,
                       availableYears: payroll
                           .map((row) => DateTime.tryParse(
                               (row['period'] ?? '').toString()))
@@ -1965,6 +1982,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     required double pcb,
     required double employerContributions,
     required int payrollRecords,
+    required int activeLocalEmployees,
+    required int activeForeignEmployees,
+    required int selectedActiveEmployees,
     required List<int> availableYears,
     required Map<String, String> branchOptions,
     required bool compact,
@@ -1999,6 +2019,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       child: Stack(
         children: [
+          if (!compact)
+            Positioned(
+              right: 0,
+              top: 62,
+              child: _dashboardWorkforceFlashCards(
+                local: activeLocalEmployees,
+                foreign: activeForeignEmployees,
+                total: selectedActiveEmployees,
+              ),
+            ),
           Positioned(
             right: -34,
             top: -62,
@@ -2063,6 +2093,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
+              if (compact) ...[
+                const SizedBox(height: 14),
+                _dashboardWorkforceFlashCards(
+                  local: activeLocalEmployees,
+                  foreign: activeForeignEmployees,
+                  total: selectedActiveEmployees,
+                ),
+              ],
               const SizedBox(height: 18),
               Text(
                 'Payroll command centre',
@@ -2174,6 +2212,71 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _dashboardWorkforceFlashCards({
+    required int local,
+    required int foreign,
+    required int total,
+  }) {
+    Widget card(String label, int value, IconData icon, Color color) {
+      return Container(
+        width: 108,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: .55)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: .08),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 19, color: color),
+            const SizedBox(width: 7),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value.toString(),
+                  style: const TextStyle(
+                    color: Color(0xFF20242D),
+                    fontSize: 19,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .45,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        card('Locals', local, Icons.person_outline, const Color(0xFF243B8F)),
+        card('Foreigners', foreign, Icons.public, const Color(0xFFED1C24)),
+        card('Total', total, Icons.groups_2_outlined, const Color(0xFF169B71)),
+      ],
     );
   }
 
