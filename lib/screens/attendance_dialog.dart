@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
+import '../services/app_service.dart';
 import '../widgets/employee_photo.dart';
 
 // ============================================================================
@@ -60,6 +61,15 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   bool _showBreakAttendanceOnMobile = false;
   String? loadError;
   Timer? _liveRefreshTimer;
+
+  String get _watermarkBranchName {
+    final branch = AppService.instance.branchById(widget.branchId);
+    final name = branch?.branchName ??
+        widget.employee['branch_name']?.toString() ??
+        widget.employee['branchName']?.toString() ??
+        widget.branchId;
+    return name.trim().isEmpty ? widget.branchId : name.trim();
+  }
 
   double _requiredWorkHours = 7.5;
   bool _salaryRuleLoaded = false;
@@ -2100,7 +2110,64 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             ),
           ),
           Expanded(
-            child: child,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                child,
+                IgnorePointer(
+                  child: Center(
+                    child: Transform.rotate(
+                      angle: -.28,
+                      child: Opacity(
+                        opacity: .075,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/hasani_books_logo.jpg',
+                              width: 300,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Text(
+                                'HASANI BOOKS',
+                                style: TextStyle(
+                                  color: Color(0xFF243B8F),
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: const Color(0xFF243B8F),
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _watermarkBranchName.toUpperCase(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFF243B8F),
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
