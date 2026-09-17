@@ -22,7 +22,8 @@ class BranchPortal extends StatefulWidget {
   State<BranchPortal> createState() => _BranchPortalState();
 }
 
-class _BranchPortalState extends State<BranchPortal> {
+class _BranchPortalState extends State<BranchPortal>
+    with SingleTickerProviderStateMixin {
   final AppService service = AppService.instance;
 
   DailyPortalTheme get _portalTheme => DailyPortalTheme.today();
@@ -40,9 +41,20 @@ class _BranchPortalState extends State<BranchPortal> {
   final TextEditingController _employeeSearchController =
       TextEditingController();
   String _employeeSearch = '';
+  late final AnimationController _celebrationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _celebrationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
 
   @override
   void dispose() {
+    _celebrationController.dispose();
     _employeeSearchController.dispose();
     super.dispose();
   }
@@ -282,21 +294,37 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Widget _sidebar() {
     return Container(
-      width: 250,
+      width: 264,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(right: BorderSide(color: Color(0xFFD7DDEA))),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x100D1B3E),
+            blurRadius: 18,
+            offset: Offset(5, 0),
+          ),
+        ],
       ),
       child: Column(
         children: [
           _sidebarHeader(),
-          const Divider(),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(
-                vertical: 10,
-              ),
+              padding: const EdgeInsets.fromLTRB(12, 18, 12, 10),
               children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Text(
+                    'WORKSPACE',
+                    style: TextStyle(
+                      color: Color(0xFF98A2B3),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.3,
+                    ),
+                  ),
+                ),
                 _sidebarItem(
                   'Dashboard',
                   Icons.dashboard_outlined,
@@ -316,20 +344,31 @@ class _BranchPortalState extends State<BranchPortal> {
               ],
             ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(
-              Icons.logout,
-              color: Colors.red,
-            ),
-            title: const Text(
-              'Logout',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
+          Container(
+            margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            decoration: BoxDecoration(
+              color: const Color(0xFFED1C24).withValues(alpha: .06),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFED1C24).withValues(alpha: .22),
               ),
             ),
-            onTap: logout,
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              leading: const Icon(Icons.logout, color: Color(0xFFED1C24)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Color(0xFFED1C24),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                  size: 13, color: Color(0xFFED1C24)),
+              onTap: logout,
+            ),
           ),
           const Padding(
             padding: EdgeInsets.all(16),
@@ -348,43 +387,90 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Widget _sidebarHeader() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
       width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF7F9FF), Colors.white],
+        ),
+        border: Border(bottom: BorderSide(color: Color(0xFFE4E7EC))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset(
-            'assets/hasani_books_logo.jpg',
-            width: 160,
-            errorBuilder: (
-              context,
-              error,
-              stackTrace,
-            ) {
-              return const Text(
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: const Color(0xFFDDE3F0)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0D000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Image.asset(
+              'assets/hasani_books_logo.jpg',
+              width: 158,
+              errorBuilder: (context, error, stackTrace) => const Text(
                 'HASANI BOOKS',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF2D55D8),
+                  color: Color(0xFF243B8F),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'BRANCH PORTAL',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF15965D),
+              ),
             ),
           ),
-          const SizedBox(height: 5),
-          Text(
-            branchDisplayName,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF15965D).withValues(alpha: .08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF15965D).withValues(alpha: .25),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.storefront_outlined,
+                    color: Color(0xFF15965D), size: 20),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'BRANCH PORTAL',
+                        style: TextStyle(
+                          color: Color(0xFF15965D),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .8,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        branchDisplayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF344054),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.circle, color: Color(0xFF73D6AE), size: 8),
+              ],
             ),
           ),
         ],
@@ -436,31 +522,60 @@ class _BranchPortalState extends State<BranchPortal> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 2,
+        horizontal: 2,
+        vertical: 4,
       ),
-      child: ListTile(
-        selected: selected,
-        selectedTileColor: const Color(0xFF243B8F).withValues(alpha: .10),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [Color(0xFF243B8F), Color(0xFF315AD9)],
+                )
+              : null,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x26243B8F),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
-        leading: Icon(
-          icon,
-          color: selected ? const Color(0xFF243B8F) : const Color(0xFF667085),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? const Color(0xFF243B8F) : const Color(0xFF344054),
+        child: ListTile(
+          dense: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
+          leading: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: selected
+                  ? Colors.white.withValues(alpha: .16)
+                  : const Color(0xFFF2F4F7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              size: 19,
+              color: selected ? Colors.white : const Color(0xFF667085),
+            ),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              color: selected ? Colors.white : const Color(0xFF344054),
+            ),
+          ),
+          trailing: selected
+              ? const Icon(Icons.chevron_right, color: Colors.white, size: 18)
+              : null,
+          onTap: () => setState(() => selectedPage = page),
         ),
-        onTap: () {
-          setState(() {
-            selectedPage = page;
-          });
-        },
       ),
     );
   }
@@ -606,15 +721,17 @@ class _BranchPortalState extends State<BranchPortal> {
 
   Widget _dashboardPage() {
     final totalEmployees = employees.length;
-    final present = todayAttendance
-        .where((record) => record.status.trim().toLowerCase() == 'present')
-        .length;
-    final late = todayAttendance
+    final monthlyAttendance = attendance
+        .where((record) =>
+            record.date.year == attendanceMonth.year &&
+            record.date.month == attendanceMonth.month)
+        .toList();
+    final lateRecords = monthlyAttendance
         .where((record) => record.status.trim().toLowerCase() == 'late')
-        .length;
-    final absent = todayAttendance
+        .toList();
+    final absentRecords = monthlyAttendance
         .where((record) => record.status.trim().toLowerCase() == 'absent')
-        .length;
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -654,6 +771,8 @@ class _BranchPortalState extends State<BranchPortal> {
                   style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 20),
+                _branchPeriodSelector(),
+                const SizedBox(height: 14),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
@@ -665,22 +784,26 @@ class _BranchPortalState extends State<BranchPortal> {
                 const Color(0xFF315AD9),
               ),
               _statCard(
-                'Present',
-                present.toString(),
-                Icons.check_circle,
-                const Color(0xFF15965D),
-              ),
-              _statCard(
                 'Late',
-                late.toString(),
+                lateRecords.length.toString(),
                 Icons.schedule,
                 Colors.orange,
+                onTap: () => _showMonthlyAttendanceDetails(
+                  title: 'Late Employees',
+                  records: lateRecords,
+                  late: true,
+                ),
               ),
               _statCard(
                 'Absent',
-                absent.toString(),
+                absentRecords.length.toString(),
                 Icons.cancel,
                 Colors.red,
+                onTap: () => _showMonthlyAttendanceDetails(
+                  title: 'Absent Employees',
+                  records: absentRecords,
+                  late: false,
+                ),
               ),
                   ],
                 ),
@@ -688,36 +811,467 @@ class _BranchPortalState extends State<BranchPortal> {
             ),
           ),
           const SizedBox(height: 24),
-          _panel(
-            'Quick Actions',
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _actionButton(
-                  'Record Attendance',
-                  Icons.fact_check,
-                  () {
-                    setState(() {
-                      selectedPage = 1;
-                    });
-                  },
-                ),
-                _actionButton(
-                  'Employees',
-                  Icons.people,
-                  () {
-                    setState(() {
-                      selectedPage = 2;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
+          _branchCelebrationPanels(),
           const SizedBox(height: 24),
           _dashboardAttendanceRegister(),
         ],
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _branchUpcomingEvents({
+    required bool birthday,
+  }) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final events = <Map<String, dynamic>>[];
+    for (final employee in employees) {
+      final original = birthday ? employee.birthday : employee.joiningDate;
+      if (original == null || (!birthday && !original.isBefore(today))) {
+        continue;
+      }
+      DateTime occurrence(int year) {
+        final lastDay = DateTime(year, original.month + 1, 0).day;
+        return DateTime(
+            year, original.month, original.day.clamp(1, lastDay).toInt());
+      }
+
+      var next = occurrence(today.year);
+      if (next.isBefore(today)) next = occurrence(today.year + 1);
+      final days = next.difference(today).inDays;
+      if (days <= 3) {
+        events.add({
+          'employee': employee,
+          'date': next,
+          'days': days,
+          'years': birthday ? null : next.year - original.year,
+        });
+      }
+    }
+    events.sort((a, b) => (a['date'] as DateTime).compareTo(b['date']));
+    return events;
+  }
+
+  Widget _branchCelebrationPanels() {
+    final birthdays = _branchUpcomingEvents(birthday: true);
+    final anniversaries = _branchUpcomingEvents(birthday: false);
+    return LayoutBuilder(builder: (context, constraints) {
+      final stacked = constraints.maxWidth < 760;
+      final birthdayPanel = _celebrationPanel(
+        title: 'Upcoming Birthdays',
+        subtitle: 'Celebrations in the next 3 days',
+        icon: Icons.cake_outlined,
+        color: const Color(0xFFED1C24),
+        events: birthdays,
+        birthday: true,
+      );
+      final anniversaryPanel = _celebrationPanel(
+        title: 'Work Anniversaries',
+        subtitle: 'Milestones in the next 3 days',
+        icon: Icons.workspace_premium_outlined,
+        color: const Color(0xFF243B8F),
+        events: anniversaries,
+        birthday: false,
+      );
+      if (stacked) {
+        return Column(children: [
+          birthdayPanel,
+          const SizedBox(height: 14),
+          anniversaryPanel,
+        ]);
+      }
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: birthdayPanel),
+        const SizedBox(width: 16),
+        Expanded(child: anniversaryPanel),
+      ]);
+    });
+  }
+
+  Widget _celebrationPanel({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required List<Map<String, dynamic>> events,
+    required bool birthday,
+  }) {
+    final content = Container(
+      constraints: const BoxConstraints(minHeight: 154),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, color.withValues(alpha: .07)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: .45), width: 1.3),
+        boxShadow: const [
+          BoxShadow(color: Color(0x0D000000), blurRadius: 14, offset: Offset(0, 5)),
+        ],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+              Text(subtitle,
+                  style: const TextStyle(fontSize: 11, color: Colors.black54)),
+            ]),
+          ),
+          if (events.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text('${events.length}',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w900)),
+            ),
+        ]),
+        const SizedBox(height: 12),
+        if (events.isEmpty)
+          const Text('No upcoming celebrations',
+              style: TextStyle(color: Colors.black54))
+        else
+          ...events.map((event) {
+            final employee = event['employee'] as Employee;
+            final days = event['days'] as int;
+            final timing = days == 0
+                ? 'Today'
+                : days == 1
+                    ? 'Tomorrow'
+                    : 'In $days days';
+            return InkWell(
+              onTap: () => _showCelebrationPopup(event, birthday: birthday),
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(children: [
+                  Text(birthday ? '🎂' : '🎉',
+                      style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(employee.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                  Text(timing,
+                      style: TextStyle(
+                          color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+                ]),
+              ),
+            );
+          }),
+      ]),
+    );
+    if (events.isEmpty) return content;
+    return AnimatedBuilder(
+      animation: _celebrationController,
+      child: content,
+      builder: (context, child) => Transform.scale(
+        scale: .995 + (_celebrationController.value * .005),
+        child: child,
+      ),
+    );
+  }
+
+  Future<void> _showCelebrationPopup(
+    Map<String, dynamic> event, {
+    required bool birthday,
+  }) {
+    final employee = event['employee'] as Employee;
+    final years = event['years'] as int?;
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Celebration',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 420),
+      pageBuilder: (context, animation, secondaryAnimation) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 390,
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: const [
+                BoxShadow(color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 12)),
+              ],
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(birthday ? '🎈  🎂  🎈' : '🎊  🏆  🎊',
+                  style: const TextStyle(fontSize: 34)),
+              const SizedBox(height: 18),
+              Text(
+                birthday ? 'Happy Birthday!' : 'Work Anniversary!',
+                style: TextStyle(
+                  color: birthday ? const Color(0xFFED1C24) : const Color(0xFF243B8F),
+                  fontSize: 25,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(employee.name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text(
+                birthday
+                    ? 'Wishing you a wonderful celebration from everyone at Hasani Books.'
+                    : 'Congratulations on ${years ?? ''} wonderful year${years == 1 ? '' : 's'} with Hasani Books!',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.black54, height: 1.45),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Celebrate'),
+              ),
+            ]),
+          ),
+        ),
+      ),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: curved, child: child),
+        );
+      },
+    );
+  }
+
+  Widget _branchPeriodSelector() {
+    final currentYear = DateTime.now().year;
+    final years = List.generate(8, (index) => currentYear + 1 - index);
+    if (!years.contains(attendanceMonth.year)) years.add(attendanceMonth.year);
+    years.sort((a, b) => b.compareTo(a));
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        SizedBox(
+          width: 170,
+          child: DropdownButtonFormField<int>(
+            initialValue: attendanceMonth.month,
+            decoration: const InputDecoration(
+              labelText: 'Month',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            items: List.generate(
+              12,
+              (index) => DropdownMenuItem(
+                value: index + 1,
+                child: Text(DateFormat('MMMM').format(DateTime(2000, index + 1))),
+              ),
+            ),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => attendanceMonth =
+                    DateTime(attendanceMonth.year, value));
+              }
+            },
+          ),
+        ),
+        SizedBox(
+          width: 130,
+          child: DropdownButtonFormField<int>(
+            initialValue: attendanceMonth.year,
+            decoration: const InputDecoration(
+              labelText: 'Year',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            items: years
+                .map((year) => DropdownMenuItem(
+                      value: year,
+                      child: Text(year.toString()),
+                    ))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => attendanceMonth =
+                    DateTime(value, attendanceMonth.month));
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  int? _branchClockMinutes(String value) {
+    final parts = value.trim().split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return hour * 60 + minute;
+  }
+
+  String _durationText(int minutes) {
+    if (minutes < 60) return '$minutes min';
+    final hours = minutes ~/ 60;
+    final remainder = minutes % 60;
+    return remainder == 0 ? '$hours hr' : '$hours hr $remainder min';
+  }
+
+  Future<void> _showMonthlyAttendanceDetails({
+    required String title,
+    required List<AttendanceRecord> records,
+    required bool late,
+  }) async {
+    final rosterByEmployeeDate = <String, Map<String, dynamic>>{};
+    if (late && records.isNotEmpty) {
+      final ids = records.map((record) => record.employeeId).toSet();
+      final start = DateTime(attendanceMonth.year, attendanceMonth.month);
+      final end = DateTime(attendanceMonth.year, attendanceMonth.month + 1);
+      final results = await Future.wait(ids.map((id) =>
+          SupabaseService.getDailyRosters(
+              branchId: branch?.branchId ?? branchId,
+              employeeId: id,
+              start: start,
+              end: end)));
+      for (final rows in results) {
+        for (final row in rows) {
+          final key = '${row['employee_id'].toString().toUpperCase()}|'
+              '${row['roster_date'].toString().split('T').first}';
+          rosterByEmployeeDate[key] = row;
+        }
+      }
+    }
+    if (!mounted) return;
+
+    final grouped = <String, List<AttendanceRecord>>{};
+    for (final record in records) {
+      grouped.putIfAbsent(record.employeeId, () => []).add(record);
+    }
+    final ids = grouped.keys.toList()
+      ..sort((a, b) {
+        final aName = service.findEmployee(a)?.name ?? a;
+        final bName = service.findEmployee(b)?.name ?? b;
+        return aName.toLowerCase().compareTo(bName.toLowerCase());
+      });
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: .72,
+        minChildSize: .45,
+        maxChildSize: .94,
+        builder: (context, controller) => Container(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(children: [
+            Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(children: [
+              Icon(late ? Icons.schedule : Icons.cancel_outlined,
+                  color: late ? Colors.orange : Colors.red),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '$title · ${DateFormat('MMMM yyyy').format(attendanceMonth)}',
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w900),
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(sheetContext),
+                icon: const Icon(Icons.close),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ids.isEmpty
+                  ? const Center(child: Text('No attendance records found.'))
+                  : ListView.separated(
+                      controller: controller,
+                      itemCount: ids.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final id = ids[index];
+                        final employeeRecords = grouped[id]!
+                          ..sort((a, b) => a.date.compareTo(b.date));
+                        final name = service.findEmployee(id)?.name ?? id;
+                        return ExpansionTile(
+                          tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+                          title: Text(name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800)),
+                          subtitle: Text(late
+                              ? '${employeeRecords.length} late occurrence${employeeRecords.length == 1 ? '' : 's'}'
+                              : '${employeeRecords.length} absent day${employeeRecords.length == 1 ? '' : 's'}'),
+                          children: employeeRecords.map((record) {
+                            String detail;
+                            if (late) {
+                              final key = '${record.employeeId.toUpperCase()}|'
+                                  '${DateFormat('yyyy-MM-dd').format(record.date)}';
+                              final shiftStart = _branchClockMinutes(
+                                  rosterByEmployeeDate[key]?['shift_start']
+                                          ?.toString() ??
+                                      '');
+                              final actual =
+                                  _branchClockMinutes(record.effectiveCheckIn);
+                              final minutes = actual != null && shiftStart != null
+                                  ? (actual - shiftStart).clamp(0, 1440)
+                                  : null;
+                              detail = minutes == null
+                                  ? 'Check-in ${record.effectiveCheckIn.isEmpty ? 'not recorded' : record.effectiveCheckIn} · late duration unavailable'
+                                  : 'Check-in ${record.effectiveCheckIn} · ${_durationText(minutes)} late';
+                            } else {
+                              detail = 'Absent';
+                            }
+                            return ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.calendar_today_outlined,
+                                  size: 18),
+                              title: Text(
+                                  DateFormat('EEE, dd MMM yyyy').format(record.date)),
+                              trailing: Text(detail,
+                                  style: TextStyle(
+                                      color: late ? Colors.orange : Colors.red,
+                                      fontWeight: FontWeight.w700)),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+            ),
+          ]),
+        ),
       ),
     );
   }
@@ -2050,46 +2604,64 @@ class _BranchPortalState extends State<BranchPortal> {
     String title,
     String value,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     return SizedBox(
       width: 220,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .06),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: .65)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: .13),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(icon, color: color, size: 21),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .06),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: color.withValues(alpha: .65)),
             ),
-            const SizedBox(width: 11),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(value,
-                    style: const TextStyle(
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: .13),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(icon, color: color, size: 21),
+                ),
+                const SizedBox(width: 11),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: const TextStyle(
                         color: Color(0xFF20242D),
                         fontSize: 21,
-                        fontWeight: FontWeight.w900)),
-                Text(title.toUpperCase(),
-                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      title.toUpperCase(),
+                      style: TextStyle(
                         color: color,
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: .6)),
+                        letterSpacing: .6,
+                      ),
+                    ),
+                  ],
+                ),
+              if (onTap != null) ...[
+                const Spacer(),
+                Icon(Icons.arrow_outward, size: 15, color: color),
+              ],
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
