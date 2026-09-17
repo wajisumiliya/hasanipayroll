@@ -38,4 +38,5 @@ void main() {
     await output.parent.create(recursive: true);
     await output.writeAsBytes(bytes);
     expect(bytes, isNotEmpty);
- 
+  });
+}
