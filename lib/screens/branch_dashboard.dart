@@ -212,6 +212,32 @@ class _BranchPortalState extends State<BranchPortal>
         const DecoratedBox(
           decoration: BoxDecoration(color: Color(0xFFF7F8FC)),
         ),
+        Center(
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: .025,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image(
+                    image: AssetImage('assets/hasani_books_logo.jpg'),
+                    width: 540,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    branchDisplayName.toUpperCase(),
+                    style: const TextStyle(
+                      color: Color(0xFF243B8F),
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         Positioned.fill(child: child),
       ],
     );
@@ -2677,27 +2703,110 @@ class _BranchPortalState extends State<BranchPortal>
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFF8FAFF)],
+        ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFF243B8F).withValues(alpha: .3)),
         boxShadow: const [
           BoxShadow(color: Color(0x0D000000), blurRadius: 14, offset: Offset(0, 5)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+          Positioned(
+            right: 32,
+            top: 34,
+            bottom: 34,
+            child: Opacity(
+              opacity: .035,
+              child: Image.asset(
+                'assets/hasani_books_logo.jpg',
+                width: 420,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
             ),
           ),
-          const SizedBox(height: 18),
-          child,
+          Positioned(
+            right: 24,
+            bottom: 10,
+            child: IgnorePointer(
+              child: Text(
+                branchDisplayName.toUpperCase(),
+                style: const TextStyle(
+                  color: Color(0x0D243B8F),
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.5,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF243B8F), Color(0xFFED1C24)],
+                        ),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Color(0xFF20242D),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF243B8F).withValues(alpha: .07),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.storefront_outlined,
+                              size: 14, color: Color(0xFF243B8F)),
+                          const SizedBox(width: 6),
+                          Text(
+                            branchDisplayName,
+                            style: const TextStyle(
+                              color: Color(0xFF243B8F),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                child,
+              ],
+            ),
+          ),
         ],
       ),
     );
