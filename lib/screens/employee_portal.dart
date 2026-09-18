@@ -1225,10 +1225,10 @@ class _EmployeePortalState extends State<EmployeePortal>
     final available = payroll != null;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: available ? accent.withValues(alpha: .08) : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: available
               ? accent.withValues(alpha: .16)
@@ -1237,8 +1237,8 @@ class _EmployeePortalState extends State<EmployeePortal>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -1248,17 +1248,17 @@ class _EmployeePortalState extends State<EmployeePortal>
           Row(
             children: [
               CircleAvatar(
-                radius: 20,
+                radius: 16,
                 backgroundColor: available
                     ? accent.withValues(alpha: .13)
                     : Colors.grey.shade200,
                 child: Icon(
                   Icons.description_outlined,
                   color: available ? accent : Colors.grey,
-                  size: 21,
+                  size: 18,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1268,7 +1268,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1276,7 +1276,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                       '$year',
                       style: const TextStyle(
                         color: Colors.black54,
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                     ),
                   ],
@@ -1284,23 +1284,28 @@ class _EmployeePortalState extends State<EmployeePortal>
               ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 7),
           const Text(
             'Net Pay',
-            style: TextStyle(color: Colors.black54, fontSize: 11),
+            style: TextStyle(color: Colors.black54, fontSize: 9),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 1),
           Text(
             available ? _moneyText(payroll.netPay) : 'Not available',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: available ? accent : Colors.grey,
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 5),
+          if (available && _showFinancialDetails)
+            _RinggitNoteBreakdown(amount: payroll.netPay)
+          else
+            const SizedBox(height: 25),
+          const Spacer(),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -1308,13 +1313,17 @@ class _EmployeePortalState extends State<EmployeePortal>
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                minimumSize: const Size(0, 31),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(9),
                 ),
               ),
-              icon: const Icon(Icons.download_outlined, size: 17),
-              label: Text(available ? 'Download' : 'No payslip'),
+              icon: const Icon(Icons.download_outlined, size: 14),
+              label: Text(
+                available ? 'Download' : 'No payslip',
+                style: const TextStyle(fontSize: 11),
+              ),
             ),
           ),
         ],
@@ -1329,7 +1338,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .07),
         borderRadius: BorderRadius.circular(14),
@@ -1337,17 +1346,18 @@ class _EmployeePortalState extends State<EmployeePortal>
       child: Row(
         children: [
           CircleAvatar(
+            radius: 17,
             backgroundColor: color.withValues(alpha: .13),
             child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 9),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
                     style: const TextStyle(
-                        color: Colors.black54, fontSize: 12)),
+                        color: Colors.black54, fontSize: 10)),
                 const SizedBox(height: 2),
                 Text(
                   value,
@@ -1355,7 +1365,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: color,
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1364,6 +1374,62 @@ class _EmployeePortalState extends State<EmployeePortal>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _yearSummary({
+    required int year,
+    required double gross,
+    required double deductions,
+    required double net,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900 ? 4 : 2;
+        final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            SizedBox(
+              width: width,
+              child: _yearSummaryItem(
+                icon: Icons.calendar_today_outlined,
+                label: 'Year',
+                value: '$year',
+                color: const Color(0xFF2D55D8),
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _yearSummaryItem(
+                icon: Icons.payments_outlined,
+                label: 'Gross',
+                value: _moneyText(gross),
+                color: const Color(0xFF2563EB),
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _yearSummaryItem(
+                icon: Icons.remove_circle_outline,
+                label: 'Year Deduction',
+                value: _moneyText(deductions),
+                color: const Color(0xFFD52B3F),
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _yearSummaryItem(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'Year Net',
+                value: _moneyText(net),
+                color: const Color(0xFF07833D),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1423,7 +1489,16 @@ class _EmployeePortalState extends State<EmployeePortal>
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
+            _yearSummary(
+              year: year,
+              gross: gross,
+              deductions: deductions,
+              net: net,
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1),
+            const SizedBox(height: 14),
             LayoutBuilder(
               builder: (context, constraints) {
                 final columns = constraints.maxWidth >= 1100
@@ -1439,67 +1514,15 @@ class _EmployeePortalState extends State<EmployeePortal>
                   itemCount: 12,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    mainAxisExtent: 190,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    mainAxisExtent: 166,
                   ),
                   itemBuilder: (context, index) => _payslipMonthCard(
                     month: index + 1,
                     year: year,
                     payroll: byMonth[index + 1],
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: 18),
-            const Divider(),
-            const SizedBox(height: 10),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 900 ? 4 : 2;
-                final width =
-                    (constraints.maxWidth - (columns - 1) * 12) / columns;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    SizedBox(
-                      width: width,
-                      child: _yearSummaryItem(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Year',
-                        value: '$year',
-                        color: const Color(0xFF2D55D8),
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: _yearSummaryItem(
-                        icon: Icons.payments_outlined,
-                        label: 'Gross',
-                        value: _moneyText(gross),
-                        color: const Color(0xFF2563EB),
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: _yearSummaryItem(
-                        icon: Icons.remove_circle_outline,
-                        label: 'Year Deduction',
-                        value: _moneyText(deductions),
-                        color: const Color(0xFFD52B3F),
-                      ),
-                    ),
-                    SizedBox(
-                      width: width,
-                      child: _yearSummaryItem(
-                        icon: Icons.account_balance_wallet_outlined,
-                        label: 'Year Net',
-                        value: _moneyText(net),
-                        color: const Color(0xFF07833D),
-                      ),
-                    ),
-                  ],
                 );
               },
             ),
@@ -1922,6 +1945,103 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
       );
     }
+  }
+}
+
+class _RinggitNoteBreakdown extends StatelessWidget {
+  const _RinggitNoteBreakdown({required this.amount});
+
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    var remaining = amount.isNegative ? 0 : amount.floor();
+    final notes = <({int value, int count, Color color})>[];
+    const denominations = [
+      (value: 100, color: Color(0xFF7650A8)),
+      (value: 50, color: Color(0xFF3A8F70)),
+      (value: 20, color: Color(0xFFD9822B)),
+      (value: 10, color: Color(0xFFC94C62)),
+    ];
+
+    for (final denomination in denominations) {
+      final count = remaining ~/ denomination.value;
+      remaining %= denomination.value;
+      notes.add((
+        value: denomination.value,
+        count: count,
+        color: denomination.color,
+      ));
+    }
+
+    return SizedBox(
+      height: 25,
+      child: Row(
+        children: [
+          for (var index = 0; index < notes.length; index++) ...[
+            if (index > 0) const SizedBox(width: 3),
+            Expanded(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: Duration(milliseconds: 420 + index * 130),
+                curve: Curves.easeOutBack,
+                builder: (context, progress, child) {
+                  return Opacity(
+                    opacity: progress.clamp(0.0, 1.0),
+                    child: Transform.translate(
+                      offset: Offset(0, (1 - progress) * 9),
+                      child: Transform.scale(
+                        scale: .78 + progress * .22,
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  height: 24,
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: notes[index].color,
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: notes[index].color.withValues(alpha: .25),
+                        blurRadius: 3,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FittedBox(
+                        child: Text(
+                          'RM${notes[index].value}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '×${notes[index].count}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 7,
+                          height: .9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
