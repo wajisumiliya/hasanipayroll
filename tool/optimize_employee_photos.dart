@@ -179,11 +179,13 @@ List<_StorageObject> _decodeObjectList(String body) {
   return value.map((raw) {
     final row = raw as Map<String, dynamic>;
     final metadata = (row['metadata'] as Map?)?.cast<String, dynamic>() ?? {};
-    final size = metadata['size'];
+    final size = metadata['size'] ?? row['size'];
     return _StorageObject(
       name: row['name']?.toString() ?? '',
       size: size is num ? size.toInt() : int.tryParse('$size') ?? 0,
-      contentType: metadata['mimetype']?.toString() ?? 'application/octet-stream',
+      contentType: metadata['mimetype']?.toString() ??
+          metadata['contentType']?.toString() ??
+          'application/octet-stream',
     );
   }).where((o) => o.name.isNotEmpty).toList();
 }
