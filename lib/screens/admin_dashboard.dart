@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:image/image.dart' as img;
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -5435,16 +5436,31 @@ class _AdminDashboardState extends State<AdminDashboard>
       if (bytes.length > 5 * 1024 * 1024) {
         throw Exception('Photo must be 5 MB or smaller.');
       }
-      final extension = (file.extension ?? '').toLowerCase();
-      final contentType = extension == 'png'
-          ? 'image/png'
-          : extension == 'webp'
-              ? 'image/webp'
-              : 'image/jpeg';
+      // Employee photos are displayed as small avatars throughout the app.
+      // Decode, resize and encode them once before upload so every subsequent
+      // Storage/CDN request transfers a small optimized file.
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) {
+        throw Exception('The selected file is not a valid image.');
+      }
+      final resized = decoded.width > 480 || decoded.height > 480
+          ? img.copyResize(
+              decoded,
+              width: decoded.width >= decoded.height ? 480 : null,
+              height: decoded.height > decoded.width ? 480 : null,
+              interpolation: img.Interpolation.average,
+            )
+          : decoded;
+      final optimizedBytes = Uint8List.fromList(
+        img.encodeJpg(resized, quality: 78),
+      );
+      if (optimizedBytes.length > 500 * 1024) {
+        throw Exception('Unable to optimize this photo below 500 KB.');
+      }
       final url = await SupabaseService.uploadEmployeePhoto(
         employeeId: employeeId,
-        bytes: bytes,
-        contentType: contentType,
+        bytes: optimizedBytes,
+        contentType: 'image/jpeg',
       );
       _refreshEmployeePhotoData();
       if (mounted) _message('Employee photo uploaded successfully.');
