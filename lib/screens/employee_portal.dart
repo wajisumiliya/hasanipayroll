@@ -1956,12 +1956,28 @@ class _RinggitNoteBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var remaining = amount.isNegative ? 0 : amount.floor();
-    final notes = <({int value, int count, Color color})>[];
+    final notes = <({int value, int count, Color color, String asset})>[];
     const denominations = [
-      (value: 100, color: Color(0xFF7650A8)),
-      (value: 50, color: Color(0xFF3A8F70)),
-      (value: 20, color: Color(0xFFD9822B)),
-      (value: 10, color: Color(0xFFC94C62)),
+      (
+        value: 100,
+        color: Color(0xFF7650A8),
+        asset: 'assets/rm100_note.png'
+      ),
+      (
+        value: 50,
+        color: Color(0xFF3A8F70),
+        asset: 'assets/rm50_note.png'
+      ),
+      (
+        value: 20,
+        color: Color(0xFFD9822B),
+        asset: 'assets/rm20_note.png'
+      ),
+      (
+        value: 10,
+        color: Color(0xFFC94C62),
+        asset: 'assets/rm10_note.png'
+      ),
     ];
 
     for (final denomination in denominations) {
@@ -1971,6 +1987,7 @@ class _RinggitNoteBreakdown extends StatelessWidget {
         value: denomination.value,
         count: count,
         color: denomination.color,
+        asset: denomination.asset,
       ));
     }
 
@@ -1999,41 +2016,71 @@ class _RinggitNoteBreakdown extends StatelessWidget {
                 },
                 child: Container(
                   height: 24,
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
-                    color: notes[index].color,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(3),
                     boxShadow: [
                       BoxShadow(
-                        color: notes[index].color.withValues(alpha: .25),
+                        color: notes[index].color.withValues(alpha: .28),
                         blurRadius: 3,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      FittedBox(
-                        child: Text(
-                          'RM${notes[index].value}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w800,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          notes[index].asset,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                          filterQuality: FilterQuality.medium,
+                        ),
+                        Center(
+                          child: Transform.rotate(
+                            angle: -.22,
+                            child: FittedBox(
+                              child: Text(
+                                'SPECIMEN',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: .72),
+                                  fontSize: 7,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: .4,
+                                  shadows: const [
+                                    Shadow(color: Colors.black54, blurRadius: 2),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        '×${notes[index].count}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 7,
-                          height: .9,
-                          fontWeight: FontWeight.w700,
+                        Positioned(
+                          right: 1,
+                          bottom: 1,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 3,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: .78),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              '×${notes[index].count}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 7,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
