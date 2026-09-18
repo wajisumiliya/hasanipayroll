@@ -36,7 +36,19 @@ void main(List<String> args) async {
   final client = http.Client();
   try {
     final objects = await _listObjects(client, baseUrl, serviceRole);
-    final candidates = objects.where((o) => o.size > 500 * 1024).toList()
+
+    // Some Storage API versions omit object size metadata from list responses.
+    // Probe those objects with HEAD so dry-run selection uses real byte sizes.
+    final hydrated = <_StorageObject>[];
+    for (final object in objects) {
+      if (object.size > 0) {
+        hydrated.add(object);
+      } else {
+        hydrated.add(await _headObject(client, baseUrl, serviceRole, object));
+      }
+    }
+
+    final candidates = hydrated.where((o) => o.size > 500 * 1024).toList()
       ..sort((a, b) => b.size.compareTo(a.size));
 
     stdout.writeln(
@@ -179,7 +191,10 @@ List<_StorageObject> _decodeObjectList(String body) {
   return value.map((raw) {
     final row = raw as Map<String, dynamic>;
     final metadata = (row['metadata'] as Map?)?.cast<String, dynamic>() ?? {};
-    final size = metadata['size'] ?? row['size'];
+    final size = metadata['size'] ??
+        metadata['contentLength'] ??
+        metadata['content-length'] ??
+        row['size'];
     return _StorageObject(
       name: row['name']?.toString() ?? '',
       size: size is num ? size.toInt() : int.tryParse('$size') ?? 0,
@@ -188,6 +203,27 @@ List<_StorageObject> _decodeObjectList(String body) {
           'application/octet-stream',
     );
   }).where((o) => o.name.isNotEmpty).toList();
+}
+
+Future<_StorageObject> _headObject(
+  http.Client client,
+  String baseUrl,
+  String key,
+  _StorageObject object,
+) async {
+  final encoded = object.name.split('/').map(Uri.encodeComponent).join('/');
+  final response = await client.head(
+    Uri.parse('$baseUrl/storage/v1/object/employee-photos/$encoded'),
+    headers: _headers(key),
+  );
+  _ensureSuccess(response, 'head ${object.name}');
+  final size = int.tryParse(response.headers['content-length'] ?? '') ?? 0;
+  final contentType = response.headers['content-type'] ?? object.contentType;
+  return _StorageObject(
+    name: object.name,
+    size: size,
+    contentType: contentType,
+  );
 }
 
 Future<Uint8List> _download(
