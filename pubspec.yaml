@@ -58,10 +58,6 @@ flutter:
     - assets/dashboard_eis_icon.png
     - assets/dashboard_hrdf_corp.png
     - assets/payroll_export_template.xlsx
-    - assets/rm100_note.png
-    - assets/rm50_note.png
-    - assets/rm20_note.png
-    - assets/rm10_note.png
 
 # ============================================================================
 # APP ICON

@@ -116,6 +116,8 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
       _date = picked;
       _shiftStart = '';
       _shiftEnd = '';
+      _otStart.clear();
+      _otEnd.clear();
     });
     await _loadShift();
   }
@@ -160,6 +162,400 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
 
   @override
   Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 600;
+
+    return ListView(
+      padding: EdgeInsets.all(mobile ? 12 : 22),
+      children: [
+        const Text(
+          'Request Overtime',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Complete the form and send it to your branch for approval.',
+          style: TextStyle(color: Colors.black54),
+        ),
+        const SizedBox(height: 14),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: Colors.grey.shade200),
+          ),
+          child: Form(
+            key: _formKey,
+            child: Padding(
+              padding: EdgeInsets.all(mobile ? 14 : 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor:
+                            const Color(0xFF3155A4).withValues(alpha: .10),
+                        child: const Icon(
+                          Icons.more_time_outlined,
+                          color: Color(0xFF3155A4),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.employee.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              '${widget.employee.employeeId} • ${widget.employee.department}',
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 28),
+                  const Text(
+                    'Overtime date',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 7),
+                  OutlinedButton.icon(
+                    onPressed: _chooseDate,
+                    style: OutlinedButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 15,
+                      ),
+                    ),
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(DateFormat('EEEE, dd MMMM yyyy').format(_date)),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F6FC),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule_outlined,
+                            color: Color(0xFF3155A4)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _shiftStart.isEmpty && _shiftEnd.isEmpty
+                                ? 'No rostered shift found for this date'
+                                : 'Rostered shift: ${_shiftStart.isEmpty ? '-' : _shiftStart} – ${_shiftEnd.isEmpty ? '-' : _shiftEnd}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stack = constraints.maxWidth < 430;
+                      final start = _simpleTimeField(
+                        label: 'Overtime starts',
+                        controller: _otStart,
+                      );
+                      final end = _simpleTimeField(
+                        label: 'Overtime ends',
+                        controller: _otEnd,
+                      );
+                      if (stack) {
+                        return Column(
+                          children: [
+                            start,
+                            const SizedBox(height: 12),
+                            end,
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(child: start),
+                          const SizedBox(width: 12),
+                          Expanded(child: end),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3155A4).withValues(alpha: .08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Requested duration',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        Text(
+                          _duration(_requestedMinutes),
+                          style: const TextStyle(
+                            color: Color(0xFF3155A4),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _reason,
+                    minLines: 3,
+                    maxLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'Reason for overtime',
+                      hintText: 'Explain why overtime is required',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.notes_outlined),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Please enter a reason'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _approvalFlow(),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _saving ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      backgroundColor: const Color(0xFF3155A4),
+                    ),
+                    icon: _saving
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send_outlined),
+                    label: Text(
+                      _saving ? 'Submitting...' : 'Submit to Branch',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'My OT Requests',
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        _simpleRequestHistory(),
+      ],
+    );
+  }
+
+  Widget _simpleTimeField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return TextFormField(
+      controller: controller,
+      readOnly: true,
+      onTap: () => _chooseTime(controller),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: 'Select time',
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.access_time_outlined),
+        suffixIcon: const Icon(Icons.arrow_drop_down),
+      ),
+      validator: (value) => _minutes(value ?? '') == null
+          ? 'Please select a valid time'
+          : null,
+    );
+  }
+
+  Future<void> _chooseTime(TextEditingController controller) async {
+    final minutes = _minutes(controller.text);
+    final initial = minutes == null
+        ? TimeOfDay.now()
+        : TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60);
+    final picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked == null || !mounted) return;
+    setState(() {
+      controller.text =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    });
+  }
+
+  Widget _approvalFlow() {
+    Widget step(IconData icon, String title, String subtitle, Color color) {
+      return Expanded(
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 17,
+              backgroundColor: color.withValues(alpha: .12),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(height: 5),
+            Text(title,
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 9, color: Colors.black54)),
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        step(Icons.send_outlined, 'Submit', 'Employee', Colors.blue),
+        const Icon(Icons.chevron_right, color: Colors.black26),
+        step(Icons.store_outlined, 'Review', 'Branch', Colors.orange),
+        const Icon(Icons.chevron_right, color: Colors.black26),
+        step(Icons.verified_outlined, 'Final time', 'Admin', Colors.green),
+      ],
+    );
+  }
+
+  Widget _simpleRequestHistory() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _requests,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Text('Unable to load requests: ${snapshot.error}');
+        }
+        final rows = snapshot.data ?? [];
+        if (rows.isEmpty) {
+          return const Card(
+            elevation: 0,
+            child: Padding(
+              padding: EdgeInsets.all(22),
+              child: Center(child: Text('No OT requests submitted.')),
+            ),
+          );
+        }
+        return Column(children: rows.map(_simpleRequestCard).toList());
+      },
+    );
+  }
+
+  Widget _simpleRequestCard(Map<String, dynamic> row) {
+    final status = row['status']?.toString() ?? 'pending_branch';
+    final color = status == 'approved'
+        ? Colors.green
+        : status == 'rejected'
+            ? Colors.red
+            : Colors.orange;
+    final approved = int.tryParse(row['approved_minutes']?.toString() ?? '');
+    final requested = int.tryParse(row['requested_minutes']?.toString() ?? '');
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 9),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.more_time, color: color),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    DateFormat('dd MMM yyyy').format(
+                      DateTime.tryParse(row['overtime_date']?.toString() ?? '') ??
+                          DateTime.now(),
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: .10),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _statusText(status),
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 9),
+            Text(row['reason']?.toString() ?? '-'),
+            const SizedBox(height: 9),
+            Wrap(
+              spacing: 14,
+              runSpacing: 6,
+              children: [
+                Text(
+                    '${_shortTime(row['overtime_start'])} – ${_shortTime(row['overtime_end'])}'),
+                Text('Requested ${_duration(requested)}'),
+                if (approved != null)
+                  Text(
+                    'Admin approved ${_duration(approved)}',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+              ],
+            ),
+            const Divider(height: 20),
+            Text(
+              'Submitted ${_stamp(row['submitted_at'])}  •  '
+              'Branch ${_stamp(row['branch_approved_at'])}  •  '
+              'Admin ${_stamp(row['admin_approved_at'])}',
+              style: const TextStyle(fontSize: 10, color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _legacyPaperView() {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [

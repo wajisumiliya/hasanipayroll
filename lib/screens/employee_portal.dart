@@ -1322,11 +1322,6 @@ class _EmployeePortalState extends State<EmployeePortal>
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 5),
-          if (available && _showFinancialDetails)
-            _RinggitNoteBreakdown(amount: payroll.netPay)
-          else
-            const SizedBox(height: 25),
           const Spacer(),
           SizedBox(
             width: double.infinity,
@@ -1538,7 +1533,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                     crossAxisCount: columns,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    mainAxisExtent: 166,
+                    mainAxisExtent: 144,
                   ),
                   itemBuilder: (context, index) => _payslipMonthCard(
                     month: index + 1,
@@ -1968,150 +1963,6 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
       );
     }
-  }
-}
-
-class _RinggitNoteBreakdown extends StatelessWidget {
-  const _RinggitNoteBreakdown({required this.amount});
-
-  final double amount;
-
-  @override
-  Widget build(BuildContext context) {
-    var remaining = amount.isNegative ? 0 : amount.floor();
-    final notes = <({int value, int count, Color color, String asset})>[];
-    const denominations = [
-      (
-        value: 100,
-        color: Color(0xFF7650A8),
-        asset: 'assets/rm100_note.png'
-      ),
-      (
-        value: 50,
-        color: Color(0xFF3A8F70),
-        asset: 'assets/rm50_note.png'
-      ),
-      (
-        value: 20,
-        color: Color(0xFFD9822B),
-        asset: 'assets/rm20_note.png'
-      ),
-      (
-        value: 10,
-        color: Color(0xFFC94C62),
-        asset: 'assets/rm10_note.png'
-      ),
-    ];
-
-    for (final denomination in denominations) {
-      final count = remaining ~/ denomination.value;
-      remaining %= denomination.value;
-      notes.add((
-        value: denomination.value,
-        count: count,
-        color: denomination.color,
-        asset: denomination.asset,
-      ));
-    }
-
-    return SizedBox(
-      height: 25,
-      child: Row(
-        children: [
-          for (var index = 0; index < notes.length; index++) ...[
-            if (index > 0) const SizedBox(width: 3),
-            Expanded(
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: 1),
-                duration: Duration(milliseconds: 420 + index * 130),
-                curve: Curves.easeOutBack,
-                builder: (context, progress, child) {
-                  return Opacity(
-                    opacity: progress.clamp(0.0, 1.0),
-                    child: Transform.translate(
-                      offset: Offset(0, (1 - progress) * 9),
-                      child: Transform.scale(
-                        scale: .78 + progress * .22,
-                        child: child,
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  height: 24,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: notes[index].color.withValues(alpha: .28),
-                        blurRadius: 3,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          notes[index].asset,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          filterQuality: FilterQuality.medium,
-                        ),
-                        Center(
-                          child: Transform.rotate(
-                            angle: -.22,
-                            child: FittedBox(
-                              child: Text(
-                                'SPECIMEN',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: .72),
-                                  fontSize: 7,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: .4,
-                                  shadows: const [
-                                    Shadow(color: Colors.black54, blurRadius: 2),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 1,
-                          bottom: 1,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 3,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: .78),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              '×${notes[index].count}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 7,
-                                height: 1,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }
 
