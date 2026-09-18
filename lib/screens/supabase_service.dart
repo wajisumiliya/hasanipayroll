@@ -80,7 +80,11 @@ class SupabaseService {
     await client.storage.from('employee-photos').uploadBinary(
           path,
           bytes,
-          fileOptions: FileOptions(contentType: contentType, upsert: true),
+          fileOptions: FileOptions(
+            contentType: contentType,
+            cacheControl: '31536000',
+            upsert: true,
+          ),
         );
     final publicUrl = client.storage.from('employee-photos').getPublicUrl(path);
     final versionedUrl =
