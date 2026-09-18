@@ -1939,22 +1939,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                       birthdays: upcomingBirthdays,
                       anniversaries: upcomingAnniversaries,
                     ),
-                    if (false)
-                      Wrap(
-                        children: [
-                          if (false)
-                            _powerMetricCard(
-                              width: metricWidth,
-                              title: 'Organisation',
-                              value: branches.toString(),
-                              icon: Icons.account_tree_outlined,
-                              accent: const Color(0xFFED1C24),
-                              detail:
-                                  '$branches branches · $departments departments',
-                              onTap: () => _showBranchFlow(employees),
-                            ),
-                        ],
-                      ),
                     const SizedBox(height: 16),
                     _dashboardSectionTitle(
                       'Payroll reports',
