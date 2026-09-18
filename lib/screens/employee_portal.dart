@@ -792,76 +792,30 @@ class _EmployeePortalState extends State<EmployeePortal>
 
     final payroll = records.first;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _welcome(),
-          const SizedBox(height: 18),
-          _salary(payroll),
-          const SizedBox(height: 24),
-          Text(
-            'Quick Access',
-            style: TextStyle(
-              color: tab == 0 ? Colors.white : Colors.black87,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 760;
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(compact ? 12 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _quick(
-                'Payslips',
-                Icons.description,
-                () {
-                  setState(() {
-                    tab = 1;
-                  });
-                },
-              ),
-              _quick(
-                'Attendance',
-                Icons.calendar_month,
-                () {
-                  setState(() {
-                    tab = 2;
-                  });
-                },
-              ),
-              _quick(
-                'Profile',
-                Icons.person,
-                () {
-                  setState(() {
-                    tab = 3;
-                  });
-                },
-              ),
-              _quick(
-                'Bank Info',
-                Icons.account_balance,
-                () {
-                  setState(() {
-                    tab = 4;
-                  });
-                },
-              ),
-              _quick(
-                'Password',
-                Icons.lock,
-                () {
-                  setState(() {
-                    tab = 5;
-                  });
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+              _welcome(),
+              const SizedBox(height: 12),
+              if (compact) ...[
+                _salary(payroll),
+                const SizedBox(height: 12),
+                _quickAccessPanel(),
+              ] else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: _salary(payroll)),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 2, child: _quickAccessPanel()),
+                  ],
+                ),
+              const SizedBox(height: 16),
           Row(
             children: [
               Text(
@@ -886,9 +840,11 @@ class _EmployeePortalState extends State<EmployeePortal>
             ],
           ),
           const SizedBox(height: 8),
-          ...records.take(5).map(_recentPayslipTile),
-        ],
-      ),
+              ...records.take(3).map(_recentPayslipTile),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -939,8 +895,8 @@ class _EmployeePortalState extends State<EmployeePortal>
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 156),
-      padding: const EdgeInsets.fromLTRB(22, 20, 16, 14),
+      constraints: const BoxConstraints(minHeight: 118),
+      padding: const EdgeInsets.fromLTRB(18, 14, 16, 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -966,11 +922,11 @@ class _EmployeePortalState extends State<EmployeePortal>
           EmployeePhoto(
             name: employee!.name,
             photoUrl: employee!.photoUrl,
-            radius: 31,
+            radius: 27,
             backgroundColor: Colors.white.withValues(alpha: .16),
             foregroundColor: dailyTheme.accent,
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 13),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -986,7 +942,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
-                    fontSize: 20,
+                    fontSize: 18,
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -994,7 +950,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   '${employee!.employeeId}  •  ${DateFormat('EEEE, d MMMM').format(DateTime.now())}',
                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
-                const SizedBox(height: 13),
+                const SizedBox(height: 8),
                 Text(
                   _isBirthdayToday
                       ? '🎉 Wishing you happiness, success and a wonderful year ahead! 🎉'
@@ -1002,7 +958,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   style: TextStyle(
                     color: dailyTheme.accent,
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -1022,7 +978,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: tab == 0 ? const Color(0xE6102A43) : Colors.white,
         borderRadius: BorderRadius.circular(tab == 0 ? 18 : 14),
@@ -1045,7 +1001,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   DateFormat('MMMM yyyy').format(payroll.period),
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 18,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -1053,11 +1009,12 @@ class _EmployeePortalState extends State<EmployeePortal>
                 onPressed: () => _pdf(payroll),
                 child: const Text(
                   'View Payslip',
+                  style: TextStyle(fontSize: 11),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -1074,17 +1031,15 @@ class _EmployeePortalState extends State<EmployeePortal>
                   Colors.red,
                 ),
               ),
+              Expanded(
+                child: _metric(
+                  'Net Pay',
+                  payroll.netPay,
+                  const Color(0xFF13B66B),
+                  big: true,
+                ),
+              ),
             ],
-          ),
-          const Divider(height: 30),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _metric(
-              'Net Pay',
-              payroll.netPay,
-              const Color(0xFF139B60),
-              big: true,
-            ),
           ),
         ],
       ),
@@ -1108,12 +1063,19 @@ class _EmployeePortalState extends State<EmployeePortal>
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          _moneyText(value),
-          style: TextStyle(
-            fontSize: big ? 26 : 18,
-            fontWeight: FontWeight.w800,
-            color: color,
+        SizedBox(
+          width: double.infinity,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _moneyText(value),
+              style: TextStyle(
+                fontSize: big ? 22 : 17,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
           ),
         ),
       ],
@@ -1124,46 +1086,106 @@ class _EmployeePortalState extends State<EmployeePortal>
   // QUICK ACCESS
   // =============================================================
 
+  Widget _quickAccessPanel() {
+    final actions = <({String title, IconData icon, int page})>[
+      (title: 'Payslips', icon: Icons.description_outlined, page: 1),
+      (title: 'Attendance', icon: Icons.calendar_month_outlined, page: 2),
+      (title: 'OT Request', icon: Icons.more_time_outlined, page: 6),
+      (title: 'Profile', icon: Icons.person_outline, page: 3),
+      (title: 'Bank Info', icon: Icons.account_balance_outlined, page: 4),
+      (title: 'Password', icon: Icons.lock_outline, page: 5),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xE6102A43),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: _dailyTheme.accent.withValues(alpha: .38),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Quick Access',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 390 ? 3 : 2;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: actions.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  mainAxisExtent: 62,
+                ),
+                itemBuilder: (context, index) {
+                  final action = actions[index];
+                  return _quick(
+                    action.title,
+                    action.icon,
+                    () => setState(() => tab = action.page),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _quick(
     String title,
     IconData icon,
     VoidCallback onTap,
   ) {
-    return SizedBox(
-      width: 130,
-      child: InkWell(
+    return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
           decoration: BoxDecoration(
-            color: tab == 0 ? const Color(0xE60B2239) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            color: const Color(0xE60B2239),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: tab == 0
-                  ? _dailyTheme.accent.withValues(alpha: .38)
-                  : Colors.black12,
+              color: _dailyTheme.accent.withValues(alpha: .30),
             ),
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                color: tab == 0 ? _dailyTheme.accent : const Color(0xFF2D55D8),
+                size: 20,
+                color: _dailyTheme.accent,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 3),
               Text(
                 title,
-                style: TextStyle(
-                  color: tab == 0 ? Colors.white : Colors.black87,
-                  fontSize: 11,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -1434,6 +1456,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   }
 
   Widget _payslipYearSection(int year, List<PayrollRecord> yearRecords) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     final byMonth = <int, PayrollRecord>{
       for (final record in yearRecords) record.period.month: record,
     };
@@ -1458,7 +1481,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(compact ? 10 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1474,8 +1497,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(width: 12),
                 Text(
                   '$year',
-                  style: const TextStyle(
-                    fontSize: 24,
+                  style: TextStyle(
+                    fontSize: compact ? 20 : 24,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1484,6 +1507,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   '${yearRecords.length} payslips',
                   style: const TextStyle(
                     color: Colors.black54,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1505,9 +1529,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                     ? 6
                     : constraints.maxWidth >= 700
                         ? 3
-                        : constraints.maxWidth >= 420
-                            ? 2
-                            : 1;
+                        : 2;
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1537,6 +1559,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
 
   Widget _payslips() {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     final recordsByYear = <int, List<PayrollRecord>>{};
     for (final record in records) {
       recordsByYear.putIfAbsent(record.period.year, () => []).add(record);
@@ -1545,7 +1568,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       ..sort((a, b) => b.compareTo(a));
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(compact ? 10 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
