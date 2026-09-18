@@ -76,6 +76,18 @@ class _AdminDashboardState extends State<AdminDashboard>
     with SingleTickerProviderStateMixin {
   final AppService service = AppService.instance;
 
+  String get _adminScopeName => service.currentUser?.isLocalAdmin == true
+      ? 'Local Admin'
+      : service.currentUser?.isForeignAdmin == true
+          ? 'Foreign Admin'
+          : 'Admin User';
+
+  String get _adminScopeLabel => service.currentUser?.isLocalAdmin == true
+      ? 'Local staff only'
+      : service.currentUser?.isForeignAdmin == true
+          ? 'Foreign staff only'
+          : 'Administrator';
+
   DailyPortalTheme get _portalTheme => DailyPortalTheme.today();
 
   int selectedPage = 0;
@@ -120,6 +132,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   String _adminEmployeeSearch = '';
   String _attendanceEmployeeSearch = '';
   String _payslipEmployeeSearch = '';
+  bool _payslipShowActiveEmployees = true;
   String _attendanceSubmissionFilter = 'submitted';
   final Map<String, String> _approvedOtInputs = {};
   late final AnimationController _flagAnimationController;
@@ -802,9 +815,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             ),
           ),
           const SizedBox(height: 5),
-          const Text(
-            'Administrator',
-            style: TextStyle(
+          Text(
+            _adminScopeLabel,
+            style: const TextStyle(
               fontSize: 12,
               color: Colors.black54,
             ),
@@ -1076,15 +1089,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Admin User',
-                    style: TextStyle(
+                    _adminScopeName,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    'Administrator',
-                    style: TextStyle(
+                    _adminScopeLabel,
+                    style: const TextStyle(
                       fontSize: 11,
                       color: Colors.white70,
                     ),
@@ -1290,9 +1303,36 @@ class _AdminDashboardState extends State<AdminDashboard>
       SupabaseService.getBranches(),
     ]);
 
+    var employees = List<Map<String, dynamic>>.from(results[0]);
+    var payroll = List<Map<String, dynamic>>.from(results[1]);
+    final staffScope = service.currentUser?.staffScope?.trim().toLowerCase();
+    if (staffScope == 'local' || staffScope == 'foreign') {
+      employees = employees.where((employee) {
+        final foreign = (employee['address'] ?? '')
+            .toString()
+            .toUpperCase()
+            .contains('FRN');
+        return staffScope == 'foreign' ? foreign : !foreign;
+      }).toList();
+      final allowedIds = employees
+          .map((employee) =>
+              (employee['employee_id'] ?? employee['id'] ?? '')
+                  .toString()
+                  .trim()
+                  .toUpperCase())
+          .toSet();
+      payroll = payroll.where((row) {
+        final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
+        return allowedIds.contains(employeeId);
+      }).toList();
+    }
+
     return {
-      'employees': results[0],
-      'payroll': results[1],
+      'employees': employees,
+      'payroll': payroll,
       'branches': results[2],
     };
   }
@@ -1790,22 +1830,22 @@ class _AdminDashboardState extends State<AdminDashboard>
                 .contains('FRN');
 
         final activeManagementEmployees =
-            selectedActiveEmployees.where(isManagement).length;
+            selectedActiveEmployees.where(isManagement).toList();
         final activeTempEmployees = selectedActiveEmployees
             .where((employee) => !isManagement(employee) && isTempId(employee))
-            .length;
+            .toList();
         final activeForeignEmployees = selectedActiveEmployees
             .where((employee) =>
                 !isManagement(employee) &&
                 !isTempId(employee) &&
                 isForeign(employee))
-            .length;
+            .toList();
         final activeLocalEmployees = selectedActiveEmployees
             .where((employee) =>
                 !isManagement(employee) &&
                 !isTempId(employee) &&
                 !isForeign(employee))
-            .length;
+            .toList();
 
         final departments = employees
             .map((e) => e['department']?.toString().trim() ?? '')
@@ -1895,7 +1935,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       activeTempEmployees: activeTempEmployees,
                       activeManagementEmployees: activeManagementEmployees,
                       activeForeignEmployees: activeForeignEmployees,
-                      selectedActiveEmployees: selectedActiveEmployees.length,
+                      selectedActiveEmployees: selectedActiveEmployees,
                       availableYears: payroll
                           .map((row) => DateTime.tryParse(
                               (row['period'] ?? '').toString()))
@@ -2072,11 +2112,11 @@ class _AdminDashboardState extends State<AdminDashboard>
     required double pcb,
     required double employerContributions,
     required int payrollRecords,
-    required int activeLocalEmployees,
-    required int activeTempEmployees,
-    required int activeManagementEmployees,
-    required int activeForeignEmployees,
-    required int selectedActiveEmployees,
+    required List<Map<String, dynamic>> activeLocalEmployees,
+    required List<Map<String, dynamic>> activeTempEmployees,
+    required List<Map<String, dynamic>> activeManagementEmployees,
+    required List<Map<String, dynamic>> activeForeignEmployees,
+    required List<Map<String, dynamic>> selectedActiveEmployees,
     required List<int> availableYears,
     required Map<String, String> branchOptions,
     required bool compact,
@@ -2408,6 +2448,26 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  List<Map<String, dynamic>> _scopedEmployeeRows(
+    Iterable<Map<String, dynamic>> rows,
+  ) {
+    final staffScope = service.currentUser?.staffScope?.trim().toLowerCase();
+    if (staffScope != 'local' && staffScope != 'foreign') {
+      return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    }
+    return rows.where((employee) {
+      final foreign = (employee['address'] ?? '')
+          .toString()
+          .toUpperCase()
+          .contains('FRN');
+      return staffScope == 'foreign' ? foreign : !foreign;
+    }).map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadScopedEmployees() async {
+    return _scopedEmployeeRows(await SupabaseService.getEmployees());
+  }
+
   Widget _dashboardFlagsAndClock() {
     return Wrap(
       spacing: 8,
@@ -2421,57 +2481,69 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _dashboardWorkforceFlashCards({
-    required int local,
-    required int temp,
-    required int management,
-    required int foreign,
-    required int total,
+    required List<Map<String, dynamic>> local,
+    required List<Map<String, dynamic>> temp,
+    required List<Map<String, dynamic>> management,
+    required List<Map<String, dynamic>> foreign,
+    required List<Map<String, dynamic>> total,
   }) {
-    Widget card(String label, int value, IconData icon, Color color) {
-      return Container(
-        width: 108,
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .08),
+    Widget card(
+      String label,
+      List<Map<String, dynamic>> employees,
+      IconData icon,
+      Color color,
+    ) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showEmployeeDetails('$label Employees', employees),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: .55)),
-          boxShadow: [
-            BoxShadow(
+          child: Container(
+            width: 108,
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+            decoration: BoxDecoration(
               color: color.withValues(alpha: .08),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 19, color: color),
-            const SizedBox(width: 7),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value.toString(),
-                  style: const TextStyle(
-                    color: Color(0xFF20242D),
-                    fontSize: 19,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .45,
-                  ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: color.withValues(alpha: .55)),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: .08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
-          ],
+            child: Row(
+              children: [
+                Icon(icon, size: 19, color: color),
+                const SizedBox(width: 7),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      employees.length.toString(),
+                      style: const TextStyle(
+                        color: Color(0xFF20242D),
+                        fontSize: 19,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      label.toUpperCase(),
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .45,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -2990,7 +3062,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<void> _showNotificationComposer() async {
-    final employees = await SupabaseService.getEmployees();
+    final employees = await _loadScopedEmployees();
     if (!mounted) return;
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
@@ -3828,7 +3900,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _employeesPage() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _adminEmployeesFuture ??= SupabaseService.getEmployees(),
+      future: _adminEmployeesFuture ??= _loadScopedEmployees(),
       builder: (context, snapshot) {
         // ----------------------------------------------------------
         // LOADING
@@ -9727,9 +9799,14 @@ class _AdminDashboardState extends State<AdminDashboard>
     final employees = service.allEmployees.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final query = _payslipEmployeeSearch.trim().toLowerCase();
+    final statusEmployees = employees
+        .where(
+          (employee) => employee.isActive == _payslipShowActiveEmployees,
+        )
+        .toList();
     final filteredEmployees = query.isEmpty
-        ? employees
-        : employees.where((employee) {
+        ? statusEmployees
+        : statusEmployees.where((employee) {
             return employee.name.toLowerCase().contains(query) ||
                 employee.employeeId.toLowerCase().contains(query) ||
                 employee.department.toLowerCase().contains(query) ||
@@ -9766,6 +9843,37 @@ class _AdminDashboardState extends State<AdminDashboard>
             style: TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              FilterChip(
+                selected: _payslipShowActiveEmployees,
+                avatar: const Icon(Icons.check_circle_outline, size: 18),
+                label: Text(
+                  'Active (${employees.where((employee) => employee.isActive).length})',
+                ),
+                onSelected: (_) => setState(() {
+                  _payslipShowActiveEmployees = true;
+                  selectedPayslipEmployeeId = null;
+                  selectedEmployeePayslipYear = null;
+                }),
+              ),
+              FilterChip(
+                selected: !_payslipShowActiveEmployees,
+                avatar: const Icon(Icons.person_off_outlined, size: 18),
+                label: Text(
+                  'Inactive (${employees.where((employee) => !employee.isActive).length})',
+                ),
+                onSelected: (_) => setState(() {
+                  _payslipShowActiveEmployees = false;
+                  selectedPayslipEmployeeId = null;
+                  selectedEmployeePayslipYear = null;
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -13388,12 +13496,19 @@ class _AdminDashboardState extends State<AdminDashboard>
       SupabaseService.getEmployees(),
       SupabaseService.getBranches(),
     ]);
+    final scopedEmployeeRows = _scopedEmployeeRows(results[1]);
+    final scopedEmployeeIds = scopedEmployeeRows
+        .map((row) => _normalizeBranchValue(row['employee_id']))
+        .toSet();
     final payroll = results[0]
         .where((row) => _payrollPeriodMatchesMonth(row['period'], month))
+        .where((row) => service.currentUser?.staffScope == null ||
+            scopedEmployeeIds.contains(
+                _normalizeBranchValue(row['employee_id'])))
         .map((row) => Map<String, dynamic>.from(row))
         .toList();
     final employees = <String, Map<String, dynamic>>{};
-    for (final row in results[1]) {
+    for (final row in scopedEmployeeRows) {
       employees[_normalizeBranchValue(row['employee_id'])] = row;
     }
     final branchNames = <String, String>{};

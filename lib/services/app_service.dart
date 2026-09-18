@@ -20,6 +20,7 @@ class app_user {
   final String? branchId;
   final String? employeeId;
   final String? displayName;
+  final String? staffScope;
   final bool isReviewer;
 
   const app_user({
@@ -28,6 +29,7 @@ class app_user {
     this.branchId,
     this.employeeId,
     this.displayName,
+    this.staffScope,
     this.isReviewer = false,
   });
 
@@ -37,6 +39,10 @@ class app_user {
 
   bool get isEmployee => role.trim().toLowerCase() == 'employee';
 
+  bool get isLocalAdmin => isAdmin && staffScope == 'local';
+
+  bool get isForeignAdmin => isAdmin && staffScope == 'foreign';
+
   Map<String, dynamic> toJson() {
     return {
       'username': username,
@@ -44,6 +50,7 @@ class app_user {
       'branch_id': branchId,
       'employee_id': employeeId,
       'display_name': displayName,
+      'staff_scope': staffScope,
       'is_reviewer': isReviewer,
     };
   }
@@ -59,6 +66,8 @@ class app_user {
           json['employee_id']?.toString() ?? json['employeeId']?.toString(),
       displayName:
           json['display_name']?.toString() ?? json['displayName']?.toString(),
+      staffScope:
+          json['staff_scope']?.toString() ?? json['staffScope']?.toString(),
       isReviewer: json['is_reviewer'] == true || json['isReviewer'] == true,
     );
   }
@@ -434,6 +443,9 @@ class AppService extends ChangeNotifier {
               verified['employeeId']?.toString() ?? _currentUser!.employeeId,
           displayName:
               verified['displayName']?.toString() ?? _currentUser!.displayName,
+          staffScope: verified['staffScope']?.toString() ??
+              verified['staff_scope']?.toString() ??
+              _currentUser!.staffScope,
           isReviewer: verified['isReviewer'] == true,
         );
         await _persistCurrentUser();
@@ -557,6 +569,8 @@ class AppService extends ChangeNotifier {
         }
       }
 
+      employees.removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
+
       _employeesLoaded = true;
 
       debugPrint(
@@ -652,8 +666,21 @@ class AppService extends ChangeNotifier {
 
       payroll.clear();
 
+      final allowedEmployeeIds = employees
+          .map((employee) => employee.employeeId.trim().toUpperCase())
+          .toSet();
+
       for (final row in response) {
         try {
+          final employeeId =
+              (row['employee_id'] ?? row['employeeId'] ?? '')
+                  .toString()
+                  .trim()
+                  .toUpperCase();
+          if (_currentUser?.staffScope != null &&
+              !allowedEmployeeIds.contains(employeeId)) {
+            continue;
+          }
           payroll.add(
             _payrollFromSupabase(
               Map<String, dynamic>.from(
@@ -828,8 +855,21 @@ class AppService extends ChangeNotifier {
 
       attendance.clear();
 
+      final allowedEmployeeIds = employees
+          .map((employee) => employee.employeeId.trim().toUpperCase())
+          .toSet();
+
       for (final row in response) {
         try {
+          final employeeId =
+              (row['employee_id'] ?? row['employeeId'] ?? '')
+                  .toString()
+                  .trim()
+                  .toUpperCase();
+          if (_currentUser?.staffScope != null &&
+              !allowedEmployeeIds.contains(employeeId)) {
+            continue;
+          }
           attendance.add(
             _attendanceFromSupabase(
               Map<String, dynamic>.from(
@@ -1014,6 +1054,8 @@ class AppService extends ChangeNotifier {
         branchId: branchId,
         employeeId: employeeId,
         displayName: isReviewer ? 'Google Play Reviewer' : displayName ?? email,
+        staffScope: userData['staffScope']?.toString() ??
+            userData['staff_scope']?.toString(),
         isReviewer: isReviewer,
       );
       _accessToken = data['accessToken']?.toString();
@@ -1214,6 +1256,8 @@ class AppService extends ChangeNotifier {
         branchId: branchId,
         employeeId: employeeId,
         displayName: displayName ?? userData['email']?.toString(),
+        staffScope: userData['staffScope']?.toString() ??
+            userData['staff_scope']?.toString(),
         isReviewer: isReviewer,
       );
       _accessToken = data['accessToken']?.toString();
@@ -1448,6 +1492,15 @@ class AppService extends ChangeNotifier {
   // ==========================================================================
   // ALL EMPLOYEES
   // ==========================================================================
+
+  bool _employeeAllowedByStaffScope(Employee employee) {
+    final scope = _currentUser?.staffScope?.trim().toLowerCase();
+    if (scope == null || scope.isEmpty) return true;
+    final foreign = employee.address.toUpperCase().contains('FRN');
+    if (scope == 'foreign') return foreign;
+    if (scope == 'local') return !foreign;
+    return false;
+  }
 
   List<Employee> get allEmployees {
     return List<Employee>.from(

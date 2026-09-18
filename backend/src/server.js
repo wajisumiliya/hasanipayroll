@@ -439,6 +439,7 @@ function isPlayReviewer(user) {
 }
 function createAccessToken(
   user,
+  staffScope = null,
 ) {
   const login = String(user.username || user.email || "").trim().toUpperCase();
   const baseLogin = login.endsWith("FRN") ? login.slice(0, -3) : login;
@@ -460,6 +461,7 @@ function createAccessToken(
         employee_id: user.employeeId || null,
         is_frn: login.endsWith("FRN"),
         is_reviewer: isPlayReviewer(user),
+        staff_scope: staffScope,
       },
 
       employeeId:
@@ -795,12 +797,43 @@ async function findAppUser(login) {
   };
 }
 
+async function findPrimaryAdminUser() {
+  const result = await pool.query(
+    `SELECT to_jsonb(account_row) AS data
+     FROM public."app_user" AS account_row
+     WHERE UPPER(TRIM(COALESCE(to_jsonb(account_row) ->> 'role', ''))) = 'ADMIN'
+       AND COALESCE((to_jsonb(account_row) ->> 'isActive')::boolean, true) = true
+     ORDER BY
+       CASE
+         WHEN LOWER(TRIM(COALESCE(to_jsonb(account_row) ->> 'username', ''))) = 'admin' THEN 0
+         WHEN LOWER(TRIM(COALESCE(to_jsonb(account_row) ->> 'email', ''))) = 'admin@hasani.local' THEN 1
+         ELSE 2
+       END,
+       COALESCE(to_jsonb(account_row) ->> 'createdAt', '')
+     LIMIT 1`,
+  );
+  const data = result.rows[0]?.data;
+  if (!data) return null;
+  return {
+    ...data,
+    employeeId: data.employeeId ?? data.employee_id ?? null,
+    passwordHash: data.passwordHash ?? data.password_hash ?? null,
+    isActive: [true, "true", "t", "1"].includes(
+      data.isActive ?? data.is_active ?? true,
+    ),
+    mustChangePassword:
+      data.mustChangePassword ?? data.must_change_password ?? false,
+  };
+}
+
 // ============================================================
 // SAFE USER
 // ============================================================
 
 async function publicAppUser(
   user,
+  staffScope = null,
+  loginAlias = null,
 ) {
   const role =
     String(
@@ -830,7 +863,7 @@ async function publicAppUser(
     id: user.id ?? null,
 
     username:
-      user.username ?? "",
+      loginAlias ?? user.username ?? "",
 
     email:
       user.email ?? null,
@@ -878,6 +911,8 @@ async function publicAppUser(
       role === "employee",
 
     isReviewer: reviewer,
+
+    staffScope,
   };
 }
 
@@ -1005,6 +1040,14 @@ app.post(
           req.body?.username,
         );
 
+      const normalizedUsername = username.toLowerCase();
+      const scopedAdminLogin = normalizedUsername === "adminloc" || normalizedUsername === "adminfrn";
+      const staffScope = normalizedUsername === "adminloc"
+        ? "local"
+        : normalizedUsername === "adminfrn"
+          ? "foreign"
+          : null;
+
       const password =
         String(
           req.body?.password ??
@@ -1022,10 +1065,9 @@ app.post(
         });
       }
 
-      const user =
-        await findAppUser(
-          username,
-        );
+      const user = scopedAdminLogin
+        ? await findPrimaryAdminUser()
+        : await findAppUser(username);
 
       // Generic response prevents account enumeration.
       if (!user) {
@@ -1074,6 +1116,8 @@ app.post(
       const safeUser =
         await publicAppUser(
           user,
+          staffScope,
+          scopedAdminLogin ? normalizedUsername : null,
         );
 
       // The default password was verified. Issue a short-lived, restricted
@@ -1112,6 +1156,7 @@ app.post(
       const accessToken =
         createAccessToken(
           user,
+          staffScope,
         );
 
       return res.json({
@@ -1362,6 +1407,12 @@ app.get(
       const safeUser =
         await publicAppUser(
           req.user,
+          req.auth?.app_metadata?.staff_scope ?? null,
+          req.auth?.app_metadata?.staff_scope === "local"
+            ? "adminloc"
+            : req.auth?.app_metadata?.staff_scope === "foreign"
+              ? "adminfrn"
+              : null,
         );
 
       res.json({
