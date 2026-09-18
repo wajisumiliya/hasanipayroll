@@ -650,7 +650,7 @@ class _BranchPortalState extends State<BranchPortal>
           const BoxShadow(
             color: Color(0x22000000),
             blurRadius: 22,
-            offset: const Offset(0, 8),
+            offset: Offset(0, 8),
           ),
         ],
         border: Border(
