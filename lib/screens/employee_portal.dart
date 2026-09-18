@@ -1672,28 +1672,41 @@ class _EmployeePortalState extends State<EmployeePortal>
           if (records.isEmpty)
             _emptyPayroll()
           else if (compact) ...[
-            DropdownButtonFormField<int>(
-              initialValue: selectedYear,
-              decoration: InputDecoration(
-                labelText: 'Select year',
-                prefixIcon: const Icon(Icons.calendar_month_outlined),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+            const Text(
+              'Select year',
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
-              items: years
-                  .map(
-                    (year) => DropdownMenuItem<int>(
-                      value: year,
-                      child: Text('$year'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (year) => setState(() {
-                _selectedPayslipYear = year;
-              }),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: years.map((year) {
+                final selected = year == selectedYear;
+                return ChoiceChip(
+                  avatar: Icon(
+                    Icons.calendar_month_outlined,
+                    size: 17,
+                    color: selected ? Colors.white : const Color(0xFF2D55D8),
+                  ),
+                  label: Text('$year'),
+                  selected: selected,
+                  showCheckmark: false,
+                  selectedColor: const Color(0xFF2D55D8),
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFF2D55D8)),
+                  labelStyle: TextStyle(
+                    color: selected ? Colors.white : const Color(0xFF2D55D8),
+                    fontWeight: FontWeight.w800,
+                  ),
+                  onSelected: (_) => setState(() {
+                    _selectedPayslipYear = year;
+                  }),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 14),
             if (selectedYear != null)
