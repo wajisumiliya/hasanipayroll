@@ -194,6 +194,15 @@ Future<List<_StorageObject>> _listObjects(
   return result.where((o) => !o.name.startsWith('_migration_backup/')).toList();
 }
 
+String _objectName(Map<String, dynamic> row) {
+  final name = row['name']?.toString() ?? '';
+  final id = row['id']?.toString() ?? '';
+  // Supabase list can return folder placeholders (name without a slash and
+  // null id). They are not downloadable objects, so ignore them.
+  if (id.isEmpty && !name.contains('/')) return '';
+  return name;
+}
+
 List<_StorageObject> _decodeObjectList(String body) {
   // Keep the utility dependency-light; dart:convert is sufficient.
   final value = jsonDecode(body) as List<dynamic>;
@@ -205,7 +214,7 @@ List<_StorageObject> _decodeObjectList(String body) {
         metadata['content-length'] ??
         row['size'];
     return _StorageObject(
-      name: row['name']?.toString() ?? '',
+      name: _objectName(row),
       size: size is num ? size.toInt() : int.tryParse('$size') ?? 0,
       contentType: metadata['mimetype']?.toString() ??
           metadata['contentType']?.toString() ??
