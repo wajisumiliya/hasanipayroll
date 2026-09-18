@@ -102,6 +102,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedPayrollBranchId;
   String? selectedPayslipEmployeeId;
+  int? selectedEmployeePayslipYear;
   DateTime selectedPayslipMonth =
       DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedLogBranchId;
@@ -9746,6 +9747,9 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
     final years = recordsByYear.keys.toList()
       ..sort((a, b) => b.compareTo(a));
+    final activeYear = years.contains(selectedEmployeePayslipYear)
+        ? selectedEmployeePayslipYear
+        : (years.isEmpty ? null : years.first);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -9794,6 +9798,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   _payslipEmployeeSearch =
                       _payslipEmployeeSearchController.text;
                   selectedPayslipEmployeeId = null;
+                  selectedEmployeePayslipYear = null;
                 }),
                 icon: const Icon(Icons.search),
                 label: const Text('Search'),
@@ -9859,6 +9864,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         borderRadius: BorderRadius.circular(14),
                         onTap: () => setState(() {
                           selectedPayslipEmployeeId = employee.employeeId;
+                          selectedEmployeePayslipYear = null;
                         }),
                         child: Container(
                           padding: const EdgeInsets.all(11),
@@ -9928,14 +9934,42 @@ class _AdminDashboardState extends State<AdminDashboard>
                   child: Text('No payroll records found for this employee.'),
                 ),
               )
-            else
-              ...years.map(
-                (year) => _adminPayslipYear(
-                  selectedEmployee,
-                  year,
-                  recordsByYear[year]!,
-                ),
+            else ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: years.map((year) {
+                  final selected = year == activeYear;
+                  return ChoiceChip(
+                    avatar: Icon(
+                      Icons.calendar_month_outlined,
+                      size: 18,
+                      color: selected ? Colors.white : const Color(0xFF243B8F),
+                    ),
+                    label: Text('$year'),
+                    selected: selected,
+                    showCheckmark: false,
+                    selectedColor: const Color(0xFF243B8F),
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFF243B8F)),
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : const Color(0xFF243B8F),
+                      fontWeight: FontWeight.w800,
+                    ),
+                    onSelected: (_) => setState(() {
+                      selectedEmployeePayslipYear = year;
+                    }),
+                  );
+                }).toList(),
               ),
+              const SizedBox(height: 12),
+              if (activeYear != null)
+                _adminPayslipYear(
+                  selectedEmployee,
+                  activeYear,
+                  recordsByYear[activeYear]!,
+                ),
+            ],
           ],
         ],
       ),
@@ -9984,7 +10018,10 @@ class _AdminDashboardState extends State<AdminDashboard>
             ),
           ),
           OutlinedButton.icon(
-            onPressed: () => setState(() => selectedPayslipEmployeeId = null),
+            onPressed: () => setState(() {
+              selectedPayslipEmployeeId = null;
+              selectedEmployeePayslipYear = null;
+            }),
             icon: const Icon(Icons.swap_horiz),
             label: const Text('Change Employee'),
           ),

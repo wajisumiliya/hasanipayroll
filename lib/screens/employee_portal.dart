@@ -28,6 +28,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   final AppService service = AppService.instance;
 
   int tab = 0;
+  int? _selectedPayslipYear;
   bool _showFinancialDetails = false;
   late final AnimationController _birthdayController;
   Timer? _birthdayCelebrationTimer;
@@ -1238,6 +1239,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     required int month,
     required int year,
     required PayrollRecord? payroll,
+    bool mobileCompact = false,
   }) {
     const colors = [
       Color(0xFF2F6FED),
@@ -1249,6 +1251,81 @@ class _EmployeePortalState extends State<EmployeePortal>
     ];
     final accent = colors[(month - 1) % colors.length];
     final available = payroll != null;
+
+    if (mobileCompact) {
+      return Material(
+        color: available ? accent.withValues(alpha: .08) : Colors.grey.shade50,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: available
+                ? accent.withValues(alpha: .22)
+                : Colors.grey.shade200,
+          ),
+        ),
+        child: InkWell(
+          onTap: available ? () => _pdf(payroll) : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      color: available ? accent : Colors.grey,
+                      size: 17,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        DateFormat('MMM').format(DateTime(year, month)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                const Text(
+                  'Net Pay',
+                  style: TextStyle(color: Colors.black54, fontSize: 8),
+                ),
+                Text(
+                  available ? _moneyText(payroll.netPay) : 'Unavailable',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: available ? accent : Colors.grey,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(
+                      available
+                          ? Icons.download_outlined
+                          : Icons.block_outlined,
+                      color: available ? accent : Colors.grey,
+                      size: 15,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(11),
@@ -1524,25 +1601,28 @@ class _EmployeePortalState extends State<EmployeePortal>
             const SizedBox(height: 14),
             LayoutBuilder(
               builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 1100
-                    ? 6
-                    : constraints.maxWidth >= 700
-                        ? 3
-                        : 2;
+                final columns = compact
+                    ? 3
+                    : constraints.maxWidth >= 1100
+                        ? 6
+                        : constraints.maxWidth >= 700
+                            ? 3
+                            : 2;
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: 12,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    mainAxisExtent: 144,
+                    crossAxisSpacing: compact ? 6 : 10,
+                    mainAxisSpacing: compact ? 6 : 10,
+                    mainAxisExtent: compact ? 104 : 144,
                   ),
                   itemBuilder: (context, index) => _payslipMonthCard(
                     month: index + 1,
                     year: year,
                     payroll: byMonth[index + 1],
+                    mobileCompact: compact,
                   ),
                 );
               },
@@ -1565,6 +1645,9 @@ class _EmployeePortalState extends State<EmployeePortal>
     }
     final years = recordsByYear.keys.toList()
       ..sort((a, b) => b.compareTo(a));
+    final selectedYear = years.contains(_selectedPayslipYear)
+        ? _selectedPayslipYear!
+        : (years.isEmpty ? null : years.first);
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(compact ? 10 : 24),
@@ -1588,6 +1671,37 @@ class _EmployeePortalState extends State<EmployeePortal>
           const SizedBox(height: 18),
           if (records.isEmpty)
             _emptyPayroll()
+          else if (compact) ...[
+            DropdownButtonFormField<int>(
+              initialValue: selectedYear,
+              decoration: InputDecoration(
+                labelText: 'Select year',
+                prefixIcon: const Icon(Icons.calendar_month_outlined),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              items: years
+                  .map(
+                    (year) => DropdownMenuItem<int>(
+                      value: year,
+                      child: Text('$year'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (year) => setState(() {
+                _selectedPayslipYear = year;
+              }),
+            ),
+            const SizedBox(height: 14),
+            if (selectedYear != null)
+              _payslipYearSection(
+                selectedYear,
+                recordsByYear[selectedYear]!,
+              ),
+          ]
           else
             ...years.map(
               (year) => _payslipYearSection(year, recordsByYear[year]!),
