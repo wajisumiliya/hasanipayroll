@@ -17,17 +17,23 @@ import 'package:image/image.dart' as img;
 /// dart run tool/optimize_employee_photos.dart ///   --url=https://PROJECT.supabase.co ///   --service-role=YOUR_SERVICE_ROLE_KEY
 ///
 /// Apply after reviewing dry-run:
-/// dart run tool/optimize_employee_photos.dart ///   --url=https://PROJECT.supabase.co ///   --service-role=YOUR_SERVICE_ROLE_KEY --apply
+/// dart run tool/optimize_employee_photos.dart ///   --url=https://PROJECT.supabase.co ///   --service-role=YOUR_SERVICE_ROLE_KEY --apply --limit=5
 void main(List<String> args) async {
   final options = _parseArgs(args);
   final baseUrl = options['url'] ?? '';
   final serviceRole = options['service-role'] ?? '';
   final apply = args.contains('--apply');
+  final limit = int.tryParse(options['limit'] ?? '');
+  if (limit != null && limit < 1) {
+    stderr.writeln('--limit must be at least 1.');
+    exitCode = 64;
+    return;
+  }
 
   if (baseUrl.isEmpty || serviceRole.isEmpty) {
     stderr.writeln(
       'Required: --url=https://PROJECT.supabase.co '
-      '--service-role=SERVICE_ROLE_KEY [--apply]',
+      '--service-role=SERVICE_ROLE_KEY [--apply] [--limit=N]',
     );
     exitCode = 64;
     return;
@@ -56,13 +62,20 @@ void main(List<String> args) async {
       }
     }
 
-    final candidates = hydrated.where((o) => o.size > 500 * 1024).toList()
-      ..sort((a, b) => b.size.compareTo(a.size));
+    final allCandidates =
+        hydrated.where((o) => o.size > 500 * 1024).toList()
+          ..sort((a, b) => b.size.compareTo(a.size));
+    final candidates = limit == null
+        ? allCandidates
+        : allCandidates.take(limit).toList();
 
     stdout.writeln(
       'Found ${objects.length} employee photos; '
-      '${candidates.length} are over 500 KB.',
+      '${allCandidates.length} are over 500 KB.',
     );
+    if (limit != null) {
+      stdout.writeln('This run will process at most ${candidates.length} photo(s).');
+    }
     if (!apply) {
       stdout.writeln('DRY RUN: no Storage objects will be changed.');
     }
