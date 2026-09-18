@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/services/attendance_pdf_service.dart';
 
 void main() {
-  testWidgets('renders attendance PDF watermark', (tester) async {
+  test('renders attendance PDF watermark', () async {
     final days = List.generate(
       30,
       (index) => AttendancePrintDay(
