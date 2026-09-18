@@ -2378,6 +2378,11 @@ class _AdminDashboardState extends State<AdminDashboard>
       ('🇳🇵', 'NP', 'Nepal'),
       ('🇲🇲', 'MM', 'Myanmar (Burma)'),
     ];
+    final visibleCountries = service.currentUser?.isLocalAdmin == true
+        ? countries.where((country) => country.$2 == 'MY').toList()
+        : service.currentUser?.isForeignAdmin == true
+            ? countries.where((country) => country.$2 != 'MY').toList()
+            : countries;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
@@ -2395,7 +2400,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       child: Wrap(
         spacing: 7,
         runSpacing: 7,
-        children: countries.indexed
+        children: visibleCountries.indexed
             .map(
               (entry) => Tooltip(
                 message: entry.$2.$3,
