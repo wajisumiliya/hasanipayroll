@@ -1803,11 +1803,6 @@ class _AdminDashboardState extends State<AdminDashboard>
             .toSet()
             .length;
 
-        final branches = employees
-            .map((e) => e['branch_id']?.toString().trim() ?? '')
-            .where((v) => v.isNotEmpty)
-            .toSet()
-            .length;
         final upcomingBirthdays = _upcomingEmployeeEvents(
           selectedActiveEmployees,
           dateKeys: const ['birthday', 'date_of_birth'],
@@ -1865,16 +1860,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 720;
-              final metricColumns = compact
-                  ? 1
-                  : constraints.maxWidth >= 1180
-                      ? 4
-                      : 2;
-              final horizontalPadding = compact ? 32.0 : 48.0;
-              final metricWidth = (constraints.maxWidth -
-                      horizontalPadding -
-                      (16 * (metricColumns - 1))) /
-                  metricColumns;
 
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
