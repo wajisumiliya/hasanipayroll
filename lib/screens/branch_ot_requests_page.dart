@@ -5,8 +5,13 @@ import 'supabase_service.dart';
 
 class BranchOtRequestsPage extends StatefulWidget {
   final String branchId;
+  final Set<String>? employeeIds;
 
-  const BranchOtRequestsPage({super.key, required this.branchId});
+  const BranchOtRequestsPage({
+    super.key,
+    required this.branchId,
+    this.employeeIds,
+  });
 
   @override
   State<BranchOtRequestsPage> createState() => _BranchOtRequestsPageState();
@@ -21,8 +26,20 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
     _refresh();
   }
 
-  void _refresh() =>
-      _future = SupabaseService.getBranchOtRequests(widget.branchId);
+  void _refresh() => _future = _loadRequests();
+
+  Future<List<Map<String, dynamic>>> _loadRequests() async {
+    final rows =
+        await SupabaseService.getBranchOtRequests(widget.branchId.trim());
+    final visibleIds = widget.employeeIds;
+    if (visibleIds == null) return rows;
+    if (visibleIds.isEmpty) return const [];
+
+    return rows.where((row) {
+      final employeeId = row['employee_id']?.toString().trim().toUpperCase();
+      return employeeId != null && visibleIds.contains(employeeId);
+    }).toList();
+  }
 
   String _time(dynamic value) {
     final text = value?.toString() ?? '';

@@ -634,7 +634,21 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadPayrollFromSupabase() async {
     try {
-      final response = await _supabase.from('payroll').select();
+      const pageSize = 1000;
+      final response = <Map<String, dynamic>>[];
+      var offset = 0;
+      while (true) {
+        final batch = await _supabase
+            .from('payroll')
+            .select()
+            .order('period', ascending: false)
+            .order('employee_id', ascending: true)
+            .range(offset, offset + pageSize - 1);
+        final page = List<Map<String, dynamic>>.from(batch);
+        response.addAll(page);
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
 
       payroll.clear();
 

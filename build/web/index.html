@@ -34,6 +34,22 @@
   <link rel="manifest" href="manifest.json?v=2">
 </head>
 <body>
+  <script>
+    window.reloadLatestPayrollApp = async () => {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((item) => item.unregister()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+
+      const latestUrl = new URL(window.location.href);
+      latestUrl.searchParams.set('_app_refresh', Date.now().toString());
+      window.location.replace(latestUrl.toString());
+    };
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

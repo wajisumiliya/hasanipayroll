@@ -14,6 +14,7 @@ import '../services/pdf_service.dart';
 import 'employee_ot_request_page.dart';
 import 'login_screen.dart';
 import '../widgets/employee_photo.dart';
+import '../widgets/app_reload_button.dart';
 
 class EmployeePortal extends StatefulWidget {
   const EmployeePortal({super.key});
@@ -557,6 +558,8 @@ class _EmployeePortalState extends State<EmployeePortal>
           const Spacer(),
           _financialVisibilityButton(color: Colors.white70),
           const SizedBox(width: 8),
+          const AppReloadButton(color: Colors.white70),
+          const SizedBox(width: 8),
           PortalDayIndicator(theme: DailyPortalTheme.today()),
           const SizedBox(width: 22),
           EmployeePhoto(
@@ -615,6 +618,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         title: Text(_mobileTitle()),
         actions: [
           _financialVisibilityButton(),
+          const AppReloadButton(color: Colors.white),
           IconButton(
             onPressed: logout,
             tooltip: 'Logout',

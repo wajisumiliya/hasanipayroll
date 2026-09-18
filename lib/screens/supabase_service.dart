@@ -1080,14 +1080,51 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getPayroll() async {
     try {
+      const pageSize = 1000;
+      final payrollRows = <Map<String, dynamic>>[];
+      var offset = 0;
+
+      while (true) {
+        final response = await client
+            .from('payroll')
+            .select()
+            .order('period', ascending: false)
+            .order('employee_id', ascending: true)
+            .range(offset, offset + pageSize - 1);
+        final page = _mapList(response);
+        payrollRows.addAll(page);
+
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      return payrollRows;
+    } catch (e, stackTrace) {
+      debugPrint('GET PAYROLL ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getPayrollForMonth(
+    DateTime month,
+  ) async {
+    try {
+      final start = DateTime(month.year, month.month, 1);
+      final end = DateTime(month.year, month.month + 1, 1);
+      String dateText(DateTime value) =>
+          '${value.year.toString().padLeft(4, '0')}-'
+          '${value.month.toString().padLeft(2, '0')}-'
+          '${value.day.toString().padLeft(2, '0')}';
       final response = await client
           .from('payroll')
           .select()
-          .order('period', ascending: false);
-
+          .gte('period', dateText(start))
+          .lt('period', dateText(end))
+          .order('employee_id', ascending: true);
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET PAYROLL ERROR: $e');
+      debugPrint('GET MONTHLY PAYROLL ERROR: $e');
       debugPrint('$stackTrace');
       rethrow;
     }

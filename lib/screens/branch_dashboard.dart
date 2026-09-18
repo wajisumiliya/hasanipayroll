@@ -12,6 +12,7 @@ import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
 import 'branch_ot_requests_page.dart';
+import '../widgets/app_reload_button.dart';
 
 // ============================================================================
 // BRANCH PORTAL
@@ -260,6 +261,7 @@ class _BranchPortalState extends State<BranchPortal>
         ),
         title: Text(_pageTitle()),
         actions: [
+          const AppReloadButton(color: Colors.white),
           IconButton(
             onPressed: logout,
             icon: const Icon(Icons.logout),
@@ -672,6 +674,8 @@ class _BranchPortalState extends State<BranchPortal>
             ),
           ),
           const Spacer(),
+          const AppReloadButton(color: Colors.white),
+          const SizedBox(width: 8),
           PortalDayIndicator(theme: theme),
           const SizedBox(width: 24),
           CircleAvatar(
@@ -737,7 +741,10 @@ class _BranchPortalState extends State<BranchPortal>
       case 2:
         return _employeesPage();
       case 3:
-        return BranchOtRequestsPage(branchId: branchId);
+        return BranchOtRequestsPage(
+          branchId: branch?.branchId ?? branchId,
+          employeeIds: _visibleEmployeeIds,
+        );
       default:
         return _dashboardPage();
     }
