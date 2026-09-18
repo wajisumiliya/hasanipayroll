@@ -38,13 +38,21 @@ void main(List<String> args) async {
     final objects = await _listObjects(client, baseUrl, serviceRole);
 
     // Some Storage API versions omit object size metadata from list responses.
-    // Probe those objects with HEAD so dry-run selection uses real byte sizes.
+    // Download only when size is unknown; this endpoint is supported for the
+    // same objects we must later optimize, unlike HEAD on some Storage setups.
     final hydrated = <_StorageObject>[];
+    final prefetched = <String, Uint8List>{};
     for (final object in objects) {
       if (object.size > 0) {
         hydrated.add(object);
       } else {
-        hydrated.add(await _headObject(client, baseUrl, serviceRole, object));
+        final bytes = await _download(client, baseUrl, serviceRole, object.name);
+        prefetched[object.name] = bytes;
+        hydrated.add(_StorageObject(
+          name: object.name,
+          size: bytes.length,
+          contentType: object.contentType,
+        ));
       }
     }
 
@@ -64,7 +72,8 @@ void main(List<String> args) async {
     var optimizedBytes = 0;
 
     for (final object in candidates) {
-      final original = await _download(client, baseUrl, serviceRole, object.name);
+      final original = prefetched.remove(object.name) ??
+          await _download(client, baseUrl, serviceRole, object.name);
       final decoded = img.decodeImage(original);
       if (decoded == null) {
         stderr.writeln('SKIP ${object.name}: unsupported/corrupt image');
@@ -203,27 +212,6 @@ List<_StorageObject> _decodeObjectList(String body) {
           'application/octet-stream',
     );
   }).where((o) => o.name.isNotEmpty).toList();
-}
-
-Future<_StorageObject> _headObject(
-  http.Client client,
-  String baseUrl,
-  String key,
-  _StorageObject object,
-) async {
-  final encoded = object.name.split('/').map(Uri.encodeComponent).join('/');
-  final response = await client.head(
-    Uri.parse('$baseUrl/storage/v1/object/employee-photos/$encoded'),
-    headers: _headers(key),
-  );
-  _ensureSuccess(response, 'head ${object.name}');
-  final size = int.tryParse(response.headers['content-length'] ?? '') ?? 0;
-  final contentType = response.headers['content-type'] ?? object.contentType;
-  return _StorageObject(
-    name: object.name,
-    size: size,
-    contentType: contentType,
-  );
 }
 
 Future<Uint8List> _download(
