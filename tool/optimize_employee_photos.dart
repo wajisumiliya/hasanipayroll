@@ -174,7 +174,42 @@ Future<List<_StorageObject>> _listObjects(
   String baseUrl,
   String key,
 ) async {
+  // Objects are stored as EMPLOYEE_ID/profile. Supabase Storage list is
+  // folder-based, so first list the root folders and then list each folder.
+  final roots = await _listPrefix(client, baseUrl, key, '');
   final result = <_StorageObject>[];
+
+  for (final root in roots) {
+    final folder = root['name']?.toString() ?? '';
+    if (folder.isEmpty || folder == '_migration_backup') continue;
+    final children = await _listPrefix(client, baseUrl, key, folder);
+    for (final row in children) {
+      final child = row['name']?.toString() ?? '';
+      if (child.isEmpty) continue;
+      final metadata = (row['metadata'] as Map?)?.cast<String, dynamic>() ?? {};
+      final size = metadata['size'] ??
+          metadata['contentLength'] ??
+          metadata['content-length'] ??
+          row['size'];
+      result.add(_StorageObject(
+        name: '$folder/$child',
+        size: size is num ? size.toInt() : int.tryParse('$size') ?? 0,
+        contentType: metadata['mimetype']?.toString() ??
+            metadata['contentType']?.toString() ??
+            'application/octet-stream',
+      ));
+    }
+  }
+  return result;
+}
+
+Future<List<Map<String, dynamic>>> _listPrefix(
+  http.Client client,
+  String baseUrl,
+  String key,
+  String prefix,
+) async {
+  final result = <Map<String, dynamic>>[];
   var offset = 0;
   const limit = 100;
 
@@ -182,45 +217,22 @@ Future<List<_StorageObject>> _listObjects(
     final response = await client.post(
       Uri.parse('$baseUrl/storage/v1/object/list/employee-photos'),
       headers: _headers(key, json: true),
-      body:
-          '{"prefix":"","limit":$limit,"offset":$offset,"sortBy":{"column":"name","order":"asc"}}',
+      body: jsonEncode({
+        'prefix': prefix,
+        'limit': limit,
+        'offset': offset,
+        'sortBy': {'column': 'name', 'order': 'asc'},
+      }),
     );
-    _ensureSuccess(response, 'list objects');
-    final rows = _decodeObjectList(response.body);
+    _ensureSuccess(response, 'list prefix $prefix');
+    final value = jsonDecode(response.body) as List<dynamic>;
+    final rows =
+        value.map((e) => (e as Map).cast<String, dynamic>()).toList();
     result.addAll(rows);
     if (rows.length < limit) break;
     offset += limit;
   }
-  return result.where((o) => !o.name.startsWith('_migration_backup/')).toList();
-}
-
-String _objectName(Map<String, dynamic> row) {
-  final name = row['name']?.toString() ?? '';
-  final id = row['id']?.toString() ?? '';
-  // Supabase list can return folder placeholders (name without a slash and
-  // null id). They are not downloadable objects, so ignore them.
-  if (id.isEmpty && !name.contains('/')) return '';
-  return name;
-}
-
-List<_StorageObject> _decodeObjectList(String body) {
-  // Keep the utility dependency-light; dart:convert is sufficient.
-  final value = jsonDecode(body) as List<dynamic>;
-  return value.map((raw) {
-    final row = raw as Map<String, dynamic>;
-    final metadata = (row['metadata'] as Map?)?.cast<String, dynamic>() ?? {};
-    final size = metadata['size'] ??
-        metadata['contentLength'] ??
-        metadata['content-length'] ??
-        row['size'];
-    return _StorageObject(
-      name: _objectName(row),
-      size: size is num ? size.toInt() : int.tryParse('$size') ?? 0,
-      contentType: metadata['mimetype']?.toString() ??
-          metadata['contentType']?.toString() ??
-          'application/octet-stream',
-    );
-  }).where((o) => o.name.isNotEmpty).toList();
+  return result;
 }
 
 Future<Uint8List> _download(
