@@ -24,6 +24,7 @@ import 'package:archive/archive.dart';
 import 'package:file_saver/file_saver.dart';
 import 'dart:typed_data';
 import 'dart:math' as math;
+import 'dart:async';
 import '../screens/supabase_service.dart';
 import '../screens/attendance_dialog.dart';
 import 'monthly_roster_page.dart';
@@ -2077,7 +2078,15 @@ class _AdminDashboardState extends State<AdminDashboard>
     final stackFlashCards =
         !compact && MediaQuery.sizeOf(context).width >= 1050;
     final period = DateFormat('MMMM yyyy').format(selectedDashboardMonth);
-    final years = {...availableYears, selectedDashboardMonth.year}.toList()
+    final currentYear = DateTime.now().year;
+    final dashboardYears = currentYear >= 2023
+        ? List<int>.generate(currentYear - 2023 + 1, (index) => 2023 + index)
+        : <int>[currentYear];
+    final years = {
+      ...dashboardYears,
+      ...availableYears,
+      selectedDashboardMonth.year,
+    }.toList()
       ..sort((a, b) => b.compareTo(a));
     final sortedBranches = branchOptions.entries.toList()
       ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
@@ -2136,7 +2145,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             Positioned(
               right: 0,
               top: 0,
-              child: _dashboardCountryFlags(),
+              child: _dashboardFlagsAndClock(),
             ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2187,7 +2196,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
               if (!stackFlashCards) ...[
                 const SizedBox(height: 14),
-                _dashboardCountryFlags(),
+                _dashboardFlagsAndClock(),
                 const SizedBox(height: 10),
                 _dashboardWorkforceFlashCards(
                   local: activeLocalEmployees,
@@ -2387,6 +2396,18 @@ class _AdminDashboardState extends State<AdminDashboard>
             )
             .toList(),
       ),
+    );
+  }
+
+  Widget _dashboardFlagsAndClock() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _dashboardCountryFlags(),
+        const _AdminDigitalClock(),
+      ],
     );
   }
 
@@ -15232,6 +15253,87 @@ class _AdminDashboardState extends State<AdminDashboard>
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+class _AdminDigitalClock extends StatefulWidget {
+  const _AdminDigitalClock();
+
+  @override
+  State<_AdminDigitalClock> createState() => _AdminDigitalClockState();
+}
+
+class _AdminDigitalClockState extends State<_AdminDigitalClock> {
+  late DateTime _now;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 61,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .86),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withValues(alpha: .10)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.schedule_outlined,
+            size: 18,
+            color: Color(0xFF243B8F),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat('hh:mm:ss a').format(_now),
+                style: const TextStyle(
+                  color: Color(0xFF20242D),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .3,
+                ),
+              ),
+              Text(
+                DateFormat('dd MMM yyyy').format(_now),
+                style: const TextStyle(
+                  color: Color(0xFF667085),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
