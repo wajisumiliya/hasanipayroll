@@ -1939,20 +1939,22 @@ class _AdminDashboardState extends State<AdminDashboard>
                       birthdays: upcomingBirthdays,
                       anniversaries: upcomingAnniversaries,
                     ),
-                    if (false) Wrap(
-                      children: [
-                        if (false) _powerMetricCard(
-                          width: metricWidth,
-                          title: 'Organisation',
-                          value: branches.toString(),
-                          icon: Icons.account_tree_outlined,
-                          accent: const Color(0xFFED1C24),
-                          detail:
-                              '$branches branches · $departments departments',
-                          onTap: () => _showBranchFlow(employees),
-                        ),
-                      ],
-                    ),
+                    if (false)
+                      Wrap(
+                        children: [
+                          if (false)
+                            _powerMetricCard(
+                              width: metricWidth,
+                              title: 'Organisation',
+                              value: branches.toString(),
+                              icon: Icons.account_tree_outlined,
+                              accent: const Color(0xFFED1C24),
+                              detail:
+                                  '$branches branches · $departments departments',
+                              onTap: () => _showBranchFlow(employees),
+                            ),
+                        ],
+                      ),
                     const SizedBox(height: 16),
                     _dashboardSectionTitle(
                       'Payroll reports',
@@ -2373,8 +2375,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                 child: AnimatedBuilder(
                   animation: _flagAnimationController,
                   builder: (context, child) {
-                    final phase = (_flagAnimationController.value * math.pi * 2) +
-                        (entry.$1 * .72);
+                    final phase =
+                        (_flagAnimationController.value * math.pi * 2) +
+                            (entry.$1 * .72);
                     return Transform(
                       alignment: Alignment.center,
                       transform: Matrix4.identity()
@@ -2863,8 +2866,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
 
     return Column(children: [
-      panel('Upcoming birthdays', Icons.cake_outlined,
-          const Color(0xFFED1C24), birthdays, false),
+      panel('Upcoming birthdays', Icons.cake_outlined, const Color(0xFFED1C24),
+          birthdays, false),
       const SizedBox(height: 10),
       panel('Upcoming work anniversaries', Icons.workspace_premium_outlined,
           const Color(0xFF243B8F), anniversaries, true),

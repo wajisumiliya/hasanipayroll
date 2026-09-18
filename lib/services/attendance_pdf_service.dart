@@ -83,33 +83,33 @@ class AttendancePdfService {
           content: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-            _header(logo, 'WORK ATTENDANCE', month),
-            pw.SizedBox(height: 7),
-            _employeeInfo(
-                employeeId, employeeName, department, section, branchId),
-            pw.SizedBox(height: 8),
-            pw.Row(
-              children: [
-                _summary(
-                    'GROSS WORK', 'Check-out - Check-in', workTotal, _blue),
-                pw.SizedBox(width: 5),
-                _summary(
-                    'BREAK HOURS', 'All recorded breaks', breakTotal, _red),
-                pw.SizedBox(width: 5),
-                _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
-                pw.SizedBox(width: 5),
-                _summary('APPROVED OT', 'Authorized overtime', otTotal,
-                    PdfColors.black),
-                pw.SizedBox(width: 5),
-                _summary('LATE HOURS', 'After roster start', lateTotal,
-                    PdfColors.black),
-              ],
-            ),
-            pw.SizedBox(height: 8),
-            _workTable(days),
-            pw.Spacer(),
-            _signatures(),
-            _pageFooter(1, 'Front - Work attendance and monthly totals'),
+              _header(logo, 'WORK ATTENDANCE', month),
+              pw.SizedBox(height: 7),
+              _employeeInfo(
+                  employeeId, employeeName, department, section, branchId),
+              pw.SizedBox(height: 8),
+              pw.Row(
+                children: [
+                  _summary(
+                      'GROSS WORK', 'Check-out - Check-in', workTotal, _blue),
+                  pw.SizedBox(width: 5),
+                  _summary(
+                      'BREAK HOURS', 'All recorded breaks', breakTotal, _red),
+                  pw.SizedBox(width: 5),
+                  _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
+                  pw.SizedBox(width: 5),
+                  _summary('APPROVED OT', 'Authorized overtime', otTotal,
+                      PdfColors.black),
+                  pw.SizedBox(width: 5),
+                  _summary('LATE HOURS', 'After roster start', lateTotal,
+                      PdfColors.black),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+              _workTable(days),
+              pw.Spacer(),
+              _signatures(),
+              _pageFooter(1, 'Front - Work attendance and monthly totals'),
             ],
           ),
         ),
@@ -126,15 +126,15 @@ class AttendancePdfService {
           content: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-            _header(logo, 'BREAK ATTENDANCE', month),
-            pw.SizedBox(height: 7),
-            _employeeInfo(
-                employeeId, employeeName, department, section, branchId),
-            pw.SizedBox(height: 8),
-            _breakTable(days),
-            pw.Spacer(),
-            _signatures(),
-            _pageFooter(2, 'Back - Morning, afternoon and evening breaks'),
+              _header(logo, 'BREAK ATTENDANCE', month),
+              pw.SizedBox(height: 7),
+              _employeeInfo(
+                  employeeId, employeeName, department, section, branchId),
+              pw.SizedBox(height: 8),
+              _breakTable(days),
+              pw.Spacer(),
+              _signatures(),
+              _pageFooter(2, 'Back - Morning, afternoon and evening breaks'),
             ],
           ),
         ),
@@ -204,45 +204,45 @@ class AttendancePdfService {
               child: pw.Opacity(
                 opacity: .065,
                 child: pw.Column(
-                    mainAxisSize: pw.MainAxisSize.min,
-                    children: [
-                      if (logo != null)
-                        pw.Image(logo, width: 260, fit: pw.BoxFit.contain)
-                      else
-                        pw.Text(
-                          'HASANI BOOKS',
-                          style: pw.TextStyle(
-                            fontSize: 34,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.black,
-                          ),
-                        ),
-                      pw.SizedBox(height: 10),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 7,
-                        ),
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(
-                            color: PdfColors.black,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: pw.Text(
-                          branchName.trim().isEmpty
-                              ? 'BRANCH'
-                              : branchName.toUpperCase(),
-                          textAlign: pw.TextAlign.center,
-                          style: pw.TextStyle(
-                            fontSize: 24,
-                            fontWeight: pw.FontWeight.bold,
-                            letterSpacing: 2.5,
-                            color: PdfColors.black,
-                          ),
+                  mainAxisSize: pw.MainAxisSize.min,
+                  children: [
+                    if (logo != null)
+                      pw.Image(logo, width: 260, fit: pw.BoxFit.contain)
+                    else
+                      pw.Text(
+                        'HASANI BOOKS',
+                        style: pw.TextStyle(
+                          fontSize: 34,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.black,
                         ),
                       ),
-                    ],
+                    pw.SizedBox(height: 10),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 7,
+                      ),
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(
+                          color: PdfColors.black,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: pw.Text(
+                        branchName.trim().isEmpty
+                            ? 'BRANCH'
+                            : branchName.toUpperCase(),
+                        textAlign: pw.TextAlign.center,
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          letterSpacing: 2.5,
+                          color: PdfColors.black,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

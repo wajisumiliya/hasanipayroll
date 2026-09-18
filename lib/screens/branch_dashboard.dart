@@ -805,34 +805,34 @@ class _BranchPortalState extends State<BranchPortal>
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-              _statCard(
-                'Employees',
-                totalEmployees.toString(),
-                Icons.people,
-                const Color(0xFF315AD9),
-              ),
-              _statCard(
-                'Late',
-                lateRecords.length.toString(),
-                Icons.schedule,
-                Colors.orange,
-                onTap: () => _showMonthlyAttendanceDetails(
-                  title: 'Late Employees',
-                  records: lateRecords,
-                  late: true,
-                ),
-              ),
-              _statCard(
-                'Absent',
-                absentRecords.length.toString(),
-                Icons.cancel,
-                Colors.red,
-                onTap: () => _showMonthlyAttendanceDetails(
-                  title: 'Absent Employees',
-                  records: absentRecords,
-                  late: false,
-                ),
-              ),
+                    _statCard(
+                      'Employees',
+                      totalEmployees.toString(),
+                      Icons.people,
+                      const Color(0xFF315AD9),
+                    ),
+                    _statCard(
+                      'Late',
+                      lateRecords.length.toString(),
+                      Icons.schedule,
+                      Colors.orange,
+                      onTap: () => _showMonthlyAttendanceDetails(
+                        title: 'Late Employees',
+                        records: lateRecords,
+                        late: true,
+                      ),
+                    ),
+                    _statCard(
+                      'Absent',
+                      absentRecords.length.toString(),
+                      Icons.cancel,
+                      Colors.red,
+                      onTap: () => _showMonthlyAttendanceDetails(
+                        title: 'Absent Employees',
+                        records: absentRecords,
+                        late: false,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -936,7 +936,8 @@ class _BranchPortalState extends State<BranchPortal>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: .45), width: 1.3),
         boxShadow: const [
-          BoxShadow(color: Color(0x0D000000), blurRadius: 14, offset: Offset(0, 5)),
+          BoxShadow(
+              color: Color(0x0D000000), blurRadius: 14, offset: Offset(0, 5)),
         ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -952,9 +953,11 @@ class _BranchPortalState extends State<BranchPortal>
           ),
           const SizedBox(width: 11),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title,
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w900)),
               Text(subtitle,
                   style: const TextStyle(fontSize: 11, color: Colors.black54)),
             ]),
@@ -1001,7 +1004,9 @@ class _BranchPortalState extends State<BranchPortal>
                   ),
                   Text(timing,
                       style: TextStyle(
-                          color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800)),
                 ]),
               ),
             );
@@ -1044,7 +1049,10 @@ class _BranchPortalState extends State<BranchPortal>
               color: Colors.white,
               borderRadius: BorderRadius.circular(28),
               boxShadow: const [
-                BoxShadow(color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 12)),
+                BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 30,
+                    offset: Offset(0, 12)),
               ],
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1054,7 +1062,9 @@ class _BranchPortalState extends State<BranchPortal>
               Text(
                 birthday ? 'Happy Birthday!' : 'Work Anniversary!',
                 style: TextStyle(
-                  color: birthday ? const Color(0xFFED1C24) : const Color(0xFF243B8F),
+                  color: birthday
+                      ? const Color(0xFFED1C24)
+                      : const Color(0xFF243B8F),
                   fontSize: 25,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1062,7 +1072,8 @@ class _BranchPortalState extends State<BranchPortal>
               const SizedBox(height: 10),
               Text(employee.name,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
               Text(
                 birthday
@@ -1092,7 +1103,8 @@ class _BranchPortalState extends State<BranchPortal>
         ),
       ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
+        final curved =
+            CurvedAnimation(parent: animation, curve: Curves.elasticOut);
         return FadeTransition(
           opacity: animation,
           child: ScaleTransition(scale: curved, child: child),
@@ -1163,8 +1175,8 @@ class _BranchPortalState extends State<BranchPortal>
                     right: 24,
                     top: 50,
                     child: Transform.translate(
-                      offset:
-                          Offset(0, math.sin((progress * math.pi * 2) + 2) * 12),
+                      offset: Offset(
+                          0, math.sin((progress * math.pi * 2) + 2) * 12),
                       child: const Text('🎈', style: TextStyle(fontSize: 72)),
                     ),
                   ),
@@ -1181,7 +1193,8 @@ class _BranchPortalState extends State<BranchPortal>
                           color: Colors.white.withValues(alpha: .94),
                           borderRadius: BorderRadius.circular(36),
                           border: Border.all(
-                              color: Colors.white.withValues(alpha: .8), width: 2),
+                              color: Colors.white.withValues(alpha: .8),
+                              width: 2),
                           boxShadow: const [
                             BoxShadow(
                                 color: Color(0x55000000),
@@ -1261,7 +1274,8 @@ class _BranchPortalState extends State<BranchPortal>
         ),
       ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
+        final curved =
+            CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
         return FadeTransition(
           opacity: animation,
           child: ScaleTransition(scale: curved, child: child),
@@ -1292,13 +1306,14 @@ class _BranchPortalState extends State<BranchPortal>
               12,
               (index) => DropdownMenuItem(
                 value: index + 1,
-                child: Text(DateFormat('MMMM').format(DateTime(2000, index + 1))),
+                child:
+                    Text(DateFormat('MMMM').format(DateTime(2000, index + 1))),
               ),
             ),
             onChanged: (value) {
               if (value != null) {
-                setState(() => attendanceMonth =
-                    DateTime(attendanceMonth.year, value));
+                setState(() =>
+                    attendanceMonth = DateTime(attendanceMonth.year, value));
               }
             },
           ),
@@ -1320,8 +1335,8 @@ class _BranchPortalState extends State<BranchPortal>
                 .toList(),
             onChanged: (value) {
               if (value != null) {
-                setState(() => attendanceMonth =
-                    DateTime(value, attendanceMonth.month));
+                setState(() =>
+                    attendanceMonth = DateTime(value, attendanceMonth.month));
               }
             },
           ),
@@ -1437,7 +1452,8 @@ class _BranchPortalState extends State<BranchPortal>
                           ..sort((a, b) => a.date.compareTo(b.date));
                         final name = service.findEmployee(id)?.name ?? id;
                         return ExpansionTile(
-                          tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+                          tilePadding:
+                              const EdgeInsets.symmetric(horizontal: 4),
                           title: Text(name,
                               style:
                                   const TextStyle(fontWeight: FontWeight.w800)),
@@ -1455,9 +1471,10 @@ class _BranchPortalState extends State<BranchPortal>
                                       '');
                               final actual =
                                   _branchClockMinutes(record.effectiveCheckIn);
-                              final minutes = actual != null && shiftStart != null
-                                  ? (actual - shiftStart).clamp(0, 1440)
-                                  : null;
+                              final minutes =
+                                  actual != null && shiftStart != null
+                                      ? (actual - shiftStart).clamp(0, 1440)
+                                      : null;
                               detail = minutes == null
                                   ? 'Check-in ${record.effectiveCheckIn.isEmpty ? 'not recorded' : record.effectiveCheckIn} · late duration unavailable'
                                   : 'Check-in ${record.effectiveCheckIn} · ${_durationText(minutes)} late';
@@ -1468,8 +1485,8 @@ class _BranchPortalState extends State<BranchPortal>
                               dense: true,
                               leading: const Icon(Icons.calendar_today_outlined,
                                   size: 18),
-                              title: Text(
-                                  DateFormat('EEE, dd MMM yyyy').format(record.date)),
+                              title: Text(DateFormat('EEE, dd MMM yyyy')
+                                  .format(record.date)),
                               trailing: Text(detail,
                                   style: TextStyle(
                                       color: late ? Colors.orange : Colors.red,
@@ -2865,10 +2882,10 @@ class _BranchPortalState extends State<BranchPortal>
                     ),
                   ],
                 ),
-              if (onTap != null) ...[
-                const Spacer(),
-                Icon(Icons.arrow_outward, size: 15, color: color),
-              ],
+                if (onTap != null) ...[
+                  const Spacer(),
+                  Icon(Icons.arrow_outward, size: 15, color: color),
+                ],
               ],
             ),
           ),
@@ -2895,9 +2912,11 @@ class _BranchPortalState extends State<BranchPortal>
           colors: [Colors.white, Color(0xFFF8FAFF)],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF243B8F).withValues(alpha: .3)),
+        border:
+            Border.all(color: const Color(0xFF243B8F).withValues(alpha: .3)),
         boxShadow: const [
-          BoxShadow(color: Color(0x0D000000), blurRadius: 14, offset: Offset(0, 5)),
+          BoxShadow(
+              color: Color(0x0D000000), blurRadius: 14, offset: Offset(0, 5)),
         ],
       ),
       child: Stack(

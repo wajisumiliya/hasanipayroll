@@ -238,8 +238,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                     child: Center(
                       child: Transform.scale(
                         scale: .97 +
-                            ((math.sin(progress * math.pi * 2) + 1) / 2) *
-                                .03,
+                            ((math.sin(progress * math.pi * 2) + 1) / 2) * .03,
                         child: Container(
                           constraints: const BoxConstraints(maxWidth: 560),
                           padding: const EdgeInsets.symmetric(
@@ -933,10 +932,10 @@ class _EmployeePortalState extends State<EmployeePortal>
     final greeting = _isBirthdayToday
         ? 'Happy Birthday'
         : hour < 12
-        ? 'Good morning'
-        : hour < 18
-            ? 'Good afternoon'
-            : 'Good evening';
+            ? 'Good morning'
+            : hour < 18
+                ? 'Good afternoon'
+                : 'Good evening';
 
     return Container(
       width: double.infinity,
