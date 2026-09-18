@@ -886,7 +886,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             ],
           ),
           const SizedBox(height: 8),
-          ...records.take(5).map(_tile),
+          ...records.take(5).map(_recentPayslipTile),
         ],
       ),
     );
@@ -1168,12 +1168,10 @@ class _EmployeePortalState extends State<EmployeePortal>
   }
 
   // =============================================================
-  // PAYSLIP TILE
+  // PAYSLIP MONTH CARD
   // =============================================================
 
-  Widget _tile(
-    PayrollRecord payroll,
-  ) {
+  Widget _recentPayslipTile(PayrollRecord payroll) {
     return Card(
       color: tab == 0 ? const Color(0xE6102A43) : Colors.white,
       margin: const EdgeInsets.only(bottom: 8),
@@ -1194,16 +1192,318 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
         subtitle: Text(
           _showFinancialDetails
-              ? 'Net pay RM ${payroll.netPay.toStringAsFixed(2)}'
+              ? 'Net pay ${_moneyText(payroll.netPay)}'
               : 'Net pay RM ••••••',
-          style: TextStyle(color: tab == 0 ? Colors.white60 : Colors.black54),
+          style: TextStyle(
+            color: tab == 0 ? Colors.white60 : Colors.black54,
+          ),
         ),
         trailing: IconButton(
           onPressed: () => _pdf(payroll),
           tooltip: 'View payslip',
-          icon: const Icon(
-            Icons.download_outlined,
+          color: tab == 0 ? Colors.white : null,
+          icon: const Icon(Icons.download_outlined),
+        ),
+      ),
+    );
+  }
+
+  Widget _payslipMonthCard({
+    required int month,
+    required int year,
+    required PayrollRecord? payroll,
+  }) {
+    const colors = [
+      Color(0xFF2F6FED),
+      Color(0xFFEC4775),
+      Color(0xFF1FB874),
+      Color(0xFF8B43E6),
+      Color(0xFFE5AF13),
+      Color(0xFF14AEC5),
+    ];
+    final accent = colors[(month - 1) % colors.length];
+    final available = payroll != null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: available ? accent.withValues(alpha: .08) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: available
+              ? accent.withValues(alpha: .16)
+              : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: available
+                    ? accent.withValues(alpha: .13)
+                    : Colors.grey.shade200,
+                child: Icon(
+                  Icons.description_outlined,
+                  color: available ? accent : Colors.grey,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('MMMM').format(DateTime(year, month)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      '$year',
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          const Text(
+            'Net Pay',
+            style: TextStyle(color: Colors.black54, fontSize: 11),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            available ? _moneyText(payroll.netPay) : 'Not available',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: available ? accent : Colors.grey,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: available ? () => _pdf(payroll) : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: const Icon(Icons.download_outlined, size: 17),
+              label: Text(available ? 'Download' : 'No payslip'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _yearSummaryItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: .13),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        color: Colors.black54, fontSize: 12)),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _payslipYearSection(int year, List<PayrollRecord> yearRecords) {
+    final byMonth = <int, PayrollRecord>{
+      for (final record in yearRecords) record.period.month: record,
+    };
+    final gross = yearRecords.fold<double>(
+      0,
+      (total, record) => total + record.totalEarnings,
+    );
+    final deductions = yearRecords.fold<double>(
+      0,
+      (total, record) => total + record.totalDeductions,
+    );
+    final net = yearRecords.fold<double>(
+      0,
+      (total, record) => total + record.netPay,
+    );
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 24),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Color(0xFFEAF0FF),
+                  child: Icon(
+                    Icons.calendar_month_outlined,
+                    color: Color(0xFF2D55D8),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '$year',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${yearRecords.length} payslips',
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 1100
+                    ? 6
+                    : constraints.maxWidth >= 700
+                        ? 3
+                        : constraints.maxWidth >= 420
+                            ? 2
+                            : 1;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 12,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                    mainAxisExtent: 190,
+                  ),
+                  itemBuilder: (context, index) => _payslipMonthCard(
+                    month: index + 1,
+                    year: year,
+                    payroll: byMonth[index + 1],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 18),
+            const Divider(),
+            const SizedBox(height: 10),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 900 ? 4 : 2;
+                final width =
+                    (constraints.maxWidth - (columns - 1) * 12) / columns;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: width,
+                      child: _yearSummaryItem(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Year',
+                        value: '$year',
+                        color: const Color(0xFF2D55D8),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: _yearSummaryItem(
+                        icon: Icons.payments_outlined,
+                        label: 'Gross',
+                        value: _moneyText(gross),
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: _yearSummaryItem(
+                        icon: Icons.remove_circle_outline,
+                        label: 'Year Deduction',
+                        value: _moneyText(deductions),
+                        color: const Color(0xFFD52B3F),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: _yearSummaryItem(
+                        icon: Icons.account_balance_wallet_outlined,
+                        label: 'Year Net',
+                        value: _moneyText(net),
+                        color: const Color(0xFF07833D),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -1214,27 +1514,39 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
 
   Widget _payslips() {
+    final recordsByYear = <int, List<PayrollRecord>>{};
+    for (final record in records) {
+      recordsByYear.putIfAbsent(record.period.year, () => []).add(record);
+    }
+    final years = recordsByYear.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Payslip History',
+            'My Payslips',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            '${records.length} payroll records available',
-            style: const TextStyle(
+          const Text(
+            'View your monthly net pay and download payslips by year',
+            style: TextStyle(
               color: Colors.black54,
             ),
           ),
           const SizedBox(height: 18),
-          if (records.isEmpty) _emptyPayroll() else ...records.map(_tile),
+          if (records.isEmpty)
+            _emptyPayroll()
+          else
+            ...years.map(
+              (year) => _payslipYearSection(year, recordsByYear[year]!),
+            ),
         ],
       ),
     );
