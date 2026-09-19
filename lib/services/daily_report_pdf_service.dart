@@ -33,8 +33,6 @@ class DailyReportPdfService {
       return date == null ? '-' : names[date.weekday - 1];
     }
 
-    pw.Widget rule() => pw.Container(height: .45, color: ink);
-
     pw.Widget section(String label) => pw.Container(
           height: 19,
           alignment: pw.Alignment.center,
@@ -74,11 +72,6 @@ class DailyReportPdfService {
             pw.SizedBox(height: 6),
             pw.Text(text(value), style: const pw.TextStyle(fontSize: 8)),
             pw.Spacer(),
-            rule(),
-            pw.SizedBox(height: 10),
-            rule(),
-            pw.SizedBox(height: 10),
-            rule(),
           ]),
         );
 
@@ -188,8 +181,6 @@ class DailyReportPdfService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Spacer(),
-                    rule(),
-                    pw.SizedBox(height: 6),
                     pw.Text('Name: ${text(report['reported_by'])}',
                         style: const pw.TextStyle(fontSize: 7)),
                   ],
@@ -215,11 +206,6 @@ class DailyReportPdfService {
                   pw.Text(text(report['hq_comment']),
                       style: const pw.TextStyle(fontSize: 8)),
                   pw.Spacer(),
-                  rule(),
-                  pw.SizedBox(height: 9),
-                  rule(),
-                  pw.SizedBox(height: 9),
-                  rule(),
                 ]),
               ),
               flex: 2,

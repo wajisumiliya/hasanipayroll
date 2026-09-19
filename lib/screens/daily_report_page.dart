@@ -93,12 +93,12 @@ class _DailyReportPageState extends State<DailyReportPage> {
           'unpaid_leave',
           'weekly_leave',
           'annual_leave',
-          'air_conditioner',
           'maintenance_total',
           'working_condition',
           'service_repair'
         ])
           key: int.tryParse(c[key]!.text.trim()) ?? 0,
+        'air_conditioner': c['air_conditioner']!.text.trim(),
         'maintenance_report': c['maintenance_report']!.text.trim(),
         'report_crew': c['report_crew']!.text.trim(),
         'recommendation': c['recommendation']!.text.trim(),
@@ -286,7 +286,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
                     'Total',
                     'Working Condition',
                     'To Service / Repair'
-                  ]),
+                  ], textKeys: const {'air_conditioner'}),
                   _bar('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
                   _area('maintenance_report', 'REPORT', required: true),
                   _bar('ORSANO'),
@@ -347,7 +347,9 @@ class _DailyReportPageState extends State<DailyReportPage> {
           textAlign: TextAlign.center,
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold)));
-  Widget _fourFields(List<String> keys, List<String> labels) => Padding(
+  Widget _fourFields(List<String> keys, List<String> labels,
+          {Set<String> textKeys = const {}}) =>
+      Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: LayoutBuilder(
           builder: (_, box) => Wrap(
@@ -359,7 +361,8 @@ class _DailyReportPageState extends State<DailyReportPage> {
                 width: box.maxWidth > 600
                     ? (box.maxWidth - 24) / 4
                     : (box.maxWidth - 8) / 2,
-                child: _field(keys[i], labels[i], number: true),
+                child: _field(keys[i], labels[i],
+                    number: !textKeys.contains(keys[i])),
               ),
             ),
           ),
