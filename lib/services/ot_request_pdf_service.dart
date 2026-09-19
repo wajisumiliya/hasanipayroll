@@ -47,8 +47,7 @@ class OtRequestPdfService {
           child: pw.Text(text,
               textAlign: pw.TextAlign.center,
               style: pw.TextStyle(
-                  color:
-                      header ? PdfColors.white : PdfColor.fromHex('#263B73'),
+                  color: header ? PdfColors.white : PdfColor.fromHex('#263B73'),
                   fontSize: header ? 7 : 8,
                   fontWeight:
                       header ? pw.FontWeight.bold : pw.FontWeight.normal)),
@@ -73,8 +72,7 @@ class OtRequestPdfService {
                         pw.Container(
                             color: blue,
                             padding: const pw.EdgeInsets.all(8),
-                            child: pw.Text(
-                                'BORANG TUNTUTAN\nKERJA LEBIH MASA',
+                            child: pw.Text('BORANG TUNTUTAN\nKERJA LEBIH MASA',
                                 style: pw.TextStyle(
                                     color: PdfColors.white,
                                     fontSize: 9,
@@ -139,11 +137,9 @@ class OtRequestPdfService {
                               if (index < pageRows.length)
                                 pw.TableRow(children: [
                                   cell('${start + index + 1}'),
-                                  cell(value(
-                                      pageRows[index], 'overtime_date')),
+                                  cell(value(pageRows[index], 'overtime_date')),
                                   cell(time(pageRows[index], 'shift_start')),
-                                  cell(
-                                      time(pageRows[index], 'overtime_start')),
+                                  cell(time(pageRows[index], 'overtime_start')),
                                   cell(time(pageRows[index], 'overtime_end')),
                                   cell(duration(pageRows[index])),
                                   cell(value(pageRows[index], 'reason')),
@@ -153,9 +149,7 @@ class OtRequestPdfService {
                               else
                                 pw.TableRow(children: [
                                   cell('${start + index + 1}'),
-                                  for (var column = 1;
-                                      column < 8;
-                                      column++)
+                                  for (var column = 1; column < 8; column++)
                                     cell('')
                                 ]),
                           ]),
