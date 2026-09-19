@@ -1878,8 +1878,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         final overtime = sumField('overtime');
         final bonus = sumField('bonus');
         final epf = sumField('epf_employee');
+        final epfEmployer = sumField('epf_employer');
         final socso = sumField('socso_employee');
+        final socsoEmployer = sumField('socso_employer');
         final eis = sumField('eis_employee');
+        final eisEmployer = sumField('eis_employer');
         final pcb = sumField('pcb');
         final employerContributions = sumField('epf_employer') +
             sumField('socso_employer') +
@@ -1925,8 +1928,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                       bonus: bonus,
                       totalDeductions: totalDeductions,
                       epf: epf,
+                      epfEmployer: epfEmployer,
                       socso: socso,
+                      socsoEmployer: socsoEmployer,
                       eis: eis,
+                      eisEmployer: eisEmployer,
                       pcb: pcb,
                       employerContributions: employerContributions,
                       payrollRecords: periodPayroll.length,
@@ -2106,8 +2112,11 @@ class _AdminDashboardState extends State<AdminDashboard>
     required double bonus,
     required double totalDeductions,
     required double epf,
+    required double epfEmployer,
     required double socso,
+    required double socsoEmployer,
     required double eis,
+    required double eisEmployer,
     required double pcb,
     required double employerContributions,
     required int payrollRecords,
@@ -2323,8 +2332,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                         Icons.badge_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(width, 'Bonus', bonus,
                         Icons.card_giftcard_outlined, const Color(0xFFED1C24)),
-                    _compactPayrollMetric(width, 'EPF', epf,
-                        Icons.savings_outlined, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(
+                      width,
+                      'EPF',
+                      epf,
+                      Icons.savings_outlined,
+                      const Color(0xFF243B8F),
+                      employerValue: epfEmployer,
+                      assetName: 'assets/dashboard_epf_kwsp.png',
+                    ),
                     _compactPayrollMetric(
                         width,
                         'Gross payroll',
@@ -2341,7 +2357,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                         'SOCSO',
                         socso,
                         Icons.health_and_safety_outlined,
-                        const Color(0xFF243B8F)),
+                        const Color(0xFF243B8F),
+                        employerValue: socsoEmployer,
+                        assetName: 'assets/official_socso_logo.png'),
                     _compactPayrollMetric(width, 'Net payroll', totalNet,
                         Icons.payments_outlined, const Color(0xFFED1C24),
                         onTap: onNetTap),
@@ -2349,8 +2367,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                         Icons.schedule_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(width, 'PCB', pcb,
                         Icons.receipt_long_outlined, const Color(0xFFED1C24)),
-                    _compactPayrollMetric(width, 'EIS', eis,
-                        Icons.shield_outlined, const Color(0xFF243B8F)),
+                    _compactPayrollMetric(
+                      width,
+                      'EIS',
+                      eis,
+                      Icons.shield_outlined,
+                      const Color(0xFF243B8F),
+                      employerValue: eisEmployer,
+                      assetName: 'assets/dashboard_eis_icon.png',
+                    ),
                     _compactPayrollMetric(
                       width,
                       'Employer contributions',
@@ -2576,6 +2601,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     IconData icon,
     Color accent, {
     VoidCallback? onTap,
+    double? employerValue,
+    String? assetName,
   }) {
     return SizedBox(
       width: width,
@@ -2600,7 +2627,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                     color: accent.withValues(alpha: .13),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: accent, size: 18),
+                  padding: assetName == null
+                      ? EdgeInsets.zero
+                      : const EdgeInsets.all(3),
+                  child: assetName == null
+                      ? Icon(icon, color: accent, size: 18)
+                      : Image.asset(
+                          assetName,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) =>
+                              Icon(icon, color: accent, size: 18),
+                        ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -2617,16 +2654,41 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        _money(value),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF20242D),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                      if (employerValue == null)
+                        Text(
+                          _money(value),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF20242D),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _statutoryContributionValue(
+                                'Employee',
+                                value,
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 27,
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              color: accent.withValues(alpha: .20),
+                            ),
+                            Expanded(
+                              child: _statutoryContributionValue(
+                                'Employer',
+                                employerValue,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -2638,6 +2700,35 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _statutoryContributionValue(String label, double value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.black45,
+            fontSize: 8,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .35,
+          ),
+        ),
+        Text(
+          _money(value),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFF20242D),
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 
