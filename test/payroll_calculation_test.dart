@@ -33,6 +33,16 @@ void main() {
         1700,
       );
     });
+
+    test('keeps a genuinely blank salary blank', () {
+      expect(
+        PayrollCalculationService.salaryBase(
+          basicSalary: 0,
+          fwSalary: 0,
+        ),
+        0,
+      );
+    });
   });
 
   test('PayrollRecord gross and net use the centralized rules', () {
@@ -62,4 +72,45 @@ void main() {
     expect(record.totalDeductions, 15);
     expect(record.netPay, 1935);
   });
+
+  test('unpaid and late deductions reduce net pay exactly once', () {
+    final gross = PayrollCalculationService.grossEarnings(
+      basicSalary: 2000,
+      fwSalary: 0,
+      overtime: 100,
+    );
+    final deductions = PayrollCalculationService.totalDeductions(
+      epfEmployee: 220,
+      socsoEmployee: 10,
+      eisEmployee: 4,
+      unpaid: 125.50,
+      late: 8.25,
+    );
+
+    expect(gross, 2100);
+    expect(deductions, 367.75);
+    expect(
+      PayrollCalculationService.netPay(
+        gross: gross,
+        deductions: deductions,
+      ),
+      1732.25,
+    );
+  });
+
+  test(
+    'statutory deductions are included without affecting employer amounts',
+    () {
+      expect(
+        PayrollCalculationService.totalDeductions(
+          epfEmployee: 187,
+          socsoEmployee: 9.75,
+          eisEmployee: 3.40,
+          pcb: 25,
+          zakat: 15,
+        ),
+        240.15,
+      );
+    },
+  );
 }
