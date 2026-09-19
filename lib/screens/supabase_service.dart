@@ -86,12 +86,12 @@ class SupabaseService {
             upsert: true,
           ),
         );
-    final publicUrl = client.storage.from('employee-photos').getPublicUrl(path);
-    final versionedUrl =
-        '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
-    await client.from('employees').update({'photo_url': versionedUrl}).eq(
-        'employee_id', employeeId.trim());
-    return versionedUrl;
+    // Store the object path, not a permanent public URL. EmployeePhoto resolves
+    // this path to a short-lived signed URL for authenticated viewers.
+    await client
+        .from('employees')
+        .update({'photo_url': path}).eq('employee_id', employeeId.trim());
+    return path;
   }
 
   static Future<void> removeEmployeePhoto(String employeeId) async {
