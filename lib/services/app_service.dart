@@ -44,6 +44,8 @@ class app_user {
 
   bool get isForeignAdmin => isAdmin && staffScope == 'foreign';
 
+  bool get isRequestAdmin => isAdmin && staffScope == 'requests';
+
   Map<String, dynamic> toJson() {
     return {
       'username': username,
@@ -1292,7 +1294,7 @@ class AppService extends ChangeNotifier {
   // ==========================================================================
 
   Future<void> _loadDataForCurrentUser() async {
-    if (isReviewer) {
+    if (isReviewer || _currentUser?.isRequestAdmin == true) {
       employees.clear();
       payroll.clear();
       attendance.clear();

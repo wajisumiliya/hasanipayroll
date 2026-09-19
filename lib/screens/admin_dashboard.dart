@@ -29,6 +29,7 @@ import '../screens/supabase_service.dart';
 import '../screens/attendance_dialog.dart';
 import 'monthly_roster_page.dart';
 import 'leave_requests_approval_page.dart';
+import 'daily_report_page.dart';
 import '../dashboard_brand_logos.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
@@ -334,6 +335,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Employee Payslips';
       case 13:
         return 'Leave Requests';
+      case 14:
+        return 'Daily Reports';
       default:
         return 'Dashboard';
     }
@@ -434,6 +437,9 @@ class _AdminDashboardState extends State<AdminDashboard>
 
       case 13:
         return const LeaveRequestsApprovalPage.admin();
+
+      case 14:
+        return const DailyReportPage.admin();
 
       default:
         return _dashboardPage();
@@ -643,6 +649,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                       13,
                     ),
                     _drawerItem(
+                      'Daily Reports',
+                      Icons.assignment_outlined,
+                      14,
+                    ),
+                    _drawerItem(
                       'Reports',
                       Icons.bar_chart_outlined,
                       6,
@@ -757,6 +768,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                   'Leave Requests',
                   Icons.flight_takeoff_outlined,
                   13,
+                ),
+                _sidebarItem(
+                  'Daily Reports',
+                  Icons.assignment_outlined,
+                  14,
                 ),
                 _sidebarItem(
                   'Reports',

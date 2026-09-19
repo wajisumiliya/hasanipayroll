@@ -1524,6 +1524,33 @@ class SupabaseService {
     }, onConflict: 'notification_id,employee_id');
   }
 
+  static Future<List<Map<String, dynamic>>> getDailyReports({
+    String? branchId,
+  }) async {
+    var query = client.from('daily_reports').select();
+    if (branchId != null && branchId.trim().isNotEmpty) {
+      query = query.ilike('branch_id', branchId.trim());
+    }
+    return _mapList(await query.order('report_date', ascending: false));
+  }
+
+  static Future<void> submitDailyReport(Map<String, dynamic> report) async {
+    await client.from('daily_reports').insert(report);
+  }
+
+  static Future<void> reviewDailyReport({
+    required String id,
+    required String comment,
+    required String reviewer,
+  }) async {
+    await client.from('daily_reports').update({
+      'hq_comment': comment.trim(),
+      'reviewed_by': reviewer.trim(),
+      'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', id);
+  }
+
   // ============================================================
   // ATTENDANCE BY EMPLOYEE
   // ============================================================

@@ -13,6 +13,7 @@ import 'supabase_service.dart';
 import 'attendance_dialog.dart';
 import 'branch_ot_requests_page.dart';
 import 'leave_requests_approval_page.dart';
+import 'daily_report_page.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_photo.dart';
 
@@ -294,7 +295,9 @@ class _BranchPortalState extends State<BranchPortal>
                       2,
                     ),
                     _drawerItem('OT Requests', Icons.more_time_outlined, 3),
-                    _drawerItem('Leave Requests', Icons.flight_takeoff_outlined, 4),
+                    _drawerItem(
+                        'Leave Requests', Icons.flight_takeoff_outlined, 4),
+                    _drawerItem('Daily Report', Icons.assignment_outlined, 5),
                   ],
                 ),
               ),
@@ -374,7 +377,9 @@ class _BranchPortalState extends State<BranchPortal>
                   2,
                 ),
                 _sidebarItem('OT Requests', Icons.more_time_outlined, 3),
-                _sidebarItem('Leave Requests', Icons.flight_takeoff_outlined, 4),
+                _sidebarItem(
+                    'Leave Requests', Icons.flight_takeoff_outlined, 4),
+                _sidebarItem('Daily Report', Icons.assignment_outlined, 5),
               ],
             ),
           ),
@@ -735,6 +740,8 @@ class _BranchPortalState extends State<BranchPortal>
         return 'OT Requests';
       case 4:
         return 'Leave Requests';
+      case 5:
+        return 'Daily Report';
       default:
         return 'Dashboard';
     }
@@ -755,6 +762,10 @@ class _BranchPortalState extends State<BranchPortal>
         return LeaveRequestsApprovalPage.branch(
           branchId: branch?.branchId ?? branchId,
           employeeIds: _visibleEmployeeIds,
+        );
+      case 5:
+        return DailyReportPage.branch(
+          branchId: branch?.branchId ?? branchId,
         );
       default:
         return _dashboardPage();

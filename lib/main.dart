@@ -6,6 +6,7 @@ import 'screens/admin_dashboard.dart';
 import 'screens/branch_dashboard.dart';
 import 'screens/employee_portal.dart';
 import 'screens/login_screen.dart';
+import 'screens/request_admin_dashboard.dart';
 import 'screens/supabase_service.dart';
 import 'services/app_service.dart';
 import 'services/notification_service.dart';
@@ -29,6 +30,9 @@ class HasaniPayrollApp extends StatelessWidget {
 
   Widget _homePage() {
     final user = AppService.instance.currentUser;
+    if (user?.isAdmin == true && user?.staffScope == 'requests') {
+      return const RequestAdminDashboard();
+    }
     if (user?.isAdmin == true) return const AdminDashboard();
     if (user?.isBranch == true) return const BranchPortal();
     if (user?.isEmployee == true) return const EmployeePortal();

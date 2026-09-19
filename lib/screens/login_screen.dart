@@ -13,6 +13,7 @@ import '../theme/daily_portal_theme.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
+import 'request_admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -679,7 +680,9 @@ class _LoginScreenState extends State<LoginScreen>
     if (user.isAdmin) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => const AdminDashboard(),
+          builder: (_) => user.staffScope == 'requests'
+              ? const RequestAdminDashboard()
+              : const AdminDashboard(),
         ),
       );
       return;

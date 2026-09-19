@@ -448,7 +448,9 @@ function createAccessToken(
     HBAS: "ALOR SETAR", HBASTANA: "ASTANA", HBGURUN: "GURUN",
     HBJITRA: "JITRA", HBPERAI: "PRAI", HBKULIM: "KULIM", HBLKW: "LANGKAWI",
   };
-  const appRole = String(user.role || "employee").trim().toLowerCase();
+  const appRole = staffScope === "requests"
+    ? "request_admin"
+    : String(user.role || "employee").trim().toLowerCase();
   const branchId = branchByLogin[baseLogin] || null;
   return jwt.sign(
     {
@@ -1042,11 +1044,14 @@ app.post(
 
       const normalizedUsername = username.toLowerCase();
       const scopedAdminLogin = normalizedUsername === "adminloc" || normalizedUsername === "adminfrn";
+      const requestAdminLogin = normalizedUsername === "hbreq";
       const staffScope = normalizedUsername === "adminloc"
         ? "local"
         : normalizedUsername === "adminfrn"
           ? "foreign"
-          : null;
+          : requestAdminLogin
+            ? "requests"
+            : null;
 
       const password =
         String(
