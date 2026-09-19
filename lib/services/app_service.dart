@@ -569,7 +569,8 @@ class AppService extends ChangeNotifier {
         }
       }
 
-      employees.removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
+      employees
+          .removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
 
       _employeesLoaded = true;
 
@@ -672,11 +673,10 @@ class AppService extends ChangeNotifier {
 
       for (final row in response) {
         try {
-          final employeeId =
-              (row['employee_id'] ?? row['employeeId'] ?? '')
-                  .toString()
-                  .trim()
-                  .toUpperCase();
+          final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
+              .toString()
+              .trim()
+              .toUpperCase();
           if (_currentUser?.staffScope != null &&
               !allowedEmployeeIds.contains(employeeId)) {
             continue;
@@ -861,11 +861,10 @@ class AppService extends ChangeNotifier {
 
       for (final row in response) {
         try {
-          final employeeId =
-              (row['employee_id'] ?? row['employeeId'] ?? '')
-                  .toString()
-                  .trim()
-                  .toUpperCase();
+          final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
+              .toString()
+              .trim()
+              .toUpperCase();
           if (_currentUser?.staffScope != null &&
               !allowedEmployeeIds.contains(employeeId)) {
             continue;
