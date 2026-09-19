@@ -74,7 +74,7 @@ jobs:
       # if your project does not currently contain a test directory.
       # ==========================================================
       - name: Check Dart formatting
-        run: dart format --output=none --set-exit-if-changed lib
+        run: dart format --output=none --set-exit-if-changed lib test
 
       # ==========================================================
       # ANALYZE
