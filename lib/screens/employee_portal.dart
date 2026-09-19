@@ -903,7 +903,6 @@ class _EmployeePortalState extends State<EmployeePortal>
         final compact = constraints.maxWidth < 520;
         return Container(
           width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 820),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -920,56 +919,78 @@ class _EmployeePortalState extends State<EmployeePortal>
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _isBirthdayToday
-                        ? const [Color(0xFFED1C24), Color(0xFF7C3AED)]
-                        : dailyTheme.hero,
-                  ),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                color: Colors.white,
                 child: Row(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(7),
-                      child: Image.asset(
-                        'assets/hasani_books_logo.jpg',
-                        width: compact ? 72 : 90,
-                        height: 34,
-                        fit: BoxFit.contain,
-                      ),
+                    Image.asset(
+                      'assets/hasani_books_logo.jpg',
+                      width: compact ? 105 : 150,
+                      height: 46,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(width: 12),
                     const Expanded(
-                      child: Text(
-                        'EMPLOYEE IDENTITY CARD',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'EMPLOYEE CARD',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: Color(0xFF08255F),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 3,
+                            ),
+                          ),
+                          Text(
+                            'PEOPLE  •  KNOWLEDGE  •  PROGRESS',
+                            style: TextStyle(
+                              color: Color(0xFF526A96),
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.4,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.all(compact ? 14 : 18),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(compact ? 16 : 24),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFF4FAFF), Colors.white, Color(0xFFEDF5FF)],
+                  ),
+                  border: Border(
+                    top: BorderSide(color: Color(0xFFE20C2C), width: 5),
+                    bottom: BorderSide(color: Color(0xFF083E91), width: 5),
+                  ),
+                ),
                 child: compact
                     ? Column(
                         children: [
                           _identityPhoto(dailyTheme),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 16),
                           _identityInformation(greeting, dailyTheme, centered: true),
+                          const SizedBox(height: 16),
+                          _identityVerification(),
                         ],
                       )
                     : Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           _identityPhoto(dailyTheme),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 24),
                           Expanded(child: _identityInformation(greeting, dailyTheme)),
+                          const SizedBox(width: 20),
+                          _identityVerification(),
                         ],
                       ),
               ),
@@ -991,7 +1012,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       child: EmployeePhoto(
         name: employee!.name,
         photoUrl: employee!.photoUrl,
-        radius: 48,
+        radius: 66,
         backgroundColor: dailyTheme.accent.withValues(alpha: .14),
         foregroundColor: dailyTheme.accent,
       ),
@@ -1030,16 +1051,33 @@ class _EmployeePortalState extends State<EmployeePortal>
           spacing: 22,
           runSpacing: 10,
           children: [
-            _identityField('Employee ID', employee!.employeeId),
+            _identityField(Icons.badge_outlined, 'Employee ID', employee!.employeeId),
             _identityField(
+              Icons.business_outlined,
               'Department',
               employee!.department.trim().isEmpty ? '-' : employee!.department,
             ),
-            _identityField('Branch', branch),
             _identityField(
-              'Status',
-              employee!.isActive ? 'ACTIVE' : 'INACTIVE',
-              valueColor: employee!.isActive ? const Color(0xFF15805D) : Colors.red,
+              Icons.location_on_outlined,
+              'Branch',
+              branch,
+            ),
+            _identityField(
+              Icons.calendar_month_outlined,
+              'Joining Date',
+              employee!.joiningDate == null
+                  ? '-'
+                  : DateFormat('dd MMM yyyy').format(employee!.joiningDate!),
+            ),
+            _identityField(
+              Icons.email_outlined,
+              'Email',
+              employee!.email.trim().isEmpty ? '-' : employee!.email,
+            ),
+            _identityField(
+              Icons.phone_outlined,
+              'Contact',
+              employee!.phone.trim().isEmpty ? '-' : employee!.phone,
             ),
           ],
         ),
@@ -1053,30 +1091,99 @@ class _EmployeePortalState extends State<EmployeePortal>
     );
   }
 
-  Widget _identityField(String label, String value, {Color? valueColor}) {
-    return SizedBox(
-      width: 132,
+  Widget _identityVerification() {
+    final active = employee!.isActive;
+    final color = active ? const Color(0xFF00A651) : const Color(0xFFED1C24);
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: .25)),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.black45,
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              letterSpacing: .7,
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF08255F)),
             ),
+            child: const Icon(Icons.qr_code_2, size: 48, color: Color(0xFF08255F)),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 6),
           Text(
-            value,
+            employee!.employeeId,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: valueColor ?? const Color(0xFF17233C),
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
+            style: const TextStyle(
+              color: Color(0xFF08255F),
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 5),
+                Text(
+                  active ? 'ACTIVE' : 'INACTIVE',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            active ? 'VALUED MEMBER' : 'NOT ACTIVE',
+            style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _identityField(IconData icon, String label, String value) {
+    return SizedBox(
+      width: 185,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, color: const Color(0xFF0B347C), size: 25),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(color: Color(0xFF60759B), fontSize: 10),
+                ),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF08255F),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
