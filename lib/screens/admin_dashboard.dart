@@ -6455,6 +6455,19 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       ),
                                     ),
                                     const SizedBox(width: 10),
+                                    IconButton(
+                                      tooltip: 'Open original OT form',
+                                      onPressed: () {
+                                        Navigator.pop(dialogContext);
+                                        Future<void>.delayed(Duration.zero, () {
+                                          if (mounted) {
+                                            _showOtRequestForm(request);
+                                          }
+                                        });
+                                      },
+                                      icon: const Icon(
+                                          Icons.description_outlined),
+                                    ),
                                     _statusChip(status),
                                   ],
                                 ),
@@ -6467,6 +6480,31 @@ class _AdminDashboardState extends State<AdminDashboard>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              try {
+                                final bytes = await OtRequestPdfService.build(
+                                  first,
+                                  monthlyRequests: requests,
+                                );
+                                await Printing.layoutPdf(
+                                  onLayout: (_) async => bytes,
+                                );
+                              } catch (error) {
+                                if (!dialogContext.mounted) return;
+                                ScaffoldMessenger.of(dialogContext)
+                                    .showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Unable to print OT form: $error'),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.print_outlined),
+                            label: const Text('Print all requests'),
+                          ),
+                          const SizedBox(width: 10),
                           OutlinedButton(
                             onPressed: () => Navigator.pop(dialogContext),
                             child: const Text('Close'),
