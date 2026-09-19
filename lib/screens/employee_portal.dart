@@ -786,9 +786,9 @@ class _EmployeePortalState extends State<EmployeePortal>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _welcome(),
-              const SizedBox(height: 12),
               if (compact) ...[
+                _welcome(),
+                const SizedBox(height: 12),
                 _salary(payroll),
                 const SizedBox(height: 12),
                 _quickAccessPanel(),
@@ -796,37 +796,24 @@ class _EmployeePortalState extends State<EmployeePortal>
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: 3, child: _salary(payroll)),
-                    const SizedBox(width: 12),
-                    Expanded(flex: 2, child: _quickAccessPanel()),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: _welcome(),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _salary(payroll),
+                          const SizedBox(height: 16),
+                          _quickAccessPanel(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Text(
-                    'Recent Payslips',
-                    style: TextStyle(
-                      color: tab == 0 ? Colors.white : Colors.black87,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        tab = 1;
-                      });
-                    },
-                    child: const Text(
-                      'View All',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ...records.take(3).map(_recentPayslipTile),
             ],
           ),
         );

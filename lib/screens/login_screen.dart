@@ -1546,24 +1546,45 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ],
         ),
-        child: Image.asset(
-          // SAME EXISTING LOGO USED BY YOUR ORIGINAL LOGIN SCREEN
-          'assets/hasani_books_logo.jpg',
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return const Center(
-              child: Text(
-                'HASANI BOOKS',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF173A78),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 24,
-                  letterSpacing: .8,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: RichText(
+                text: const TextSpan(
+                  style: TextStyle(
+                    fontSize: 36,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.2,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: 'hasani',
+                      style: TextStyle(color: Color(0xFF263B91)),
+                    ),
+                    TextSpan(
+                      text: ' BOOKS',
+                      style: TextStyle(color: Color(0xFFED1C24)),
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
+            ),
+            const SizedBox(height: 5),
+            const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Knowledge for a Better Tomorrow',
+                style: TextStyle(
+                  color: Color(0xFF08255F),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
