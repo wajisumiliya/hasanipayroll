@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EmployeePhoto extends StatelessWidget {
   const EmployeePhoto({
@@ -19,34 +18,6 @@ class EmployeePhoto extends StatelessWidget {
   final Color foregroundColor;
   final Color? borderColor;
 
-  String? _storagePath(String value) {
-    final clean = value.trim();
-    if (clean.isEmpty) return null;
-    if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
-      return clean;
-    }
-    final uri = Uri.tryParse(clean);
-    if (uri == null) return null;
-    const marker = '/storage/v1/object/public/employee-photos/';
-    final index = uri.path.indexOf(marker);
-    if (index < 0) return null;
-    final encoded = uri.path.substring(index + marker.length);
-    return Uri.decodeComponent(encoded);
-  }
-
-  Future<String?> _resolvedUrl() async {
-    final raw = photoUrl?.trim() ?? '';
-    final path = _storagePath(raw);
-    if (path == null || path.isEmpty) return null;
-    try {
-      return await Supabase.instance.client.storage
-          .from('employee-photos')
-          .createSignedUrl(path, 3600);
-    } catch (_) {
-      return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final fallback = Center(
@@ -59,6 +30,7 @@ class EmployeePhoto extends StatelessWidget {
         ),
       ),
     );
+    final url = photoUrl?.trim() ?? '';
 
     return Container(
       width: radius * 2,
@@ -75,19 +47,14 @@ class EmployeePhoto extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: FutureBuilder<String?>(
-        future: _resolvedUrl(),
-        builder: (context, snapshot) {
-          final url = snapshot.data?.trim() ?? '';
-          if (url.isEmpty) return fallback;
-          return Image.network(
-            url,
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-            errorBuilder: (_, __, ___) => fallback,
-          );
-        },
-      ),
+      child: url.isEmpty
+          ? fallback
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              errorBuilder: (_, __, ___) => fallback,
+            ),
     );
   }
 }
