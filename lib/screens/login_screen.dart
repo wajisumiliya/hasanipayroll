@@ -453,10 +453,18 @@ class _LoginScreenState extends State<LoginScreen>
         loading = false;
       });
 
-      await NotificationService.registerCurrentDevice(
-        employeeId: user.employeeId,
-        branchId: user.branchId,
-      );
+      // Request-admin accounts do not represent an employee or branch device.
+      // Notification setup must never prevent a successful login.
+      if (!user.isRequestAdmin) {
+        try {
+          await NotificationService.registerCurrentDevice(
+            employeeId: user.employeeId,
+            branchId: user.branchId,
+          );
+        } catch (error) {
+          debugPrint('Device notification registration skipped: $error');
+        }
+      }
 
       _openCorrectPortal(user);
     } catch (e) {
