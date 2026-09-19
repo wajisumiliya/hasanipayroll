@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -8,8 +9,9 @@ class DailyReportPdfService {
   static Future<Uint8List> build(Map<String, dynamic> report) async {
     const ink = PdfColor.fromInt(0xff303030);
     const blue = PdfColor.fromInt(0xff123b86);
-    const pale = PdfColor.fromInt(0xffe9e9eb);
     final document = pw.Document();
+    final logoData = await rootBundle.load('assets/hasani_books_logo.jpg');
+    final logo = pw.MemoryImage(logoData.buffer.asUint8List());
     final orsano = report['orsanco'] is Map
         ? Map<String, dynamic>.from(report['orsanco'] as Map)
         : <String, dynamic>{};
@@ -117,8 +119,6 @@ class DailyReportPdfService {
                 pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                decoration: pw.BoxDecoration(
-                    color: pale, borderRadius: pw.BorderRadius.circular(5)),
                 child: pw.Text(label,
                     style:
                         pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
@@ -175,13 +175,11 @@ class DailyReportPdfService {
         padding: const pw.EdgeInsets.all(5),
         child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
           pw.SizedBox(height: 4),
-          pw.Text('hasani BOOKS',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(fontSize: 25, fontWeight: pw.FontWeight.bold)),
+          pw.Center(child: pw.Image(logo, height: 37, fit: pw.BoxFit.contain)),
           pw.Text('DAILY REPORT',
               textAlign: pw.TextAlign.center,
               style: pw.TextStyle(
-                  color: blue, fontSize: 28, fontWeight: pw.FontWeight.bold)),
+                  color: blue, fontSize: 32, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 3),
           pw.Row(children: [
             reportInfoCell('Branch', text(report['branch_id']), flex: 2),
