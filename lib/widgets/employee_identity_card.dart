@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../models/payroll.dart';
-import 'employee_photo.dart';
 
 class EmployeeIdentityCard extends StatefulWidget {
   final Employee employee;
@@ -65,24 +64,30 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
     return LayoutBuilder(builder: (context, constraints) {
       final mobile = constraints.maxWidth < 760;
       if (!mobile) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.start,
+          spacing: 22,
+          runSpacing: 22,
           children: [
-            Expanded(child: _front()),
-            const SizedBox(width: 22),
-            Expanded(child: _back()),
+            SizedBox(width: 390, child: _front()),
+            SizedBox(width: 390, child: _back()),
           ],
         );
       }
-      final cardHeight = (constraints.maxWidth.clamp(280, 440) / .68);
+      final cardWidth = constraints.maxWidth.clamp(280.0, 370.0);
+      final cardHeight = cardWidth / .68;
       return Column(
         children: [
-          SizedBox(
-            height: cardHeight,
-            child: PageView(
-              controller: _page,
-              onPageChanged: (value) => setState(() => _side = value),
-              children: [_front(), _back()],
+          Center(
+            child: SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: PageView(
+                controller: _page,
+                onPageChanged: (value) => setState(() => _side = value),
+                children: [_front(), _back()],
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -116,34 +121,13 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         child: _shell(
           background: const _IdentityFrontBackground(),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(25, 22, 25, 25),
+            padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
             child: Column(
               children: [
                 _logo(showValues: true),
-                const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: navy, width: 1.3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: navy.withValues(alpha: .15),
-                        blurRadius: 15,
-                        offset: const Offset(0, 7),
-                      ),
-                    ],
-                  ),
-                  child: EmployeePhoto(
-                    name: employee.name,
-                    photoUrl: employee.photoUrl,
-                    radius: 78,
-                    backgroundColor: pale,
-                    foregroundColor: navy,
-                  ),
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
+                _portraitPhoto(),
+                const SizedBox(height: 10),
                 Text(
                   employee.name,
                   textAlign: TextAlign.center,
@@ -151,7 +135,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: navy,
-                    fontSize: 23,
+                    fontSize: 20,
                     height: 1.05,
                     fontWeight: FontWeight.w900,
                   ),
@@ -161,7 +145,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                   employee.employeeId,
                   style: const TextStyle(
                     color: navy,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
                   ),
@@ -169,16 +153,73 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 Container(
                   width: 74,
                   height: 3,
-                  margin: const EdgeInsets.only(top: 5, bottom: 14),
+                  margin: const EdgeInsets.only(top: 4, bottom: 10),
                   color: red,
                 ),
-                _info(Icons.person_outline, 'Designation', employee.designation),
-                _info(Icons.apartment_outlined, 'Department', employee.department),
-                _info(Icons.location_on_outlined, 'Branch', _branch),
-                _info(Icons.calendar_month_outlined, 'Joining Date', _joining),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _info(Icons.person_outline, 'Designation', employee.designation),
+                          _info(Icons.apartment_outlined, 'Department', employee.department),
+                          _info(Icons.location_on_outlined, 'Branch', _branch),
+                          _info(Icons.calendar_month_outlined, 'Joining Date', _joining),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 92,
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: navy),
+                            ),
+                            child: const Icon(Icons.qr_code_2, color: Colors.black, size: 68),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(employee.employeeId,
+                              style: const TextStyle(
+                                  color: navy, fontSize: 9, fontWeight: FontWeight.w800)),
+                          const Text('Scan to verify',
+                              style: TextStyle(color: navy, fontSize: 7)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 const Spacer(),
-                _verification(),
-                const SizedBox(height: 15),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    width: 190,
+                    child: Column(
+                      children: [
+                        Text(
+                          employee.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: navy,
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const Divider(height: 5, color: navy),
+                        const Text('EMPLOYEE SIGNATURE',
+                            style: TextStyle(color: navy, fontSize: 7, letterSpacing: 1.4)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 const Text(
                   'HASANI BOOKS SDN BHD',
                   style: TextStyle(
@@ -203,21 +244,21 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         child: _shell(
           background: const _IdentityBackBackground(),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(27, 22, 27, 25),
+            padding: const EdgeInsets.fromLTRB(25, 18, 25, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _logo(),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 const Text('OUR VALUES', style: _sectionStyle),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _value(Icons.menu_book_rounded, 'Knowledge', 'We Learn'),
                 _value(Icons.groups_rounded, 'People', 'We Grow'),
                 _value(Icons.trending_up_rounded, 'Progress', 'We Achieve'),
                 _value(Icons.handshake_outlined, 'Integrity', 'We Always Do the Right Thing'),
-                const Divider(height: 28, color: navy),
+                const Divider(height: 20, color: navy),
                 const Text('IMPORTANT NOTES', style: _sectionStyle),
-                const SizedBox(height: 11),
+                const SizedBox(height: 8),
                 _note('1. This digital card is the property of Hasani Books Sdn Bhd.'),
                 _note('2. It must be used only for authorised company identification.'),
                 _note('3. This employee card is non-transferable.'),
@@ -235,7 +276,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                   SizedBox(width: 7),
                   Text('www.hasanibooks.com', style: TextStyle(color: navy, fontSize: 11)),
                 ]),
-                const SizedBox(height: 27),
+                const SizedBox(height: 18),
                 const Center(
                   child: Text(
                     'HASANI BOOKS SDN BHD',
@@ -273,15 +314,25 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   Widget _logo({bool showValues = false}) => Row(
         children: [
           Expanded(
-            child: Image.asset(
-              'assets/hasani_books_payslip_logo.jpeg',
-              height: 58,
-              alignment: Alignment.centerLeft,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Text(
-                'hasani BOOKS',
-                style: TextStyle(color: navy, fontSize: 24, fontWeight: FontWeight.w900),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Image.asset(
+                  'assets/hasani_books_logo.jpg',
+                  height: 37,
+                  cacheWidth: 900,
+                  alignment: Alignment.centerLeft,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Text(
+                    'hasani BOOKS',
+                    style: TextStyle(color: navy, fontSize: 24, fontWeight: FontWeight.w900),
+                  ),
+                ),
+                const Text(
+                  'Knowledge for a Better Tomorrow',
+                  style: TextStyle(color: navy, fontSize: 8.5),
+                ),
+              ],
             ),
           ),
           if (showValues)
@@ -296,8 +347,53 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         ],
       );
 
+  Widget _portraitPhoto() {
+    Widget fallback() {
+      final initial = employee.name.trim().isEmpty
+          ? '?'
+          : employee.name.trim().substring(0, 1).toUpperCase();
+      return Container(
+        color: pale,
+        alignment: Alignment.center,
+        child: Text(
+          initial,
+          style: const TextStyle(color: navy, fontSize: 62, fontWeight: FontWeight.w900),
+        ),
+      );
+    }
+
+    return Container(
+      width: 165,
+      height: 150,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: navy, width: 1.3),
+        boxShadow: [
+          BoxShadow(
+            color: navy.withValues(alpha: .15),
+            blurRadius: 15,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: employee.photoUrl.trim().isEmpty
+            ? fallback()
+            : Image.network(
+                employee.photoUrl,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, __, ___) => fallback(),
+              ),
+      ),
+    );
+  }
+
   Widget _info(IconData icon, String label, String value) => Padding(
-        padding: const EdgeInsets.only(bottom: 9),
+        padding: const EdgeInsets.only(bottom: 4),
         child: Row(children: [
           SizedBox(width: 35, child: Icon(icon, color: navy, size: 23)),
           const SizedBox(width: 6),
@@ -322,7 +418,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
           borderRadius: BorderRadius.circular(13),
         ),
         child: Row(children: [
-          const Icon(Icons.qr_code_2_rounded, color: navy, size: 35),
+          const Icon(Icons.qr_code_2_rounded, color: navy, size: 30),
           const SizedBox(width: 9),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -337,13 +433,13 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
       );
 
   Widget _value(IconData icon, String title, String subtitle) => Padding(
-        padding: const EdgeInsets.only(bottom: 13),
+        padding: const EdgeInsets.only(bottom: 9),
         child: Row(children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 35,
+            height: 35,
             decoration: BoxDecoration(color: pale, borderRadius: BorderRadius.circular(11)),
-            child: Icon(icon, color: navy, size: 23),
+            child: Icon(icon, color: navy, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -357,7 +453,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
       );
 
   Widget _note(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 7),
+        padding: const EdgeInsets.only(bottom: 5),
         child: Text(text, style: TextStyle(color: navy.withValues(alpha: .88), fontSize: 10.5)),
       );
 
@@ -420,10 +516,10 @@ class _IdentityFrontBackground extends StatelessWidget {
         Positioned(
           left: -80,
           right: -10,
-          bottom: 43,
+          bottom: 76,
           child: Transform.rotate(
             angle: -.08,
-            child: Container(height: 13, color: const Color(0xFFED1C24)),
+            child: Container(height: 8, color: const Color(0xFFED1C24)),
           ),
         ),
         Positioned(

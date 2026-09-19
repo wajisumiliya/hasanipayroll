@@ -617,7 +617,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: tab == 0
-                ? dailyTheme.pageBackground
+                ? const [Color(0xFFF3F8FF), Color(0xFFFFFFFF)]
                 : [
                     dailyTheme.surfaceTint,
                     const Color(0xFFF5F7FB),
