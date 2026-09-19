@@ -18,8 +18,6 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   static const blue = Color(0xFF174CA4);
   static const red = Color(0xFFED1C24);
   static const pale = Color(0xFFEAF4FF);
-  final _page = PageController();
-  int _side = 0;
   static const _screenSecurity =
       MethodChannel('com.hasani.payroll/screen_security');
   static int _visibleSecureCards = 0;
@@ -55,66 +53,21 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   void dispose() {
     if (_visibleSecureCards > 0) _visibleSecureCards--;
     if (_visibleSecureCards == 0) _setSecureScreen(false);
-    _page.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final mobile = constraints.maxWidth < 760;
-      if (!mobile) {
-        return Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.start,
-          spacing: 22,
-          runSpacing: 22,
-          children: [
-            SizedBox(width: 390, child: _front()),
-            SizedBox(width: 390, child: _back()),
-          ],
-        );
-      }
-      final cardWidth = constraints.maxWidth.clamp(280.0, 370.0);
-      final cardHeight = cardWidth / .68;
-      return Column(
-        children: [
-          Center(
-            child: SizedBox(
-              width: cardWidth,
-              height: cardHeight,
-              child: PageView(
-                controller: _page,
-                onPageChanged: (value) => setState(() => _side = value),
-                children: [_front(), _back()],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _sideButton(0, 'Front'),
-              const SizedBox(width: 8),
-              _sideButton(1, 'Back'),
-            ],
-          ),
-        ],
+      final cardWidth = constraints.maxWidth.clamp(280.0, 390.0);
+      return Center(
+        child: SizedBox(
+          width: cardWidth,
+          child: _front(),
+        ),
       );
     });
   }
-
-  Widget _sideButton(int index, String label) => ChoiceChip(
-        label: Text(label),
-        selected: _side == index,
-        selectedColor: navy,
-        labelStyle: TextStyle(color: _side == index ? Colors.white : navy),
-        onSelected: (_) => _page.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOut,
-        ),
-      );
 
   Widget _front() => AspectRatio(
         aspectRatio: .68,
@@ -196,29 +149,6 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                   ],
                 ),
                 const Spacer(),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SizedBox(
-                    width: 190,
-                    child: Column(
-                      children: [
-                        Text(
-                          employee.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: navy,
-                            fontSize: 13,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                        const Divider(height: 5, color: navy),
-                        const Text('EMPLOYEE SIGNATURE',
-                            style: TextStyle(color: navy, fontSize: 7, letterSpacing: 1.4)),
-                      ],
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 8),
                 const Text(
                   'HASANI BOOKS SDN BHD',
@@ -464,9 +394,9 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
     letterSpacing: 1.2,
   );
   static const _miniStyle = TextStyle(
-    color: navy,
+    color: Colors.white,
     fontSize: 8,
-    fontWeight: FontWeight.w800,
+    fontWeight: FontWeight.w900,
     letterSpacing: 1.5,
   );
 }

@@ -768,8 +768,6 @@ class _EmployeePortalState extends State<EmployeePortal>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _dashboardIntro(),
-            const SizedBox(height: 18),
             _welcome(),
             const SizedBox(height: 24),
             _emptyPayroll(),
@@ -788,8 +786,6 @@ class _EmployeePortalState extends State<EmployeePortal>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _dashboardIntro(),
-              const SizedBox(height: 18),
               _welcome(),
               const SizedBox(height: 12),
               if (compact) ...[
