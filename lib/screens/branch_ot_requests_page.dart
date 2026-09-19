@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../services/app_service.dart';
+import '../widgets/employee_photo.dart';
 import 'supabase_service.dart';
 
 class BranchOtRequestsPage extends StatefulWidget {
@@ -18,6 +20,7 @@ class BranchOtRequestsPage extends StatefulWidget {
 }
 
 class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
+  final AppService service = AppService.instance;
   Future<List<Map<String, dynamic>>>? _future;
 
   @override
@@ -112,6 +115,10 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
 
   Future<void> _showForm(Map<String, dynamic> request) async {
     final status = request['status']?.toString() ?? '';
+    final employeeId = request['employee_id']?.toString() ?? '';
+    final employee = service.employeeById(employeeId);
+    final employeeName =
+        employee?.name ?? request['employee_name']?.toString() ?? employeeId;
     final approvedByController = TextEditingController(
       text: request['branch_approved_name']?.toString() ?? '',
     );
@@ -142,6 +149,12 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
                           fontSize: 32,
                           fontWeight: FontWeight.w900)),
                   const Spacer(),
+                  EmployeePhoto(
+                    name: employeeName,
+                    photoUrl: employee?.photoUrl,
+                    radius: 22,
+                  ),
+                  const SizedBox(width: 10),
                   IconButton(
                       onPressed: () => Navigator.pop(dialogContext),
                       icon: const Icon(Icons.close)),
@@ -211,7 +224,11 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
                   Expanded(
                       child: _approval(
                           'DISEMAK OLEH',
-                          request['branch_approved_name']?.toString().trim().isNotEmpty == true
+                          request['branch_approved_name']
+                                      ?.toString()
+                                      .trim()
+                                      .isNotEmpty ==
+                                  true
                               ? request['branch_approved_name'].toString()
                               : widget.branchId,
                           _stamp(request['branch_approved_at']))),
@@ -336,12 +353,22 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
                   itemBuilder: (context, index) {
                     final row = rows[index];
                     final status = row['status']?.toString() ?? '';
+                    final employeeId =
+                        row['employee_id']?.toString().trim() ?? '';
+                    final employee = service.employeeById(employeeId);
+                    final storedName =
+                        row['employee_name']?.toString().trim() ?? '';
+                    final employeeName = employee?.name ??
+                        (storedName.isEmpty ? employeeId : storedName);
                     return Card(
                       child: ListTile(
                         onTap: () => _showForm(row),
-                        leading:
-                            const CircleAvatar(child: Icon(Icons.more_time)),
-                        title: Text(row['employee_name']?.toString() ?? '-'),
+                        leading: EmployeePhoto(
+                          name: employeeName,
+                          photoUrl: employee?.photoUrl,
+                          radius: 22,
+                        ),
+                        title: Text(employeeName),
                         subtitle: Text(
                             '${row['employee_id']} • ${row['overtime_date']} • '
                             '${_duration(row['requested_minutes'])} • ${row['reason']}'),

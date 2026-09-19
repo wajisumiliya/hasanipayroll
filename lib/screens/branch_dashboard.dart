@@ -13,6 +13,7 @@ import 'supabase_service.dart';
 import 'attendance_dialog.dart';
 import 'branch_ot_requests_page.dart';
 import '../widgets/app_reload_button.dart';
+import '../widgets/employee_photo.dart';
 
 // ============================================================================
 // BRANCH PORTAL
@@ -1457,10 +1458,16 @@ class _BranchPortalState extends State<BranchPortal>
                         final id = ids[index];
                         final employeeRecords = grouped[id]!
                           ..sort((a, b) => a.date.compareTo(b.date));
-                        final name = service.findEmployee(id)?.name ?? id;
+                        final employee = service.findEmployee(id);
+                        final name = employee?.name ?? id;
                         return ExpansionTile(
                           tilePadding:
                               const EdgeInsets.symmetric(horizontal: 4),
+                          leading: EmployeePhoto(
+                            name: name,
+                            photoUrl: employee?.photoUrl,
+                            radius: 18,
+                          ),
                           title: Text(name,
                               style:
                                   const TextStyle(fontWeight: FontWeight.w800)),
@@ -1883,19 +1890,12 @@ class _BranchPortalState extends State<BranchPortal>
                             );
 
                             return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: const Color(
-                                  0xFFE7F7EF,
-                                ),
-                                child: Text(
-                                  name.isEmpty ? '?' : name[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Color(
-                                      0xFF15965D,
-                                    ),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              leading: EmployeePhoto(
+                                name: name,
+                                photoUrl: employee['photo_url']?.toString(),
+                                radius: 20,
+                                backgroundColor: const Color(0xFFE7F7EF),
+                                foregroundColor: const Color(0xFF15965D),
                               ),
                               title: Text(
                                 name,
@@ -2106,16 +2106,13 @@ class _BranchPortalState extends State<BranchPortal>
         bottom: 8,
       ),
       child: ListTile(
-        leading: CircleAvatar(
+        leading: EmployeePhoto(
+          name: employee?.name ?? record.employeeId,
+          photoUrl: employee?.photoUrl,
+          radius: 20,
           backgroundColor: color.withValues(alpha: .12),
-          child: Icon(
-            record.status == 'Present'
-                ? Icons.check
-                : record.status == 'Late'
-                    ? Icons.schedule
-                    : Icons.close,
-            color: color,
-          ),
+          foregroundColor: color,
+          borderColor: color.withValues(alpha: .35),
         ),
         title: Text(
           employee?.name ?? record.employeeId,
@@ -2307,19 +2304,12 @@ class _BranchPortalState extends State<BranchPortal>
                             );
 
                             return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: const Color(
-                                  0xFFE7F7EF,
-                                ),
-                                child: Text(
-                                  name.isEmpty ? '?' : name[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Color(
-                                      0xFF15965D,
-                                    ),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              leading: EmployeePhoto(
+                                name: name,
+                                photoUrl: employee['photo_url']?.toString(),
+                                radius: 20,
+                                backgroundColor: const Color(0xFFE7F7EF),
+                                foregroundColor: const Color(0xFF15965D),
                               ),
                               title: Text(
                                 name,
@@ -2650,12 +2640,10 @@ class _BranchPortalState extends State<BranchPortal>
         bottom: 8,
       ),
       child: ListTile(
-        leading: CircleAvatar(
-          child: Text(
-            employee.name.trim().isEmpty
-                ? '?'
-                : employee.name.trim().substring(0, 1).toUpperCase(),
-          ),
+        leading: EmployeePhoto(
+          name: employee.name,
+          photoUrl: employee.photoUrl,
+          radius: 20,
         ),
         title: Text(
           employee.name,

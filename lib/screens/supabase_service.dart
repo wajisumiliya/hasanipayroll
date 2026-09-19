@@ -1332,15 +1332,24 @@ class SupabaseService {
     int? approvedOtMinutes,
   }) async {
     try {
-      await client.from('overtime_requests').update({
-        'status': approve ? 'approved' : 'rejected',
-        'approved_minutes': approve ? approvedOtMinutes : null,
-        'reviewed_at': DateTime.now().toUtc().toIso8601String(),
-        'reviewed_by': currentUser?.id,
-        'admin_approved_at':
-            approve ? DateTime.now().toUtc().toIso8601String() : null,
-        'admin_approved_by': approve ? currentUser?.id : null,
-      }).eq('id', requestId);
+      final updated = await client
+          .from('overtime_requests')
+          .update({
+            'status': approve ? 'approved' : 'rejected',
+            'approved_minutes': approve ? approvedOtMinutes : null,
+            'reviewed_at': DateTime.now().toUtc().toIso8601String(),
+            'reviewed_by': currentUser?.id,
+            'admin_approved_at':
+                approve ? DateTime.now().toUtc().toIso8601String() : null,
+            'admin_approved_by': approve ? currentUser?.id : null,
+          })
+          .eq('id', requestId)
+          .select('id,status,approved_minutes');
+      if (updated.isEmpty) {
+        throw StateError(
+          'The selected OT request was not updated. Refresh and try again.',
+        );
+      }
     } catch (e, stackTrace) {
       debugPrint('REVIEW OT REQUEST ERROR: $e');
       debugPrint('$stackTrace');
@@ -1368,14 +1377,23 @@ class SupabaseService {
       throw ArgumentError('Branch approver name is required.');
     }
     final now = DateTime.now().toUtc().toIso8601String();
-    await client.from('overtime_requests').update({
-      'status': approve ? 'pending_admin' : 'rejected',
-      'branch_approved_at': approve ? now : null,
-      'branch_approved_by': approve ? currentUser?.id : null,
-      'branch_approved_name': approve ? approverName : null,
-      if (!approve) 'reviewed_at': now,
-      if (!approve) 'reviewed_by': currentUser?.id,
-    }).eq('id', requestId);
+    final updated = await client
+        .from('overtime_requests')
+        .update({
+          'status': approve ? 'pending_admin' : 'rejected',
+          'branch_approved_at': approve ? now : null,
+          'branch_approved_by': approve ? currentUser?.id : null,
+          'branch_approved_name': approve ? approverName : null,
+          if (!approve) 'reviewed_at': now,
+          if (!approve) 'reviewed_by': currentUser?.id,
+        })
+        .eq('id', requestId)
+        .select('id,branch_approved_name');
+    if (updated.isEmpty) {
+      throw StateError(
+        'The OT request was not updated. Please refresh and try again.',
+      );
+    }
   }
 
   static Future<List<Map<String, dynamic>>> getEmployeeOtRequests(

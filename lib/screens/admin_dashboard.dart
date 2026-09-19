@@ -1315,11 +1315,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         return staffScope == 'foreign' ? foreign : !foreign;
       }).toList();
       final allowedIds = employees
-          .map((employee) =>
-              (employee['employee_id'] ?? employee['id'] ?? '')
-                  .toString()
-                  .trim()
-                  .toUpperCase())
+          .map((employee) => (employee['employee_id'] ?? employee['id'] ?? '')
+              .toString()
+              .trim()
+              .toUpperCase())
           .toSet();
       payroll = payroll.where((row) {
         final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
@@ -2460,13 +2459,16 @@ class _AdminDashboardState extends State<AdminDashboard>
     if (staffScope != 'local' && staffScope != 'foreign') {
       return rows.map((row) => Map<String, dynamic>.from(row)).toList();
     }
-    return rows.where((employee) {
-      final foreign = (employee['address'] ?? '')
-          .toString()
-          .toUpperCase()
-          .contains('FRN');
-      return staffScope == 'foreign' ? foreign : !foreign;
-    }).map((row) => Map<String, dynamic>.from(row)).toList();
+    return rows
+        .where((employee) {
+          final foreign = (employee['address'] ?? '')
+              .toString()
+              .toUpperCase()
+              .contains('FRN');
+          return staffScope == 'foreign' ? foreign : !foreign;
+        })
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
   }
 
   Future<List<Map<String, dynamic>>> _loadScopedEmployees() async {
@@ -6209,6 +6211,292 @@ class _AdminDashboardState extends State<AdminDashboard>
     setState(() => _otRequestsFuture = null);
   }
 
+  Future<List<Map<String, dynamic>>> _employeeMonthlyOtRequests(
+    Map<String, dynamic> request,
+  ) async {
+    final employeeId = request['employee_id']?.toString().trim() ?? '';
+    final selectedDate =
+        DateTime.tryParse(request['overtime_date']?.toString() ?? '');
+    if (employeeId.isEmpty || selectedDate == null) return [request];
+    final rows = await SupabaseService.getEmployeeOtRequests(employeeId);
+    final monthly = rows
+        .where((row) {
+          final date =
+              DateTime.tryParse(row['overtime_date']?.toString() ?? '');
+          return date != null &&
+              date.year == selectedDate.year &&
+              date.month == selectedDate.month;
+        })
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList()
+      ..sort((a, b) => (a['overtime_date'] ?? '')
+          .toString()
+          .compareTo((b['overtime_date'] ?? '').toString()));
+    return monthly.isEmpty ? [request] : monthly;
+  }
+
+  Future<void> _showEmployeeOtRequestsForm(
+    List<Map<String, dynamic>> employeeRequests,
+  ) async {
+    if (employeeRequests.isEmpty) return;
+    final requests = employeeRequests
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList()
+      ..sort((a, b) => (b['overtime_date'] ?? '')
+          .toString()
+          .compareTo((a['overtime_date'] ?? '').toString()));
+    final first = requests.first;
+    final employeeId = first['employee_id']?.toString() ?? '-';
+    final employee = service.employeeById(employeeId);
+    final requestName = first['employee_name']?.toString().trim() ?? '';
+    final name =
+        employee?.name ?? (requestName.isNotEmpty ? requestName : employeeId);
+    final branch = employee?.branchId.isNotEmpty == true
+        ? employee!.branchId
+        : first['branch_id']?.toString() ?? '-';
+    final department = employee?.department.isNotEmpty == true
+        ? employee!.department
+        : first['department']?.toString() ?? '-';
+    final selectedIds = <String>{};
+    final controllers = <String, TextEditingController>{};
+    for (final request in requests) {
+      final id = request['id']?.toString() ?? '';
+      final requested =
+          int.tryParse(request['requested_minutes']?.toString() ?? '') ?? 0;
+      controllers[id] = TextEditingController(
+        text: _otMinutesText(
+          int.tryParse(request['approved_minutes']?.toString() ?? '') ??
+              requested,
+        ),
+      );
+    }
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            final pending = requests
+                .where((row) => row['status']?.toString() == 'pending_admin')
+                .toList();
+            Future<void> approveSelected() async {
+              if (selectedIds.isEmpty) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                    content: Text('Select at least one pending OT request.'),
+                  ),
+                );
+                return;
+              }
+              try {
+                final selected = requests.where(
+                  (row) => selectedIds.contains(row['id']?.toString()),
+                );
+                final approvals = <({String id, int minutes})>[];
+                for (final request in selected) {
+                  final id = request['id'].toString();
+                  final minutes = _parseOtMinutes(controllers[id]!.text);
+                  if (minutes == null) {
+                    throw Exception(
+                      'Enter approved time as HH:MM for ${request['overtime_date']}.',
+                    );
+                  }
+                  approvals.add((id: id, minutes: minutes));
+                }
+                for (final approval in approvals) {
+                  await SupabaseService.reviewOtRequest(
+                    requestId: approval.id,
+                    approve: true,
+                    approvedOtMinutes: approval.minutes,
+                  );
+                }
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                _refreshOtRequests();
+                if (mounted) {
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${approvals.length} selected OT request(s) approved.',
+                      ),
+                    ),
+                  );
+                }
+              } catch (error) {
+                if (!dialogContext.mounted) return;
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(content: Text('Unable to approve requests: $error')),
+                );
+              }
+            }
+
+            return Dialog(
+              insetPadding: const EdgeInsets.all(16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          EmployeePhoto(
+                            name: name,
+                            photoUrl: employee?.photoUrl,
+                            radius: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name,
+                                    style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800)),
+                                Text('$employeeId • $department • $branch'),
+                                Text(
+                                  '${requests.length} request(s) • ${pending.length} waiting for admin',
+                                  style: const TextStyle(color: Colors.black54),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 28),
+                      if (pending.isNotEmpty)
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => setDialogState(() {
+                                selectedIds
+                                  ..clear()
+                                  ..addAll(pending.map(
+                                      (row) => row['id']?.toString() ?? ''));
+                                selectedIds.remove('');
+                              }),
+                              icon: const Icon(Icons.select_all),
+                              label: const Text('Select all pending'),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  setDialogState(selectedIds.clear),
+                              child: const Text('Clear selection'),
+                            ),
+                          ],
+                        ),
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: requests.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final request = requests[index];
+                            final id = request['id']?.toString() ?? '';
+                            final status = request['status']?.toString() ?? '';
+                            final canSelect = status == 'pending_admin';
+                            final requested = int.tryParse(
+                                    request['requested_minutes']?.toString() ??
+                                        '') ??
+                                0;
+                            final approver = request['branch_approved_name']
+                                    ?.toString()
+                                    .trim() ??
+                                '';
+                            return Card(
+                              elevation: 0,
+                              color: canSelect
+                                  ? const Color(0xFFFFFCED)
+                                  : Colors.grey.shade50,
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Row(
+                                  children: [
+                                    Checkbox(
+                                      value: selectedIds.contains(id),
+                                      onChanged: canSelect
+                                          ? (value) => setDialogState(() {
+                                                value == true
+                                                    ? selectedIds.add(id)
+                                                    : selectedIds.remove(id);
+                                              })
+                                          : null,
+                                    ),
+                                    SizedBox(
+                                      width: 96,
+                                      child: Text(
+                                        request['overtime_date']?.toString() ??
+                                            '-',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        '${_shortTime(request['overtime_start'])}–${_shortTime(request['overtime_end'])}  •  ${request['reason'] ?? '-'}\n'
+                                        'Requested ${_otMinutesText(requested)}${approver.isEmpty ? '' : '  •  Branch approved by $approver'}',
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 135,
+                                      child: TextField(
+                                        controller: controllers[id],
+                                        enabled: canSelect,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Approved HH:MM',
+                                          isDense: true,
+                                          border: OutlineInputBorder(),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    _statusChip(status),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('Close'),
+                          ),
+                          const SizedBox(width: 10),
+                          FilledButton.icon(
+                            onPressed:
+                                selectedIds.isEmpty ? null : approveSelected,
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: Text(
+                              'Approve selected (${selectedIds.length})',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      for (final controller in controllers.values) {
+        controller.dispose();
+      }
+    }
+  }
+
   Future<void> _showOtRequestForm(Map<String, dynamic> request) async {
     final employeeId = request['employee_id']?.toString() ?? '-';
     final name = request['employee_name']?.toString() ?? employeeId;
@@ -6385,7 +6673,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                   OutlinedButton.icon(
                     onPressed: () async {
                       try {
-                        final bytes = await OtRequestPdfService.build(request);
+                        final monthlyRequests =
+                            await _employeeMonthlyOtRequests(request);
+                        final bytes = await OtRequestPdfService.build(
+                          request,
+                          monthlyRequests: monthlyRequests,
+                        );
                         await Printing.layoutPdf(onLayout: (_) async => bytes);
                       } catch (error) {
                         if (!dialogContext.mounted) return;
@@ -6444,6 +6737,132 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _otRequestsPage() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('OT Requests',
+                        style: TextStyle(
+                            fontSize: 26, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 4),
+                    Text(
+                      'Select an employee to review and approve their OT requests.',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _refreshOtRequests,
+                tooltip: 'Refresh OT requests',
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadOtRequests(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Unable to load OT requests:\n${snapshot.error}',
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+                final requests =
+                    snapshot.data ?? const <Map<String, dynamic>>[];
+                if (requests.isEmpty) {
+                  return const Center(child: Text('No OT requests.'));
+                }
+                final grouped = <String, List<Map<String, dynamic>>>{};
+                for (final request in requests) {
+                  final id = request['employee_id']?.toString().trim() ?? '';
+                  grouped.putIfAbsent(id, () => []).add(request);
+                }
+                final groups = grouped.entries.toList()
+                  ..sort((a, b) =>
+                      (service.employeeById(a.key)?.name ?? a.key).compareTo(
+                        service.employeeById(b.key)?.name ?? b.key,
+                      ));
+                return ListView.separated(
+                  itemCount: groups.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final group = groups[index];
+                    final rows = group.value;
+                    final first = rows.first;
+                    final employeeId = group.key.isEmpty ? '-' : group.key;
+                    final employee = service.employeeById(employeeId);
+                    final storedName =
+                        first['employee_name']?.toString().trim() ?? '';
+                    final name = employee?.name ??
+                        (storedName.isEmpty ? employeeId : storedName);
+                    final branch = employee?.branchId.isNotEmpty == true
+                        ? employee!.branchId
+                        : first['branch_id']?.toString() ?? '-';
+                    final department = employee?.department.isNotEmpty == true
+                        ? employee!.department
+                        : first['department']?.toString() ?? '-';
+                    final pending = rows
+                        .where((row) =>
+                            row['status']?.toString() == 'pending_admin')
+                        .length;
+                    final approved = rows
+                        .where((row) => row['status']?.toString() == 'approved')
+                        .length;
+                    return Card(
+                      elevation: 0,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        onTap: () => _showEmployeeOtRequestsForm(rows),
+                        leading: EmployeePhoto(
+                          name: name,
+                          photoUrl: employee?.photoUrl,
+                          radius: 24,
+                        ),
+                        title: Text(name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(
+                          '$employeeId • $department • $branch\n'
+                          '${rows.length} request(s) • $pending waiting for admin • $approved approved',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (pending > 0)
+                              Chip(label: Text('$pending pending')),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legacyOtRequestsPage() {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -6519,7 +6938,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                     final reason = request['reason']?.toString() ?? '-';
                     final status = request['status']?.toString() ?? 'pending';
                     final branchApprover =
-                        request['branch_approved_name']?.toString().trim() ?? '';
+                        request['branch_approved_name']?.toString().trim() ??
+                            '';
                     final canAdminApprove = status == 'pending_admin';
                     return Card(
                       elevation: 0,
@@ -9832,8 +10252,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     for (final record in employeePayroll) {
       recordsByYear.putIfAbsent(record.period.year, () => []).add(record);
     }
-    final years = recordsByYear.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final years = recordsByYear.keys.toList()..sort((a, b) => b.compareTo(a));
     final activeYear = years.contains(selectedEmployeePayslipYear)
         ? selectedEmployeePayslipYear
         : (years.isEmpty ? null : years.first);
@@ -10160,7 +10579,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         0, (total, record) => total + record.totalEarnings);
     final deduction = records.fold<double>(
         0, (total, record) => total + record.totalDeductions);
-    final net = records.fold<double>(0, (total, record) => total + record.netPay);
+    final net =
+        records.fold<double>(0, (total, record) => total + record.netPay);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -13512,9 +13932,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         .toSet();
     final payroll = results[0]
         .where((row) => _payrollPeriodMatchesMonth(row['period'], month))
-        .where((row) => service.currentUser?.staffScope == null ||
-            scopedEmployeeIds.contains(
-                _normalizeBranchValue(row['employee_id'])))
+        .where((row) =>
+            service.currentUser?.staffScope == null ||
+            scopedEmployeeIds
+                .contains(_normalizeBranchValue(row['employee_id'])))
         .map((row) => Map<String, dynamic>.from(row))
         .toList();
     final employees = <String, Map<String, dynamic>>{};
