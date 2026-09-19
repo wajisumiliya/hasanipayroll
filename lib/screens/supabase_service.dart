@@ -1410,6 +1410,80 @@ class SupabaseService {
     await client.from('overtime_requests').insert(request);
   }
 
+  static Future<void> submitLeaveRequest(Map<String, dynamic> request) async {
+    await client.from('leave_requests').insert(request);
+  }
+
+  static Future<List<Map<String, dynamic>>> getEmployeeLeaveRequests(
+      String employeeId) async {
+    final response = await client
+        .from('leave_requests')
+        .select()
+        .eq('employee_id', employeeId.trim())
+        .order('submitted_at', ascending: false);
+    return _mapList(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getBranchLeaveRequests(
+      String branchId) async {
+    final response = await client
+        .from('leave_requests')
+        .select()
+        .ilike('branch_id', branchId.trim())
+        .order('submitted_at', ascending: false);
+    return _mapList(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllLeaveRequests() async {
+    final response = await client
+        .from('leave_requests')
+        .select()
+        .order('submitted_at', ascending: false);
+    return _mapList(response);
+  }
+
+  static Future<void> reviewBranchLeaveRequest({
+    required String requestId,
+    required bool approve,
+    required String approverName,
+    String? remarks,
+  }) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final updated = await client
+        .from('leave_requests')
+        .update({
+          'status': approve ? 'pending_admin' : 'rejected',
+          'branch_remarks': remarks?.trim(),
+          'branch_approved_at': approve ? now : null,
+          'branch_approved_by': approve ? currentUser?.id : null,
+          'branch_approved_name': approve ? approverName.trim() : null,
+        })
+        .eq('id', requestId)
+        .eq('status', 'pending_branch')
+        .select('id,status');
+    if (updated.isEmpty) throw StateError('Leave request was not updated.');
+  }
+
+  static Future<void> reviewAdminLeaveRequest({
+    required String requestId,
+    required bool approve,
+    String? remarks,
+  }) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final updated = await client
+        .from('leave_requests')
+        .update({
+          'status': approve ? 'approved' : 'rejected',
+          'admin_remarks': remarks?.trim(),
+          'admin_approved_at': approve ? now : null,
+          'admin_approved_by': approve ? currentUser?.id : null,
+        })
+        .eq('id', requestId)
+        .eq('status', 'pending_admin')
+        .select('id,status');
+    if (updated.isEmpty) throw StateError('Leave request was not updated.');
+  }
+
   // ============================================================
   // ATTENDANCE BY EMPLOYEE
   // ============================================================

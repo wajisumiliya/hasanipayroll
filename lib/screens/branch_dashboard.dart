@@ -12,6 +12,7 @@ import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
 import 'branch_ot_requests_page.dart';
+import 'leave_requests_approval_page.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_photo.dart';
 
@@ -293,6 +294,7 @@ class _BranchPortalState extends State<BranchPortal>
                       2,
                     ),
                     _drawerItem('OT Requests', Icons.more_time_outlined, 3),
+                    _drawerItem('Leave Requests', Icons.flight_takeoff_outlined, 4),
                   ],
                 ),
               ),
@@ -372,6 +374,7 @@ class _BranchPortalState extends State<BranchPortal>
                   2,
                 ),
                 _sidebarItem('OT Requests', Icons.more_time_outlined, 3),
+                _sidebarItem('Leave Requests', Icons.flight_takeoff_outlined, 4),
               ],
             ),
           ),
@@ -730,6 +733,8 @@ class _BranchPortalState extends State<BranchPortal>
         return 'Employees';
       case 3:
         return 'OT Requests';
+      case 4:
+        return 'Leave Requests';
       default:
         return 'Dashboard';
     }
@@ -743,6 +748,11 @@ class _BranchPortalState extends State<BranchPortal>
         return _employeesPage();
       case 3:
         return BranchOtRequestsPage(
+          branchId: branch?.branchId ?? branchId,
+          employeeIds: _visibleEmployeeIds,
+        );
+      case 4:
+        return LeaveRequestsApprovalPage.branch(
           branchId: branch?.branchId ?? branchId,
           employeeIds: _visibleEmployeeIds,
         );

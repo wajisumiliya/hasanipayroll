@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/payroll.dart';
+import 'supabase_service.dart';
 
 class EmployeeLeaveRequestPage extends StatefulWidget {
   final Employee employee;
@@ -24,6 +25,20 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
   DateTime? _fromDate;
   DateTime? _toDate;
   String _leaveType = 'Unpaid Leave';
+  bool _saving = false;
+  Future<List<Map<String, dynamic>>>? _requests;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  void _refresh() {
+    _requests = SupabaseService.getEmployeeLeaveRequests(
+      widget.employee.employeeId,
+    );
+  }
 
   @override
   void dispose() {
@@ -61,7 +76,7 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_fromDate == null || _toDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -69,11 +84,45 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Leave form completed. Submission workflow is coming next.'),
-      ),
-    );
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await SupabaseService.submitLeaveRequest({
+        'employee_id': widget.employee.employeeId,
+        'employee_name': widget.employee.name,
+        'branch_id': widget.employee.branchId,
+        'department': widget.employee.department,
+        'designation': widget.employee.designation,
+        'leave_type': _leaveType,
+        'start_date': DateFormat('yyyy-MM-dd').format(_fromDate!),
+        'end_date': DateFormat('yyyy-MM-dd').format(_toDate!),
+        'total_days': _days,
+        'reason': _reason.text.trim(),
+        'address_during_leave': _emergencyAddress.text.trim(),
+        'emergency_phone': _emergencyPhone.text.trim(),
+      });
+      _reason.clear();
+      _emergencyAddress.clear();
+      _emergencyPhone.clear();
+      setState(() {
+        _fromDate = null;
+        _toDate = null;
+        _refresh();
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Leave request sent to your branch for approval.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to submit leave request: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -166,13 +215,19 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: FilledButton.icon(
-                      onPressed: _submit,
+                      onPressed: _saving ? null : _submit,
                       style: FilledButton.styleFrom(
                         backgroundColor: _pink,
                         padding: const EdgeInsets.symmetric(vertical: 15),
                       ),
-                      icon: const Icon(Icons.send_outlined),
-                      label: const Text('Submit Leave Application'),
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_outlined),
+                      label: Text(_saving ? 'Submitting...' : 'Submit Leave Application'),
                     ),
                   ),
                 ],
@@ -180,7 +235,106 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
             ),
           ),
         ),
+        const SizedBox(height: 22),
+        _requestHistory(),
       ],
+    );
+  }
+
+  Widget _requestHistory() {
+    return Center(
+      child: SizedBox(
+        width: double.infinity,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 850),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _pink.withValues(alpha: .25)),
+          ),
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _requests,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+              if (rows.isEmpty) {
+                return const Text('No leave applications submitted yet.');
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'My Leave Applications',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final row in rows) _historyTile(row),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _historyTile(Map<String, dynamic> row) {
+    final status = row['status']?.toString() ?? 'pending_branch';
+    final approved = status == 'approved';
+    final rejected = status == 'rejected';
+    final color = approved
+        ? Colors.green
+        : rejected
+            ? Colors.red
+            : Colors.orange;
+    final label = status == 'pending_branch'
+        ? 'Waiting for branch'
+        : status == 'pending_admin'
+            ? 'Waiting for admin'
+            : status.replaceAll('_', ' ');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: .20)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.event_note_outlined, color: color),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  row['leave_type']?.toString() ?? 'Leave',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  '${row['start_date']} - ${row['end_date']}  •  ${row['total_days']} day(s)',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Text(
+              label.toUpperCase(),
+              style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
