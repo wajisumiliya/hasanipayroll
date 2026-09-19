@@ -88,8 +88,9 @@ class SupabaseService {
         );
     // Store the object path, not a permanent public URL. EmployeePhoto resolves
     // this path to a short-lived signed URL for authenticated viewers.
-    await client.from('employees').update({'photo_url': path}).eq(
-        'employee_id', employeeId.trim());
+    await client
+        .from('employees')
+        .update({'photo_url': path}).eq('employee_id', employeeId.trim());
     return path;
   }
 
