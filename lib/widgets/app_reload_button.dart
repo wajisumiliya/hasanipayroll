@@ -31,7 +31,7 @@ class _AppReloadButtonState extends State<AppReloadButton> {
               } catch (_) {
                 if (!mounted) return;
                 setState(() => _reloading = false);
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text('Unable to reload. Please try again.'),
                   ),

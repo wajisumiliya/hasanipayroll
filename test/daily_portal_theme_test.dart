@@ -5,9 +5,7 @@ import 'package:hasani_payroll_portal/theme/daily_portal_theme.dart';
 void main() {
   test('each weekday has a distinct royal palette with a gold accent', () {
     final themes = [
-      for (var weekday = DateTime.monday;
-          weekday <= DateTime.sunday;
-          weekday++)
+      for (var weekday = DateTime.monday; weekday <= DateTime.sunday; weekday++)
         DailyPortalTheme.forWeekday(weekday),
     ];
 
