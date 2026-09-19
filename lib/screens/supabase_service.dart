@@ -1,6 +1,7 @@
 // lib/screens/supabase_service.dart
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
@@ -1526,10 +1527,14 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getDailyReports({
     String? branchId,
+    DateTime? reportDate,
   }) async {
     var query = client.from('daily_reports').select();
     if (branchId != null && branchId.trim().isNotEmpty) {
       query = query.ilike('branch_id', branchId.trim());
+    }
+    if (reportDate != null) {
+      query = query.eq('report_date', DateFormat('yyyy-MM-dd').format(reportDate));
     }
     return _mapList(await query.order('report_date', ascending: false));
   }

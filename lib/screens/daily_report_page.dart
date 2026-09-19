@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 
 import '../services/app_service.dart';
+import '../services/daily_report_pdf_service.dart';
 import 'supabase_service.dart';
 
 class DailyReportPage extends StatefulWidget {
@@ -35,7 +38,6 @@ class _DailyReportPageState extends State<DailyReportPage> {
       'report_crew',
       'recommendation',
       'reported_by',
-      'branch_stamp',
       'ors_agama',
       'ors_sk',
       'ors_sm',
@@ -50,6 +52,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
       key: TextEditingController(),
   };
   DateTime? date;
+  DateTime? reportFilterDate;
   bool saving = false;
   late Future<List<Map<String, dynamic>>> reports;
 
@@ -59,9 +62,10 @@ class _DailyReportPageState extends State<DailyReportPage> {
     reports = _load();
   }
 
-  Future<List<Map<String, dynamic>>> _load() => widget.adminMode
-      ? SupabaseService.getDailyReports()
-      : SupabaseService.getDailyReports(branchId: widget.branchId);
+  Future<List<Map<String, dynamic>>> _load() => SupabaseService.getDailyReports(
+        branchId: widget.adminMode ? null : widget.branchId,
+        reportDate: reportFilterDate,
+      );
 
   @override
   void dispose() {
@@ -99,7 +103,8 @@ class _DailyReportPageState extends State<DailyReportPage> {
         'report_crew': c['report_crew']!.text.trim(),
         'recommendation': c['recommendation']!.text.trim(),
         'reported_by': c['reported_by']!.text.trim(),
-        'branch_stamp': c['branch_stamp']!.text.trim(),
+        // The branch stamp is created from the submitting branch, not typed.
+        'branch_stamp': _stampValue(widget.branchId),
         'orsanco': {
           for (final key in [
             'agama',
@@ -140,6 +145,22 @@ class _DailyReportPageState extends State<DailyReportPage> {
     if (picked != null && mounted) setState(() => date = picked);
   }
 
+  Future<void> _pickHistoryDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: reportFilterDate ?? DateTime.now(),
+      firstDate: DateTime(DateTime.now().year - 3),
+      lastDate: DateTime(DateTime.now().year + 1),
+      helpText: 'SELECT REPORT DATE',
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        reportFilterDate = picked;
+        reports = _load();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) => ListView(
         padding: const EdgeInsets.all(18),
@@ -149,6 +170,8 @@ class _DailyReportPageState extends State<DailyReportPage> {
           Text(widget.adminMode ? 'Submitted Daily Reports' : 'Report History',
               style:
                   const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          _historyDateFilter(),
           const SizedBox(height: 12),
           FutureBuilder<List<Map<String, dynamic>>>(
             future: reports,
@@ -165,6 +188,40 @@ class _DailyReportPageState extends State<DailyReportPage> {
             },
           ),
         ],
+      );
+
+  Widget _historyDateFilter() => Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFC8D3F4)),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(children: [
+          IconButton(
+            tooltip: 'Choose report date',
+            onPressed: _pickHistoryDate,
+            icon: const Icon(Icons.calendar_month_outlined, color: blue),
+          ),
+          Expanded(
+            child: Text(
+              reportFilterDate == null
+                  ? 'All report dates - choose year, month and date'
+                  : 'Reports for ${DateFormat('dd MMMM yyyy').format(reportFilterDate!)}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          if (reportFilterDate != null)
+            IconButton(
+              tooltip: 'Show all dates',
+              onPressed: () => setState(() {
+                reportFilterDate = null;
+                reports = _load();
+              }),
+              icon: const Icon(Icons.clear),
+            ),
+        ]),
       );
 
   Widget _reportForm() => Center(
@@ -269,7 +326,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
                         child: _field('reported_by', 'REPORTED BY',
                             required: true)),
                     const SizedBox(width: 8),
-                    Expanded(child: _field('branch_stamp', 'BRANCH STAMP')),
+                    Expanded(child: _branchStamp(widget.branchId)),
                   ]),
                   const SizedBox(height: 14),
                   FilledButton.icon(
@@ -328,6 +385,47 @@ class _DailyReportPageState extends State<DailyReportPage> {
               : null,
           decoration: InputDecoration(labelText: label)));
 
+  String _stampValue(String? branchId) {
+    final branch = branchId?.trim();
+    return 'HASANI BOOKS | BRANCH: ${branch == null || branch.isEmpty ? '-' : branch}';
+  }
+
+  Widget _branchStamp(dynamic branchId) {
+    final branch = branchId?.toString().trim();
+    final label = branch == null || branch.isEmpty ? '-' : branch.toUpperCase();
+    return Container(
+      constraints: const BoxConstraints(minHeight: 58),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F8FF),
+        border: Border.all(color: blue, width: 1.5),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Text('HASANI',
+              style: TextStyle(
+                  color: blue, fontSize: 14, fontWeight: FontWeight.w900)),
+          const Text('BOOKS',
+              style: TextStyle(
+                  color: Color(0xFFE51B2A),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          const Text('BRANCH STAMP',
+              style: TextStyle(
+                  color: blue, fontSize: 8, fontWeight: FontWeight.w800)),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: blue, fontSize: 10, fontWeight: FontWeight.w900)),
+        ]),
+      ),
+    );
+  }
+
   Widget _reportTile(Map<String, dynamic> row) => Card(
         child: ListTile(
           leading: const CircleAvatar(
@@ -336,7 +434,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
           title: Text('${row['branch_id']} · ${row['report_date']}',
               style: const TextStyle(fontWeight: FontWeight.w800)),
           subtitle: Text(
-              'Reported by ${row['reported_by']}\n${row['maintenance_report'] ?? ''}',
+              'Submitted ${_malaysiaTimestamp(row['submitted_at'])}\nReported by ${row['reported_by']}\n${row['maintenance_report'] ?? ''}',
               maxLines: 3,
               overflow: TextOverflow.ellipsis),
           trailing: widget.adminMode
@@ -355,11 +453,16 @@ class _DailyReportPageState extends State<DailyReportPage> {
               title: Text('${row['branch_id']} · ${row['report_date']}'),
               content: SizedBox(
                 width: 850,
+                height: MediaQuery.sizeOf(ctx).height * .68,
                 child: SingleChildScrollView(
                   child: _adminReportForm(row, comment),
                 ),
               ),
               actions: [
+                OutlinedButton.icon(
+                    onPressed: () => _printReport(row),
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: const Text('Print PDF')),
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
                     child: const Text('Close')),
@@ -378,6 +481,31 @@ class _DailyReportPageState extends State<DailyReportPage> {
       if (mounted) setState(() => reports = _load());
     }
     comment.dispose();
+  }
+
+  Future<void> _printReport(Map<String, dynamic> row) async {
+    try {
+      final bytes = await DailyReportPdfService.build(row);
+      await Printing.layoutPdf(
+        name:
+            'daily_report_${row['branch_id'] ?? 'branch'}_${row['report_date'] ?? 'report'}.pdf',
+        format: PdfPageFormat.a4,
+        onLayout: (_) async => bytes,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to create daily report PDF: $error')),
+        );
+      }
+    }
+  }
+
+  String _malaysiaTimestamp(dynamic value) {
+    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    if (parsed == null) return '-';
+    final malaysia = parsed.toUtc().add(const Duration(hours: 8));
+    return '${DateFormat('dd/MM/yyyy hh:mm a').format(malaysia)} MYT';
   }
 
   Widget _adminReportForm(
@@ -416,6 +544,8 @@ class _DailyReportPageState extends State<DailyReportPage> {
             'DAY',
             reportDate == null ? '-' : DateFormat('EEEE').format(reportDate)
           ),
+          ('SUBMITTED AT', _malaysiaTimestamp(row['submitted_at'])),
+          ('REVIEWED AT', _malaysiaTimestamp(row['reviewed_at'])),
         ]),
         _readFour([
           ('Attendance', row['attendance']),
@@ -449,9 +579,10 @@ class _DailyReportPageState extends State<DailyReportPage> {
         _readArea('CREW', row['report_crew']),
         _bar('RECOMMENDATION / DEMAND / SALES'),
         _readArea('RECOMMENDATION', row['recommendation']),
-        _readFour([
-          ('REPORTED BY', row['reported_by']),
-          ('BRANCH STAMP', row['branch_stamp']),
+        Row(children: [
+          Expanded(child: _readValue('REPORTED BY', row['reported_by'])),
+          const SizedBox(width: 8),
+          Expanded(child: _branchStamp(row['branch_id'])),
         ]),
         _bar('COMMENT BY HQ'),
         Padding(
@@ -467,7 +598,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(
-                'Reviewed by ${row['reviewed_by'] ?? '-'} · ${row['reviewed_at']}'),
+                'Reviewed by ${row['reviewed_by'] ?? '-'} · ${_malaysiaTimestamp(row['reviewed_at'])}'),
           ),
       ]),
     );

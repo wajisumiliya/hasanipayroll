@@ -1080,9 +1080,22 @@ app.post(
         });
       }
 
-      const user = scopedAdminLogin
-        ? await findPrimaryAdminUser()
-        : await findAppUser(username);
+      const configuredAdminPassword = String(process.env.ADMIN_PASSWORD || "");
+      const user = requestAdminLogin
+        ? (configuredAdminPassword.length > 0
+            ? {
+                id: "hbreq",
+                username: "hbreq",
+                email: null,
+                role: "ADMIN",
+                isActive: true,
+                mustChangePassword: false,
+                employeeId: null,
+              }
+            : null)
+        : scopedAdminLogin
+          ? await findPrimaryAdminUser()
+          : await findAppUser(username);
 
       // Generic response prevents account enumeration.
       if (!user) {
@@ -1103,11 +1116,9 @@ app.post(
         });
       }
 
-      const matches =
-        await verifyPassword(
-          password,
-          user.passwordHash,
-        );
+      const matches = requestAdminLogin
+        ? matchesConfiguredPassword(password, configuredAdminPassword)
+        : await verifyPassword(password, user.passwordHash);
 
       if (!matches) {
         return res.status(401).json({
@@ -3814,6 +3825,14 @@ async function ensurePlayReviewerAccount() {
   }
 
   console.log("Google Play reviewer account synchronized.");
+}
+
+function matchesConfiguredPassword(enteredPassword, configuredPassword) {
+  const entered = Buffer.from(String(enteredPassword ?? ""), "utf8");
+  const configured = Buffer.from(String(configuredPassword ?? ""), "utf8");
+  return entered.length > 0 &&
+    entered.length === configured.length &&
+    crypto.timingSafeEqual(entered, configured);
 }
 async function ensureAdminAccount() {
   const email = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
