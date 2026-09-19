@@ -1,5 +1,7 @@
 // lib/models/payroll.dart
 
+import '../services/payroll_calculation_service.dart';
+
 // ============================================================================
 // PAYROLL RECORD
 // ============================================================================
@@ -154,13 +156,19 @@ class PayrollRecord {
   // TOTALS
   // ==========================================================================
 
+  double get salaryBase {
+    return PayrollCalculationService.salaryBase(
+      basicSalary: basicSalary,
+      fwSalary: fwSalary,
+    );
+  }
+
   double get totalAllowance {
-    return fwSalary + elaunKedatangan + elaunPerkhidmatan + elaunKerajinan;
+    return elaunKedatangan + elaunPerkhidmatan + elaunKerajinan;
   }
 
   double get additionalEarnings {
-    return fwSalary +
-        elaunKedatangan +
+    return elaunKedatangan +
         elaunPerkhidmatan +
         elaunKerajinan +
         overtime +
@@ -173,7 +181,20 @@ class PayrollRecord {
   }
 
   double get totalEarnings {
-    return basicSalary + additionalEarnings;
+    return PayrollCalculationService.grossEarnings(
+      basicSalary: basicSalary,
+      fwSalary: fwSalary,
+      elaunKedatangan: elaunKedatangan,
+      elaunPerkhidmatan: elaunPerkhidmatan,
+      elaunKerajinan: elaunKerajinan,
+      overtime: overtime,
+      bonus: bonus,
+      commission: commission,
+      otherEarnings: otherEarnings,
+      housingAllowance: housingAllowance,
+      travelAllowance: travelAllowance,
+      cutiUmum: cutiUmum,
+    );
   }
 
   double get statutoryDeductions {
@@ -181,16 +202,25 @@ class PayrollRecord {
   }
 
   double get totalDeductions {
-    return statutoryDeductions +
-        advanceDeduction +
-        loanDeduction +
-        unpaidLeave +
-        lateDeduction +
-        otherDeductionAmount;
+    return PayrollCalculationService.totalDeductions(
+      epfEmployee: epfEmployee,
+      socsoEmployee: socsoEmployee,
+      eisEmployee: eisEmployee,
+      pcb: pcb,
+      zakat: zakat,
+      advance: advanceDeduction,
+      loan: loanDeduction,
+      unpaid: unpaidLeave,
+      late: lateDeduction,
+      other: otherDeductionAmount,
+    );
   }
 
   double get netPay {
-    return totalEarnings - totalDeductions;
+    return PayrollCalculationService.netPay(
+      gross: totalEarnings,
+      deductions: totalDeductions,
+    );
   }
 
   double get totalEmployerContribution {
