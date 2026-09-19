@@ -1484,6 +1484,37 @@ class SupabaseService {
     if (updated.isEmpty) throw StateError('Leave request was not updated.');
   }
 
+  static Future<List<Map<String, dynamic>>> getEmployeeNotifications(
+      String employeeId) async {
+    final notifications = _mapList(await client
+        .from('app_notifications')
+        .select()
+        .eq('audience', 'employee')
+        .eq('employee_id', employeeId.trim())
+        .order('created_at', ascending: false)
+        .limit(50));
+    final reads = _mapList(await client
+        .from('notification_reads')
+        .select('notification_id')
+        .eq('employee_id', employeeId.trim()));
+    final readIds =
+        reads.map((row) => row['notification_id']?.toString()).toSet();
+    return notifications
+        .map((row) =>
+            {...row, 'is_read': readIds.contains(row['id']?.toString())})
+        .toList();
+  }
+
+  static Future<void> markEmployeeNotificationRead({
+    required String notificationId,
+    required String employeeId,
+  }) async {
+    await client.from('notification_reads').upsert({
+      'notification_id': notificationId,
+      'employee_id': employeeId.trim(),
+    }, onConflict: 'notification_id,employee_id');
+  }
+
   // ============================================================
   // ATTENDANCE BY EMPLOYEE
   // ============================================================

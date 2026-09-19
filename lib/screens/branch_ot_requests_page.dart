@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/app_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/employee_photo.dart';
 import 'supabase_service.dart';
 
@@ -83,6 +84,17 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
         requestId: request['id'].toString(),
         approve: approve,
         approvedByName: approvedByName,
+      );
+      await NotificationService.send(
+        title: approve ? 'OT Forwarded to Admin' : 'OT Request Rejected',
+        body: approve
+            ? 'Your OT request was approved by your branch and sent to admin.'
+            : 'Your OT request was rejected by your branch.',
+        audience: 'employee',
+        employeeId: request['employee_id']?.toString(),
+        type: approve ? 'approval' : 'rejection',
+      ).catchError(
+        (error) => debugPrint('OT branch notification error: $error'),
       );
       if (!mounted) return;
       setState(_refresh);

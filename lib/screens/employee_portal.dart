@@ -14,6 +14,7 @@ import '../services/pdf_service.dart';
 import 'employee_ot_request_page.dart';
 import 'employee_leave_request_page.dart';
 import 'login_screen.dart';
+import 'supabase_service.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
@@ -34,7 +35,10 @@ class _EmployeePortalState extends State<EmployeePortal>
   bool _showFinancialDetails = false;
   late final AnimationController _birthdayController;
   Timer? _birthdayCelebrationTimer;
+  Timer? _notificationRefreshTimer;
   bool _showBirthdayCelebration = false;
+  List<Map<String, dynamic>> _notifications = const [];
+  bool _notificationsLoading = false;
 
   @override
   void initState() {
@@ -52,11 +56,148 @@ class _EmployeePortalState extends State<EmployeePortal>
         setState(() => _showBirthdayCelebration = false);
       });
     }
+    _loadEmployeeNotifications();
+    _notificationRefreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _loadEmployeeNotifications(),
+    );
+  }
+
+  Future<void> _loadEmployeeNotifications() async {
+    if (employeeId.isEmpty || _notificationsLoading) return;
+    _notificationsLoading = true;
+    try {
+      final rows = await SupabaseService.getEmployeeNotifications(employeeId);
+      if (mounted) setState(() => _notifications = rows);
+    } catch (error) {
+      debugPrint('Employee notification load error: $error');
+    } finally {
+      _notificationsLoading = false;
+    }
+  }
+
+  int get _unreadNotificationCount =>
+      _notifications.where((row) => row['is_read'] != true).length;
+
+  Widget _notificationButton({Color color = const Color(0xFF08255F)}) {
+    final count = _unreadNotificationCount;
+    return IconButton(
+      tooltip: 'Notifications',
+      onPressed: _showNotifications,
+      icon: count == 0
+          ? Icon(Icons.notifications_outlined, color: color)
+          : Badge(
+              label: Text(count > 99 ? '99+' : '$count'),
+              child: Icon(Icons.notifications_outlined, color: color),
+            ),
+    );
+  }
+
+  Future<void> _showNotifications() async {
+    await _loadEmployeeNotifications();
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * .68,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Notifications',
+                          style: TextStyle(
+                              fontSize: 21, fontWeight: FontWeight.w900)),
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        await _loadEmployeeNotifications();
+                        if (sheetContext.mounted) Navigator.pop(sheetContext);
+                        if (mounted) _showNotifications();
+                      },
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: _notifications.isEmpty
+                    ? const Center(child: Text('No notifications yet.'))
+                    : ListView.separated(
+                        itemCount: _notifications.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, index) {
+                          final item = _notifications[index];
+                          final read = item['is_read'] == true;
+                          final title =
+                              item['title']?.toString() ?? 'Notification';
+                          final type =
+                              item['notification_type']?.toString() ?? '';
+                          return ListTile(
+                            tileColor: read
+                                ? null
+                                : const Color(0xFF1976E9)
+                                    .withValues(alpha: .06),
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFF1976E9)
+                                  .withValues(alpha: .10),
+                              child: Icon(
+                                type == 'payslip'
+                                    ? Icons.receipt_long_outlined
+                                    : title.toLowerCase().contains('leave')
+                                        ? Icons.flight_takeoff_outlined
+                                        : Icons.more_time_outlined,
+                                color: const Color(0xFF08255F),
+                              ),
+                            ),
+                            title: Text(title,
+                                style: TextStyle(
+                                    fontWeight: read
+                                        ? FontWeight.w600
+                                        : FontWeight.w900)),
+                            subtitle: Text(item['body']?.toString() ?? ''),
+                            trailing: read
+                                ? null
+                                : const Icon(Icons.circle,
+                                    size: 9, color: Color(0xFF1976E9)),
+                            onTap: () async {
+                              await SupabaseService
+                                  .markEmployeeNotificationRead(
+                                notificationId: item['id'].toString(),
+                                employeeId: employeeId,
+                              );
+                              if (!mounted || !sheetContext.mounted) return;
+                              Navigator.pop(sheetContext);
+                              setState(() {
+                                item['is_read'] = true;
+                                tab = type == 'payslip'
+                                    ? 1
+                                    : title.toLowerCase().contains('leave')
+                                        ? 3
+                                        : 6;
+                              });
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
     _birthdayCelebrationTimer?.cancel();
+    _notificationRefreshTimer?.cancel();
     _birthdayController.dispose();
     super.dispose();
   }
@@ -529,14 +670,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             ),
           ),
           const SizedBox(width: 22),
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: () {},
-            icon: const Badge(
-              label: Text('3'),
-              child: Icon(Icons.notifications_outlined, color: Color(0xFF08255F)),
-            ),
-          ),
+          _notificationButton(),
           _financialVisibilityButton(color: const Color(0xFF08255F)),
           const SizedBox(width: 8),
           const AppReloadButton(color: Color(0xFF08255F)),
@@ -586,12 +720,10 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   Widget _mobile() {
     final dailyTheme = _dailyTheme;
-    final mobilePages = _isLocalEmployee
-        ? const [0, 1, 2, 6, 3]
-        : const [0, 1, 2, 6];
-    final selectedMobileIndex = mobilePages.contains(tab)
-        ? mobilePages.indexOf(tab)
-        : 0;
+    final mobilePages =
+        _isLocalEmployee ? const [0, 1, 2, 6, 3] : const [0, 1, 2, 6];
+    final selectedMobileIndex =
+        mobilePages.contains(tab) ? mobilePages.indexOf(tab) : 0;
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.white,
@@ -602,6 +734,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
         title: Text(_mobileTitle()),
         actions: [
+          _notificationButton(color: Colors.white),
           _financialVisibilityButton(),
           const AppReloadButton(color: Colors.white),
           IconButton(
@@ -1056,30 +1189,31 @@ class _EmployeePortalState extends State<EmployeePortal>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$greeting,',
-                style: TextStyle(
-                  color: const Color(0xFF6079A4),
-                  fontSize: compact ? 15 : 20,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$greeting,',
+                  style: TextStyle(
+                    color: const Color(0xFF6079A4),
+                    fontSize: compact ? 15 : 20,
+                  ),
                 ),
-              ),
-              Text(
-                '${employee!.name} 👋',
-                style: TextStyle(
-                  color: const Color(0xFF08255F),
-                  fontSize: compact ? 23 : 30,
-                  fontWeight: FontWeight.w900,
+                Text(
+                  '${employee!.name} 👋',
+                  style: TextStyle(
+                    color: const Color(0xFF08255F),
+                    fontSize: compact ? 23 : 30,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Good to see you again! Here is your employee information and quick access to common features.',
-                style: const TextStyle(color: Color(0xFF6079A4), fontSize: 12),
-              ),
-            ],
-          ),
+                const SizedBox(height: 4),
+                Text(
+                  'Good to see you again! Here is your employee information and quick access to common features.',
+                  style:
+                      const TextStyle(color: Color(0xFF6079A4), fontSize: 12),
+                ),
+              ],
+            ),
             SizedBox(height: compact ? 8 : 12),
             Text(
               DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
@@ -1105,7 +1239,8 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget _mobileIdentityCard(_EmployeeDailyTheme dailyTheme) {
     final branch = employee!.branchId.trim().isEmpty ? '-' : employee!.branchId;
     final active = employee!.isActive;
-    final statusColor = active ? const Color(0xFF00A651) : const Color(0xFFED1C24);
+    final statusColor =
+        active ? const Color(0xFF00A651) : const Color(0xFFED1C24);
     return Column(
       children: [
         Row(
@@ -1136,7 +1271,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                   ),
                   const SizedBox(height: 7),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
                       color: statusColor,
                       borderRadius: BorderRadius.circular(8),
@@ -1163,10 +1299,15 @@ class _EmployeePortalState extends State<EmployeePortal>
               spacing: 10,
               runSpacing: 10,
               children: [
-                _identityField(Icons.badge_outlined, 'Employee ID', employee!.employeeId,
+                _identityField(
+                    Icons.badge_outlined, 'Employee ID', employee!.employeeId,
                     width: fieldWidth),
-                _identityField(Icons.business_outlined, 'Department',
-                    employee!.department.trim().isEmpty ? '-' : employee!.department,
+                _identityField(
+                    Icons.business_outlined,
+                    'Department',
+                    employee!.department.trim().isEmpty
+                        ? '-'
+                        : employee!.department,
                     width: fieldWidth),
                 _identityField(Icons.location_on_outlined, 'Branch', branch,
                     width: fieldWidth),
@@ -1175,7 +1316,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                   'Joining Date',
                   employee!.joiningDate == null
                       ? '-'
-                      : DateFormat('dd MMM yyyy').format(employee!.joiningDate!),
+                      : DateFormat('dd MMM yyyy')
+                          .format(employee!.joiningDate!),
                   width: fieldWidth,
                 ),
                 _identityField(Icons.email_outlined, 'Email',
@@ -1214,7 +1356,8 @@ class _EmployeePortalState extends State<EmployeePortal>
     _EmployeeDailyTheme dailyTheme, {
     bool centered = false,
   }) {
-    final alignment = centered ? CrossAxisAlignment.center : CrossAxisAlignment.start;
+    final alignment =
+        centered ? CrossAxisAlignment.center : CrossAxisAlignment.start;
     final textAlign = centered ? TextAlign.center : TextAlign.start;
     final branch = employee!.branchId.trim().isEmpty ? '-' : employee!.branchId;
     return Column(
@@ -1231,9 +1374,12 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
         const SizedBox(height: 4),
         Text(
-          employee!.designation.trim().isEmpty ? 'Employee' : employee!.designation,
+          employee!.designation.trim().isEmpty
+              ? 'Employee'
+              : employee!.designation,
           textAlign: textAlign,
-          style: TextStyle(color: dailyTheme.accent, fontWeight: FontWeight.w800),
+          style:
+              TextStyle(color: dailyTheme.accent, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -1241,7 +1387,8 @@ class _EmployeePortalState extends State<EmployeePortal>
           spacing: 22,
           runSpacing: 10,
           children: [
-            _identityField(Icons.badge_outlined, 'Employee ID', employee!.employeeId),
+            _identityField(
+                Icons.badge_outlined, 'Employee ID', employee!.employeeId),
             _identityField(
               Icons.business_outlined,
               'Department',
@@ -1302,7 +1449,8 @@ class _EmployeePortalState extends State<EmployeePortal>
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFF08255F)),
             ),
-            child: const Icon(Icons.qr_code_2, size: 48, color: Color(0xFF08255F)),
+            child:
+                const Icon(Icons.qr_code_2, size: 48, color: Color(0xFF08255F)),
           ),
           const SizedBox(height: 6),
           Text(
@@ -1340,7 +1488,8 @@ class _EmployeePortalState extends State<EmployeePortal>
           const SizedBox(height: 5),
           Text(
             active ? 'VALUED EMPLOYEE' : 'NOT ACTIVE',
-            style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w800),
+            style: TextStyle(
+                color: color, fontSize: 9, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -1367,12 +1516,14 @@ class _EmployeePortalState extends State<EmployeePortal>
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: Color(0xFF60759B), fontSize: 10),
+                  style:
+                      const TextStyle(color: Color(0xFF60759B), fontSize: 10),
                 ),
                 Text(
                   value,
                   maxLines: multiline ? 2 : 1,
-                  overflow: multiline ? TextOverflow.visible : TextOverflow.ellipsis,
+                  overflow:
+                      multiline ? TextOverflow.visible : TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF08255F),
                     fontSize: 12,
@@ -1531,7 +1682,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           const Text(
             'Quick Access',
             style: TextStyle(
-            color: Color(0xFF08255F),
+              color: Color(0xFF08255F),
               fontSize: 15,
               fontWeight: FontWeight.w800,
             ),

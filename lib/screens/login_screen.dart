@@ -1546,45 +1546,16 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                    fontSize: 36,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.2,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: 'hasani',
-                      style: TextStyle(color: Color(0xFF263B91)),
-                    ),
-                    TextSpan(
-                      text: ' BOOKS',
-                      style: TextStyle(color: Color(0xFFED1C24)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 5),
-            const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                'Knowledge for a Better Tomorrow',
-                style: TextStyle(
-                  color: Color(0xFF08255F),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+        child: Image.asset(
+          'assets/hasani_books_logo.jpg',
+          fit: BoxFit.contain,
+          cacheWidth: 1200,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, __, ___) => const Icon(
+            Icons.business_rounded,
+            color: Color(0xFF263B91),
+            size: 46,
+          ),
         ),
       ),
     );

@@ -2696,8 +2696,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             Container(
                               width: 1,
                               height: 27,
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 8),
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
                               color: accent.withValues(alpha: .20),
                             ),
                             Expanded(
@@ -7183,6 +7182,17 @@ class _AdminDashboardState extends State<AdminDashboard>
         requestId: request['id'].toString(),
         approve: approve,
         approvedOtMinutes: approvedMinutes,
+      );
+      await NotificationService.send(
+        title: approve ? 'OT Request Approved' : 'OT Request Rejected',
+        body: approve
+            ? 'Your OT request has received final admin approval.'
+            : 'Your OT request was rejected by admin.',
+        audience: 'employee',
+        employeeId: request['employee_id']?.toString(),
+        type: approve ? 'approval' : 'rejection',
+      ).catchError(
+        (error) => debugPrint('OT admin notification error: $error'),
       );
       _refreshOtRequests();
       if (mounted) {

@@ -1,12 +1,13 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 import '../screens/supabase_service.dart';
 import 'notification_presenter.dart';
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  static const String _sendFunctionName = 'dynamic-responder';
+  static const String _sendFunctionName = 'send-notification';
 
   static Future<void> initialize({
     String? employeeId,
@@ -206,5 +207,19 @@ class NotificationService {
     if (response.status < 200 || response.status >= 300) {
       throw Exception('Notification service returned ${response.status}.');
     }
+  }
+
+  static Future<void> sendPayslipAvailable({
+    required String employeeId,
+    required DateTime period,
+  }) {
+    return send(
+      title: 'New Payslip Available',
+      body:
+          'Your ${DateFormat('MMMM yyyy').format(period)} payslip is ready to view.',
+      audience: 'employee',
+      employeeId: employeeId.trim(),
+      type: 'payslip',
+    );
   }
 }

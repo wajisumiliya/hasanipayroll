@@ -5,7 +5,7 @@ create table if not exists public.leave_requests (
   branch_id text not null,
   department text,
   designation text,
-  leave_type text not null check (leave_type in ('Unpaid Leave', 'Emergency Leave', 'Replacement Leave')),
+  leave_type text not null check (leave_type in ('Annual Leave', 'Unpaid Leave', 'Emergency Leave', 'Replacement Leave')),
   start_date date not null,
   end_date date not null,
   total_days integer not null check (total_days > 0),

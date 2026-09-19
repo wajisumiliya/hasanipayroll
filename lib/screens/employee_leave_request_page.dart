@@ -208,12 +208,12 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                       ],
                     ),
                   ),
+                  _bar('BRANCH MANAGER SUPPORT AND COMMENTS'),
+                  _managerSupport(mobile),
                   _bar('FOR OFFICIAL USE'),
                   _officialUse(mobile),
-                  _bar('NOTES'),
-                  const SizedBox(height: 76),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    padding: const EdgeInsets.all(16),
                     child: FilledButton.icon(
                       onPressed: _saving ? null : _submit,
                       style: FilledButton.styleFrom(
@@ -344,9 +344,10 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
       child: Row(
         children: [
           Image.asset(
-            'assets/hasani_books_payslip_logo.jpeg',
-            width: mobile ? 120 : 190,
+            'assets/hasani_books_logo.jpg',
+            width: mobile ? 150 : 260,
             height: 58,
+            cacheWidth: 1000,
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => const Text(
               'hasani',
@@ -358,20 +359,19 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'HASANI EDAR SDN. BHD.',
+                const Text(
+                  'Managed by Hasani Edar Sdn Bhd',
                   style: TextStyle(
                     color: _pink,
-                    fontSize: mobile ? 13 : 19,
-                    fontWeight: FontWeight.w900,
-                    fontStyle: FontStyle.italic,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (!mobile)
-                  const Text(
-                    'No. 43 & 44A, Jalan Pengkalan Taman Pekan Baru, Sungai Petani, Kedah Darul Aman',
-                    style: TextStyle(color: _pink, fontSize: 9),
-                  ),
+                const SizedBox(height: 7),
+                Text(
+                  'Branch: ${widget.employee.branchId.isEmpty ? '-' : widget.employee.branchId}',
+                  style: const TextStyle(color: _pink, fontSize: 10),
+                ),
               ],
             ),
           ),
@@ -396,14 +396,19 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
       );
 
   Widget _leaveTypes(bool mobile) {
-    const types = ['Unpaid Leave', 'Emergency Leave', 'Replacement Leave'];
+    const types = [
+      'Annual Leave',
+      'Unpaid Leave',
+      'Emergency Leave',
+      'Replacement Leave',
+    ];
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: types.map((type) {
         final selected = _leaveType == type;
         return SizedBox(
-          width: mobile ? double.infinity : 250,
+          width: mobile ? double.infinity : 185,
           child: InkWell(
             onTap: () => setState(() => _leaveType = type),
             child: Container(
@@ -446,7 +451,7 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
       ('Name', widget.employee.name),
       ('Employee ID', widget.employee.employeeId),
       ('Designation', widget.employee.designation),
-      ('Department', widget.employee.department),
+      ('Weekly leave', '-'),
     ];
     return Wrap(
       spacing: 18,
@@ -479,18 +484,57 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
   Widget _dateSection(bool mobile) {
     final from = _fromDate == null ? 'Select date' : DateFormat('dd/MM/yyyy').format(_fromDate!);
     final to = _toDate == null ? 'Select date' : DateFormat('dd/MM/yyyy').format(_toDate!);
-    return Wrap(
-      spacing: 12,
-      runSpacing: 10,
-      crossAxisAlignment: WrapCrossAlignment.end,
+    final fromDay = _fromDate == null ? '-' : DateFormat('EEEE').format(_fromDate!);
+    final toDay = _toDate == null ? '-' : DateFormat('EEEE').format(_toDate!);
+    return Column(
       children: [
-        _dateButton('From date', from, () => _pickDate(from: true), mobile),
-        _dateButton('Until', to, () => _pickDate(from: false), mobile),
-        SizedBox(
-          width: mobile ? double.infinity : 130,
-          child: _readOnlyLine('Number of days', _days == 0 ? '-' : '$_days'),
+        Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.end,
+          children: [
+            _dateButton('From date', from, () => _pickDate(from: true), mobile),
+            _dateButton('Until', to, () => _pickDate(from: false), mobile),
+            SizedBox(
+              width: mobile ? double.infinity : 130,
+              child: _readOnlyLine('Number of days', _days == 0 ? '-' : '$_days'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(child: _readOnlyLine('Day', fromDay)),
+            const SizedBox(width: 18),
+            Expanded(child: _readOnlyLine('Until', toDay)),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _managerSupport(bool mobile) {
+    return Padding(
+      padding: EdgeInsets.all(mobile ? 14 : 22),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            height: 92,
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: _pink)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: _readOnlyLine('Date', '')),
+              const SizedBox(width: 24),
+              Expanded(child: _readOnlyLine('Branch Manager signature and stamp', '')),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -555,13 +599,13 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
             ],
           ),
           const SizedBox(height: 15),
-          _readOnlyLine('Approved leave', ''),
+          _readOnlyLine('Reason / official remarks', ''),
           const SizedBox(height: 20),
           Row(
             children: [
               Expanded(child: _readOnlyLine('Date', '')),
               const SizedBox(width: 24),
-              Expanded(child: _readOnlyLine('Head of Department', '')),
+              Expanded(child: _readOnlyLine('HQ Manager', '')),
             ],
           ),
         ],
