@@ -334,7 +334,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                                     Color(0xFFFFE4EA),
                                     Color(0xFFEDE4FF),
                                   ]
-                                : dailyTheme.pageBackground)
+                                : const [Color(0xFFF3F8FF), Color(0xFFFFFFFF)])
                             : [
                                 dailyTheme.surfaceTint.withValues(alpha: .96),
                                 const Color(0xFFF5F7FB),
@@ -357,81 +357,38 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
 
   Widget _desktopSidebar() {
-    final dailyTheme = _dailyTheme;
     return Container(
-      width: 250,
-      decoration: BoxDecoration(
+      width: 272,
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: dailyTheme.sidebar,
-        ),
-        border: Border(
-          right: BorderSide(
-            color: dailyTheme.accent.withValues(alpha: .35),
-          ),
+          colors: [Color(0xFF123E70), Color(0xFF06294F)],
         ),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 25),
-          Image.asset(
-            'assets/hasani_books_logo.jpg',
-            width: 160,
-            errorBuilder: (context, error, stackTrace) {
-              return const Text(
-                'HASANI BOOKS',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF2D55D8),
-                ),
-              );
-            },
+          Container(
+            height: 90,
+            width: double.infinity,
+            color: Colors.white,
+            alignment: Alignment.center,
+            child: Image.asset('assets/hasani_books_logo.jpg', width: 210),
           ),
-          const SizedBox(height: 28),
-          const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 20,
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'EMPLOYEE PORTAL',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D55D8),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           _side(
             'Dashboard',
             Icons.dashboard_outlined,
             0,
           ),
           _side(
-            'My Payslips',
-            Icons.receipt_long_outlined,
-            1,
-          ),
-          _side(
-            'Attendance',
-            Icons.calendar_month_outlined,
-            2,
-          ),
-          _side(
-            'OT Request',
-            Icons.more_time_outlined,
-            6,
-          ),
-          _side(
             'Profile',
             Icons.person_outline,
             3,
           ),
+          _side('Attendance', Icons.calendar_month_outlined, 2),
+          _side('OT Request', Icons.more_time_outlined, 6),
+          _side('Payslip', Icons.receipt_long_outlined, 1),
           _side(
             'Bank Information',
             Icons.account_balance_outlined,
@@ -443,7 +400,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             5,
           ),
           const Spacer(),
-          const Divider(),
+          const Divider(color: Colors.white24),
           _side(
             'Logout',
             Icons.logout,
@@ -454,7 +411,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             child: Text(
               '© 2026 Hasani Books',
               style: TextStyle(
-                color: Colors.black45,
+                color: Colors.white54,
                 fontSize: 11,
               ),
             ),
@@ -482,17 +439,13 @@ class _EmployeePortalState extends State<EmployeePortal>
       ),
       child: ListTile(
         selected: selected,
-        selectedTileColor: _dailyTheme.accent.withValues(alpha: .18),
+        selectedTileColor: const Color(0xFF1976E9),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
         leading: Icon(
           icon,
-          color: selected
-              ? _dailyTheme.accent
-              : title == 'Logout'
-                  ? Colors.red
-                  : Colors.black54,
+          color: title == 'Logout' ? Colors.red.shade200 : Colors.white,
         ),
         title: Text(
           title,
@@ -502,7 +455,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 ? Colors.red
                 : selected
                     ? Colors.white
-                    : Colors.white70,
+                    : Colors.white.withValues(alpha: .86),
           ),
         ),
         onTap: () {
@@ -524,51 +477,60 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
 
   Widget _desktopTopBar() {
-    final dailyTheme = _dailyTheme;
     return Container(
-      height: 78,
+      height: 74,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: dailyTheme.header),
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF07030D).withValues(alpha: .42),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF08255F).withValues(alpha: .08),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
-        border: Border(
-          bottom: BorderSide(
-            color: dailyTheme.accent.withValues(alpha: .30),
-          ),
-        ),
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: 28,
       ),
       child: Row(
         children: [
-          Text(
-            _pageTitle().toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.4,
+          Expanded(
+            child: Container(
+              height: 44,
+              constraints: const BoxConstraints(maxWidth: 700),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F5FC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const TextField(
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF7890B5)),
+                  hintText: 'Search anything...',
+                  hintStyle: TextStyle(color: Color(0xFF9AAECD)),
+                ),
+              ),
             ),
           ),
-          const Spacer(),
-          _financialVisibilityButton(color: Colors.white70),
-          const SizedBox(width: 8),
-          const AppReloadButton(color: Colors.white70),
-          const SizedBox(width: 8),
-          PortalDayIndicator(theme: DailyPortalTheme.today()),
           const SizedBox(width: 22),
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: () {},
+            icon: const Badge(
+              label: Text('3'),
+              child: Icon(Icons.notifications_outlined, color: Color(0xFF08255F)),
+            ),
+          ),
+          _financialVisibilityButton(color: const Color(0xFF08255F)),
+          const SizedBox(width: 8),
+          const AppReloadButton(color: Color(0xFF08255F)),
+          const SizedBox(width: 16),
           EmployeePhoto(
             name: employee!.name,
             photoUrl: employee!.photoUrl,
             radius: 20,
-            backgroundColor: _dailyTheme.accent.withValues(alpha: .20),
-            foregroundColor: Colors.white,
+            backgroundColor: const Color(0xFFE8F1FF),
+            foregroundColor: const Color(0xFF08255F),
           ),
           const SizedBox(width: 10),
           Column(
@@ -578,7 +540,7 @@ class _EmployeePortalState extends State<EmployeePortal>
               Text(
                 employee!.name,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF08255F),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -586,7 +548,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 employee!.employeeId,
                 style: const TextStyle(
                   fontSize: 11,
-                  color: Colors.white60,
+                  color: Color(0xFF60759B),
                 ),
               ),
             ],
@@ -595,7 +557,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           IconButton(
             onPressed: logout,
             tooltip: 'Logout',
-            icon: const Icon(Icons.logout, color: Colors.white70),
+            icon: const Icon(Icons.expand_more, color: Color(0xFF08255F)),
           ),
         ],
       ),
@@ -787,6 +749,8 @@ class _EmployeePortalState extends State<EmployeePortal>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _dashboardIntro(),
+            const SizedBox(height: 18),
             _welcome(),
             const SizedBox(height: 24),
             _emptyPayroll(),
@@ -805,6 +769,8 @@ class _EmployeePortalState extends State<EmployeePortal>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _dashboardIntro(),
+              const SizedBox(height: 18),
               _welcome(),
               const SizedBox(height: 12),
               if (compact) ...[
@@ -889,14 +855,6 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   Widget _welcome() {
     final dailyTheme = _dailyTheme;
-    final hour = DateTime.now().hour;
-    final greeting = _isBirthdayToday
-        ? 'Happy Birthday'
-        : hour < 12
-            ? 'Good morning'
-            : hour < 18
-                ? 'Good afternoon'
-                : 'Good evening';
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -978,7 +936,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                         children: [
                           _identityPhoto(dailyTheme),
                           const SizedBox(height: 16),
-                          _identityInformation(greeting, dailyTheme, centered: true),
+                          _identityInformation(dailyTheme, centered: true),
                           const SizedBox(height: 16),
                           _identityVerification(),
                         ],
@@ -988,7 +946,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                         children: [
                           _identityPhoto(dailyTheme),
                           const SizedBox(width: 24),
-                          Expanded(child: _identityInformation(greeting, dailyTheme)),
+                          Expanded(child: _identityInformation(dailyTheme)),
                           const SizedBox(width: 20),
                           _identityVerification(),
                         ],
@@ -998,6 +956,67 @@ class _EmployeePortalState extends State<EmployeePortal>
           ),
         );
       },
+    );
+  }
+
+  Widget _dashboardIntro() {
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 18
+            ? 'Good afternoon'
+            : 'Good evening';
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$greeting,',
+                style: const TextStyle(
+                  color: Color(0xFF6079A4),
+                  fontSize: 20,
+                ),
+              ),
+              Text(
+                '${employee!.name} 👋',
+                style: const TextStyle(
+                  color: Color(0xFF08255F),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Good to see you again! Here is your employee information and quick access to common features.',
+                style: TextStyle(color: Color(0xFF6079A4)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
+              style: const TextStyle(color: Color(0xFF526C99)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '“${_dailyTheme.quote}”',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Color(0xFF6079A4),
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1020,7 +1039,6 @@ class _EmployeePortalState extends State<EmployeePortal>
   }
 
   Widget _identityInformation(
-    String greeting,
     _EmployeeDailyTheme dailyTheme, {
     bool centered = false,
   }) {
@@ -1031,7 +1049,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       crossAxisAlignment: alignment,
       children: [
         Text(
-          '$greeting, ${employee!.name}',
+          employee!.name,
           textAlign: textAlign,
           style: const TextStyle(
             color: Color(0xFF17233C),
@@ -1149,7 +1167,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           ),
           const SizedBox(height: 5),
           Text(
-            active ? 'VALUED MEMBER' : 'NOT ACTIVE',
+            active ? 'VALUED EMPLOYEE' : 'NOT ACTIVE',
             style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w800),
           ),
         ],
@@ -1202,8 +1220,8 @@ class _EmployeePortalState extends State<EmployeePortal>
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: tab == 0 ? const Color(0xE6102A43) : Colors.white,
-        borderRadius: BorderRadius.circular(tab == 0 ? 18 : 14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: tab == 0
             ? Border.all(color: _dailyTheme.accent.withValues(alpha: .38))
             : null,
@@ -1243,7 +1261,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 child: _metric(
                   'Gross Earnings',
                   payroll.totalEarnings,
-                  tab == 0 ? Colors.white : Colors.black,
+                  const Color(0xFF08255F),
                 ),
               ),
               Expanded(
@@ -1279,8 +1297,8 @@ class _EmployeePortalState extends State<EmployeePortal>
       children: [
         Text(
           title,
-          style: TextStyle(
-            color: tab == 0 ? Colors.white60 : Colors.black54,
+          style: const TextStyle(
+            color: Colors.black54,
             fontSize: 12,
           ),
         ),
@@ -1322,7 +1340,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xE6102A43),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: _dailyTheme.accent.withValues(alpha: .38),
@@ -1334,7 +1352,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           const Text(
             'Quick Access',
             style: TextStyle(
-              color: Colors.white,
+            color: Color(0xFF08255F),
               fontSize: 15,
               fontWeight: FontWeight.w800,
             ),
@@ -1380,7 +1398,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xE60B2239),
+          color: const Color(0xFFF2F7FF),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: _dailyTheme.accent.withValues(alpha: .30),
@@ -1400,7 +1418,7 @@ class _EmployeePortalState extends State<EmployeePortal>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: Colors.white,
+                color: Color(0xFF08255F),
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
