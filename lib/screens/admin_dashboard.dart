@@ -1866,7 +1866,10 @@ class _AdminDashboardState extends State<AdminDashboard>
               0,
               (sum, row) => sum + _number(row[key]),
             );
-        final basicPay = sumField('basic_salary') + sumField('fw_salary');
+        final basicPay = periodPayroll.fold<double>(
+          0,
+          (sum, row) => sum + _payrollSalaryBase(row),
+        );
         final allowances = periodPayroll.fold<double>(
           0,
           (sum, row) =>
@@ -11514,15 +11517,16 @@ class _AdminDashboardState extends State<AdminDashboard>
 // PAYROLL TOTAL
 // ============================================================================
 
+  double _payrollSalaryBase(Map<String, dynamic> payroll) {
+    final fwSalary = _payrollNumber(payroll['fw_salary']);
+    if (fwSalary != 0) return fwSalary;
+    return _payrollNumber(payroll['basic_salary']);
+  }
+
   double _payrollTotalEarnings(
     Map<String, dynamic> payroll,
   ) {
-    return _payrollNumber(
-          payroll['basic_salary'],
-        ) +
-        _payrollNumber(
-          payroll['fw_salary'],
-        ) +
+    return _payrollSalaryBase(payroll) +
         _payrollNumber(
           payroll['elaun_kedatangan'],
         ) +
@@ -12928,7 +12932,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         final basicSalary = money(payroll['basic_salary']);
         final fwSalary = money(payroll['fw_salary']);
-        final totalSalary = basicSalary + fwSalary;
+        final totalSalary = fwSalary != 0 ? fwSalary : basicSalary;
 
         final elaunKedatangan = money(payroll['elaun_kedatangan']);
         final elaunPerkhidmatan = money(payroll['elaun_perkhidmatan']);
@@ -13398,8 +13402,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           final elaunKerajinan = money(payroll['elaun_kerajinan']);
           final overtime = money(payroll['overtime']);
           final cutiUmum = money(payroll['cuti_umum']);
-          final jumlah = basic +
-              fw +
+          final jumlah = (fw != 0 ? fw : basic) +
               elaunKedatangan +
               elaunPerkhidmatan +
               elaunKerajinan +
@@ -13699,8 +13702,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
           final employee = employeeMap[employeeId] ?? <String, dynamic>{};
           final salary = salaryMap[employeeId] ?? <String, dynamic>{};
-          final basic =
-              money(payroll['basic_salary']) + money(payroll['fw_salary']);
+          final basic = money(payroll['fw_salary']) != 0
+              ? money(payroll['fw_salary'])
+              : money(payroll['basic_salary']);
           final attendance = money(payroll['elaun_kedatangan']);
           final service = money(payroll['elaun_perkhidmatan']);
           final diligence = money(payroll['elaun_kerajinan']);
@@ -15299,10 +15303,17 @@ class _AdminDashboardState extends State<AdminDashboard>
         // Calculate gross manually when the database
         // does not contain a gross amount.
 
-        final gross = money(row['basic_salary']) +
-            money(row['basicSalary']) +
-            money(row['fw_salary']) +
-            money(row['fwSalary']) +
+        final snakeBasic = money(row['basic_salary']);
+        final camelBasic = money(row['basicSalary']);
+        final snakeFw = money(row['fw_salary']);
+        final camelFw = money(row['fwSalary']);
+        final salaryBase = snakeFw != 0
+            ? snakeFw
+            : (camelFw != 0
+                ? camelFw
+                : (snakeBasic != 0 ? snakeBasic : camelBasic));
+
+        final gross = salaryBase +
             money(row['food_allowance']) +
             money(row['foodAllowance']) +
             money(row['other_allowance']) +
