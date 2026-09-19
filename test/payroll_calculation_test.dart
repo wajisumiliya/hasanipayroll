@@ -101,16 +101,16 @@ void main() {
   test(
     'statutory deductions are included without affecting employer amounts',
     () {
-    expect(
-      PayrollCalculationService.totalDeductions(
-        epfEmployee: 187,
-        socsoEmployee: 9.75,
-        eisEmployee: 3.40,
-        pcb: 25,
-        zakat: 15,
-      ),
-      240.15,
-    );
+      expect(
+        PayrollCalculationService.totalDeductions(
+          epfEmployee: 187,
+          socsoEmployee: 9.75,
+          eisEmployee: 3.40,
+          pcb: 25,
+          zakat: 15,
+        ),
+        240.15,
+      );
     },
   );
 }
