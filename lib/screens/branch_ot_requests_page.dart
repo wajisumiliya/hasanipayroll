@@ -70,11 +70,16 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
     }
   }
 
-  Future<void> _review(Map<String, dynamic> request, bool approve) async {
+  Future<void> _review(
+    Map<String, dynamic> request,
+    bool approve, {
+    String? approvedByName,
+  }) async {
     try {
       await SupabaseService.reviewBranchOtRequest(
         requestId: request['id'].toString(),
         approve: approve,
+        approvedByName: approvedByName,
       );
       if (!mounted) return;
       setState(_refresh);
@@ -107,6 +112,9 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
 
   Future<void> _showForm(Map<String, dynamic> request) async {
     final status = request['status']?.toString() ?? '';
+    final approvedByController = TextEditingController(
+      text: request['branch_approved_name']?.toString() ?? '',
+    );
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
@@ -201,14 +209,29 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
                           request['employee_name']?.toString() ?? '-',
                           _stamp(request['submitted_at']))),
                   Expanded(
-                      child: _approval('DISEMAK OLEH', widget.branchId,
+                      child: _approval(
+                          'DISEMAK OLEH',
+                          request['branch_approved_name']?.toString().trim().isNotEmpty == true
+                              ? request['branch_approved_name'].toString()
+                              : widget.branchId,
                           _stamp(request['branch_approved_at']))),
                   Expanded(
                       child: _approval('DISAHKAN OLEH', 'ADMIN',
                           _stamp(request['admin_approved_at']))),
                 ]),
                 const SizedBox(height: 14),
-                if (status == 'pending_branch')
+                if (status == 'pending_branch') ...[
+                  TextField(
+                    controller: approvedByController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Approved by',
+                      hintText: 'Enter approver name',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                     OutlinedButton(
                       onPressed: () async {
@@ -220,18 +243,35 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed: () async {
+                        final approvedByName = approvedByController.text.trim();
+                        if (approvedByName.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please enter the name of the person approving this request.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
                         Navigator.pop(dialogContext);
-                        await _review(request, true);
+                        await _review(
+                          request,
+                          true,
+                          approvedByName: approvedByName,
+                        );
                       },
                       child: const Text('Branch Approve'),
                     ),
                   ]),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
+    approvedByController.dispose();
   }
 
   Widget _approval(String title, String name, String stamp) => Container(

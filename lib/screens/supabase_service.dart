@@ -1361,12 +1361,18 @@ class SupabaseService {
   static Future<void> reviewBranchOtRequest({
     required String requestId,
     required bool approve,
+    String? approvedByName,
   }) async {
+    final approverName = approvedByName?.trim() ?? '';
+    if (approve && approverName.isEmpty) {
+      throw ArgumentError('Branch approver name is required.');
+    }
     final now = DateTime.now().toUtc().toIso8601String();
     await client.from('overtime_requests').update({
       'status': approve ? 'pending_admin' : 'rejected',
       'branch_approved_at': approve ? now : null,
       'branch_approved_by': approve ? currentUser?.id : null,
+      'branch_approved_name': approve ? approverName : null,
       if (!approve) 'reviewed_at': now,
       if (!approve) 'reviewed_by': currentUser?.id,
     }).eq('id', requestId);

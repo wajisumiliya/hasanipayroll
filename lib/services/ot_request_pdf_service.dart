@@ -140,7 +140,7 @@ class OtRequestPdfService {
                               height: 42)),
                       pw.Expanded(
                           child: cell(
-                              'DISEMAK OLEH\n${v('branch_id')}\n${v('branch_approved_at', 'Waiting')}',
+                              'DISEMAK OLEH\n${v('branch_approved_name', v('branch_id'))}\n${v('branch_approved_at', 'Waiting')}',
                               header: true,
                               height: 42)),
                       pw.Expanded(

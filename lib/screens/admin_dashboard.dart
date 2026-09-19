@@ -6371,7 +6371,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           height: 80)),
                   Expanded(
                       child: cell(
-                          'DISEMAK OLEH\n$branch\n${stamp(request['branch_approved_at'])}',
+                          'DISEMAK OLEH\n${request['branch_approved_name']?.toString().trim().isNotEmpty == true ? request['branch_approved_name'] : branch}\n${stamp(request['branch_approved_at'])}',
                           header: true,
                           height: 80)),
                   Expanded(
@@ -6518,6 +6518,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                         (request['overtime_end'] ?? '-').toString();
                     final reason = request['reason']?.toString() ?? '-';
                     final status = request['status']?.toString() ?? 'pending';
+                    final branchApprover =
+                        request['branch_approved_name']?.toString().trim() ?? '';
                     final canAdminApprove = status == 'pending_admin';
                     return Card(
                       elevation: 0,
@@ -6528,7 +6530,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                         title: Text(employeeName,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text('$employeeId • $branchId • $date'),
+                        subtitle: Text(
+                          '$employeeId • $branchId • $date'
+                          '${branchApprover.isEmpty ? '' : '\nApproved by: $branchApprover'}',
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
