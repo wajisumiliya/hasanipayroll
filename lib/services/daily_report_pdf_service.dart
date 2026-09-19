@@ -33,6 +33,15 @@ class DailyReportPdfService {
       return date == null ? '-' : names[date.weekday - 1];
     }
 
+    String malaysianDateTime(dynamic value) {
+      final parsed = DateTime.tryParse(value?.toString() ?? '');
+      if (parsed == null) return '-';
+      final local = parsed.isUtc ? parsed.add(const Duration(hours: 8)) : parsed;
+      String two(int number) => number.toString().padLeft(2, '0');
+      return '${two(local.day)}/${two(local.month)}/${local.year} '
+          '${two(local.hour)}:${two(local.minute)} MYT';
+    }
+
     pw.Widget section(String label) => pw.Container(
           height: 19,
           alignment: pw.Alignment.center,
@@ -82,10 +91,10 @@ class DailyReportPdfService {
                     color: pale, borderRadius: pw.BorderRadius.circular(5)),
                 child: pw.Text(label,
                     style:
-                        pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                        pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
               ),
               pw.SizedBox(height: 6),
-              pw.Text(text(value), style: const pw.TextStyle(fontSize: 8)),
+              pw.Text(text(value), style: const pw.TextStyle(fontSize: 10)),
             ]),
           ),
         );
@@ -145,17 +154,26 @@ class DailyReportPdfService {
                   color: blue, fontSize: 28, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 3),
           pw.Container(
-            height: 20,
+            height: 39,
             color: ink,
             padding: const pw.EdgeInsets.symmetric(horizontal: 7),
-            child: pw.Row(children: [
-              pw.Text('Date:', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(width: 6),
-              pw.Container(width: 125, height: 12, color: PdfColors.white, child: pw.Text(text(report['report_date']), style: const pw.TextStyle(fontSize: 7))),
-              pw.SizedBox(width: 12),
-              pw.Text('Day:', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(width: 6),
-              pw.Container(width: 125, height: 12, color: PdfColors.white, child: pw.Text(dayName(), style: const pw.TextStyle(fontSize: 7))),
+            child: pw.Column(children: [
+              pw.Row(children: [
+                pw.Text('Branch: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.Expanded(child: pw.Text(text(report['branch_id']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
+                pw.Text('Report Date: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(width: 88, child: pw.Text(text(report['report_date']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
+                pw.SizedBox(width: 10),
+                pw.Text('Day: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(width: 60, child: pw.Text(dayName(), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
+              ]),
+              pw.SizedBox(height: 3),
+              pw.Row(children: [
+                pw.Text('Reported By: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.Expanded(child: pw.Text(text(report['reported_by']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
+                pw.Text('Submitted At: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(width: 130, child: pw.Text(malaysianDateTime(report['submitted_at']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
+              ]),
             ]),
           ),
           pw.Row(children: [
@@ -172,7 +190,7 @@ class DailyReportPdfService {
             inlineField('To Service or Repair', report['service_repair']),
           ]),
           section('MAINTENANCE/ELECTRICAL/EQUIPMENT'),
-          reportArea('Report:', report['maintenance_report'], flex: 2),
+          reportArea('Report:', report['maintenance_report'], flex: 3),
           section('ORSANO'),
           pw.Row(children: [
             orsanoCell('Agama', orsano['agama']),
@@ -186,8 +204,8 @@ class DailyReportPdfService {
             orsanoCell('Quran', orsano['quran']),
             orsanoCell('Others', orsano['others']),
           ]),
-          reportArea('Report Crew:', report['report_crew'], flex: 2),
-          reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 3),
+          reportArea('Report Crew:', report['report_crew'], flex: 3),
+          reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 1),
           pw.Row(children: [
             bottomBox(
               'Reported By:',
@@ -211,6 +229,28 @@ class DailyReportPdfService {
                   textAlign: pw.TextAlign.center,
                   style: pw.TextStyle(
                       fontSize: 8, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+            ),
+            bottomBox(
+              'Reviewed By:',
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      text(report['reviewed_by']) == '-'
+                          ? 'Nur Muhammad Faizal'
+                          : text(report['reviewed_by']),
+                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.SizedBox(height: 5),
+                    pw.Text('Reviewed At:',
+                        style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(malaysianDateTime(report['reviewed_at']),
+                        style: const pw.TextStyle(fontSize: 8)),
+                  ],
                 ),
               ),
             ),
