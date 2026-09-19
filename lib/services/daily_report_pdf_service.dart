@@ -25,6 +25,13 @@ class DailyReportPdfService {
       return '${DateFormat('dd/MM/yyyy hh:mm a').format(malaysia)} MYT';
     }
 
+    String reviewerName(dynamic input) {
+      final name = value(input, '');
+      return name.isEmpty || name.toLowerCase() == 'admin'
+          ? 'Nur Muhammad Faizal'
+          : name;
+    }
+
     pw.Widget heading(String text) => pw.Container(
           width: double.infinity,
           color: blue,
@@ -80,6 +87,45 @@ class DailyReportPdfService {
           ],
         );
 
+    pw.Widget counter(String label, dynamic input) => pw.Expanded(
+          child: pw.Container(
+            height: 31,
+            alignment: pw.Alignment.center,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            decoration: pw.BoxDecoration(border: pw.Border.all(color: blue)),
+            child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text(label,
+                      textAlign: pw.TextAlign.center,
+                      maxLines: 1,
+                      style: pw.TextStyle(
+                          color: blue,
+                          fontSize: 4.5,
+                          fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 2),
+                  pw.Text(value(input),
+                      style: pw.TextStyle(
+                          color: blue,
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold)),
+                ]),
+          ),
+        );
+
+    pw.Widget orsancoLine() => pw.Row(children: [
+          counter('Agama', orsanco['agama']),
+          counter('S.K', orsanco['sk']),
+          counter('S.M', orsanco['sm']),
+          counter('Umum', orsanco['umum']),
+          counter('Novel', orsanco['novel']),
+          counter('Alat Tulis', orsanco['alat_tulis']),
+          counter('Tadika', orsanco['tadika']),
+          counter('Kanak Kanak', orsanco['kanak']),
+          counter('Quran', orsanco['quran']),
+          counter('Others', orsanco['others']),
+        ]);
+
     document.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(22),
@@ -124,7 +170,7 @@ class DailyReportPdfService {
               ('BRANCH', report['branch_id']),
               ('REPORT DATE', report['report_date']),
               ('REPORTED BY', report['reported_by']),
-              ('REVIEWED BY', report['reviewed_by']),
+              ('SUBMITTED AT', malaysiaTime(report['submitted_at'])),
             ]),
             pw.SizedBox(height: 7),
             heading('ATTENDANCE'),
@@ -144,25 +190,8 @@ class DailyReportPdfService {
             ]),
             area('MAINTENANCE / ELECTRICAL / EQUIPMENT', report['maintenance_report']),
             pw.SizedBox(height: 7),
-            heading('ORSANCO'),
-            four([
-              ('Agama', orsanco['agama']),
-              ('S.K', orsanco['sk']),
-              ('S.M', orsanco['sm']),
-              ('Umum', orsanco['umum']),
-            ]),
-            four([
-              ('Novel', orsanco['novel']),
-              ('Alat Tulis', orsanco['alat_tulis']),
-              ('Tadika', orsanco['tadika']),
-              ('Kanak Kanak', orsanco['kanak']),
-            ]),
-            four([
-              ('Quran', orsanco['quran']),
-              ('Others', orsanco['others']),
-              ('Branch Stamp', 'HASANI BOOKS - ${value(report['branch_id'])}'),
-              ('Reviewed At', malaysiaTime(report['reviewed_at'])),
-            ]),
+            heading('ORSANO'),
+            orsancoLine(),
             pw.SizedBox(height: 7),
             heading('REPORT CREW'),
             area('CREW', report['report_crew']),
@@ -172,6 +201,12 @@ class DailyReportPdfService {
             pw.SizedBox(height: 7),
             heading('COMMENT BY HQ'),
             area('HQ COMMENT', report['hq_comment']),
+            pw.SizedBox(height: 7),
+            four([
+              ('BRANCH STAMP', 'HASANI BOOKS - ${value(report['branch_id'])}'),
+              ('REVIEWED BY', reviewerName(report['reviewed_by'])),
+              ('REVIEWED AT', malaysiaTime(report['reviewed_at'])),
+            ]),
           ]),
         ),
       ],

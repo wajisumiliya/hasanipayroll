@@ -289,7 +289,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
                   ]),
                   _bar('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
                   _area('maintenance_report', 'REPORT', required: true),
-                  _bar('ORSANCO'),
+                  _bar('ORSANO'),
                   _fourFields(
                     [
                       'ors_agama',
@@ -475,9 +475,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
       await SupabaseService.reviewDailyReport(
           id: row['id'].toString(),
           comment: comment.text,
-          reviewer: AppService.instance.currentUser?.displayName ??
-              AppService.instance.currentUser?.username ??
-              'Admin');
+          reviewer: _dailyReportReviewerName());
       if (mounted) setState(() => reports = _load());
     }
     comment.dispose();
@@ -506,6 +504,19 @@ class _DailyReportPageState extends State<DailyReportPage> {
     if (parsed == null) return '-';
     final malaysia = parsed.toUtc().add(const Duration(hours: 8));
     return '${DateFormat('dd/MM/yyyy hh:mm a').format(malaysia)} MYT';
+  }
+
+  String _dailyReportReviewerName() {
+    final user = AppService.instance.currentUser;
+    final name = user?.displayName?.trim() ?? '';
+    final username = (user?.username ?? '').trim();
+    if (name.isNotEmpty && !name.contains('@') && name.toLowerCase() != 'admin') {
+      return name;
+    }
+    if (username.isNotEmpty && username.toLowerCase() != 'admin') {
+      return username;
+    }
+    return 'Nur Muhammad Faizal';
   }
 
   Widget _adminReportForm(
@@ -562,7 +573,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
         ]),
         _bar('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
         _readArea('REPORT', row['maintenance_report']),
-        _bar('ORSANCO'),
+        _bar('ORSANO'),
         _readFour([
           ('Agama', orsanco['agama']),
           ('S.K', orsanco['sk']),
