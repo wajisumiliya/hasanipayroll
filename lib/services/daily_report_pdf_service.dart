@@ -42,6 +42,8 @@ class DailyReportPdfService {
           '${two(local.hour)}:${two(local.minute)} MYT';
     }
 
+    final reviewedAt = malaysianDateTime(report['reviewed_at']);
+
     pw.Widget section(String label) => pw.Container(
           height: 19,
           alignment: pw.Alignment.center,
@@ -74,6 +76,34 @@ class DailyReportPdfService {
             decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
             child: pw.Text(label,
                 style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+          ),
+        );
+
+    pw.Widget reportInfoCell(String label, String value, {int flex = 1}) =>
+        pw.Expanded(
+          flex: flex,
+          child: pw.Container(
+            height: 39,
+            padding: const pw.EdgeInsets.fromLTRB(5, 4, 5, 3),
+            decoration: pw.BoxDecoration(
+              color: ink,
+              border: pw.Border.all(color: PdfColors.white, width: .45),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(label.toUpperCase(),
+                    style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 6.5,
+                        fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 3),
+                pw.Text(value,
+                    maxLines: 1,
+                    style: const pw.TextStyle(
+                        color: PdfColors.white, fontSize: 7)),
+              ],
+            ),
           ),
         );
 
@@ -153,29 +183,14 @@ class DailyReportPdfService {
               style: pw.TextStyle(
                   color: blue, fontSize: 28, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 3),
-          pw.Container(
-            height: 39,
-            color: ink,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 7),
-            child: pw.Column(children: [
-              pw.Row(children: [
-                pw.Text('Branch: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                pw.Expanded(child: pw.Text(text(report['branch_id']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
-                pw.Text('Report Date: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(width: 88, child: pw.Text(text(report['report_date']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
-                pw.SizedBox(width: 10),
-                pw.Text('Day: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(width: 60, child: pw.Text(dayName(), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
-              ]),
-              pw.SizedBox(height: 3),
-              pw.Row(children: [
-                pw.Text('Reported By: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                pw.Expanded(child: pw.Text(text(report['reported_by']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
-                pw.Text('Submitted At: ', style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(width: 130, child: pw.Text(malaysianDateTime(report['submitted_at']), style: const pw.TextStyle(color: PdfColors.white, fontSize: 8))),
-              ]),
-            ]),
-          ),
+          pw.Row(children: [
+            reportInfoCell('Branch', text(report['branch_id']), flex: 2),
+            reportInfoCell('Report Date', text(report['report_date']), flex: 2),
+            reportInfoCell('Reported By', text(report['reported_by']), flex: 2),
+            reportInfoCell('Submitted At', malaysianDateTime(report['submitted_at']),
+                flex: 3),
+            reportInfoCell('Day', dayName()),
+          ]),
           pw.Row(children: [
             inlineField('Attendance', report['attendance']),
             inlineField('Unpaid Leave', report['unpaid_leave']),
@@ -205,7 +220,7 @@ class DailyReportPdfService {
             orsanoCell('Others', orsano['others']),
           ]),
           reportArea('Report Crew:', report['report_crew'], flex: 3),
-          reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 1),
+          reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 2),
           pw.Row(children: [
             bottomBox(
               'Reported By:',
@@ -215,7 +230,7 @@ class DailyReportPdfService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Spacer(),
-                    pw.Text('Name: ${text(report['reported_by'])}',
+                    pw.Text(text(report['reported_by']),
                         style: const pw.TextStyle(fontSize: 7)),
                   ],
                 ),
@@ -245,11 +260,14 @@ class DailyReportPdfService {
                           : text(report['reviewed_by']),
                       style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
                     ),
-                    pw.SizedBox(height: 5),
-                    pw.Text('Reviewed At:',
-                        style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
-                    pw.Text(malaysianDateTime(report['reviewed_at']),
-                        style: const pw.TextStyle(fontSize: 8)),
+                    if (reviewedAt != '-') ...[
+                      pw.SizedBox(height: 5),
+                      pw.Text('Reviewed At:',
+                          style: pw.TextStyle(
+                              fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                      pw.Text(reviewedAt,
+                          style: const pw.TextStyle(fontSize: 8)),
+                    ],
                   ],
                 ),
               ),
