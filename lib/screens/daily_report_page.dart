@@ -30,7 +30,6 @@ class _DailyReportPageState extends State<DailyReportPage> {
       'unpaid_leave',
       'weekly_leave',
       'annual_leave',
-      'air_conditioner',
       'maintenance_total',
       'working_condition',
       'service_repair',
@@ -98,7 +97,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
           'service_repair'
         ])
           key: int.tryParse(c[key]!.text.trim()) ?? 0,
-        'air_conditioner': c['air_conditioner']!.text.trim(),
+        'air_conditioner': 'Air Conditioner',
         'maintenance_report': c['maintenance_report']!.text.trim(),
         'report_crew': c['report_crew']!.text.trim(),
         'recommendation': c['recommendation']!.text.trim(),
@@ -276,17 +275,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
                     'Annual Leave'
                   ]),
                   _bar('MAINTENANCE'),
-                  _fourFields([
-                    'air_conditioner',
-                    'maintenance_total',
-                    'working_condition',
-                    'service_repair'
-                  ], [
-                    'Air Conditioner',
-                    'Total',
-                    'Working Condition',
-                    'To Service / Repair'
-                  ], textKeys: const {'air_conditioner'}),
+                  _maintenanceFields(),
                   _bar('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
                   _area('maintenance_report', 'REPORT', required: true),
                   _bar('ORSANO'),
@@ -367,6 +356,36 @@ class _DailyReportPageState extends State<DailyReportPage> {
             ),
           ),
         ),
+      );
+
+  Widget _maintenanceFields() => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: LayoutBuilder(
+          builder: (_, box) {
+            final width = box.maxWidth > 600
+                ? (box.maxWidth - 24) / 4
+                : (box.maxWidth - 8) / 2;
+            return Wrap(spacing: 8, runSpacing: 8, children: [
+              SizedBox(width: width, child: _categoryHeading('Air Conditioner')),
+              SizedBox(width: width, child: _field('maintenance_total', 'Total', number: true)),
+              SizedBox(width: width, child: _field('working_condition', 'Working Condition', number: true)),
+              SizedBox(width: width, child: _field('service_repair', 'To Service / Repair', number: true)),
+            ]);
+          },
+        ),
+      );
+
+  Widget _categoryHeading(String text) => Container(
+        height: 48,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F6FF),
+          border: Border.all(color: const Color(0xFFC8D3F4)),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Text(text,
+            style: const TextStyle(color: blue, fontWeight: FontWeight.w800)),
       );
   Widget _field(String key, String label,
           {bool number = false, bool required = false}) =>

@@ -57,22 +57,37 @@ class DailyReportPdfService {
           ),
         );
 
-    pw.Widget reportArea(String label, dynamic value, double height) => pw.Container(
-          height: height,
-          padding: const pw.EdgeInsets.fromLTRB(8, 7, 8, 6),
-          decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
-          child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-              decoration: pw.BoxDecoration(
-                  color: pale, borderRadius: pw.BorderRadius.circular(5)),
-              child: pw.Text(label,
-                  style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-            ),
-            pw.SizedBox(height: 6),
-            pw.Text(text(value), style: const pw.TextStyle(fontSize: 8)),
-            pw.Spacer(),
-          ]),
+    pw.Widget categoryHeading(String label) => pw.Expanded(
+          child: pw.Container(
+            height: 35,
+            alignment: pw.Alignment.centerLeft,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6),
+            decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
+            child: pw.Text(label,
+                style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+          ),
+        );
+
+    pw.Widget reportArea(String label, dynamic value, {int flex = 1}) =>
+        pw.Expanded(
+          flex: flex,
+          child: pw.Container(
+            padding: const pw.EdgeInsets.fromLTRB(8, 7, 8, 6),
+            decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
+            child:
+                pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: pw.BoxDecoration(
+                    color: pale, borderRadius: pw.BorderRadius.circular(5)),
+                child: pw.Text(label,
+                    style:
+                        pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Text(text(value), style: const pw.TextStyle(fontSize: 8)),
+            ]),
+          ),
         );
 
     pw.Widget orsanoCell(String label, dynamic value) => pw.Expanded(
@@ -116,6 +131,7 @@ class DailyReportPdfService {
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(10),
       build: (_) => pw.Container(
+        height: PdfPageFormat.a4.height - 20,
         decoration: pw.BoxDecoration(border: pw.Border.all(color: ink, width: 2)),
         padding: const pw.EdgeInsets.all(5),
         child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
@@ -150,13 +166,13 @@ class DailyReportPdfService {
           ]),
           section('MAINTENANCE'),
           pw.Row(children: [
-            inlineField('Air Conditioner', report['air_conditioner']),
+            categoryHeading('Air Conditioner'),
             inlineField('Total', report['maintenance_total']),
             inlineField('Working Condition', report['working_condition']),
             inlineField('To Service or Repair', report['service_repair']),
           ]),
           section('MAINTENANCE/ELECTRICAL/EQUIPMENT'),
-          reportArea('Report:', report['maintenance_report'], 104),
+          reportArea('Report:', report['maintenance_report'], flex: 2),
           section('ORSANO'),
           pw.Row(children: [
             orsanoCell('Agama', orsano['agama']),
@@ -170,8 +186,8 @@ class DailyReportPdfService {
             orsanoCell('Quran', orsano['quran']),
             orsanoCell('Others', orsano['others']),
           ]),
-          reportArea('Report Crew:', report['report_crew'], 112),
-          reportArea('Recommendation/Demand/Sales:', report['recommendation'], 128),
+          reportArea('Report Crew:', report['report_crew'], flex: 2),
+          reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 3),
           pw.Row(children: [
             bottomBox(
               'Reported By:',
