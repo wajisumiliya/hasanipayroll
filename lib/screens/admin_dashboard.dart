@@ -10644,7 +10644,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   final available = record != null;
                   return InkWell(
                     onTap: available
-                        ? () => _viewAdminPayslip(employee, record!)
+                        ? () => _viewAdminPayslip(employee, record)
                         : null,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
@@ -10687,7 +10687,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           const Spacer(),
                           Text(
                             available
-                                ? 'RM ${NumberFormat('#,##0.00').format(record!.netPay)}'
+                                ? 'RM ${NumberFormat('#,##0.00').format(record.netPay)}'
                                 : 'No payslip',
                             style: TextStyle(
                               color: available
