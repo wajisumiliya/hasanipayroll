@@ -395,9 +395,8 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
         prefixIcon: const Icon(Icons.access_time_outlined),
         suffixIcon: const Icon(Icons.arrow_drop_down),
       ),
-      validator: (value) => _minutes(value ?? '') == null
-          ? 'Please select a valid time'
-          : null,
+      validator: (value) =>
+          _minutes(value ?? '') == null ? 'Please select a valid time' : null,
     );
   }
 
@@ -498,7 +497,8 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
                 Expanded(
                   child: Text(
                     DateFormat('dd MMM yyyy').format(
-                      DateTime.tryParse(row['overtime_date']?.toString() ?? '') ??
+                      DateTime.tryParse(
+                              row['overtime_date']?.toString() ?? '') ??
                           DateTime.now(),
                     ),
                     style: const TextStyle(fontWeight: FontWeight.w800),
