@@ -555,6 +555,7 @@ class _EmployeeOtRequestPageState extends State<EmployeeOtRequestPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _legacyPaperView() {
     return ListView(
       padding: const EdgeInsets.all(20),
