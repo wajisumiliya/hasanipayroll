@@ -52,6 +52,7 @@ create policy leave_requests_employee_insert on public.leave_requests
       select 1 from public.employees e
       where e.employee_id = leave_requests.employee_id
         and lower(trim(e.branch_id)) = lower(trim(leave_requests.branch_id))
+        and upper(coalesce(e.address, '')) not like '%FRN%'
     )
   );
 

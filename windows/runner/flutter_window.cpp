@@ -1,6 +1,7 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <flutter/standard_method_codec.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -27,6 +28,35 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  screen_security_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "com.hasani.payroll/screen_security",
+          &flutter::StandardMethodCodec::GetInstance());
+  screen_security_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        DWORD affinity = WDA_NONE;
+        if (call.method_name() == "enableSecureScreen") {
+#ifndef WDA_EXCLUDEFROMCAPTURE
+#define WDA_EXCLUDEFROMCAPTURE 0x00000011
+#endif
+          affinity = WDA_EXCLUDEFROMCAPTURE;
+        } else if (call.method_name() != "disableSecureScreen") {
+          result->NotImplemented();
+          return;
+        }
+
+        if (SetWindowDisplayAffinity(GetHandle(), affinity)) {
+          result->Success();
+        } else {
+          result->Error(
+              "screen_security_failed",
+              "Windows could not update display-capture protection.");
+        }
+      });
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -41,6 +71,7 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   if (flutter_controller_) {
+    screen_security_channel_.reset();
     flutter_controller_ = nullptr;
   }
 

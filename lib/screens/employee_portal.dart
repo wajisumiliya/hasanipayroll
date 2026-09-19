@@ -16,6 +16,7 @@ import 'employee_leave_request_page.dart';
 import 'login_screen.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
+import '../widgets/employee_identity_card.dart';
 
 class EmployeePortal extends StatefulWidget {
   const EmployeePortal({super.key});
@@ -100,6 +101,11 @@ class _EmployeePortalState extends State<EmployeePortal>
   /// =============================================================
 
   Employee? get employee => service.currentEmployee;
+
+  bool get _isForeignEmployee =>
+      employee?.address.toUpperCase().contains('FRN') == true;
+
+  bool get _isLocalEmployee => !_isForeignEmployee;
 
   bool get _isBirthdayToday {
     final birthday = employee?.birthday;
@@ -394,7 +400,8 @@ class _EmployeePortalState extends State<EmployeePortal>
             Icons.dashboard_outlined,
             0,
           ),
-          _side('Leave', Icons.flight_takeoff_outlined, 3),
+          if (_isLocalEmployee)
+            _side('Leave', Icons.flight_takeoff_outlined, 3),
           _side('Attendance', Icons.calendar_month_outlined, 2),
           _side('OT Request', Icons.more_time_outlined, 6),
           _side('Payslip', Icons.receipt_long_outlined, 1),
@@ -579,6 +586,12 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   Widget _mobile() {
     final dailyTheme = _dailyTheme;
+    final mobilePages = _isLocalEmployee
+        ? const [0, 1, 2, 6, 3]
+        : const [0, 1, 2, 6];
+    final selectedMobileIndex = mobilePages.contains(tab)
+        ? mobilePages.indexOf(tab)
+        : 0;
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.white,
@@ -615,44 +628,39 @@ class _EmployeePortalState extends State<EmployeePortal>
       ),
       bottomNavigationBar: NavigationBar(
         indicatorColor: dailyTheme.accent.withValues(alpha: .22),
-        selectedIndex: tab == 6
-            ? 3
-            : (tab == 3
-                ? 4
-                : tab > 2
-                    ? 0
-                    : tab),
+        selectedIndex: selectedMobileIndex,
         onDestinationSelected: (index) {
           setState(() {
-            tab = const [0, 1, 2, 6, 3][index];
+            tab = mobilePages[index];
           });
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'Payslips',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: 'Attendance',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.more_time_outlined),
             selectedIcon: Icon(Icons.more_time),
             label: 'OT Request',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.flight_takeoff_outlined),
-            selectedIcon: Icon(Icons.flight_takeoff),
-            label: 'Leave',
-          ),
+          if (_isLocalEmployee)
+            const NavigationDestination(
+              icon: Icon(Icons.flight_takeoff_outlined),
+              selectedIcon: Icon(Icons.flight_takeoff),
+              label: 'Leave',
+            ),
         ],
       ),
     );
@@ -731,7 +739,9 @@ class _EmployeePortalState extends State<EmployeePortal>
         return _attendance();
 
       case 3:
-        return EmployeeLeaveRequestPage(employee: employee!);
+        return _isLocalEmployee
+            ? EmployeeLeaveRequestPage(employee: employee!)
+            : _foreignLeavePlaceholder();
 
       case 4:
         return _bankInformation();
@@ -863,6 +873,8 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
 
   Widget _welcome() {
+    return EmployeeIdentityCard(employee: employee!);
+    /*
     final dailyTheme = _dailyTheme;
 
     return LayoutBuilder(
@@ -1044,6 +1056,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         );
       },
     );
+    */
   }
 
   Widget _dashboardIntro() {
@@ -1513,7 +1526,8 @@ class _EmployeePortalState extends State<EmployeePortal>
       (title: 'Payslips', icon: Icons.description_outlined, page: 1),
       (title: 'Attendance', icon: Icons.calendar_month_outlined, page: 2),
       (title: 'OT Request', icon: Icons.more_time_outlined, page: 6),
-      (title: 'Leave', icon: Icons.flight_takeoff_outlined, page: 3),
+      if (_isLocalEmployee)
+        (title: 'Leave', icon: Icons.flight_takeoff_outlined, page: 3),
       (title: 'Bank Info', icon: Icons.account_balance_outlined, page: 4),
       (title: 'Password', icon: Icons.lock_outline, page: 5),
     ];
@@ -2283,7 +2297,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   // LEAVE
   // =============================================================
 
-  Widget _leavePlaceholder() {
+  Widget _foreignLeavePlaceholder() {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -2321,7 +2335,7 @@ class _EmployeePortalState extends State<EmployeePortal>
               ),
               const SizedBox(height: 18),
               const Text(
-                'Leave Request',
+                'Foreign Employee Leave',
                 style: TextStyle(
                   color: Color(0xFF08255F),
                   fontSize: 24,
@@ -2330,7 +2344,7 @@ class _EmployeePortalState extends State<EmployeePortal>
               ),
               const SizedBox(height: 8),
               const Text(
-                'The leave application form will be available here soon. It will follow the same request and approval concept as OT requests.',
+                'This leave form is available to local employees only. A dedicated foreign-employee leave form will be added later.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF6079A4), height: 1.5),
               ),
