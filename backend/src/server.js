@@ -454,7 +454,7 @@ function createAccessToken(
   const branchId = branchByLogin[baseLogin] || null;
   return jwt.sign(
     {
-      sub: String(user.id),
+      sub: String(user.id ?? user.username ?? user.email),
 
       role: "authenticated",
       app_metadata: {
@@ -788,7 +788,12 @@ async function findAppUser(login) {
   return {
     ...data,
     employeeId: data.employeeId ?? data.employee_id ?? null,
-    passwordHash: data.passwordHash ?? data.password_hash ?? null,
+    passwordHash:
+      data.passwordHash ??
+      data.passwordhash ??
+      data.password_hash ??
+      data.password ??
+      null,
     isActive: [true, "true", "t", "1"].includes(
       data.isActive ?? data.is_active ?? true,
     ),
@@ -819,7 +824,12 @@ async function findPrimaryAdminUser() {
   return {
     ...data,
     employeeId: data.employeeId ?? data.employee_id ?? null,
-    passwordHash: data.passwordHash ?? data.password_hash ?? null,
+    passwordHash:
+      data.passwordHash ??
+      data.passwordhash ??
+      data.password_hash ??
+      data.password ??
+      null,
     isActive: [true, "true", "t", "1"].includes(
       data.isActive ?? data.is_active ?? true,
     ),
@@ -1106,17 +1116,6 @@ app.post(
             "Invalid username or password.",
         });
       }
-
-      await pool.query(
-        `
-        UPDATE public."app_user"
-        SET
-          "lastLoginAt" = NOW(),
-          "updatedAt" = NOW()
-        WHERE "id" = $1
-        `,
-        [user.id],
-      );
 
       const safeUser =
         await publicAppUser(

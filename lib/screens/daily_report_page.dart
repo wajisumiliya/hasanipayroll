@@ -49,7 +49,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
     ])
       key: TextEditingController(),
   };
-  DateTime date = DateTime.now();
+  DateTime? date;
   bool saving = false;
   late Future<List<Map<String, dynamic>>> reports;
 
@@ -73,11 +73,17 @@ class _DailyReportPageState extends State<DailyReportPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || saving) return;
+    if (date == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select the report date.')),
+      );
+      return;
+    }
     setState(() => saving = true);
     try {
       await SupabaseService.submitDailyReport({
         'branch_id': widget.branchId,
-        'report_date': DateFormat('yyyy-MM-dd').format(date),
+        'report_date': DateFormat('yyyy-MM-dd').format(date!),
         for (final key in [
           'attendance',
           'unpaid_leave',
@@ -122,6 +128,16 @@ class _DailyReportPageState extends State<DailyReportPage> {
     } finally {
       if (mounted) setState(() => saving = false);
     }
+  }
+
+  Future<void> _pickReportDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: date ?? DateTime.now(),
+      firstDate: DateTime(DateTime.now().year - 2),
+      lastDate: DateTime(DateTime.now().year + 1),
+    );
+    if (picked != null && mounted) setState(() => date = picked);
   }
 
   @override
@@ -172,10 +188,23 @@ class _DailyReportPageState extends State<DailyReportPage> {
                   const SizedBox(height: 10),
                   Row(children: [
                     Expanded(
-                        child: Text(
-                            'DATE  ${DateFormat('dd/MM/yyyy').format(date)}')),
+                      child: OutlinedButton.icon(
+                        onPressed: _pickReportDate,
+                        icon: const Icon(Icons.calendar_month_outlined),
+                        label: Text(date == null
+                            ? 'SELECT REPORT DATE'
+                            : 'DATE  ${DateFormat('dd/MM/yyyy').format(date!)}'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
-                        child: Text('DAY  ${DateFormat('EEEE').format(date)}')),
+                      child: Text(
+                        date == null
+                            ? 'DAY  -'
+                            : 'DAY  ${DateFormat('EEEE').format(date!)}',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ]),
                   const SizedBox(height: 10),
                   _fourFields([
@@ -324,26 +353,12 @@ class _DailyReportPageState extends State<DailyReportPage> {
         context: context,
         builder: (ctx) => AlertDialog(
               title: Text('${row['branch_id']} · ${row['report_date']}'),
-              content: SingleChildScrollView(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                    Text(
-                        'Maintenance / Equipment\n${row['maintenance_report'] ?? '-'}'),
-                    const SizedBox(height: 12),
-                    Text('Report Crew\n${row['report_crew'] ?? '-'}'),
-                    const SizedBox(height: 12),
-                    Text(
-                        'Recommendation / Demand / Sales\n${row['recommendation'] ?? '-'}'),
-                    const SizedBox(height: 16),
-                    TextField(
-                        controller: comment,
-                        minLines: 3,
-                        maxLines: 5,
-                        decoration:
-                            const InputDecoration(labelText: 'COMMENT BY HQ')),
-                  ])),
+              content: SizedBox(
+                width: 850,
+                child: SingleChildScrollView(
+                  child: _adminReportForm(row, comment),
+                ),
+              ),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
@@ -364,4 +379,152 @@ class _DailyReportPageState extends State<DailyReportPage> {
     }
     comment.dispose();
   }
+
+  Widget _adminReportForm(
+      Map<String, dynamic> row, TextEditingController comment) {
+    final orsanco = row['orsanco'] is Map
+        ? Map<String, dynamic>.from(row['orsanco'] as Map)
+        : <String, dynamic>{};
+    final reportDate = DateTime.tryParse(row['report_date']?.toString() ?? '');
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: blue, width: 2),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(
+            child: Image.asset('assets/hasani_books_logo.jpg',
+                height: 65, alignment: Alignment.centerLeft),
+          ),
+          Text('BRANCH: ${row['branch_id'] ?? '-'}',
+              style: const TextStyle(color: blue, fontWeight: FontWeight.w800)),
+        ]),
+        const Text('MAINTENANCE DAILY REPORT',
+            style: TextStyle(
+                color: blue, fontSize: 21, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 10),
+        _readFour([
+          (
+            'DATE',
+            reportDate == null
+                ? '-'
+                : DateFormat('dd/MM/yyyy').format(reportDate)
+          ),
+          (
+            'DAY',
+            reportDate == null ? '-' : DateFormat('EEEE').format(reportDate)
+          ),
+        ]),
+        _readFour([
+          ('Attendance', row['attendance']),
+          ('Unpaid Leave', row['unpaid_leave']),
+          ('Weekly Leave', row['weekly_leave']),
+          ('Annual Leave', row['annual_leave']),
+        ]),
+        _bar('MAINTENANCE'),
+        _readFour([
+          ('Air Conditioner', row['air_conditioner']),
+          ('Total', row['maintenance_total']),
+          ('Working Condition', row['working_condition']),
+          ('To Service / Repair', row['service_repair']),
+        ]),
+        _bar('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
+        _readArea('REPORT', row['maintenance_report']),
+        _bar('ORSANCO'),
+        _readFour([
+          ('Agama', orsanco['agama']),
+          ('S.K', orsanco['sk']),
+          ('S.M', orsanco['sm']),
+          ('Umum', orsanco['umum']),
+          ('Novel', orsanco['novel']),
+          ('Alat Tulis', orsanco['alat_tulis']),
+          ('Tadika', orsanco['tadika']),
+          ('Kanak Kanak', orsanco['kanak']),
+          ('Quran', orsanco['quran']),
+          ('Others', orsanco['others']),
+        ]),
+        _bar('REPORT CREW'),
+        _readArea('CREW', row['report_crew']),
+        _bar('RECOMMENDATION / DEMAND / SALES'),
+        _readArea('RECOMMENDATION', row['recommendation']),
+        _readFour([
+          ('REPORTED BY', row['reported_by']),
+          ('BRANCH STAMP', row['branch_stamp']),
+        ]),
+        _bar('COMMENT BY HQ'),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: TextField(
+            controller: comment,
+            minLines: 3,
+            maxLines: 6,
+            decoration: const InputDecoration(hintText: 'Enter HQ comment'),
+          ),
+        ),
+        if (row['reviewed_at'] != null)
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+                'Reviewed by ${row['reviewed_by'] ?? '-'} · ${row['reviewed_at']}'),
+          ),
+      ]),
+    );
+  }
+
+  Widget _readFour(List<(String, dynamic)> values) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: LayoutBuilder(
+          builder: (_, box) => Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: values
+                .map((value) => SizedBox(
+                      width: box.maxWidth > 600
+                          ? (box.maxWidth - 24) / 4
+                          : (box.maxWidth - 8) / 2,
+                      child: _readValue(value.$1, value.$2),
+                    ))
+                .toList(),
+          ),
+        ),
+      );
+
+  Widget _readValue(String label, dynamic value) => Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F6FF),
+          border: Border.all(color: const Color(0xFFC8D3F4)),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label,
+              style: const TextStyle(
+                  color: blue, fontSize: 10, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(value == null || value.toString().trim().isEmpty
+              ? '-'
+              : value.toString()),
+        ]),
+      );
+
+  Widget _readArea(String label, dynamic value) => Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 90),
+        margin: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFC8D3F4)),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label,
+              style: const TextStyle(color: blue, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(value == null || value.toString().trim().isEmpty
+              ? '-'
+              : value.toString()),
+        ]),
+      );
 }

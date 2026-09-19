@@ -31,27 +31,31 @@ alter table public.daily_reports enable row level security;
 revoke all on public.daily_reports from anon, authenticated;
 grant select, insert, update on public.daily_reports to authenticated;
 
+drop policy if exists daily_reports_branch_read on public.daily_reports;
 create policy daily_reports_branch_read on public.daily_reports for select to authenticated
 using (public.current_app_role() = 'branch' and lower(trim(branch_id)) = lower(trim(public.current_branch_id())));
+drop policy if exists daily_reports_branch_insert on public.daily_reports;
 create policy daily_reports_branch_insert on public.daily_reports for insert to authenticated
 with check (public.current_app_role() = 'branch' and lower(trim(branch_id)) = lower(trim(public.current_branch_id())) and reviewed_at is null);
+drop policy if exists daily_reports_admin_read on public.daily_reports;
 create policy daily_reports_admin_read on public.daily_reports for select to authenticated
 using (public.current_app_role() in ('admin', 'request_admin'));
+drop policy if exists daily_reports_admin_update on public.daily_reports;
 create policy daily_reports_admin_update on public.daily_reports for update to authenticated
 using (public.current_app_role() in ('admin', 'request_admin'))
 with check (public.current_app_role() in ('admin', 'request_admin'));
 
+drop policy if exists ot_request_admin_reviewer_read on public.overtime_requests;
 create policy ot_request_admin_reviewer_read on public.overtime_requests for select to authenticated
 using (public.current_app_role() = 'request_admin');
+drop policy if exists ot_request_admin_reviewer_update on public.overtime_requests;
 create policy ot_request_admin_reviewer_update on public.overtime_requests for update to authenticated
 using (public.current_app_role() = 'request_admin' and status = 'pending_admin')
 with check (public.current_app_role() = 'request_admin' and status in ('approved', 'rejected'));
+drop policy if exists leave_request_admin_reviewer_read on public.leave_requests;
 create policy leave_request_admin_reviewer_read on public.leave_requests for select to authenticated
 using (public.current_app_role() = 'request_admin');
+drop policy if exists leave_request_admin_reviewer_update on public.leave_requests;
 create policy leave_request_admin_reviewer_update on public.leave_requests for update to authenticated
 using (public.current_app_role() = 'request_admin' and status = 'pending_admin')
 with check (public.current_app_role() = 'request_admin' and status in ('approved', 'rejected'));
-
-insert into public."app_user" ("id", "username", "email", "passwordHash", "role", "isActive", "mustChangePassword", "passwordChangedAt", "createdAt", "updatedAt")
-values (gen_random_uuid()::text, 'hbreq', 'hbreq', '$2b$12$O6sRmPbMDpF8iovrfIHJeOox6ud51yD3vcE9hygO7iETQPJ.R9l/W', 'ADMIN', true, false, now(), now(), now())
-on conflict ("email") do update set "username" = excluded."username", "passwordHash" = excluded."passwordHash", "role" = 'ADMIN', "isActive" = true, "mustChangePassword" = false, "passwordChangedAt" = now(), "updatedAt" = now();
