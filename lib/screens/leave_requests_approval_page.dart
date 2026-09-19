@@ -57,8 +57,8 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title:
-            Text(approve ? 'Approve leave request?' : 'Reject leave request?'),
+        title: Text(
+            approve ? 'Luluskan permohonan cuti?' : 'Tolak permohonan cuti?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -66,7 +66,7 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
               TextField(
                 controller: approver,
                 decoration: const InputDecoration(
-                  labelText: 'Approver name',
+                  labelText: 'Nama pelulus (wajib)',
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
@@ -77,8 +77,11 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
               controller: remarks,
               maxLines: 3,
               decoration: InputDecoration(
-                labelText:
-                    approve ? 'Remarks (optional)' : 'Reason for rejection',
+                labelText: approve
+                    ? (widget.adminMode
+                        ? 'Komen pejabat (wajib)'
+                        : 'Komen pengurus cawangan (wajib)')
+                    : 'Sebab penolakan (wajib)',
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -87,24 +90,28 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: approve ? Colors.green : Colors.red,
             ),
             onPressed: () {
-              if (!widget.adminMode &&
-                  approve &&
-                  approver.text.trim().isEmpty) {
+              if (!widget.adminMode && approver.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                       content: Text('Enter the branch approver name.')),
                 );
                 return;
               }
+              if (remarks.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Remarks are required.')),
+                );
+                return;
+              }
               Navigator.pop(context, true);
             },
-            child: Text(approve ? 'Approve' : 'Reject'),
+            child: Text(approve ? 'Luluskan' : 'Tolak'),
           ),
         ],
       ),
@@ -373,7 +380,7 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
                             ],
                           ),
                         ),
-                        _formBar('LEAVE APPLICATION FORM'),
+                        _formBar('BORANG PERMOHONAN CUTI'),
                         Padding(
                           padding: const EdgeInsets.all(22),
                           child: Column(
@@ -382,62 +389,70 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  'Annual Leave',
-                                  'Unpaid Leave',
-                                  'Emergency Leave',
-                                  'Replacement Leave',
+                                  'Cuti Tahunan',
+                                  'Cuti Tanpa Gaji',
+                                  'Cuti Kecemasan',
+                                  'Cuti Ganti',
                                 ]
-                                    .map((type) => _leaveTypeBox(type,
-                                        row['leave_type']?.toString() == type))
+                                    .map((type) => _leaveTypeBox(
+                                        type,
+                                        _malayLeaveType(row['leave_type']) ==
+                                            type))
                                     .toList(),
                               ),
                               const SizedBox(height: 20),
                               _formFields([
-                                ('Name', row['employee_name']),
-                                ('Employee ID', row['employee_id']),
-                                ('Designation', row['designation']),
-                                ('Department', row['department']),
-                                ('From date', _displayDate(row['start_date'])),
-                                ('Until', _displayDate(row['end_date'])),
+                                ('Nama', row['employee_name']),
+                                ('No. Kakitangan', row['employee_id']),
+                                ('Jawatan', row['designation']),
+                                ('Jabatan', row['department']),
                                 (
-                                  'Number of days',
-                                  '${row['total_days'] ?? '-'} day(s)'
+                                  'Dari tarikh',
+                                  _displayDate(row['start_date'])
+                                ),
+                                ('Hingga', _displayDate(row['end_date'])),
+                                (
+                                  'Jumlah hari',
+                                  '${row['total_days'] ?? '-'} hari'
                                 ),
                                 (
-                                  'Submitted',
+                                  'Tarikh permohonan',
                                   _displayDate(row['submitted_at'])
                                 ),
                               ]),
                               const SizedBox(height: 15),
-                              _formField('Reason for leave', row['reason']),
+                              _formField('Sebab-sebab bercuti', row['reason']),
                               const SizedBox(height: 12),
-                              _formField('Address during leave',
+                              _formField('Alamat semasa bercuti',
                                   row['address_during_leave']),
                               const SizedBox(height: 12),
-                              _formField('Emergency contact number',
-                                  row['emergency_phone']),
+                              _formField(
+                                  'No. Tel / Hp', row['emergency_phone']),
                             ],
                           ),
                         ),
-                        _formBar('BRANCH MANAGER SUPPORT AND COMMENTS'),
+                        _formBar('SOKONGAN DAN KOMEN DARI PENGURUS CAWANGAN'),
                         Padding(
                           padding: const EdgeInsets.all(22),
                           child: Column(
                             children: [
-                              _formField(
-                                  'Branch comments', row['branch_remarks']),
+                              _formField('Komen pengurus cawangan',
+                                  row['branch_remarks']),
                               const SizedBox(height: 12),
                               _formFields([
-                                ('Approved by', row['branch_approved_name']),
                                 (
-                                  'Approval date',
+                                  'Diluluskan oleh',
+                                  row['branch_approved_name']
+                                ),
+                                (
+                                  'Tarikh dihantar kepada admin',
                                   _displayDate(row['branch_approved_at'])
                                 ),
                               ]),
                             ],
                           ),
                         ),
-                        _formBar('FOR OFFICIAL USE'),
+                        _formBar('UNTUK KEGUNAAN PEJABAT'),
                         Padding(
                           padding: const EdgeInsets.all(22),
                           child: Column(
@@ -447,20 +462,21 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
                                 runSpacing: 8,
                                 children: [
                                   _checkLabel(
-                                      'Leave approved', status == 'approved'),
-                                  _checkLabel('Leave not approved',
+                                      'Cuti diluluskan', status == 'approved'),
+                                  _checkLabel('Cuti tidak diluluskan',
                                       status == 'rejected'),
                                 ],
                               ),
                               const SizedBox(height: 14),
-                              _formField('Admin remarks', row['admin_remarks']),
+                              _formField('Sebab / komen pejabat',
+                                  row['admin_remarks']),
                               const SizedBox(height: 12),
                               _formFields([
                                 (
-                                  'Final approval date',
+                                  'Tarikh kelulusan akhir',
                                   _displayDate(row['admin_approved_at'])
                                 ),
-                                ('Current stage', status.replaceAll('_', ' ')),
+                                ('Status semasa', status.replaceAll('_', ' ')),
                               ]),
                             ],
                           ),
@@ -599,6 +615,21 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
     return parsed == null
         ? '-'
         : DateFormat('dd/MM/yyyy').format(parsed.toLocal());
+  }
+
+  String _malayLeaveType(dynamic value) {
+    switch (value?.toString()) {
+      case 'Annual Leave':
+        return 'Cuti Tahunan';
+      case 'Unpaid Leave':
+        return 'Cuti Tanpa Gaji';
+      case 'Emergency Leave':
+        return 'Cuti Kecemasan';
+      case 'Replacement Leave':
+        return 'Cuti Ganti';
+      default:
+        return value?.toString() ?? '-';
+    }
   }
 
   Widget _status(String status, Color color) => Container(

@@ -1448,12 +1448,18 @@ class SupabaseService {
     required String approverName,
     String? remarks,
   }) async {
+    if (approverName.trim().isEmpty) {
+      throw ArgumentError('Approver name is required.');
+    }
+    if (remarks == null || remarks.trim().isEmpty) {
+      throw ArgumentError('Branch remarks are required.');
+    }
     final now = DateTime.now().toUtc().toIso8601String();
     final updated = await client
         .from('leave_requests')
         .update({
           'status': approve ? 'pending_admin' : 'rejected',
-          'branch_remarks': remarks?.trim(),
+          'branch_remarks': remarks.trim(),
           'branch_approved_at': approve ? now : null,
           'branch_approved_by': approve ? currentUser?.id : null,
           'branch_approved_name': approve ? approverName.trim() : null,
@@ -1469,12 +1475,15 @@ class SupabaseService {
     required bool approve,
     String? remarks,
   }) async {
+    if (remarks == null || remarks.trim().isEmpty) {
+      throw ArgumentError('Admin remarks are required.');
+    }
     final now = DateTime.now().toUtc().toIso8601String();
     final updated = await client
         .from('leave_requests')
         .update({
           'status': approve ? 'approved' : 'rejected',
-          'admin_remarks': remarks?.trim(),
+          'admin_remarks': remarks.trim(),
           'admin_approved_at': approve ? now : null,
           'admin_approved_by': approve ? currentUser?.id : null,
         })

@@ -111,7 +111,8 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Leave request sent to your branch for approval.')),
+          const SnackBar(
+              content: Text('Leave request sent to your branch for approval.')),
         );
       }
     } catch (error) {
@@ -151,7 +152,7 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
               child: Column(
                 children: [
                   _header(mobile),
-                  _bar('LEAVE APPLICATION FORM'),
+                  _bar('BORANG PERMOHONAN CUTI'),
                   Padding(
                     padding: EdgeInsets.all(mobile ? 12 : 22),
                     child: Column(
@@ -160,7 +161,7 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                         _leaveTypes(mobile),
                         const SizedBox(height: 12),
                         const Text(
-                          'Please submit this leave application at least 5 days before your leave date, except for emergency leave.',
+                          'Permohonan cuti perlu diserahkan 5 hari sebelum tarikh bercuti kecuali cuti kecemasan.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: _pink, fontSize: 11),
                         ),
@@ -171,28 +172,29 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                         const SizedBox(height: 14),
                         _lineField(
                           controller: _reason,
-                          label: 'Reason for leave',
+                          label: 'Sebab-sebab bercuti',
                           maxLines: 3,
                           required: true,
                         ),
                         const SizedBox(height: 14),
                         _lineField(
                           controller: _emergencyAddress,
-                          label: 'Address during leave',
+                          label: 'Alamat semasa bercuti',
                           maxLines: 2,
                         ),
                         const SizedBox(height: 14),
                         _lineField(
                           controller: _emergencyPhone,
-                          label: 'Emergency contact number',
+                          label: 'No. Tel / Hp',
                           keyboardType: TextInputType.phone,
                         ),
                         const SizedBox(height: 18),
                         Row(
                           children: [
                             Text(
-                              'Application date: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-                              style: const TextStyle(color: _pink, fontSize: 11),
+                              'Tarikh: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                              style:
+                                  const TextStyle(color: _pink, fontSize: 11),
                             ),
                             const Spacer(),
                             Text(
@@ -208,9 +210,9 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                       ],
                     ),
                   ),
-                  _bar('BRANCH MANAGER SUPPORT AND COMMENTS'),
+                  _bar('SOKONGAN DAN KOMEN DARI PENGURUS CAWANGAN'),
                   _managerSupport(mobile),
-                  _bar('FOR OFFICIAL USE'),
+                  _bar('UNTUK KEGUNAAN PEJABAT'),
                   _officialUse(mobile),
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -227,7 +229,9 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.send_outlined),
-                      label: Text(_saving ? 'Submitting...' : 'Submit Leave Application'),
+                      label: Text(_saving
+                          ? 'Sedang dihantar...'
+                          : 'Hantar Permohonan Cuti'),
                     ),
                   ),
                 ],
@@ -330,7 +334,8 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
             ),
             child: Text(
               label.toUpperCase(),
-              style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                  color: color, fontSize: 9, fontWeight: FontWeight.w900),
             ),
           ),
         ],
@@ -351,7 +356,8 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => const Text(
               'hasani',
-              style: TextStyle(color: _pink, fontSize: 38, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                  color: _pink, fontSize: 38, fontWeight: FontWeight.w900),
             ),
           ),
           const SizedBox(width: 18),
@@ -397,24 +403,26 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
 
   Widget _leaveTypes(bool mobile) {
     const types = [
-      'Annual Leave',
-      'Unpaid Leave',
-      'Emergency Leave',
-      'Replacement Leave',
+      ('Annual Leave', 'Cuti Tahunan'),
+      ('Unpaid Leave', 'Cuti Tanpa Gaji'),
+      ('Emergency Leave', 'Cuti Kecemasan'),
+      ('Replacement Leave', 'Cuti Ganti'),
     ];
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: types.map((type) {
-        final selected = _leaveType == type;
+        final selected = _leaveType == type.$1;
         return SizedBox(
           width: mobile ? double.infinity : 185,
           child: InkWell(
-            onTap: () => setState(() => _leaveType = type),
+            onTap: () => setState(() => _leaveType = type.$1),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
               decoration: BoxDecoration(
-                color: selected ? _pink.withValues(alpha: .10) : Colors.transparent,
+                color: selected
+                    ? _pink.withValues(alpha: .10)
+                    : Colors.transparent,
                 border: Border.all(color: _pink, width: 1.5),
               ),
               child: Row(
@@ -422,7 +430,7 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      type.toUpperCase(),
+                      type.$2.toUpperCase(),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: _pink,
@@ -431,11 +439,9 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
                       ),
                     ),
                   ),
-                  Radio<String>(
-                    value: type,
-                    groupValue: _leaveType,
-                    activeColor: _pink,
-                    onChanged: (value) => setState(() => _leaveType = value!),
+                  Icon(
+                    selected ? Icons.check_circle : Icons.circle_outlined,
+                    color: _pink,
                   ),
                 ],
               ),
@@ -448,10 +454,10 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
 
   Widget _employeeDetails(bool mobile) {
     final fields = [
-      ('Name', widget.employee.name),
-      ('Employee ID', widget.employee.employeeId),
-      ('Designation', widget.employee.designation),
-      ('Weekly leave', '-'),
+      ('Nama', widget.employee.name),
+      ('No. Kakitangan', widget.employee.employeeId),
+      ('Jawatan', widget.employee.designation),
+      ('Cuti mingguan', '-'),
     ];
     return Wrap(
       spacing: 18,
@@ -482,9 +488,14 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
       );
 
   Widget _dateSection(bool mobile) {
-    final from = _fromDate == null ? 'Select date' : DateFormat('dd/MM/yyyy').format(_fromDate!);
-    final to = _toDate == null ? 'Select date' : DateFormat('dd/MM/yyyy').format(_toDate!);
-    final fromDay = _fromDate == null ? '-' : DateFormat('EEEE').format(_fromDate!);
+    final from = _fromDate == null
+        ? 'Pilih tarikh'
+        : DateFormat('dd/MM/yyyy').format(_fromDate!);
+    final to = _toDate == null
+        ? 'Pilih tarikh'
+        : DateFormat('dd/MM/yyyy').format(_toDate!);
+    final fromDay =
+        _fromDate == null ? '-' : DateFormat('EEEE').format(_fromDate!);
     final toDay = _toDate == null ? '-' : DateFormat('EEEE').format(_toDate!);
     return Column(
       children: [
@@ -493,20 +504,21 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
           runSpacing: 10,
           crossAxisAlignment: WrapCrossAlignment.end,
           children: [
-            _dateButton('From date', from, () => _pickDate(from: true), mobile),
-            _dateButton('Until', to, () => _pickDate(from: false), mobile),
+            _dateButton(
+                'Dari tarikh', from, () => _pickDate(from: true), mobile),
+            _dateButton('Hingga', to, () => _pickDate(from: false), mobile),
             SizedBox(
               width: mobile ? double.infinity : 130,
-              child: _readOnlyLine('Number of days', _days == 0 ? '-' : '$_days'),
+              child: _readOnlyLine('Jumlah hari', _days == 0 ? '-' : '$_days'),
             ),
           ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _readOnlyLine('Day', fromDay)),
+            Expanded(child: _readOnlyLine('Hari', fromDay)),
             const SizedBox(width: 18),
-            Expanded(child: _readOnlyLine('Until', toDay)),
+            Expanded(child: _readOnlyLine('Hingga', toDay)),
           ],
         ),
       ],
@@ -528,9 +540,11 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _readOnlyLine('Date', '')),
+              Expanded(child: _readOnlyLine('Tarikh', '')),
               const SizedBox(width: 24),
-              Expanded(child: _readOnlyLine('Branch Manager signature and stamp', '')),
+              Expanded(
+                  child: _readOnlyLine(
+                      'Tandatangan dan Cop Pengurus Cawangan', '')),
             ],
           ),
         ],
@@ -538,7 +552,8 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
     );
   }
 
-  Widget _dateButton(String label, String value, VoidCallback onTap, bool mobile) {
+  Widget _dateButton(
+      String label, String value, VoidCallback onTap, bool mobile) {
     return SizedBox(
       width: mobile ? double.infinity : 245,
       child: Column(
@@ -578,8 +593,10 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: _pink),
-        enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _pink)),
-        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _pink, width: 2)),
+        enabledBorder:
+            const UnderlineInputBorder(borderSide: BorderSide(color: _pink)),
+        focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: _pink, width: 2)),
       ),
     );
   }
@@ -594,18 +611,18 @@ class _EmployeeLeaveRequestPageState extends State<EmployeeLeaveRequestPage> {
             spacing: 24,
             runSpacing: 8,
             children: const [
-              _ApprovalOption('Leave approved'),
-              _ApprovalOption('Leave not approved'),
+              _ApprovalOption('Cuti diluluskan'),
+              _ApprovalOption('Cuti tidak diluluskan'),
             ],
           ),
           const SizedBox(height: 15),
-          _readOnlyLine('Reason / official remarks', ''),
+          _readOnlyLine('Sebab', ''),
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _readOnlyLine('Date', '')),
+              Expanded(child: _readOnlyLine('Tarikh', '')),
               const SizedBox(width: 24),
-              Expanded(child: _readOnlyLine('HQ Manager', '')),
+              Expanded(child: _readOnlyLine('Pengurus HQ', '')),
             ],
           ),
         ],
@@ -632,7 +649,9 @@ class _ApprovalOption extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 7),
-        Text(label, style: const TextStyle(color: _EmployeeLeaveRequestPageState._pink)),
+        Text(label,
+            style:
+                const TextStyle(color: _EmployeeLeaveRequestPageState._pink)),
       ],
     );
   }
