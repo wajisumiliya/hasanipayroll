@@ -10,8 +10,14 @@ class DailyReportPdfService {
     const ink = PdfColor.fromInt(0xff303030);
     const blue = PdfColor.fromInt(0xff123b86);
     final document = pw.Document();
-    final logoData = await rootBundle.load('assets/hasani_books_logo.jpg');
-    final logo = pw.MemoryImage(logoData.buffer.asUint8List());
+    pw.MemoryImage? logo;
+    try {
+      final logoData = await rootBundle.load('assets/hasani_books_logo.jpg');
+      logo = pw.MemoryImage(logoData.buffer.asUint8List(
+        logoData.offsetInBytes,
+        logoData.lengthInBytes,
+      ));
+    } catch (_) {}
     final orsano = report['orsanco'] is Map
         ? Map<String, dynamic>.from(report['orsanco'] as Map)
         : <String, dynamic>{};
@@ -174,14 +180,32 @@ class DailyReportPdfService {
         decoration: pw.BoxDecoration(border: pw.Border.all(color: ink, width: 2)),
         padding: const pw.EdgeInsets.all(5),
         child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-          pw.SizedBox(height: 4),
-          pw.Center(child: pw.Image(logo, height: 37, fit: pw.BoxFit.contain)),
-          pw.Text('DAILY REPORT',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(
-                  color: blue, fontSize: 32, fontWeight: pw.FontWeight.bold)),
+          pw.Container(
+            height: 70,
+            alignment: pw.Alignment.center,
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                if (logo != null)
+                  pw.Image(logo!, width: 190, height: 34, fit: pw.BoxFit.contain)
+                else
+                  pw.Text('HASANI BOOKS',
+                      style: pw.TextStyle(
+                          color: blue,
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 2),
+                pw.Text('DAILY REPORT',
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(
+                        color: blue,
+                        fontSize: 27,
+                        fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
+          ),
           pw.SizedBox(height: 3),
-          pw.Row(children: [
+          pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
             reportInfoCell('Branch', text(report['branch_id']), flex: 2),
             reportInfoCell('Report Date', text(report['report_date']), flex: 2),
             reportInfoCell('Reported By', text(report['reported_by']), flex: 2),
@@ -219,7 +243,7 @@ class DailyReportPdfService {
           ]),
           reportArea('Report Crew:', report['report_crew'], flex: 3),
           reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 2),
-          pw.Row(children: [
+          pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
             bottomBox(
               'Reported By:',
               pw.Padding(
