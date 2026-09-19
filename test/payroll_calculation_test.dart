@@ -98,7 +98,9 @@ void main() {
     );
   });
 
-  test('statutory deductions are included without affecting employer amounts', () {
+  test(
+    'statutory deductions are included without affecting employer amounts',
+    () {
     expect(
       PayrollCalculationService.totalDeductions(
         epfEmployee: 187,
@@ -109,5 +111,6 @@ void main() {
       ),
       240.15,
     );
-  });
+    },
+  );
 }
