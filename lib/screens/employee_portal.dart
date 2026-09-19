@@ -373,7 +373,19 @@ class _EmployeePortalState extends State<EmployeePortal>
             width: double.infinity,
             color: Colors.white,
             alignment: Alignment.center,
-            child: Image.asset('assets/hasani_books_logo.jpg', width: 210),
+            child: Image.asset(
+              'assets/hasani_books_payslip_logo.jpeg',
+              width: 210,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Text(
+                'hasani BOOKS',
+                style: TextStyle(
+                  color: Color(0xFF08255F),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 18),
           _side(
@@ -381,11 +393,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             Icons.dashboard_outlined,
             0,
           ),
-          _side(
-            'Profile',
-            Icons.person_outline,
-            3,
-          ),
+          _side('Leave', Icons.flight_takeoff_outlined, 3),
           _side('Attendance', Icons.calendar_month_outlined, 2),
           _side('OT Request', Icons.more_time_outlined, 6),
           _side('Payslip', Icons.receipt_long_outlined, 1),
@@ -640,9 +648,9 @@ class _EmployeePortalState extends State<EmployeePortal>
             label: 'OT Request',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.flight_takeoff_outlined),
+            selectedIcon: Icon(Icons.flight_takeoff),
+            label: 'Leave',
           ),
         ],
       ),
@@ -665,7 +673,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         return 'Attendance';
 
       case 3:
-        return 'Profile';
+        return 'Leave';
 
       case 4:
         return 'Bank Information';
@@ -690,7 +698,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         return 'Attendance';
 
       case 3:
-        return 'Profile';
+        return 'Leave';
 
       case 4:
         return 'Bank Information';
@@ -722,7 +730,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         return _attendance();
 
       case 3:
-        return _profile();
+        return _leavePlaceholder();
 
       case 4:
         return _bankInformation();
@@ -882,10 +890,17 @@ class _EmployeePortalState extends State<EmployeePortal>
                 child: Row(
                   children: [
                     Image.asset(
-                      'assets/hasani_books_logo.jpg',
+                      'assets/hasani_books_payslip_logo.jpeg',
                       width: compact ? 105 : 150,
                       height: 46,
                       fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Text(
+                        'hasani BOOKS',
+                        style: TextStyle(
+                          color: Color(0xFF08255F),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Expanded(
@@ -932,15 +947,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   ),
                 ),
                 child: compact
-                    ? Column(
-                        children: [
-                          _identityPhoto(dailyTheme),
-                          const SizedBox(height: 16),
-                          _identityInformation(dailyTheme, centered: true),
-                          const SizedBox(height: 16),
-                          _identityVerification(),
-                        ],
-                      )
+                    ? _mobileIdentityCard(dailyTheme)
                     : Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -966,61 +973,150 @@ class _EmployeePortalState extends State<EmployeePortal>
         : hour < 18
             ? 'Good afternoon'
             : 'Good evening';
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 600;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 '$greeting,',
-                style: const TextStyle(
-                  color: Color(0xFF6079A4),
-                  fontSize: 20,
+                style: TextStyle(
+                  color: const Color(0xFF6079A4),
+                  fontSize: compact ? 15 : 20,
                 ),
               ),
               Text(
                 '${employee!.name} 👋',
-                style: const TextStyle(
-                  color: Color(0xFF08255F),
-                  fontSize: 30,
+                style: TextStyle(
+                  color: const Color(0xFF08255F),
+                  fontSize: compact ? 23 : 30,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Good to see you again! Here is your employee information and quick access to common features.',
-                style: TextStyle(color: Color(0xFF6079A4)),
+                style: const TextStyle(color: Color(0xFF6079A4), fontSize: 12),
               ),
             ],
           ),
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
+            SizedBox(height: compact ? 8 : 12),
             Text(
               DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
-              style: const TextStyle(color: Color(0xFF526C99)),
+              style: const TextStyle(color: Color(0xFF526C99), fontSize: 11),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '“${_dailyTheme.quote}”',
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: Color(0xFF6079A4),
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
+            if (!compact) ...[
+              const SizedBox(height: 5),
+              Text(
+                '“${_dailyTheme.quote}”',
+                style: const TextStyle(
+                  color: Color(0xFF6079A4),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _mobileIdentityCard(_EmployeeDailyTheme dailyTheme) {
+    final branch = employee!.branchId.trim().isEmpty ? '-' : employee!.branchId;
+    final active = employee!.isActive;
+    final statusColor = active ? const Color(0xFF00A651) : const Color(0xFFED1C24);
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _identityPhoto(dailyTheme, radius: 40),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    employee!.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF08255F),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    employee!.designation.trim().isEmpty
+                        ? 'Employee'
+                        : employee!.designation,
+                    style: TextStyle(color: dailyTheme.accent, fontSize: 12),
+                  ),
+                  const SizedBox(height: 7),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      active ? '✓ ACTIVE • VALUED EMPLOYEE' : 'INACTIVE',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 14),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final fieldWidth = (constraints.maxWidth - 10) / 2;
+            return Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _identityField(Icons.badge_outlined, 'Employee ID', employee!.employeeId,
+                    width: fieldWidth),
+                _identityField(Icons.business_outlined, 'Department',
+                    employee!.department.trim().isEmpty ? '-' : employee!.department,
+                    width: fieldWidth),
+                _identityField(Icons.location_on_outlined, 'Branch', branch,
+                    width: fieldWidth),
+                _identityField(
+                  Icons.calendar_month_outlined,
+                  'Joining Date',
+                  employee!.joiningDate == null
+                      ? '-'
+                      : DateFormat('dd MMM yyyy').format(employee!.joiningDate!),
+                  width: fieldWidth,
+                ),
+                _identityField(Icons.email_outlined, 'Email',
+                    employee!.email.trim().isEmpty ? '-' : employee!.email,
+                    width: constraints.maxWidth, multiline: true),
+                _identityField(Icons.phone_outlined, 'Contact',
+                    employee!.phone.trim().isEmpty ? '-' : employee!.phone,
+                    width: constraints.maxWidth),
+              ],
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _identityPhoto(_EmployeeDailyTheme dailyTheme) {
+  Widget _identityPhoto(_EmployeeDailyTheme dailyTheme, {double radius = 66}) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -1031,7 +1127,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       child: EmployeePhoto(
         name: employee!.name,
         photoUrl: employee!.photoUrl,
-        radius: 66,
+        radius: radius,
         backgroundColor: dailyTheme.accent.withValues(alpha: .14),
         foregroundColor: dailyTheme.accent,
       ),
@@ -1175,9 +1271,15 @@ class _EmployeePortalState extends State<EmployeePortal>
     );
   }
 
-  Widget _identityField(IconData icon, String label, String value) {
+  Widget _identityField(
+    IconData icon,
+    String label,
+    String value, {
+    double width = 185,
+    bool multiline = false,
+  }) {
     return SizedBox(
-      width: 185,
+      width: width,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -1193,8 +1295,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 ),
                 Text(
                   value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: multiline ? 2 : 1,
+                  overflow: multiline ? TextOverflow.visible : TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF08255F),
                     fontSize: 12,
@@ -1331,7 +1433,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       (title: 'Payslips', icon: Icons.description_outlined, page: 1),
       (title: 'Attendance', icon: Icons.calendar_month_outlined, page: 2),
       (title: 'OT Request', icon: Icons.more_time_outlined, page: 6),
-      (title: 'Profile', icon: Icons.person_outline, page: 3),
+      (title: 'Leave', icon: Icons.flight_takeoff_outlined, page: 3),
       (title: 'Bank Info', icon: Icons.account_balance_outlined, page: 4),
       (title: 'Password', icon: Icons.lock_outline, page: 5),
     ];
@@ -2098,7 +2200,69 @@ class _EmployeePortalState extends State<EmployeePortal>
   }
 
   // =============================================================
-  // PROFILE
+  // LEAVE
+  // =============================================================
+
+  Widget _leavePlaceholder() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 620),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFD9E6F8)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF08255F).withValues(alpha: .08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 74,
+                height: 74,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1976E9).withValues(alpha: .10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.flight_takeoff_outlined,
+                  color: Color(0xFF1976E9),
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Leave Request',
+                style: TextStyle(
+                  color: Color(0xFF08255F),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The leave application form will be available here soon. It will follow the same request and approval concept as OT requests.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF6079A4), height: 1.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =============================================================
+  // PROFILE (kept for employee information reuse; not in navigation)
   // =============================================================
 
   Widget _profile() {
