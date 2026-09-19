@@ -898,75 +898,185 @@ class _EmployeePortalState extends State<EmployeePortal>
                 ? 'Good afternoon'
                 : 'Good evening';
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+        return Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 820),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: dailyTheme.accent.withValues(alpha: .55)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .16),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _isBirthdayToday
+                        ? const [Color(0xFFED1C24), Color(0xFF7C3AED)]
+                        : dailyTheme.hero,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(7),
+                      child: Image.asset(
+                        'assets/hasani_books_logo.jpg',
+                        width: compact ? 72 : 90,
+                        height: 34,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'EMPLOYEE IDENTITY CARD',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(compact ? 14 : 18),
+                child: compact
+                    ? Column(
+                        children: [
+                          _identityPhoto(dailyTheme),
+                          const SizedBox(height: 14),
+                          _identityInformation(greeting, dailyTheme, centered: true),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          _identityPhoto(dailyTheme),
+                          const SizedBox(width: 20),
+                          Expanded(child: _identityInformation(greeting, dailyTheme)),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _identityPhoto(_EmployeeDailyTheme dailyTheme) {
     return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 118),
-      padding: const EdgeInsets.fromLTRB(18, 14, 16, 12),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _isBirthdayToday
-              ? const [Color(0xFFED1C24), Color(0xFFFF8A34), Color(0xFF7C3AED)]
-              : dailyTheme.hero,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: dailyTheme.accent.withValues(alpha: .42),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: dailyTheme.accent.withValues(alpha: .18),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: dailyTheme.accent, width: 2),
       ),
-      child: Row(
-        children: [
-          EmployeePhoto(
-            name: employee!.name,
-            photoUrl: employee!.photoUrl,
-            radius: 27,
-            backgroundColor: Colors.white.withValues(alpha: .16),
-            foregroundColor: dailyTheme.accent,
+      child: EmployeePhoto(
+        name: employee!.name,
+        photoUrl: employee!.photoUrl,
+        radius: 48,
+        backgroundColor: dailyTheme.accent.withValues(alpha: .14),
+        foregroundColor: dailyTheme.accent,
+      ),
+    );
+  }
+
+  Widget _identityInformation(
+    String greeting,
+    _EmployeeDailyTheme dailyTheme, {
+    bool centered = false,
+  }) {
+    final alignment = centered ? CrossAxisAlignment.center : CrossAxisAlignment.start;
+    final textAlign = centered ? TextAlign.center : TextAlign.start;
+    final branch = employee!.branchId.trim().isEmpty ? '-' : employee!.branchId;
+    return Column(
+      crossAxisAlignment: alignment,
+      children: [
+        Text(
+          '$greeting, ${employee!.name}',
+          textAlign: textAlign,
+          style: const TextStyle(
+            color: Color(0xFF17233C),
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
           ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$greeting,',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  employee!.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${employee!.employeeId}  •  ${DateFormat('EEEE, d MMMM').format(DateTime.now())}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _isBirthdayToday
-                      ? '🎉 Wishing you happiness, success and a wonderful year ahead! 🎉'
-                      : '“${dailyTheme.quote}”',
-                  style: TextStyle(
-                    color: dailyTheme.accent,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          employee!.designation.trim().isEmpty ? 'Employee' : employee!.designation,
+          textAlign: textAlign,
+          style: TextStyle(color: dailyTheme.accent, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          alignment: centered ? WrapAlignment.center : WrapAlignment.start,
+          spacing: 22,
+          runSpacing: 10,
+          children: [
+            _identityField('Employee ID', employee!.employeeId),
+            _identityField(
+              'Department',
+              employee!.department.trim().isEmpty ? '-' : employee!.department,
+            ),
+            _identityField('Branch', branch),
+            _identityField(
+              'Status',
+              employee!.isActive ? 'ACTIVE' : 'INACTIVE',
+              valueColor: employee!.isActive ? const Color(0xFF15805D) : Colors.red,
+            ),
+          ],
+        ),
+        const SizedBox(height: 11),
+        Text(
+          DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
+          textAlign: textAlign,
+          style: const TextStyle(color: Colors.black45, fontSize: 11),
+        ),
+      ],
+    );
+  }
+
+  Widget _identityField(String label, String value, {Color? valueColor}) {
+    return SizedBox(
+      width: 132,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: Colors.black45,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: .7,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: valueColor ?? const Color(0xFF17233C),
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
