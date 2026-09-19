@@ -12,6 +12,7 @@ import '../theme/daily_portal_theme.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
 import 'employee_ot_request_page.dart';
+import 'employee_leave_request_page.dart';
 import 'login_screen.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
@@ -730,7 +731,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         return _attendance();
 
       case 3:
-        return _leavePlaceholder();
+        return EmployeeLeaveRequestPage(employee: employee!);
 
       case 4:
         return _bankInformation();
@@ -872,13 +873,18 @@ class _EmployeePortalState extends State<EmployeePortal>
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: dailyTheme.accent.withValues(alpha: .55)),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFF092E6E), width: 1.4),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .16),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
+                color: const Color(0xFF08255F).withValues(alpha: .20),
+                blurRadius: 32,
+                offset: const Offset(0, 16),
+              ),
+              BoxShadow(
+                color: const Color(0xFFED1C24).withValues(alpha: .08),
+                blurRadius: 18,
+                offset: const Offset(-8, 5),
               ),
             ],
           ),
@@ -886,7 +892,14 @@ class _EmployeePortalState extends State<EmployeePortal>
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                color: Colors.white,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.white, Color(0xFFF4F8FF)],
+                  ),
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFD7E2F2)),
+                  ),
+                ),
                 child: Row(
                   children: [
                     Image.asset(
@@ -934,30 +947,97 @@ class _EmployeePortalState extends State<EmployeePortal>
               ),
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(compact ? 16 : 24),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFF4FAFF), Colors.white, Color(0xFFEDF5FF)],
+                    colors: [Color(0xFFEAF3FF), Color(0xFFFCFDFF), Color(0xFFE7F0FC)],
                   ),
                   border: Border(
-                    top: BorderSide(color: Color(0xFFE20C2C), width: 5),
-                    bottom: BorderSide(color: Color(0xFF083E91), width: 5),
+                    bottom: BorderSide(color: Color(0xFFED1C24), width: 5),
                   ),
                 ),
-                child: compact
-                    ? _mobileIdentityCard(dailyTheme)
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _identityPhoto(dailyTheme),
-                          const SizedBox(width: 24),
-                          Expanded(child: _identityInformation(dailyTheme)),
-                          const SizedBox(width: 20),
-                          _identityVerification(),
-                        ],
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: -72,
+                      right: -38,
+                      child: Transform.rotate(
+                        angle: -.35,
+                        child: Container(
+                          width: compact ? 150 : 270,
+                          height: 115,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF083E91), Color(0xFF031D4B)],
+                            ),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                        ),
                       ),
+                    ),
+                    Positioned(
+                      top: -48,
+                      right: compact ? 44 : 105,
+                      child: Transform.rotate(
+                        angle: -.35,
+                        child: Container(
+                          width: compact ? 62 : 100,
+                          height: 105,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFED1C24),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: -54,
+                      bottom: -68,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF0B57B7).withValues(alpha: .13),
+                            width: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Opacity(
+                          opacity: .035,
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: Icon(
+                              Icons.menu_book_rounded,
+                              color: const Color(0xFF08255F),
+                              size: compact ? 210 : 320,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(compact ? 14 : 24),
+                      child: compact
+                          ? _mobileIdentityCard(dailyTheme)
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                _identityPhoto(dailyTheme),
+                                const SizedBox(width: 24),
+                                Expanded(child: _identityInformation(dailyTheme)),
+                                const SizedBox(width: 20),
+                                _identityVerification(),
+                              ],
+                            ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
