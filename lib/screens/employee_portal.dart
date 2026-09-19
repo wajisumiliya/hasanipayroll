@@ -821,30 +821,30 @@ class _EmployeePortalState extends State<EmployeePortal>
                   ],
                 ),
               const SizedBox(height: 16),
-          Row(
-            children: [
-              Text(
-                'Recent Payslips',
-                style: TextStyle(
-                  color: tab == 0 ? Colors.white : Colors.black87,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Recent Payslips',
+                    style: TextStyle(
+                      color: tab == 0 ? Colors.white : Colors.black87,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        tab = 1;
+                      });
+                    },
+                    child: const Text(
+                      'View All',
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    tab = 1;
-                  });
-                },
-                child: const Text(
-                  'View All',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
+              const SizedBox(height: 8),
               ...records.take(3).map(_recentPayslipTile),
             ],
           ),
@@ -1158,39 +1158,39 @@ class _EmployeePortalState extends State<EmployeePortal>
     VoidCallback onTap,
   ) {
     return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
-          decoration: BoxDecoration(
-            color: const Color(0xE60B2239),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: _dailyTheme.accent.withValues(alpha: .30),
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: _dailyTheme.accent,
-              ),
-              const SizedBox(height: 3),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xE60B2239),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: _dailyTheme.accent.withValues(alpha: .30),
           ),
         ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: _dailyTheme.accent,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1333,9 +1333,8 @@ class _EmployeePortalState extends State<EmployeePortal>
         color: available ? accent.withValues(alpha: .08) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: available
-              ? accent.withValues(alpha: .16)
-              : Colors.grey.shade200,
+          color:
+              available ? accent.withValues(alpha: .16) : Colors.grey.shade200,
         ),
         boxShadow: [
           BoxShadow(
@@ -1454,8 +1453,8 @@ class _EmployeePortalState extends State<EmployeePortal>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(
-                        color: Colors.black54, fontSize: 10)),
+                    style:
+                        const TextStyle(color: Colors.black54, fontSize: 10)),
                 const SizedBox(height: 2),
                 Text(
                   value,
@@ -1643,8 +1642,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     for (final record in records) {
       recordsByYear.putIfAbsent(record.period.year, () => []).add(record);
     }
-    final years = recordsByYear.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final years = recordsByYear.keys.toList()..sort((a, b) => b.compareTo(a));
     final selectedYear = years.contains(_selectedPayslipYear)
         ? _selectedPayslipYear!
         : (years.isEmpty ? null : years.first);
@@ -1714,8 +1712,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 selectedYear,
                 recordsByYear[selectedYear]!,
               ),
-          ]
-          else
+          ] else
             ...years.map(
               (year) => _payslipYearSection(year, recordsByYear[year]!),
             ),
