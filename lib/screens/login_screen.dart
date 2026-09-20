@@ -743,7 +743,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   @override
-  Widget build(BuildContext context) => _premiumLoginPage(context);
+  Widget build(BuildContext context) => _legacyLoginPage(context);
 
   Widget _premiumLoginPage(BuildContext context) {
     return Scaffold(
