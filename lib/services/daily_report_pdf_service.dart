@@ -80,6 +80,20 @@ class DailyReportPdfService {
 
     final reviewedAt = malaysianDateTime(report['reviewed_at']);
 
+    int narrativeFlex(dynamic value) {
+      final length = text(value).length;
+      return (2 + (length / 110).ceil()).clamp(2, 6).toInt();
+    }
+
+    double narrativeFontSize(dynamic value) {
+      final length = text(value).length;
+      if (length > 600) return 6.5;
+      if (length > 420) return 7.5;
+      if (length > 280) return 8.5;
+      if (length > 160) return 9;
+      return 10;
+    }
+
     pw.Widget section(String label) => pw.Container(
           height: 19,
           alignment: pw.Alignment.center,
@@ -170,12 +184,16 @@ class DailyReportPdfService {
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                 child: pw.Text(label,
-                    style:
-                        pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                    style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                        decoration: pw.TextDecoration.underline,
+                        decorationThickness: .8)),
               ),
               pw.SizedBox(height: 6),
               pw.Text(text(value),
-                  style: const pw.TextStyle(fontSize: 10, lineSpacing: 6)),
+                  style: pw.TextStyle(
+                      fontSize: narrativeFontSize(value), lineSpacing: 6)),
             ]),
           ),
         );
@@ -275,7 +293,8 @@ class DailyReportPdfService {
             inlineField('To Service or Repair', report['service_repair']),
           ]),
           section('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
-          reportArea('Report', report['maintenance_report'], flex: 3),
+          reportArea('Report', report['maintenance_report'],
+              flex: narrativeFlex(report['maintenance_report'])),
           section('ORSANO'),
           pw.Row(children: [
             orsanoCell('Agama', orsano['agama']),
@@ -289,9 +308,10 @@ class DailyReportPdfService {
             orsanoCell('Quran', orsano['quran']),
             orsanoCell('Others', orsano['others']),
           ]),
-          reportArea('Report Crew', report['report_crew'], flex: 3),
+          reportArea('Report Crew', report['report_crew'],
+              flex: narrativeFlex(report['report_crew'])),
           reportArea('Recommandation / Demand / Sales', report['recommendation'],
-              flex: 2),
+              flex: narrativeFlex(report['recommendation'])),
           pw.Row(children: [
             bottomBox(
               'Reported By:',
