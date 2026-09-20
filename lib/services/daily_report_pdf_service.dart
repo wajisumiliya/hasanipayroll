@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart' show PdfGoogleFonts;
 
 /// Fixed A4 print layout that follows the supplied Daily Report form exactly.
 class DailyReportPdfService {
@@ -10,6 +11,14 @@ class DailyReportPdfService {
     const ink = PdfColor.fromInt(0xff303030);
     const blue = PdfColor.fromInt(0xff123b86);
     final document = pw.Document();
+    pw.ThemeData? theme;
+    try {
+      final poppins = await PdfGoogleFonts.poppinsRegular();
+      final poppinsBold = await PdfGoogleFonts.poppinsBold();
+      theme = pw.ThemeData.withFont(base: poppins, bold: poppinsBold);
+    } catch (_) {
+      // Keep PDF printing available when a device is offline.
+    }
     pw.MemoryImage? logo;
     try {
       final logoData = await rootBundle.load('assets/hasani_books_logo.jpg');
@@ -165,7 +174,8 @@ class DailyReportPdfService {
                         pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
               ),
               pw.SizedBox(height: 6),
-              pw.Text(text(value), style: const pw.TextStyle(fontSize: 10)),
+              pw.Text(text(value),
+                  style: const pw.TextStyle(fontSize: 10, lineSpacing: 6)),
             ]),
           ),
         );
@@ -212,6 +222,7 @@ class DailyReportPdfService {
     document.addPage(pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.all(10),
+      theme: theme,
       build: (_) => pw.Container(
         height: PdfPageFormat.a4.height - 20,
         decoration: pw.BoxDecoration(border: pw.Border.all(color: ink, width: 2)),
@@ -264,7 +275,7 @@ class DailyReportPdfService {
             inlineField('To Service or Repair', report['service_repair']),
           ]),
           section('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
-          reportArea('Report:', report['maintenance_report'], flex: 3),
+          reportArea('Report', report['maintenance_report'], flex: 3),
           section('ORSANO'),
           pw.Row(children: [
             orsanoCell('Agama', orsano['agama']),
@@ -278,8 +289,9 @@ class DailyReportPdfService {
             orsanoCell('Quran', orsano['quran']),
             orsanoCell('Others', orsano['others']),
           ]),
-          reportArea('Report Crew:', report['report_crew'], flex: 3),
-          reportArea('Recommendation / Demand / Sales:', report['recommendation'], flex: 2),
+          reportArea('Report Crew', report['report_crew'], flex: 3),
+          reportArea('Recommandation / Demand / Sales', report['recommendation'],
+              flex: 2),
           pw.Row(children: [
             bottomBox(
               'Reported By:',
