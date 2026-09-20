@@ -1107,7 +1107,8 @@ class _LoginScreenState extends State<LoginScreen>
             border: Border.all(color: foreground.withValues(alpha: .14)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: theme.isLight ? .10 : .30),
+                color:
+                    Colors.black.withValues(alpha: theme.isLight ? .10 : .30),
                 blurRadius: 48,
                 offset: const Offset(0, 22),
               ),
@@ -1164,10 +1165,11 @@ class _LoginScreenState extends State<LoginScreen>
                 onSubmitted: (_) {
                   if (!loading) _login();
                 },
-                decoration: decoration('Password', Icons.lock_outline_rounded)
-                    .copyWith(
+                decoration:
+                    decoration('Password', Icons.lock_outline_rounded).copyWith(
                   suffixIcon: IconButton(
-                    tooltip: obscurePassword ? 'Show password' : 'Hide password',
+                    tooltip:
+                        obscurePassword ? 'Show password' : 'Hide password',
                     onPressed: loading
                         ? null
                         : () => setState(
@@ -1244,7 +1246,8 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(height: 21),
               Row(
                 children: [
-                  Expanded(child: Divider(color: foreground.withValues(alpha: .18))),
+                  Expanded(
+                      child: Divider(color: foreground.withValues(alpha: .18))),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Text(
@@ -1256,7 +1259,8 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: foreground.withValues(alpha: .18))),
+                  Expanded(
+                      child: Divider(color: foreground.withValues(alpha: .18))),
                 ],
               ),
               const SizedBox(height: 14),
@@ -1292,14 +1296,26 @@ class _LoginScreenState extends State<LoginScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF071525), Color(0xFF152A45), Color(0xFF08111F)],
+                colors: [
+                  Color(0xFF071525),
+                  Color(0xFF152A45),
+                  Color(0xFF08111F)
+                ],
               ),
             ),
           ),
         ),
-        Positioned(left: -150, bottom: -160, child: _premiumGlow(460, const Color(0xFF2455C3))),
-        Positioned(right: -140, top: -150, child: _premiumGlow(430, const Color(0xFFF2C15A))),
-        Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: _PremiumLoginPainter()))),
+        Positioned(
+            left: -150,
+            bottom: -160,
+            child: _premiumGlow(460, const Color(0xFF2455C3))),
+        Positioned(
+            right: -140,
+            top: -150,
+            child: _premiumGlow(430, const Color(0xFFF2C15A))),
+        Positioned.fill(
+            child: IgnorePointer(
+                child: CustomPaint(painter: _PremiumLoginPainter()))),
         SafeArea(
           child: LayoutBuilder(builder: (context, constraints) {
             final compact = constraints.maxWidth < 850;
@@ -1308,7 +1324,9 @@ class _LoginScreenState extends State<LoginScreen>
               return Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(22),
-                  child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 540), child: form),
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 540),
+                      child: form),
                 ),
               );
             }
@@ -1322,7 +1340,9 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               Expanded(
                 flex: 9,
-                child: Center(child: Padding(padding: const EdgeInsets.all(40), child: form)),
+                child: Center(
+                    child: Padding(
+                        padding: const EdgeInsets.all(40), child: form)),
               ),
             ]);
           }),
@@ -1358,7 +1378,9 @@ class _LoginScreenState extends State<LoginScreen>
                         letterSpacing: 4,
                         fontWeight: FontWeight.w600)),
                 SizedBox(height: 18),
-                SizedBox(width: 52, child: Divider(color: Color(0xFFF2C15A), thickness: 3)),
+                SizedBox(
+                    width: 52,
+                    child: Divider(color: Color(0xFFF2C15A), thickness: 3)),
               ],
             ),
           ),
@@ -1391,32 +1413,56 @@ class _LoginScreenState extends State<LoginScreen>
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: compact ? 24 : 44, vertical: compact ? 30 : 40),
+            padding: EdgeInsets.symmetric(
+                horizontal: compact ? 24 : 44, vertical: compact ? 30 : 40),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: .10),
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: const Color(0xFFF2C15A).withValues(alpha: .50)),
-              boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 45, offset: Offset(0, 22))],
+              border: Border.all(
+                  color: const Color(0xFFF2C15A).withValues(alpha: .50)),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x66000000),
+                    blurRadius: 45,
+                    offset: Offset(0, 22))
+              ],
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Image.asset('assets/hasani_books_logo.jpg', width: compact ? 220 : 255,
-                  errorBuilder: (context, error, stackTrace) => const Text('HASANI BOOKS',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 28))),
+              Image.asset('assets/hasani_books_logo.jpg',
+                  width: compact ? 220 : 255,
+                  errorBuilder: (context, error, stackTrace) => const Text(
+                      'HASANI BOOKS',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 28))),
               const SizedBox(height: 34),
-              const Text('Welcome Back', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800)),
+              const Text('Welcome Back',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800)),
               const SizedBox(height: 7),
-              const Text('Sign in to continue', style: TextStyle(color: Color(0xFFC5CED9))),
+              const Text('Sign in to continue',
+                  style: TextStyle(color: Color(0xFFC5CED9))),
               const SizedBox(height: 28),
-              _premiumInput(usernameController, 'Username / Employee ID', Icons.person_outline_rounded,
+              _premiumInput(usernameController, 'Username / Employee ID',
+                  Icons.person_outline_rounded,
                   onSubmitted: (_) => FocusScope.of(context).nextFocus()),
               const SizedBox(height: 15),
-              _premiumInput(passwordController, 'Password', Icons.lock_outline_rounded, password: true,
-                  onSubmitted: (_) { if (!loading) _login(); }),
+              _premiumInput(
+                  passwordController, 'Password', Icons.lock_outline_rounded,
+                  password: true, onSubmitted: (_) {
+                if (!loading) _login();
+              }),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: loading ? null : _showForgotPasswordDialog,
-                  child: const Text('Forgot password?', style: TextStyle(color: Color(0xFFF2C15A), fontWeight: FontWeight.w700)),
+                  child: const Text('Forgot password?',
+                      style: TextStyle(
+                          color: Color(0xFFF2C15A),
+                          fontWeight: FontWeight.w700)),
                 ),
               ),
               if (errorMessage != null) _premiumError(errorMessage!),
@@ -1427,13 +1473,20 @@ class _LoginScreenState extends State<LoginScreen>
                 child: ElevatedButton.icon(
                   onPressed: loading ? null : _login,
                   icon: loading
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF08111F), strokeWidth: 2.5))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Color(0xFF08111F), strokeWidth: 2.5))
                       : const Icon(Icons.login_rounded),
-                  label: Text(loading ? 'SIGNING IN...' : 'LOGIN', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  label: Text(loading ? 'SIGNING IN...' : 'LOGIN',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900, letterSpacing: 1)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFF2C15A),
                     foregroundColor: const Color(0xFF08111F),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -1441,7 +1494,8 @@ class _LoginScreenState extends State<LoginScreen>
               const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Icon(Icons.shield_outlined, color: Color(0xFFF2C15A), size: 16),
                 SizedBox(width: 7),
-                Text('Protected • Reliable • Hasani Books', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                Text('Protected • Reliable • Hasani Books',
+                    style: TextStyle(color: Colors.white54, fontSize: 11)),
               ]),
             ]),
           ),
@@ -1452,38 +1506,64 @@ class _LoginScreenState extends State<LoginScreen>
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(color: const Color(0xFFFFE8EC), borderRadius: BorderRadius.circular(12)),
-        child: Text(message, style: const TextStyle(color: Color(0xFF9B1028), fontWeight: FontWeight.w700)),
+        decoration: BoxDecoration(
+            color: const Color(0xFFFFE8EC),
+            borderRadius: BorderRadius.circular(12)),
+        child: Text(message,
+            style: const TextStyle(
+                color: Color(0xFF9B1028), fontWeight: FontWeight.w700)),
       );
 
-  Widget _premiumInput(TextEditingController controller, String hint, IconData icon,
+  Widget _premiumInput(
+          TextEditingController controller, String hint, IconData icon,
           {bool password = false, ValueChanged<String>? onSubmitted}) =>
       TextField(
         controller: controller,
         enabled: !loading,
         obscureText: password && obscurePassword,
         onSubmitted: onSubmitted,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        style:
+            const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Color(0xFFAEB8C5)),
           prefixIcon: Icon(icon, color: const Color(0xFFF2C15A)),
-          suffixIcon: password ? IconButton(
-            onPressed: loading ? null : () => setState(() => obscurePassword = !obscurePassword),
-            icon: Icon(obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: Colors.white70),
-          ) : null,
+          suffixIcon: password
+              ? IconButton(
+                  onPressed: loading
+                      ? null
+                      : () =>
+                          setState(() => obscurePassword = !obscurePassword),
+                  icon: Icon(
+                      obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: Colors.white70),
+                )
+              : null,
           filled: true,
           fillColor: Colors.black.withValues(alpha: .20),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 19),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0x33FFFFFF))),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFF2C15A), width: 1.5)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 19),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0x33FFFFFF))),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide:
+                  const BorderSide(color: Color(0xFFF2C15A), width: 1.5)),
         ),
       );
 
   Widget _premiumGlow(double size, Color color) => Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withValues(alpha: .16), blurRadius: 150, spreadRadius: 55)]),
+        decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
+          BoxShadow(
+              color: color.withValues(alpha: .16),
+              blurRadius: 150,
+              spreadRadius: 55)
+        ]),
       );
 
   Widget _legacyLoginPage(BuildContext context) {
@@ -2561,13 +2641,11 @@ class _DailyLoginTheme {
       day == 'Thursday' ||
       day == 'Friday';
 
-  Color get foreground =>
-      isLight ? const Color(0xFF10294D) : Colors.white;
+  Color get foreground => isLight ? const Color(0xFF10294D) : Colors.white;
 
   Color get visualForeground => day == 'Thursday' ? Colors.white : foreground;
 
-  String get backgroundAsset =>
-      'assets/login_days/${day.toLowerCase()}.png';
+  String get backgroundAsset => 'assets/login_days/${day.toLowerCase()}.png';
 
   Color get pageBackground {
     switch (day) {
