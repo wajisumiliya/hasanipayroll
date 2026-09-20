@@ -232,7 +232,7 @@ class DailyReportPdfService {
                           fontSize: 24,
                           fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 2),
-                pw.Text('DAILY REPORT',
+                pw.Text('DAILY MAINTAINANCE REPORT',
                     textAlign: pw.TextAlign.center,
                     style: pw.TextStyle(
                         color: blue,
@@ -263,7 +263,7 @@ class DailyReportPdfService {
             inlineField('Working Condition', report['working_condition']),
             inlineField('To Service or Repair', report['service_repair']),
           ]),
-          section('MAINTENANCE/ELECTRICAL/EQUIPMENT'),
+          section('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
           reportArea('Report:', report['maintenance_report'], flex: 3),
           section('ORSANO'),
           pw.Row(children: [
@@ -279,7 +279,7 @@ class DailyReportPdfService {
             orsanoCell('Others', orsano['others']),
           ]),
           reportArea('Report Crew:', report['report_crew'], flex: 3),
-          reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 2),
+          reportArea('Recommendation / Demand / Sales:', report['recommendation'], flex: 2),
           pw.Row(children: [
             bottomBox(
               'Reported By:',
