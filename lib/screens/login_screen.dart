@@ -794,30 +794,57 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _premiumHero() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _premiumHero() => Stack(
+        fit: StackFit.expand,
         children: [
-          const Spacer(),
-          Image.asset('assets/hasani_books_logo.jpg', width: 330,
-              errorBuilder: (context, error, stackTrace) => const Text('HASANI BOOKS',
-                  style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900))),
-          const SizedBox(height: 36),
-          const Text('Secure access\nfor your payroll workspace.',
-              style: TextStyle(
-                  color: Colors.white, fontSize: 45, height: 1.08, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 22),
-          Container(width: 76, height: 4, color: const Color(0xFFF2C15A)),
-          const SizedBox(height: 26),
-          const Text('Manage people, attendance, payroll and daily operations in one protected workspace.',
-              style: TextStyle(color: Color(0xFFC6D0DD), fontSize: 17, height: 1.55)),
-          const Spacer(),
-          const Row(children: [
-            _PremiumFeature(Icons.groups_rounded, 'People'),
-            SizedBox(width: 38),
-            _PremiumFeature(Icons.auto_graph_rounded, 'Progress'),
-            SizedBox(width: 38),
-            _PremiumFeature(Icons.verified_user_rounded, 'Secure'),
-          ]),
+          Positioned(
+            right: -68,
+            top: 28,
+            bottom: 18,
+            child: Opacity(
+              opacity: .34,
+              child: Image.asset('assets/login_natural_tree.png',
+                  width: 420, fit: BoxFit.contain),
+            ),
+          ),
+          const Positioned(
+            top: 8,
+            left: 0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('GOOD WORK.\nBRIGHTER\nTOMORROW.',
+                    style: TextStyle(
+                        color: Color(0xFFD7DEEA),
+                        fontSize: 15,
+                        height: 1.8,
+                        letterSpacing: 4,
+                        fontWeight: FontWeight.w600)),
+                SizedBox(height: 18),
+                SizedBox(width: 52, child: Divider(color: Color(0xFFF2C15A), thickness: 3)),
+              ],
+            ),
+          ),
+          Positioned(
+            left: -42,
+            bottom: 24,
+            child: Image.asset(
+              loading || _idleCatAwake
+                  ? 'assets/login_cat_open_eyes.png'
+                  : 'assets/login_cat_cutout.png',
+              key: ValueKey(loading || _idleCatAwake),
+              width: 455,
+              height: 505,
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomLeft,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+          const Positioned(
+            left: 8,
+            bottom: 0,
+            child: _PremiumFeature(Icons.eco_outlined, 'Growing together'),
+          ),
         ],
       );
 
