@@ -16,6 +16,7 @@ import 'leave_requests_approval_page.dart';
 import 'daily_report_page.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_photo.dart';
+import '../widgets/premium_portal_sidebar.dart';
 
 // ============================================================================
 // BRANCH PORTAL
@@ -329,6 +330,30 @@ class _BranchPortalState extends State<BranchPortal>
   // ==========================================================================
 
   Widget _sidebar() {
+    PremiumPortalSidebarItem item(String label, IconData icon, int page) =>
+        PremiumPortalSidebarItem(
+          label: label,
+          icon: icon,
+          selected: selectedPage == page,
+          onTap: () => setState(() => selectedPage = page),
+        );
+    return PremiumPortalSidebar(
+      portalLabel: 'Branch Portal',
+      profileName: branchDisplayName,
+      profileDetail: service.currentUser?.displayName ?? 'Branch account',
+      profileIcon: Icons.storefront_rounded,
+      items: [
+        item('Dashboard', Icons.dashboard_outlined, 0),
+        item('Attendance', Icons.fact_check_outlined, 1),
+        item('Employees', Icons.people_outline, 2),
+        item('OT Requests', Icons.more_time_outlined, 3),
+        item('Leave Requests', Icons.flight_takeoff_outlined, 4),
+        item('Daily Report', Icons.assignment_outlined, 5),
+      ],
+      onLogout: logout,
+    );
+
+    // Legacy sidebar retained below temporarily for safe source comparison.
     return Container(
       width: 264,
       decoration: const BoxDecoration(

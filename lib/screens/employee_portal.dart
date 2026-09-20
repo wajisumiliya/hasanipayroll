@@ -18,6 +18,7 @@ import 'supabase_service.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
+import '../widgets/premium_portal_sidebar.dart';
 
 class EmployeePortal extends StatefulWidget {
   const EmployeePortal({super.key});
@@ -505,6 +506,32 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
 
   Widget _desktopSidebar() {
+    PremiumPortalSidebarItem item(String label, IconData icon, int index) =>
+        PremiumPortalSidebarItem(
+          label: label,
+          icon: icon,
+          selected: tab == index,
+          onTap: () => setState(() => tab = index),
+        );
+    return PremiumPortalSidebar(
+      portalLabel: 'Employee Portal',
+      profileName:
+          employee?.name ?? service.currentUser?.displayName ?? 'Employee',
+      profileDetail: employeeId.isEmpty ? 'Employee account' : employeeId,
+      profileIcon: Icons.badge_outlined,
+      items: [
+        item('Dashboard', Icons.dashboard_outlined, 0),
+        if (_isLocalEmployee) item('Leave', Icons.flight_takeoff_outlined, 3),
+        item('Attendance', Icons.calendar_month_outlined, 2),
+        item('OT Request', Icons.more_time_outlined, 6),
+        item('Payslip', Icons.receipt_long_outlined, 1),
+        item('Bank Information', Icons.account_balance_outlined, 4),
+        item('Change Password', Icons.lock_outline, 5),
+      ],
+      onLogout: logout,
+    );
+
+    // Legacy sidebar retained below temporarily for safe source comparison.
     return Container(
       width: 272,
       decoration: const BoxDecoration(

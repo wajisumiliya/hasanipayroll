@@ -33,6 +33,7 @@ import 'daily_report_page.dart';
 import '../dashboard_brand_logos.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
+import '../widgets/premium_portal_sidebar.dart';
 
 class _DashboardHeaderPainter extends CustomPainter {
   const _DashboardHeaderPainter();
@@ -694,6 +695,43 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   Widget _sidebar() {
+    PremiumPortalSidebarItem item(String label, IconData icon, int page) =>
+        PremiumPortalSidebarItem(
+          label: label,
+          icon: icon,
+          selected: selectedPage == page,
+          onTap: () => changePage(page),
+        );
+    return PremiumPortalSidebar(
+      portalLabel: 'Payroll Portal',
+      profileName: _adminScopeName,
+      profileDetail: _adminScopeLabel,
+      profileIcon: Icons.admin_panel_settings_outlined,
+      items: [
+        item('Dashboard', Icons.dashboard_outlined, 0),
+        item('Employees', Icons.people_outline, 1),
+        item('Payroll', Icons.payments_outlined, 2),
+        item('Employee Payslips', Icons.receipt_long_outlined, 12),
+        PremiumPortalSidebarItem(
+          label: 'Edit Payroll',
+          icon: Icons.edit_note_rounded,
+          selected: false,
+          onTap: _showEditPayrollDialog,
+        ),
+        item('RHB Layout', Icons.account_balance_outlined, 8),
+        item('Attendance', Icons.access_time, 3),
+        item('Branch Logs', Icons.manage_history_outlined, 9),
+        item('Employee Requests', Icons.how_to_reg_outlined, 10),
+        item('OT Requests', Icons.more_time_outlined, 11),
+        item('Leave Requests', Icons.flight_takeoff_outlined, 13),
+        item('Daily Reports', Icons.assignment_outlined, 14),
+        item('Reports', Icons.bar_chart_outlined, 6),
+        item('Settings', Icons.settings_outlined, 7),
+      ],
+      onLogout: logout,
+    );
+
+    // Legacy sidebar retained below temporarily for safe source comparison.
     return Container(
       width: 245,
       decoration: BoxDecoration(
