@@ -11,6 +11,29 @@ const cors = {
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
+    const authorization = request.headers.get('Authorization') ?? '';
+    if (!authorization.startsWith('Bearer ')) {
+      return json({ error: 'Authentication required.' }, 401);
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authorization } },
+      auth: { persistSession: false },
+    });
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
+      return json({ error: 'Invalid or expired authentication token.' }, 401);
+    }
+
+    const role = String(
+      user.app_metadata?.app_role ?? user.app_metadata?.role ?? '',
+    ).toLowerCase();
+    if (role !== 'admin') {
+      return json({ error: 'Administrator access required.' }, 403);
+    }
+
     const input = await request.json();
     const title = String(input.title ?? '').trim();
     const body = String(input.body ?? '').trim();
@@ -20,8 +43,9 @@ Deno.serve(async (request) => {
     }
 
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
+      supabaseUrl,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { persistSession: false } },
     );
     let query = supabase.from('notification_devices').select('token');
     if (audience === 'branch') query = query.eq('branch_id', input.branch_id);
