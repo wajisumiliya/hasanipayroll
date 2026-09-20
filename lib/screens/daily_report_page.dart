@@ -96,7 +96,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
           'working_condition',
           'service_repair'
         ])
-          key: int.tryParse(c[key]!.text.trim()) ?? 0,
+          key: c[key]!.text.trim(),
         'air_conditioner': 'Air Conditioner',
         'maintenance_report': c['maintenance_report']!.text.trim(),
         'report_crew': c['report_crew']!.text.trim(),
@@ -117,7 +117,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
             'quran',
             'others'
           ])
-            key: int.tryParse(c['ors_$key']!.text.trim()) ?? 0,
+            key: c['ors_$key']!.text.trim(),
         },
       });
       if (!mounted) return;
@@ -336,8 +336,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
           textAlign: TextAlign.center,
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold)));
-  Widget _fourFields(List<String> keys, List<String> labels,
-          {Set<String> textKeys = const {}}) =>
+  Widget _fourFields(List<String> keys, List<String> labels) =>
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: LayoutBuilder(
@@ -350,8 +349,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
                 width: box.maxWidth > 600
                     ? (box.maxWidth - 24) / 4
                     : (box.maxWidth - 8) / 2,
-                child: _field(keys[i], labels[i],
-                    number: !textKeys.contains(keys[i])),
+                child: _field(keys[i], labels[i]),
               ),
             ),
           ),
@@ -367,9 +365,9 @@ class _DailyReportPageState extends State<DailyReportPage> {
                 : (box.maxWidth - 8) / 2;
             return Wrap(spacing: 8, runSpacing: 8, children: [
               SizedBox(width: width, child: _categoryHeading('Air Conditioner')),
-              SizedBox(width: width, child: _field('maintenance_total', 'Total', number: true)),
-              SizedBox(width: width, child: _field('working_condition', 'Working Condition', number: true)),
-              SizedBox(width: width, child: _field('service_repair', 'To Service / Repair', number: true)),
+              SizedBox(width: width, child: _field('maintenance_total', 'Total')),
+              SizedBox(width: width, child: _field('working_condition', 'Working Condition')),
+              SizedBox(width: width, child: _field('service_repair', 'To Service / Repair')),
             ]);
           },
         ),
