@@ -205,7 +205,7 @@ class DailyReportPdfService {
             ),
           ),
           pw.SizedBox(height: 3),
-          pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+          pw.Row(children: [
             reportInfoCell('Branch', text(report['branch_id']), flex: 2),
             reportInfoCell('Report Date', text(report['report_date']), flex: 2),
             reportInfoCell('Reported By', text(report['reported_by']), flex: 2),
@@ -243,7 +243,7 @@ class DailyReportPdfService {
           ]),
           reportArea('Report Crew:', report['report_crew'], flex: 3),
           reportArea('Recommendation/Demand/Sales:', report['recommendation'], flex: 2),
-          pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+          pw.Row(children: [
             bottomBox(
               'Reported By:',
               pw.Padding(
