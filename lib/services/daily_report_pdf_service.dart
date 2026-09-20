@@ -265,7 +265,7 @@ class DailyReportPdfService {
                     textAlign: pw.TextAlign.center,
                     style: pw.TextStyle(
                         color: blue,
-                        fontSize: 27,
+                        fontSize: 18,
                         fontWeight: pw.FontWeight.bold)),
               ],
             ),
