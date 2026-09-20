@@ -50,6 +50,25 @@ class DailyReportPdfService {
           '${two(local.hour)}:${two(local.minute)} MYT';
     }
 
+    String stampDate() {
+      final date = DateTime.tryParse(report['report_date']?.toString() ?? '');
+      const months = [
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEP',
+        'OCT',
+        'NOV',
+        'DEC',
+      ];
+      return date == null ? '-' : '${date.day} ${months[date.month - 1]} ${date.year}';
+    }
+
     final reviewedAt = malaysianDateTime(report['reviewed_at']);
 
     pw.Widget section(String label) => pw.Container(
@@ -71,7 +90,23 @@ class DailyReportPdfService {
             child: pw.Row(children: [
               pw.Text('$label: ',
                   style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
-              pw.Expanded(child: pw.Text(text(value), style: const pw.TextStyle(fontSize: 8))),
+              pw.Expanded(
+                child: pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Container(
+                    width: 34,
+                    height: 16,
+                    alignment: pw.Alignment.center,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: ink, width: .8),
+                      borderRadius: pw.BorderRadius.circular(3),
+                    ),
+                    child: pw.Text(text(value),
+                        style: pw.TextStyle(
+                            fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                  ),
+                ),
+              ),
             ]),
           ),
         );
@@ -94,22 +129,22 @@ class DailyReportPdfService {
             height: 39,
             padding: const pw.EdgeInsets.fromLTRB(5, 4, 5, 3),
             decoration: pw.BoxDecoration(
-              color: ink,
-              border: pw.Border.all(color: PdfColors.white, width: .45),
+              color: PdfColors.white,
+              border: pw.Border.all(color: ink, width: 1),
             ),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(label.toUpperCase(),
                     style: pw.TextStyle(
-                        color: PdfColors.white,
+                        color: ink,
                         fontSize: 6.5,
                         fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 3),
                 pw.Text(value,
                     maxLines: 1,
-                    style: const pw.TextStyle(
-                        color: PdfColors.white, fontSize: 7)),
+                    style: pw.TextStyle(
+                        color: ink, fontSize: 7, fontWeight: pw.FontWeight.bold)),
               ],
             ),
           ),
@@ -145,6 +180,8 @@ class DailyReportPdfService {
                   maxLines: 2,
                   textAlign: pw.TextAlign.center,
                   style: const pw.TextStyle(fontSize: 6)),
+              pw.SizedBox(height: 3),
+              pw.Container(height: .7, color: ink),
               pw.Spacer(),
               pw.Text(text(value), style: const pw.TextStyle(fontSize: 8)),
             ]),
@@ -251,21 +288,61 @@ class DailyReportPdfService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Spacer(),
                     pw.Text(text(report['reported_by']),
-                        style: const pw.TextStyle(fontSize: 7)),
+                        style: pw.TextStyle(
+                            fontSize: 8, fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
               ),
             ),
             bottomBox(
               'Branch Stamp',
-              pw.Center(
-                child: pw.Text(
-                  'HASANI BOOKS\n${text(report['branch_id'])}',
-                  textAlign: pw.TextAlign.center,
-                  style: pw.TextStyle(
-                      fontSize: 8, fontWeight: pw.FontWeight.bold),
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(top: 3),
+                child: pw.Align(
+                  alignment: pw.Alignment.topCenter,
+                  child: pw.Container(
+                    width: 72,
+                    height: 72,
+                    padding: const pw.EdgeInsets.all(3),
+                    decoration: pw.BoxDecoration(
+                      shape: pw.BoxShape.circle,
+                      border: pw.Border.all(color: blue, width: 2),
+                    ),
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                      decoration: pw.BoxDecoration(
+                        shape: pw.BoxShape.circle,
+                        border: pw.Border.all(color: blue, width: 1.1),
+                      ),
+                      child: pw.Column(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                        children: [
+                          pw.Text('HASANI BOOKS',
+                              maxLines: 1,
+                              style: pw.TextStyle(
+                                  color: blue,
+                                  fontSize: 5.5,
+                                  fontWeight: pw.FontWeight.bold)),
+                          pw.Container(height: .7, color: blue),
+                          pw.Text(stampDate(),
+                              maxLines: 1,
+                              style: pw.TextStyle(
+                                  color: blue,
+                                  fontSize: 7,
+                                  fontWeight: pw.FontWeight.bold)),
+                          pw.Container(height: .7, color: blue),
+                          pw.Text(text(report['branch_id']).toUpperCase(),
+                              maxLines: 2,
+                              textAlign: pw.TextAlign.center,
+                              style: pw.TextStyle(
+                                  color: blue,
+                                  fontSize: 5.5,
+                                  fontWeight: pw.FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
