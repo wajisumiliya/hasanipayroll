@@ -743,7 +743,186 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _premiumLoginPage(context);
+
+  Widget _premiumLoginPage(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF08111F),
+      body: Stack(children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF071525), Color(0xFF152A45), Color(0xFF08111F)],
+              ),
+            ),
+          ),
+        ),
+        Positioned(left: -150, bottom: -160, child: _premiumGlow(460, const Color(0xFF2455C3))),
+        Positioned(right: -140, top: -150, child: _premiumGlow(430, const Color(0xFFF2C15A))),
+        Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: _PremiumLoginPainter()))),
+        SafeArea(
+          child: LayoutBuilder(builder: (context, constraints) {
+            final compact = constraints.maxWidth < 850;
+            final form = _premiumLoginCard(compact: compact);
+            if (compact) {
+              return Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(22),
+                  child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 540), child: form),
+                ),
+              );
+            }
+            return Row(children: [
+              Expanded(
+                flex: 11,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(68, 58, 40, 58),
+                  child: _premiumHero(),
+                ),
+              ),
+              Expanded(
+                flex: 9,
+                child: Center(child: Padding(padding: const EdgeInsets.all(40), child: form)),
+              ),
+            ]);
+          }),
+        ),
+      ]),
+    );
+  }
+
+  Widget _premiumHero() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Spacer(),
+          Image.asset('assets/hasani_books_logo.jpg', width: 330,
+              errorBuilder: (context, error, stackTrace) => const Text('HASANI BOOKS',
+                  style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900))),
+          const SizedBox(height: 36),
+          const Text('Secure access\nfor your payroll workspace.',
+              style: TextStyle(
+                  color: Colors.white, fontSize: 45, height: 1.08, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 22),
+          Container(width: 76, height: 4, color: const Color(0xFFF2C15A)),
+          const SizedBox(height: 26),
+          const Text('Manage people, attendance, payroll and daily operations in one protected workspace.',
+              style: TextStyle(color: Color(0xFFC6D0DD), fontSize: 17, height: 1.55)),
+          const Spacer(),
+          const Row(children: [
+            _PremiumFeature(Icons.groups_rounded, 'People'),
+            SizedBox(width: 38),
+            _PremiumFeature(Icons.auto_graph_rounded, 'Progress'),
+            SizedBox(width: 38),
+            _PremiumFeature(Icons.verified_user_rounded, 'Secure'),
+          ]),
+        ],
+      );
+
+  Widget _premiumLoginCard({required bool compact}) => ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: compact ? 24 : 44, vertical: compact ? 30 : 40),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: const Color(0xFFF2C15A).withValues(alpha: .50)),
+              boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 45, offset: Offset(0, 22))],
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Image.asset('assets/hasani_books_logo.jpg', width: compact ? 220 : 255,
+                  errorBuilder: (context, error, stackTrace) => const Text('HASANI BOOKS',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 28))),
+              const SizedBox(height: 34),
+              const Text('Welcome Back', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 7),
+              const Text('Sign in to continue', style: TextStyle(color: Color(0xFFC5CED9))),
+              const SizedBox(height: 28),
+              _premiumInput(usernameController, 'Username / Employee ID', Icons.person_outline_rounded,
+                  onSubmitted: (_) => FocusScope.of(context).nextFocus()),
+              const SizedBox(height: 15),
+              _premiumInput(passwordController, 'Password', Icons.lock_outline_rounded, password: true,
+                  onSubmitted: (_) { if (!loading) _login(); }),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: loading ? null : _showForgotPasswordDialog,
+                  child: const Text('Forgot password?', style: TextStyle(color: Color(0xFFF2C15A), fontWeight: FontWeight.w700)),
+                ),
+              ),
+              if (errorMessage != null) _premiumError(errorMessage!),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: loading ? null : _login,
+                  icon: loading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF08111F), strokeWidth: 2.5))
+                      : const Icon(Icons.login_rounded),
+                  label: Text(loading ? 'SIGNING IN...' : 'LOGIN', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF2C15A),
+                    foregroundColor: const Color(0xFF08111F),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.shield_outlined, color: Color(0xFFF2C15A), size: 16),
+                SizedBox(width: 7),
+                Text('Protected • Reliable • Hasani Books', style: TextStyle(color: Colors.white54, fontSize: 11)),
+              ]),
+            ]),
+          ),
+        ),
+      );
+
+  Widget _premiumError(String message) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(color: const Color(0xFFFFE8EC), borderRadius: BorderRadius.circular(12)),
+        child: Text(message, style: const TextStyle(color: Color(0xFF9B1028), fontWeight: FontWeight.w700)),
+      );
+
+  Widget _premiumInput(TextEditingController controller, String hint, IconData icon,
+          {bool password = false, ValueChanged<String>? onSubmitted}) =>
+      TextField(
+        controller: controller,
+        enabled: !loading,
+        obscureText: password && obscurePassword,
+        onSubmitted: onSubmitted,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFFAEB8C5)),
+          prefixIcon: Icon(icon, color: const Color(0xFFF2C15A)),
+          suffixIcon: password ? IconButton(
+            onPressed: loading ? null : () => setState(() => obscurePassword = !obscurePassword),
+            icon: Icon(obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: Colors.white70),
+          ) : null,
+          filled: true,
+          fillColor: Colors.black.withValues(alpha: .20),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 19),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0x33FFFFFF))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFF2C15A), width: 1.5)),
+        ),
+      );
+
+  Widget _premiumGlow(double size, Color color) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withValues(alpha: .16), blurRadius: 150, spreadRadius: 55)]),
+      );
+
+  Widget _legacyLoginPage(BuildContext context) {
     final theme = _todayTheme;
 
     return Scaffold(
@@ -1691,6 +1870,64 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+}
+
+class _PremiumFeature extends StatelessWidget {
+  const _PremiumFeature(this.icon, this.label);
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .07),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: .10)),
+          ),
+          child: Icon(icon, color: const Color(0xFFF2C15A), size: 20),
+        ),
+        const SizedBox(width: 9),
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700)),
+      ]);
+}
+
+class _PremiumLoginPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gold = Paint()
+      ..color = const Color(0x22F2C15A)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final blue = Paint()
+      ..color = const Color(0x224B7BEC)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(
+        Path()
+          ..moveTo(0, size.height * .2)
+          ..quadraticBezierTo(size.width * .3, size.height * .05,
+              size.width * .6, size.height * .14)
+          ..quadraticBezierTo(size.width * .82, size.height * .2, size.width,
+              size.height * .08),
+        gold);
+    canvas.drawPath(
+        Path()
+          ..moveTo(0, size.height * .82)
+          ..quadraticBezierTo(size.width * .3, size.height * .7,
+              size.width * .52, size.height * .84)
+          ..quadraticBezierTo(size.width * .78, size.height * .98, size.width,
+              size.height * .76),
+        blue);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _WateringPainter extends CustomPainter {
