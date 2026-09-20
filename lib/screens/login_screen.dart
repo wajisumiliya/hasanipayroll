@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -41,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen>
   double? _temperature;
   int? _weatherCode;
   bool _weatherLoading = true;
+  int? _previewWeekday;
 
   String? errorMessage;
 
@@ -739,11 +741,546 @@ class _LoginScreenState extends State<LoginScreen>
 
   _DailyLoginTheme get _todayTheme {
     // DateTime.weekday: Monday = 1 ... Sunday = 7.
-    return _DailyLoginTheme.forWeekday(DateTime.now().weekday);
+    return _DailyLoginTheme.forWeekday(
+      kDebugMode && _previewWeekday != null
+          ? _previewWeekday!
+          : DateTime.now().weekday,
+    );
   }
 
   @override
-  Widget build(BuildContext context) => _legacyLoginPage(context);
+  Widget build(BuildContext context) => _sevenDayLoginPage(context);
+
+  Widget _sevenDayLoginPage(BuildContext context) {
+    final theme = _todayTheme;
+
+    return Scaffold(
+      backgroundColor: theme.pageBackground,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              theme.backgroundAsset,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, __, ___) => DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: theme.pageGradient,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.black.withValues(alpha: theme.isLight ? .05 : .20),
+                    theme.pageBackground.withValues(alpha: .18),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -120,
+            bottom: -150,
+            child: _loginGlow(theme.accent1, 430),
+          ),
+          Positioned(
+            right: -130,
+            top: -160,
+            child: _loginGlow(theme.accent2, 430),
+          ),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 880;
+                if (compact) {
+                  return Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(18, 22, 18, 110),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        child: Column(
+                          children: [
+                            _sevenDayTopbar(theme, compact: true),
+                            const SizedBox(height: 20),
+                            _sevenDayAuthCard(theme, compact: true),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Expanded(
+                      flex: theme.day == 'Thursday' ? 12 : 11,
+                      child: _sevenDayVisual(theme),
+                    ),
+                    Expanded(
+                      flex: theme.day == 'Thursday' ? 8 : 9,
+                      child: Container(
+                        color: theme.panelBackground,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 42,
+                          vertical: 26,
+                        ),
+                        child: Column(
+                          children: [
+                            _sevenDayTopbar(theme),
+                            const SizedBox(height: 18),
+                            Expanded(
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 520),
+                                    child: _sevenDayAuthCard(theme),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          if (kDebugMode)
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 10,
+              child: SafeArea(child: _weekdayPreviewSelector()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weekdayPreviewSelector() {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final selected = _previewWeekday ?? DateTime.now().weekday;
+
+    return Center(
+      child: Material(
+        color: const Color(0xE6111825),
+        elevation: 12,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var index = 0; index < days.length; index++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: ChoiceChip(
+                      label: Text(days[index]),
+                      selected: selected == index + 1,
+                      showCheckmark: false,
+                      visualDensity: VisualDensity.compact,
+                      selectedColor: _todayTheme.accent1,
+                      backgroundColor: Colors.white.withValues(alpha: .08),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: .15),
+                      ),
+                      labelStyle: TextStyle(
+                        color: selected == index + 1
+                            ? const Color(0xFF08111F)
+                            : Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      onSelected: (_) {
+                        setState(() => _previewWeekday = index + 1);
+                      },
+                    ),
+                  ),
+                IconButton(
+                  tooltip: 'Use today automatically',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => setState(() => _previewWeekday = null),
+                  icon: const Icon(
+                    Icons.today_outlined,
+                    color: Colors.white,
+                    size: 19,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sevenDayVisual(_DailyLoginTheme theme) {
+    final visualForeground = theme.visualForeground;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                Colors.black.withValues(alpha: theme.isLight ? .04 : .18),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 48,
+          top: 58,
+          right: 42,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                theme.kicker,
+                style: TextStyle(
+                  color: visualForeground.withValues(alpha: .70),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2.1,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                theme.headline,
+                style: TextStyle(
+                  color: visualForeground,
+                  fontSize: 34,
+                  height: 1.08,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.1,
+                ),
+              ),
+              const SizedBox(height: 13),
+              Container(width: 46, height: 3, color: theme.accent1),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 6,
+          right: 6,
+          bottom: -30,
+          height: 570,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Image.asset(
+              loading || _idleCatAwake
+                  ? 'assets/login_cat_open_eyes.png'
+                  : 'assets/login_cat_cutout.png',
+              key: ValueKey(loading || _idleCatAwake),
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomCenter,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sevenDayTopbar(
+    _DailyLoginTheme theme, {
+    bool compact = false,
+  }) {
+    final foreground = theme.foreground;
+    return Row(
+      children: [
+        Icon(Icons.calendar_month_outlined,
+            color: theme.accent1, size: compact ? 19 : 22),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat('EEEE').format(_now).toUpperCase(),
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                '${DateFormat('dd MMMM yyyy').format(_now)}  •  ${DateFormat('hh:mm:ss a').format(_now)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: foreground.withValues(alpha: .65),
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Icon(_weatherIcon(_weatherCode), color: theme.accent1, size: 23),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              _weatherLoading
+                  ? 'Loading...'
+                  : _temperature == null
+                      ? '--°C'
+                      : '${_temperature!.round()}°C',
+              style: TextStyle(
+                color: foreground,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Text(
+              _weatherDescription(_weatherCode),
+              style: TextStyle(
+                color: foreground.withValues(alpha: .62),
+                fontSize: 9,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _sevenDayAuthCard(
+    _DailyLoginTheme theme, {
+    bool compact = false,
+  }) {
+    final foreground = theme.foreground;
+    final fieldColor = theme.isLight
+        ? const Color(0xFFF7F9FC)
+        : Colors.white.withValues(alpha: .075);
+    final fieldText = theme.isLight ? const Color(0xFF10294D) : Colors.white;
+
+    InputDecoration decoration(String label, IconData icon) {
+      final border = OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: foreground.withValues(alpha: .15)),
+      );
+      return InputDecoration(
+        hintText: label,
+        hintStyle: TextStyle(color: fieldText.withValues(alpha: .58)),
+        prefixIcon: Icon(icon, color: theme.accent1, size: 20),
+        filled: true,
+        fillColor: fieldColor,
+        contentPadding: const EdgeInsets.symmetric(vertical: 17),
+        border: border,
+        enabledBorder: border,
+        focusedBorder: border.copyWith(
+          borderSide: BorderSide(color: theme.accent1, width: 1.7),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(26),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: EdgeInsets.all(compact ? 23 : 34),
+          decoration: BoxDecoration(
+            color: theme.cardBackground,
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: foreground.withValues(alpha: .14)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: theme.isLight ? .10 : .30),
+                blurRadius: 48,
+                offset: const Offset(0, 22),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _logo(compact: compact),
+              SizedBox(height: compact ? 18 : 24),
+              Text(
+                'Welcome Back',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 29,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.7,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                theme.cardMessage,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: foreground.withValues(alpha: .65),
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 25),
+              TextField(
+                controller: usernameController,
+                enabled: !loading,
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                enableSuggestions: false,
+                style: TextStyle(color: fieldText, fontWeight: FontWeight.w600),
+                decoration: decoration(
+                  'Username / Employee ID',
+                  Icons.person_outline_rounded,
+                ),
+                onSubmitted: (_) => FocusScope.of(context).nextFocus(),
+              ),
+              const SizedBox(height: 13),
+              TextField(
+                controller: passwordController,
+                enabled: !loading,
+                obscureText: obscurePassword,
+                textInputAction: TextInputAction.done,
+                autocorrect: false,
+                enableSuggestions: false,
+                style: TextStyle(color: fieldText, fontWeight: FontWeight.w600),
+                onSubmitted: (_) {
+                  if (!loading) _login();
+                },
+                decoration: decoration('Password', Icons.lock_outline_rounded)
+                    .copyWith(
+                  suffixIcon: IconButton(
+                    tooltip: obscurePassword ? 'Show password' : 'Hide password',
+                    onPressed: loading
+                        ? null
+                        : () => setState(
+                              () => obscurePassword = !obscurePassword,
+                            ),
+                    icon: Icon(
+                      obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: foreground.withValues(alpha: .65),
+                    ),
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: loading ? null : _showForgotPasswordDialog,
+                  child: Text(
+                    'Forgot password?',
+                    style: TextStyle(
+                      color: foreground,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              if (errorMessage != null) _premiumError(errorMessage!),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 55,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [theme.buttonStart, theme.buttonEnd],
+                    ),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: loading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      disabledBackgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: loading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.3,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('SIGN IN',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: .7)),
+                              SizedBox(width: 12),
+                              Icon(Icons.arrow_forward_rounded, size: 20),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 21),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: foreground.withValues(alpha: .18))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Text(
+                      theme.footer,
+                      style: TextStyle(
+                        color: foreground.withValues(alpha: .58),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: foreground.withValues(alpha: .18))),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shield_outlined,
+                      size: 14, color: foreground.withValues(alpha: .58)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Protected  •  Reliable  •  Hasani Books',
+                    style: TextStyle(
+                      color: foreground.withValues(alpha: .58),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _premiumLoginPage(BuildContext context) {
     return Scaffold(
@@ -2018,6 +2555,102 @@ class _DailyLoginTheme {
   final Color buttonStart;
   final Color buttonEnd;
 
+  bool get isLight =>
+      day == 'Monday' ||
+      day == 'Tuesday' ||
+      day == 'Thursday' ||
+      day == 'Friday';
+
+  Color get foreground =>
+      isLight ? const Color(0xFF10294D) : Colors.white;
+
+  Color get visualForeground => day == 'Thursday' ? Colors.white : foreground;
+
+  String get backgroundAsset =>
+      'assets/login_days/${day.toLowerCase()}.png';
+
+  Color get pageBackground {
+    switch (day) {
+      case 'Monday':
+        return const Color(0xFFDCEAF4);
+      case 'Tuesday':
+        return const Color(0xFFF5F7FB);
+      case 'Thursday':
+        return const Color(0xFFF4F7FB);
+      case 'Friday':
+        return const Color(0xFFEDF5F3);
+      case 'Saturday':
+        return const Color(0xFF100D22);
+      case 'Wednesday':
+        return const Color(0xFF080807);
+      default:
+        return const Color(0xFF08111F);
+    }
+  }
+
+  Color get panelBackground => pageBackground.withValues(alpha: .97);
+
+  Color get cardBackground => isLight
+      ? Colors.white.withValues(alpha: day == 'Monday' ? .58 : .92)
+      : const Color(0xFF121722).withValues(alpha: day == 'Sunday' ? .86 : .91);
+
+  List<Color> get pageGradient {
+    switch (day) {
+      case 'Monday':
+        return const [Color(0xFFC9E0F0), Color(0xFFEDF6FB)];
+      case 'Tuesday':
+        return const [Color(0xFFF8FAFC), Color(0xFFE8EDF4)];
+      case 'Wednesday':
+        return const [Color(0xFF050505), Color(0xFF211C13)];
+      case 'Thursday':
+        return const [Color(0xFF062C54), Color(0xFFF5F8FC)];
+      case 'Friday':
+        return const [Color(0xFFD7E9E3), Color(0xFFF5FAF8)];
+      case 'Saturday':
+        return const [Color(0xFF0B1023), Color(0xFF2B1742)];
+      default:
+        return const [Color(0xFF071525), Color(0xFF17273A)];
+    }
+  }
+
+  List<Color> get visualGradient {
+    switch (day) {
+      case 'Monday':
+        return const [Color(0xFFBEDAEA), Color(0xFFE8F3F8)];
+      case 'Tuesday':
+        return const [Color(0xFFF9FAFC), Color(0xFFE5EBF1)];
+      case 'Wednesday':
+        return const [Color(0xFF050505), Color(0xFF2A2418)];
+      case 'Thursday':
+        return const [Color(0xFF06294F), Color(0xFF0D6096)];
+      case 'Friday':
+        return const [Color(0xFFE8F3EF), Color(0xFFC9DED7)];
+      case 'Saturday':
+        return const [Color(0xFF080B19), Color(0xFF392352)];
+      default:
+        return const [Color(0xFF07111C), Color(0xFF14283A)];
+    }
+  }
+
+  String get kicker {
+    switch (day) {
+      case 'Monday':
+        return 'SAME VISION • BRIGHTER TOMORROW';
+      case 'Tuesday':
+        return 'PEOPLE • PROCESS • PROGRESS';
+      case 'Wednesday':
+        return 'DISCIPLINE • FOCUS • GROWTH';
+      case 'Thursday':
+        return 'GREAT TEAMS • GREAT THINGS';
+      case 'Friday':
+        return 'FOCUS • EXECUTE • ACHIEVE';
+      case 'Saturday':
+        return 'A BRIGHTER TOMORROW • TOGETHER';
+      default:
+        return 'PEOPLE • PROCESS • PROGRESS';
+    }
+  }
+
   static _DailyLoginTheme forWeekday(int weekday) {
     switch (weekday) {
       case DateTime.monday:
@@ -2033,9 +2666,9 @@ class _DailyLoginTheme {
             Color(0xFF24162F),
           ],
           accent1: Color(0xFFF0D28B),
-          accent2: Color(0xFF9C7AC2),
-          buttonStart: Color(0xFFE6C171),
-          buttonEnd: Color(0xFF7A4D8C),
+          accent2: Color(0xFF2A86FF),
+          buttonStart: Color(0xFF2A86FF),
+          buttonEnd: Color(0xFF0B67F5),
         );
       case DateTime.tuesday:
         return const _DailyLoginTheme(
@@ -2049,10 +2682,10 @@ class _DailyLoginTheme {
             Color(0xFF38203E),
             Color(0xFF4B213E),
           ],
-          accent1: Color(0xFFE8C778),
-          accent2: Color(0xFFA76D86),
-          buttonStart: Color(0xFFDBB25F),
-          buttonEnd: Color(0xFF80465F),
+          accent1: Color(0xFF0C2C59),
+          accent2: Color(0xFF58789E),
+          buttonStart: Color(0xFF183F74),
+          buttonEnd: Color(0xFF0C2C59),
         );
       case DateTime.wednesday:
         return const _DailyLoginTheme(
@@ -2083,10 +2716,10 @@ class _DailyLoginTheme {
             Color(0xFF43254E),
             Color(0xFF291531),
           ],
-          accent1: Color(0xFFE8C778),
-          accent2: Color(0xFF986FA9),
-          buttonStart: Color(0xFFDFB964),
-          buttonEnd: Color(0xFF73477F),
+          accent1: Color(0xFF1E8CFF),
+          accent2: Color(0xFF0866F5),
+          buttonStart: Color(0xFF1E8CFF),
+          buttonEnd: Color(0xFF0866F5),
         );
       case DateTime.friday:
         return const _DailyLoginTheme(
@@ -2100,10 +2733,10 @@ class _DailyLoginTheme {
             Color(0xFF382C1D),
             Color(0xFF18121E),
           ],
-          accent1: Color(0xFFF3D994),
-          accent2: Color(0xFFB98A3D),
-          buttonStart: Color(0xFFE7C673),
-          buttonEnd: Color(0xFF9B6D2D),
+          accent1: Color(0xFF12A06F),
+          accent2: Color(0xFF087D58),
+          buttonStart: Color(0xFF12A06F),
+          buttonEnd: Color(0xFF087D58),
         );
       case DateTime.saturday:
         return const _DailyLoginTheme(
@@ -2117,10 +2750,10 @@ class _DailyLoginTheme {
             Color(0xFF263858),
             Color(0xFF171F35),
           ],
-          accent1: Color(0xFFE6C579),
-          accent2: Color(0xFF687DA5),
-          buttonStart: Color(0xFFDAB765),
-          buttonEnd: Color(0xFF4D6085),
+          accent1: Color(0xFFCA4BF0),
+          accent2: Color(0xFF6748FF),
+          buttonStart: Color(0xFF6748FF),
+          buttonEnd: Color(0xFFE04AEF),
         );
       default:
         return const _DailyLoginTheme(
@@ -2134,10 +2767,10 @@ class _DailyLoginTheme {
             Color(0xFF2D2942),
             Color(0xFF191525),
           ],
-          accent1: Color(0xFFEAD39A),
-          accent2: Color(0xFF80739A),
-          buttonStart: Color(0xFFDEC481),
-          buttonEnd: Color(0xFF625675),
+          accent1: Color(0xFFF5CF75),
+          accent2: Color(0xFFD9AD55),
+          buttonStart: Color(0xFFF5CF75),
+          buttonEnd: Color(0xFFD9AD55),
         );
     }
   }
