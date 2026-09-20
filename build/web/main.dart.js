@@ -139783,7 +139783,7 @@ q=a1.a.a
 if(q!=null)r.push(new A.pK(q,B.i7,190,34))
 else r.push(A.c2(a3,a2,A.cF(a2,B.h2,a2,a2,a2,a2,a2,a2,a2,B.am,a2,a2,24,a2,B.aD,a2,!0,a2,a2,a2,a2),a2,a2))
 r.push(new A.dn(a2,2,a2))
-r.push(A.c2("DAILY REPORT",a2,A.cF(a2,B.h2,a2,a2,a2,a2,a2,a2,a2,B.am,a2,a2,27,a2,B.aD,a2,!0,a2,a2,a2,a2),B.eq,a2))
+r.push(A.c2("DAILY MAINTAINANCE REPORT",a2,A.cF(a2,B.h2,a2,a2,a2,a2,a2,a2,a2,B.am,a2,a2,27,a2,B.aD,a2,!0,a2,a2,a2,a2),B.eq,a2))
 r=A.ec(B.e8,A.h7(r,B.c1,B.be7,B.c9),a2,a2,a2,70,a2,a2,a2)
 q=a1.b
 p=a1.c
@@ -139795,7 +139795,7 @@ l=A.i2(A.b([m.$2("Attendance",n.h(o,"attendance")),m.$2("Unpaid Leave",n.h(o,"un
 k=a1.w
 j=k.$1("MAINTENANCE")
 m=A.i2(A.b([a1.x.$1("Air Conditioner"),m.$2("Total",n.h(o,"maintenance_total")),m.$2("Working Condition",n.h(o,"working_condition")),m.$2("To Service or Repair",n.h(o,"service_repair"))],s),B.c1,B.bb)
-i=k.$1("MAINTENANCE/ELECTRICAL/EQUIPMENT")
+i=k.$1("MAINTENANCE / ELECTRICAL / EQUIPMENT")
 h=a1.y
 g=h.$3$flex("Report:",n.h(o,"maintenance_report"),3)
 k=k.$1("ORSANO")
@@ -139803,7 +139803,7 @@ f=a1.z
 e=a1.Q
 e=A.i2(A.b([f.$2("Agama",e.h(0,"agama")),f.$2("S.K",e.h(0,"sk")),f.$2("S.M",e.h(0,"sm")),f.$2("Umum",e.h(0,"umum")),f.$2("Novel",e.h(0,"novel")),f.$2("Alat Tulis",e.h(0,"alat_tulis")),f.$2("Tadika",e.h(0,"tadika")),f.$2("Kanak Kanak",e.h(0,"kanak")),f.$2("Quran",e.h(0,"quran")),f.$2("Others",e.h(0,"others"))],s),B.c1,B.bb)
 f=h.$3$flex("Report Crew:",n.h(o,"report_crew"),3)
-h=h.$3$flex("Recommendation/Demand/Sales:",n.h(o,"recommendation"),2)
+h=h.$3$flex("Recommendation / Demand / Sales:",n.h(o,"recommendation"),2)
 d=a1.as
 c=d.$2("Reported By:",new A.jz(B.oD,A.h7(A.b([A.c2(p.$1(n.h(o,a5)),a2,A.cF(a2,a2,a2,a2,a2,a2,a2,a2,a2,B.am,a2,a2,8,a2,B.aD,a2,!0,a2,a2,a2,a2),a2,a2)],s),B.ec,B.bb,B.c9)))
 b=new A.fU(B.h2,2,B.cD)
