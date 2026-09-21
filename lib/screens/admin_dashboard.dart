@@ -4379,16 +4379,6 @@ class _AdminDashboardState extends State<AdminDashboard>
               value?.toString().toLowerCase().contains(search) == true);
         }).toList()
           ..sort((a, b) {
-            if (_adminEmployeeBranchFilter != null) {
-              final aCount = service
-                  .employeePayroll(a['employee_id']?.toString() ?? '')
-                  .length;
-              final bCount = service
-                  .employeePayroll(b['employee_id']?.toString() ?? '')
-                  .length;
-              final countOrder = bCount.compareTo(aCount);
-              if (countOrder != 0) return countOrder;
-            }
             return (a['name']?.toString() ?? '')
                 .toLowerCase()
                 .compareTo((b['name']?.toString() ?? '').toLowerCase());
@@ -4477,7 +4467,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               _panel(
                 _adminEmployeeBranchFilter == null
                     ? 'Employee List'
-                    : '${_adminEmployeeBranchFilter!} • Payslip Order',
+                    : '${_adminEmployeeBranchFilter!} • Employees',
                 employees.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.all(30),
@@ -4488,7 +4478,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                       )
                     : _adminEmployeeBranchFilter != null
-                        ? _branchEmployeePayslipGrid(employees)
+                        ? _branchEmployeeManagementGrid(employees)
                         : Column(
                             children: employees.map((employee) {
                               final String employeeId =
@@ -4689,7 +4679,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Widget _branchEmployeePayslipGrid(
+  Widget _branchEmployeeManagementGrid(
     List<Map<String, dynamic>> employees,
   ) {
     return LayoutBuilder(
@@ -4709,21 +4699,16 @@ class _AdminDashboardState extends State<AdminDashboard>
             crossAxisCount: columns,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            mainAxisExtent: 92,
+            mainAxisExtent: 132,
           ),
           itemBuilder: (context, index) {
             final employee = employees[index];
             final employeeId = employee['employee_id']?.toString() ?? '';
             final name = employee['name']?.toString() ?? 'Employee';
             final branch = employee['branch_id']?.toString() ?? '';
-            final payslipCount = service.employeePayroll(employeeId).length;
             return InkWell(
               borderRadius: BorderRadius.circular(14),
-              onTap: () => setState(() {
-                selectedPayslipEmployeeId = employeeId;
-                selectedEmployeePayslipYear = null;
-                selectedPage = 12;
-              }),
+              onTap: () => _showSupabaseEmployee(employee),
               child: Container(
                 padding: const EdgeInsets.all(11),
                 decoration: BoxDecoration(
@@ -4733,44 +4718,103 @@ class _AdminDashboardState extends State<AdminDashboard>
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFFD7DFEC)),
                 ),
-                child: Row(children: [
-                  EmployeePhoto(
-                    name: name,
-                    photoUrl: employee['photo_url']?.toString(),
-                    radius: 25,
-                    borderColor: const Color(0xFF243B8F),
-                  ),
-                  const SizedBox(width: 10),
+                child: Column(children: [
                   Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w800)),
-                        Text('$employeeId • $branch',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.black54, fontSize: 11)),
-                        Text('$payslipCount payslips',
-                            style: const TextStyle(
-                                color: Color(0xFF243B8F),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800)),
-                      ],
-                    ),
+                    child: Row(children: [
+                      EmployeePhoto(
+                        name: name,
+                        photoUrl: employee['photo_url']?.toString(),
+                        radius: 25,
+                        borderColor: const Color(0xFF243B8F),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800)),
+                            Text('$employeeId • $branch',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Colors.black54, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ]),
                   ),
-                  const Icon(Icons.chevron_right_rounded),
+                  const Divider(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _employeeGridAction(
+                        'View',
+                        Icons.visibility_rounded,
+                        const Color(0xFF475569),
+                        () => _showSupabaseEmployee(employee),
+                      ),
+                      _employeeGridAction(
+                        'Edit',
+                        Icons.edit_rounded,
+                        const Color(0xFF168CE5),
+                        () => _showSupabaseEmployeeEdit(employee),
+                      ),
+                      _employeeGridAction(
+                        'Transfer',
+                        Icons.swap_horiz_rounded,
+                        const Color(0xFFF08A00),
+                        () => _showTransferEmployee(employee),
+                      ),
+                      _employeeGridAction(
+                        'Application login',
+                        Icons.manage_accounts_rounded,
+                        const Color(0xFF9C27B0),
+                        () => _createOrResetApplicationLogin(employee),
+                      ),
+                      _employeeGridAction(
+                        'Delete',
+                        Icons.delete_outline_rounded,
+                        const Color(0xFFEF3038),
+                        () => _confirmSupabaseEmployeeDelete(employeeId, name),
+                      ),
+                    ],
+                  ),
                 ]),
               ),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _employeeGridAction(
+    String tooltip,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 29,
+          height: 29,
+          margin: const EdgeInsets.only(left: 5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .10),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 17),
+        ),
+      ),
     );
   }
 
