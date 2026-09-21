@@ -2383,6 +2383,12 @@ class _BranchPortalState extends State<BranchPortal>
                                         : Colors.black12,
                                   ),
                                   IconButton(
+                                    tooltip: 'View employee identity',
+                                    onPressed: () =>
+                                        _showBranchEmployeeIdentity(employee),
+                                    icon: const Icon(Icons.visibility_outlined),
+                                  ),
+                                  IconButton(
                                     tooltip: 'Edit employee',
                                     onPressed: () =>
                                         _showEditBranchEmployee(employee),
@@ -2410,6 +2416,179 @@ class _BranchPortalState extends State<BranchPortal>
     Map<String, dynamic> employee,
   ) async {
     await _showBranchEmployeeEditor(employee: employee);
+  }
+
+  Future<void> _showBranchEmployeeIdentity(
+    Map<String, dynamic> employee,
+  ) async {
+    final name = employee['name']?.toString().trim() ?? '';
+    final employeeId = _liveEmployeeId(employee);
+    final active = _liveIsActive(employee);
+    final category = employee['is_management_staff'] == true
+        ? 'Management Staff'
+        : employee['is_temp_staff'] == true
+            ? 'Temporary Staff'
+            : employee['is_support_staff'] == true
+                ? 'Support Staff'
+                : employee['is_other_staff'] == true
+                    ? 'Other Staff'
+                    : 'Regular Staff';
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFFF3F7FF),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: EdgeInsets.zero,
+        title: Container(
+          padding: const EdgeInsets.fromLTRB(24, 18, 18, 18),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF062D69), Color(0xFF174CA4)],
+            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Row(children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.badge_outlined,
+                  color: Color(0xFF062D69), size: 30),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('HASANI BOOKS SDN BHD',
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5)),
+                  const SizedBox(height: 3),
+                  Text(name.isEmpty ? 'EMPLOYEE IDENTITY' : name.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color:
+                    active ? const Color(0xFF2EAF6D) : const Color(0xFFE45A5A),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(active ? 'ACTIVE' : 'INACTIVE',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900)),
+            ),
+          ]),
+        ),
+        content: SizedBox(
+          width: 650,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Column(children: [
+                    EmployeePhoto(
+                      name: name,
+                      photoUrl: employee['photo_url']?.toString(),
+                      radius: 66,
+                      borderColor: const Color(0xFF243B8F),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(employeeId.isEmpty ? '-' : employeeId,
+                        style: const TextStyle(
+                            color: Color(0xFF062D69),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2)),
+                    const Divider(height: 30),
+                  ]),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 5),
+                  child: Text('EMPLOYEE INFORMATION',
+                      style: TextStyle(
+                          color: Color(0xFF062D69),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.4)),
+                ),
+                _branchIdentityDetail('Employee ID', employeeId),
+                _branchIdentityDetail('Name', employee['name']),
+                _branchIdentityDetail('Designation', employee['designation']),
+                _branchIdentityDetail('Department', employee['department']),
+                _branchIdentityDetail('Email', employee['email']),
+                _branchIdentityDetail('IC No.', employee['new_ic_no']),
+                _branchIdentityDetail('Bank Code', employee['bank_code']),
+                _branchIdentityDetail('Bank Account', employee['bank_account']),
+                _branchIdentityDetail('EPF No.', employee['epf_no']),
+                _branchIdentityDetail('SOCSO No.', employee['socso_no']),
+                _branchIdentityDetail('Phone', employee['phone']),
+                _branchIdentityDetail('Address', employee['address']),
+                _branchIdentityDetail('Joining Date', employee['joining_date']),
+                _branchIdentityDetail('Branch', employee['branch_id']),
+                _branchIdentityDetail('Employee Category', category),
+                _branchIdentityDetail('Active', active ? 'Yes' : 'No'),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+        actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+      ),
+    );
+  }
+
+  Widget _branchIdentityDetail(String label, dynamic value) {
+    final displayValue = value?.toString().trim() ?? '';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD8E3F5)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 145,
+          child: Text(label.toUpperCase(),
+              style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF66728A),
+                  letterSpacing: .6)),
+        ),
+        Expanded(
+          child: Text(displayValue.isEmpty ? '-' : displayValue,
+              style: const TextStyle(
+                  color: Color(0xFF10284F), fontWeight: FontWeight.w700)),
+        ),
+      ]),
+    );
   }
 
   Future<void> _showBranchEmployeeEditor({

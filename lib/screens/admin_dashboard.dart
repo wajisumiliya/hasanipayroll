@@ -5479,11 +5479,85 @@ class _AdminDashboardState extends State<AdminDashboard>
           final photoUrl = employee['photo_url']?.toString() ?? '';
           final employeeId = employee['employee_id']?.toString() ?? '';
           return AlertDialog(
-            title: Text(
-              name.isEmpty ? 'Employee' : name,
+            backgroundColor: const Color(0xFFF3F7FF),
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            titlePadding: EdgeInsets.zero,
+            title: Container(
+              padding: const EdgeInsets.fromLTRB(24, 18, 18, 18),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF062D69), Color(0xFF174CA4)],
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.badge_outlined,
+                        color: Color(0xFF062D69), size: 30),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'HASANI BOOKS SDN BHD',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          name.isEmpty
+                              ? 'EMPLOYEE IDENTITY'
+                              : name.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: employee['is_active'] == true
+                          ? const Color(0xFF2EAF6D)
+                          : const Color(0xFFE45A5A),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      employee['is_active'] == true ? 'ACTIVE' : 'INACTIVE',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             content: SizedBox(
-              width: 500,
+              width: 650,
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -5494,8 +5568,18 @@ class _AdminDashboardState extends State<AdminDashboard>
                           EmployeePhoto(
                             name: name,
                             photoUrl: photoUrl,
-                            radius: 58,
+                            radius: 66,
                             borderColor: const Color(0xFF243B8F),
+                          ),
+                          const SizedBox(height: 9),
+                          Text(
+                            employeeId.isEmpty ? '-' : employeeId,
+                            style: const TextStyle(
+                              color: Color(0xFF062D69),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                            ),
                           ),
                           const SizedBox(height: 10),
                           Wrap(
@@ -5563,8 +5647,20 @@ class _AdminDashboardState extends State<AdminDashboard>
                             const SizedBox(height: 8),
                             const LinearProgressIndicator(),
                           ],
-                          const Divider(height: 28),
+                          const Divider(height: 30),
                         ],
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 5),
+                      child: Text(
+                        'EMPLOYEE INFORMATION',
+                        style: TextStyle(
+                          color: Color(0xFF062D69),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.4,
+                        ),
                       ),
                     ),
                     _employeeDetail(
@@ -5658,6 +5754,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 child: const Text('Close'),
               ),
             ],
+            actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
           );
         });
       },
@@ -5725,28 +5822,37 @@ class _AdminDashboardState extends State<AdminDashboard>
     String label,
     dynamic value,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 8,
+    final displayValue = value?.toString().trim() ?? '';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD8E3F5)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 130,
+            width: 145,
             child: Text(
-              label,
+              label.toUpperCase(),
               style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.black54,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF66728A),
+                letterSpacing: .6,
               ),
             ),
           ),
           Expanded(
             child: Text(
-              value?.toString() ?? '-',
+              displayValue.isEmpty ? '-' : displayValue,
               style: const TextStyle(
-                fontWeight: FontWeight.w500,
+                color: Color(0xFF10284F),
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
