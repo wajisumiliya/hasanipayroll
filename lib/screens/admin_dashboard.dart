@@ -32,6 +32,7 @@ import 'leave_requests_approval_page.dart';
 import 'daily_report_page.dart';
 import '../dashboard_brand_logos.dart';
 import '../widgets/employee_photo.dart';
+import '../widgets/employee_profile_details.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/premium_portal_sidebar.dart';
 
@@ -5651,17 +5652,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ],
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 5),
-                      child: Text(
-                        'EMPLOYEE INFORMATION',
-                        style: TextStyle(
-                          color: Color(0xFF062D69),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.4,
-                        ),
-                      ),
+                    EmployeeProfileDetails(
+                      employee: employee,
+                      showSummary: false,
                     ),
                     _employeeDetail(
                       'Employee ID',
@@ -5822,43 +5815,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     String label,
     dynamic value,
   ) {
-    final displayValue = value?.toString().trim() ?? '';
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFD8E3F5)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 145,
-            child: Text(
-              label.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF66728A),
-                letterSpacing: .6,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              displayValue.isEmpty ? '-' : displayValue,
-              style: const TextStyle(
-                color: Color(0xFF10284F),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   void _showTransferEmployee(Map<String, dynamic> employee) {
