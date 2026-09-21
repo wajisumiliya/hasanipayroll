@@ -234,8 +234,27 @@ class _DailyReportPageState extends State<DailyReportPage> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Image.asset('assets/hasani_books_logo.jpg',
-                      height: 65, alignment: Alignment.centerLeft),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Image.asset(
+                          'assets/hasani_books_logo.jpg',
+                          height: 65,
+                          alignment: Alignment.centerLeft,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 145,
+                        child: _branchStamp(
+                          widget.branchId,
+                          date,
+                          compact: true,
+                        ),
+                      ),
+                    ],
+                  ),
                   const Text('MAINTENANCE DAILY REPORT',
                       style: TextStyle(
                           color: blue,
@@ -315,7 +334,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
                         child: _field('reported_by', 'REPORTED BY',
                             required: true)),
                     const SizedBox(width: 8),
-                    Expanded(child: _branchStamp(widget.branchId)),
+                    Expanded(child: _branchStamp(widget.branchId, date)),
                   ]),
                   const SizedBox(height: 14),
                   FilledButton.icon(
@@ -336,8 +355,7 @@ class _DailyReportPageState extends State<DailyReportPage> {
           textAlign: TextAlign.center,
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold)));
-  Widget _fourFields(List<String> keys, List<String> labels) =>
-      Padding(
+  Widget _fourFields(List<String> keys, List<String> labels) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: LayoutBuilder(
           builder: (_, box) => Wrap(
@@ -364,10 +382,16 @@ class _DailyReportPageState extends State<DailyReportPage> {
                 ? (box.maxWidth - 24) / 4
                 : (box.maxWidth - 8) / 2;
             return Wrap(spacing: 8, runSpacing: 8, children: [
-              SizedBox(width: width, child: _categoryHeading('Air Conditioner')),
-              SizedBox(width: width, child: _field('maintenance_total', 'Total')),
-              SizedBox(width: width, child: _field('working_condition', 'Working Condition')),
-              SizedBox(width: width, child: _field('service_repair', 'To Service / Repair')),
+              SizedBox(
+                  width: width, child: _categoryHeading('Air Conditioner')),
+              SizedBox(
+                  width: width, child: _field('maintenance_total', 'Total')),
+              SizedBox(
+                  width: width,
+                  child: _field('working_condition', 'Working Condition')),
+              SizedBox(
+                  width: width,
+                  child: _field('service_repair', 'To Service / Repair')),
             ]);
           },
         ),
@@ -410,9 +434,85 @@ class _DailyReportPageState extends State<DailyReportPage> {
     return 'HASANI BOOKS | BRANCH: ${branch == null || branch.isEmpty ? '-' : branch}';
   }
 
-  Widget _branchStamp(dynamic branchId) {
+  String? _branchStampAsset(dynamic branchId) {
+    final name = branchId?.toString().trim().toUpperCase();
+    return switch (name) {
+      'ALOR SETAR' => 'assets/branch_stamps/ALOR SETAR.png',
+      'AMANJAYA' => 'assets/branch_stamps/AMANJAYA.png',
+      'ASTANA' => 'assets/branch_stamps/ASTANA.png',
+      'GURUN' => 'assets/branch_stamps/GURUN.png',
+      'JITRA' => 'assets/branch_stamps/JITRA.png',
+      'KULIM' => 'assets/branch_stamps/KULIM.png',
+      'LANGKAWI' => 'assets/branch_stamps/LANGKAWI.png',
+      'PRAI' || 'PERAI' => 'assets/branch_stamps/PERAI.png',
+      _ => null,
+    };
+  }
+
+  String? _branchNumber(dynamic branchId) {
+    final name = branchId?.toString().trim().toUpperCase();
+    return switch (name) {
+      'JITRA' => '01/08',
+      'ASTANA' => '02/08',
+      'ALOR SETAR' => '03/08',
+      'GURUN' => '04/08',
+      'AMANJAYA' => '05/08',
+      'PRAI' || 'PERAI' => '06/08',
+      'KULIM' => '07/08',
+      'LANGKAWI' => '08/08',
+      _ => null,
+    };
+  }
+
+  String? _branchStampCode(dynamic branchId, dynamic reportDate) {
+    final parsedDate = reportDate is DateTime
+        ? reportDate
+        : DateTime.tryParse(reportDate?.toString() ?? '');
+    final branchNumber = _branchNumber(branchId);
+    if (parsedDate == null || branchNumber == null) return null;
+    return '${DateFormat('ddMM').format(parsedDate)} / '
+        '${branchNumber.replaceFirst('/', ' / ')}';
+  }
+
+  Widget _branchStamp(
+    dynamic branchId,
+    dynamic reportDate, {
+    bool compact = false,
+  }) {
     final branch = branchId?.toString().trim();
     final label = branch == null || branch.isEmpty ? '-' : branch.toUpperCase();
+    final stampAsset = _branchStampAsset(branchId);
+    final stampCode = _branchStampCode(branchId, reportDate);
+
+    if (stampAsset != null) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: compact ? 48 : 82,
+            child: Image.asset(
+              stampAsset,
+              fit: BoxFit.contain,
+              semanticLabel: '$label branch stamp',
+            ),
+          ),
+          if (stampCode != null) ...[
+            SizedBox(height: compact ? 2 : 4),
+            Text(
+              stampCode,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: blue,
+                fontSize: compact ? 8 : 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
     return Container(
       constraints: const BoxConstraints(minHeight: 58),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -459,11 +559,55 @@ class _DailyReportPageState extends State<DailyReportPage> {
               overflow: TextOverflow.ellipsis),
           trailing: widget.adminMode
               ? IconButton(
+                  tooltip: 'Review report',
                   icon: const Icon(Icons.visibility_outlined),
                   onPressed: () => _review(row))
-              : null,
+              : Wrap(
+                  spacing: 2,
+                  children: [
+                    IconButton(
+                      tooltip: 'View report',
+                      icon: const Icon(Icons.visibility_outlined),
+                      onPressed: () => _viewReport(row),
+                    ),
+                    IconButton(
+                      tooltip: 'Print PDF',
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      onPressed: () => _printReport(row),
+                    ),
+                  ],
+                ),
         ),
       );
+
+  Future<void> _viewReport(Map<String, dynamic> row) async {
+    final comment = TextEditingController(text: row['hq_comment']?.toString());
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${row['branch_id']} · ${row['report_date']}'),
+        content: SizedBox(
+          width: 850,
+          height: MediaQuery.sizeOf(ctx).height * .68,
+          child: SingleChildScrollView(
+            child: _adminReportForm(row, comment, commentReadOnly: true),
+          ),
+        ),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => _printReport(row),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Print PDF'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+    comment.dispose();
+  }
 
   Future<void> _review(Map<String, dynamic> row) async {
     final comment = TextEditingController(text: row['hq_comment']?.toString());
@@ -530,7 +674,9 @@ class _DailyReportPageState extends State<DailyReportPage> {
     final user = AppService.instance.currentUser;
     final name = user?.displayName?.trim() ?? '';
     final username = (user?.username ?? '').trim();
-    if (name.isNotEmpty && !name.contains('@') && name.toLowerCase() != 'admin') {
+    if (name.isNotEmpty &&
+        !name.contains('@') &&
+        name.toLowerCase() != 'admin') {
       return name;
     }
     if (username.isNotEmpty && username.toLowerCase() != 'admin') {
@@ -540,7 +686,10 @@ class _DailyReportPageState extends State<DailyReportPage> {
   }
 
   Widget _adminReportForm(
-      Map<String, dynamic> row, TextEditingController comment) {
+    Map<String, dynamic> row,
+    TextEditingController comment, {
+    bool commentReadOnly = false,
+  }) {
     final orsanco = row['orsanco'] is Map
         ? Map<String, dynamic>.from(row['orsanco'] as Map)
         : <String, dynamic>{};
@@ -557,8 +706,15 @@ class _DailyReportPageState extends State<DailyReportPage> {
             child: Image.asset('assets/hasani_books_logo.jpg',
                 height: 65, alignment: Alignment.centerLeft),
           ),
-          Text('BRANCH: ${row['branch_id'] ?? '-'}',
-              style: const TextStyle(color: blue, fontWeight: FontWeight.w800)),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 145,
+            child: _branchStamp(
+              row['branch_id'],
+              row['report_date'],
+              compact: true,
+            ),
+          ),
         ]),
         const Text('MAINTENANCE DAILY REPORT',
             style: TextStyle(
@@ -613,16 +769,20 @@ class _DailyReportPageState extends State<DailyReportPage> {
         Row(children: [
           Expanded(child: _readValue('REPORTED BY', row['reported_by'])),
           const SizedBox(width: 8),
-          Expanded(child: _branchStamp(row['branch_id'])),
+          Expanded(child: _branchStamp(row['branch_id'], row['report_date'])),
         ]),
         _bar('COMMENT BY HQ'),
         Padding(
           padding: const EdgeInsets.all(8),
           child: TextField(
             controller: comment,
+            readOnly: commentReadOnly,
             minLines: 3,
             maxLines: 6,
-            decoration: const InputDecoration(hintText: 'Enter HQ comment'),
+            decoration: InputDecoration(
+              hintText:
+                  commentReadOnly ? 'No HQ comment yet' : 'Enter HQ comment',
+            ),
           ),
         ),
         if (row['reviewed_at'] != null)

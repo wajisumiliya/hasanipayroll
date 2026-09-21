@@ -27,6 +27,57 @@ class DailyReportPdfService {
         logoData.lengthInBytes,
       ));
     } catch (_) {}
+
+    String? branchStampAsset() {
+      final branch = report['branch_id']?.toString().trim().toUpperCase();
+      return switch (branch) {
+        'ALOR SETAR' => 'assets/branch_stamps/ALOR SETAR.png',
+        'AMANJAYA' => 'assets/branch_stamps/AMANJAYA.png',
+        'ASTANA' => 'assets/branch_stamps/ASTANA.png',
+        'GURUN' => 'assets/branch_stamps/GURUN.png',
+        'JITRA' => 'assets/branch_stamps/JITRA.png',
+        'KULIM' => 'assets/branch_stamps/KULIM.png',
+        'LANGKAWI' => 'assets/branch_stamps/LANGKAWI.png',
+        'PRAI' || 'PERAI' => 'assets/branch_stamps/PERAI.png',
+        _ => null,
+      };
+    }
+
+    String? branchNumber() {
+      final branch = report['branch_id']?.toString().trim().toUpperCase();
+      return switch (branch) {
+        'JITRA' => '01/08',
+        'ASTANA' => '02/08',
+        'ALOR SETAR' => '03/08',
+        'GURUN' => '04/08',
+        'AMANJAYA' => '05/08',
+        'PRAI' || 'PERAI' => '06/08',
+        'KULIM' => '07/08',
+        'LANGKAWI' => '08/08',
+        _ => null,
+      };
+    }
+
+    String branchStampCode() {
+      final date = DateTime.tryParse(report['report_date']?.toString() ?? '');
+      final number = branchNumber();
+      if (date == null || number == null) return '-';
+      String two(int value) => value.toString().padLeft(2, '0');
+      return '${two(date.day)}${two(date.month)} / '
+          '${number.replaceFirst('/', ' / ')}';
+    }
+
+    pw.MemoryImage? branchStampImage;
+    final stampAsset = branchStampAsset();
+    if (stampAsset != null) {
+      try {
+        final data = await rootBundle.load(stampAsset);
+        branchStampImage = pw.MemoryImage(data.buffer.asUint8List(
+          data.offsetInBytes,
+          data.lengthInBytes,
+        ));
+      } catch (_) {}
+    }
     final orsano = report['orsanco'] is Map
         ? Map<String, dynamic>.from(report['orsanco'] as Map)
         : <String, dynamic>{};
@@ -53,29 +104,11 @@ class DailyReportPdfService {
     String malaysianDateTime(dynamic value) {
       final parsed = DateTime.tryParse(value?.toString() ?? '');
       if (parsed == null) return '-';
-      final local = parsed.isUtc ? parsed.add(const Duration(hours: 8)) : parsed;
+      final local =
+          parsed.isUtc ? parsed.add(const Duration(hours: 8)) : parsed;
       String two(int number) => number.toString().padLeft(2, '0');
       return '${two(local.day)}/${two(local.month)}/${local.year} '
           '${two(local.hour)}:${two(local.minute)} MYT';
-    }
-
-    String stampDate() {
-      final date = DateTime.tryParse(report['report_date']?.toString() ?? '');
-      const months = [
-        'JAN',
-        'FEB',
-        'MAR',
-        'APR',
-        'MAY',
-        'JUN',
-        'JUL',
-        'AUG',
-        'SEP',
-        'OCT',
-        'NOV',
-        'DEC',
-      ];
-      return date == null ? '-' : '${date.day} ${months[date.month - 1]} ${date.year}';
     }
 
     final reviewedAt = malaysianDateTime(report['reviewed_at']);
@@ -112,7 +145,8 @@ class DailyReportPdfService {
             decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
             child: pw.Row(children: [
               pw.Text('$label: ',
-                  style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                  style: pw.TextStyle(
+                      fontSize: 7, fontWeight: pw.FontWeight.bold)),
               pw.Expanded(
                 child: pw.Align(
                   alignment: pw.Alignment.centerRight,
@@ -141,7 +175,8 @@ class DailyReportPdfService {
             padding: const pw.EdgeInsets.symmetric(horizontal: 6),
             decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
             child: pw.Text(label,
-                style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                style:
+                    pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
           ),
         );
 
@@ -167,7 +202,9 @@ class DailyReportPdfService {
                 pw.Text(value,
                     maxLines: 1,
                     style: pw.TextStyle(
-                        color: ink, fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                        color: ink,
+                        fontSize: 7,
+                        fontWeight: pw.FontWeight.bold)),
               ],
             ),
           ),
@@ -179,22 +216,24 @@ class DailyReportPdfService {
           child: pw.Container(
             padding: const pw.EdgeInsets.fromLTRB(8, 7, 8, 6),
             decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
-            child:
-                pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                child: pw.Text(label,
-                    style: pw.TextStyle(
-                        fontSize: 9,
-                        fontWeight: pw.FontWeight.bold,
-                        decoration: pw.TextDecoration.underline,
-                        decorationThickness: .8)),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Text(text(value),
-                  style: pw.TextStyle(
-                      fontSize: narrativeFontSize(value), lineSpacing: 6)),
-            ]),
+            child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 4),
+                    child: pw.Text(label,
+                        style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            decoration: pw.TextDecoration.underline,
+                            decorationThickness: .8)),
+                  ),
+                  pw.SizedBox(height: 6),
+                  pw.Text(text(value),
+                      style: pw.TextStyle(
+                          fontSize: narrativeFontSize(value), lineSpacing: 6)),
+                ]),
           ),
         );
 
@@ -203,37 +242,42 @@ class DailyReportPdfService {
             height: 42,
             padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
             decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
-              pw.Text(label,
-                  maxLines: 2,
-                  textAlign: pw.TextAlign.center,
-                  style: const pw.TextStyle(fontSize: 6)),
-              pw.SizedBox(height: 3),
-              pw.Container(height: .7, color: ink),
-              pw.Spacer(),
-              pw.Text(text(value), style: const pw.TextStyle(fontSize: 8)),
-            ]),
+            child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text(label,
+                      maxLines: 2,
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 6)),
+                  pw.SizedBox(height: 3),
+                  pw.Container(height: .7, color: ink),
+                  pw.Spacer(),
+                  pw.Text(text(value), style: const pw.TextStyle(fontSize: 8)),
+                ]),
           ),
         );
 
-    pw.Widget bottomBox(String title, pw.Widget content, {int flex = 1}) => pw.Expanded(
+    pw.Widget bottomBox(String title, pw.Widget content, {int flex = 1}) =>
+        pw.Expanded(
           flex: flex,
           child: pw.Container(
             height: 104,
             decoration: pw.BoxDecoration(border: pw.Border.all(color: ink)),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-              pw.Container(
-                height: 20,
-                alignment: pw.Alignment.center,
-                color: ink,
-                child: pw.Text(title,
-                    style: pw.TextStyle(
-                        color: PdfColors.white,
-                        fontSize: 8,
-                        fontWeight: pw.FontWeight.bold)),
-              ),
-              pw.Expanded(child: content),
-            ]),
+            child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  pw.Container(
+                    height: 20,
+                    alignment: pw.Alignment.center,
+                    color: ink,
+                    child: pw.Text(title,
+                        style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 8,
+                            fontWeight: pw.FontWeight.bold)),
+                  ),
+                  pw.Expanded(child: content),
+                ]),
           ),
         );
 
@@ -243,180 +287,199 @@ class DailyReportPdfService {
       theme: theme,
       build: (_) => pw.Container(
         height: PdfPageFormat.a4.height - 20,
-        decoration: pw.BoxDecoration(border: pw.Border.all(color: ink, width: 2)),
+        decoration:
+            pw.BoxDecoration(border: pw.Border.all(color: ink, width: 2)),
         padding: const pw.EdgeInsets.all(5),
-        child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-          pw.Container(
-            height: 70,
-            alignment: pw.Alignment.center,
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              children: [
-                if (logo != null)
-                  pw.Image(logo!, width: 190, height: 34, fit: pw.BoxFit.contain)
-                else
-                  pw.Text('HASANI BOOKS',
-                      style: pw.TextStyle(
-                          color: blue,
-                          fontSize: 24,
-                          fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 2),
-                pw.Text('DAILY MAINTAINANCE REPORT',
-                    textAlign: pw.TextAlign.center,
-                    style: pw.TextStyle(
-                        color: blue,
-                        fontSize: 18,
-                        fontWeight: pw.FontWeight.bold)),
-              ],
-            ),
-          ),
-          pw.SizedBox(height: 3),
-          pw.Row(children: [
-            reportInfoCell('Branch', text(report['branch_id']), flex: 2),
-            reportInfoCell('Report Date', text(report['report_date']), flex: 2),
-            reportInfoCell('Reported By', text(report['reported_by']), flex: 2),
-            reportInfoCell('Submitted At', malaysianDateTime(report['submitted_at']),
-                flex: 3),
-            reportInfoCell('Day', dayName()),
-          ]),
-          pw.Row(children: [
-            inlineField('Attendance', report['attendance']),
-            inlineField('Unpaid Leave', report['unpaid_leave']),
-            inlineField('Weekly Leave', report['weekly_leave']),
-            inlineField('Annual Leave', report['annual_leave']),
-          ]),
-          section('MAINTENANCE'),
-          pw.Row(children: [
-            categoryHeading('Air Conditioner'),
-            inlineField('Total', report['maintenance_total']),
-            inlineField('Working Condition', report['working_condition']),
-            inlineField('To Service or Repair', report['service_repair']),
-          ]),
-          section('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
-          reportArea('Report', report['maintenance_report'],
-              flex: narrativeFlex(report['maintenance_report'])),
-          section('ORSANO'),
-          pw.Row(children: [
-            orsanoCell('Agama', orsano['agama']),
-            orsanoCell('S.K', orsano['sk']),
-            orsanoCell('S.M', orsano['sm']),
-            orsanoCell('Umum', orsano['umum']),
-            orsanoCell('Novel', orsano['novel']),
-            orsanoCell('Alat Tulis', orsano['alat_tulis']),
-            orsanoCell('Tadika', orsano['tadika']),
-            orsanoCell('Kanak Kanak', orsano['kanak']),
-            orsanoCell('Quran', orsano['quran']),
-            orsanoCell('Others', orsano['others']),
-          ]),
-          reportArea('Report Crew', report['report_crew'],
-              flex: narrativeFlex(report['report_crew'])),
-          reportArea('Recommandation / Demand / Sales', report['recommendation'],
-              flex: narrativeFlex(report['recommendation'])),
-          pw.Row(children: [
-            bottomBox(
-              'Reported By:',
-              pw.Padding(
-                padding: const pw.EdgeInsets.all(8),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+        child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.SizedBox(
+                height: 70,
+                child: pw.Stack(
                   children: [
-                    pw.Text(text(report['reported_by']),
-                        style: pw.TextStyle(
-                            fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-            bottomBox(
-              'Branch Stamp',
-              pw.Padding(
-                padding: const pw.EdgeInsets.only(top: 3),
-                child: pw.Align(
-                  alignment: pw.Alignment.topCenter,
-                  child: pw.Container(
-                    width: 72,
-                    height: 72,
-                    padding: const pw.EdgeInsets.all(3),
-                    decoration: pw.BoxDecoration(
-                      shape: pw.BoxShape.circle,
-                      border: pw.Border.all(color: blue, width: 2),
-                    ),
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                      decoration: pw.BoxDecoration(
-                        shape: pw.BoxShape.circle,
-                        border: pw.Border.all(color: blue, width: 1.1),
-                      ),
+                    pw.Align(
+                      alignment: pw.Alignment.center,
                       child: pw.Column(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                        mainAxisAlignment: pw.MainAxisAlignment.center,
                         children: [
-                          pw.Text('HASANI BOOKS',
-                              maxLines: 1,
-                              style: pw.TextStyle(
-                                  color: blue,
-                                  fontSize: 5.5,
-                                  fontWeight: pw.FontWeight.bold)),
-                          pw.Container(height: .7, color: blue),
-                          pw.Text(stampDate(),
-                              maxLines: 1,
-                              style: pw.TextStyle(
-                                  color: blue,
-                                  fontSize: 7,
-                                  fontWeight: pw.FontWeight.bold)),
-                          pw.Container(height: .7, color: blue),
-                          pw.Text(text(report['branch_id']).toUpperCase(),
-                              maxLines: 2,
+                          if (logo != null)
+                            pw.Image(logo,
+                                width: 190, height: 34, fit: pw.BoxFit.contain)
+                          else
+                            pw.Text('HASANI BOOKS',
+                                style: pw.TextStyle(
+                                    color: blue,
+                                    fontSize: 24,
+                                    fontWeight: pw.FontWeight.bold)),
+                          pw.SizedBox(height: 2),
+                          pw.Text('DAILY MAINTAINANCE REPORT',
                               textAlign: pw.TextAlign.center,
                               style: pw.TextStyle(
                                   color: blue,
-                                  fontSize: 5.5,
+                                  fontSize: 18,
+                                  fontWeight: pw.FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    if (branchStampImage != null)
+                      pw.Positioned(
+                        top: 2,
+                        right: 3,
+                        child: pw.Column(
+                          mainAxisSize: pw.MainAxisSize.min,
+                          children: [
+                            pw.SizedBox(
+                              width: 76,
+                              height: 43,
+                              child: pw.Image(branchStampImage,
+                                  fit: pw.BoxFit.contain),
+                            ),
+                            pw.SizedBox(height: 1),
+                            pw.Text(branchStampCode(),
+                                style: pw.TextStyle(
+                                    color: blue,
+                                    fontSize: 6,
+                                    fontWeight: pw.FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 3),
+              pw.Row(children: [
+                reportInfoCell('Branch', text(report['branch_id']), flex: 2),
+                reportInfoCell('Report Date', text(report['report_date']),
+                    flex: 2),
+                reportInfoCell('Reported By', text(report['reported_by']),
+                    flex: 2),
+                reportInfoCell(
+                    'Submitted At', malaysianDateTime(report['submitted_at']),
+                    flex: 3),
+                reportInfoCell('Day', dayName()),
+              ]),
+              pw.Row(children: [
+                inlineField('Attendance', report['attendance']),
+                inlineField('Unpaid Leave', report['unpaid_leave']),
+                inlineField('Weekly Leave', report['weekly_leave']),
+                inlineField('Annual Leave', report['annual_leave']),
+              ]),
+              section('MAINTENANCE'),
+              pw.Row(children: [
+                categoryHeading('Air Conditioner'),
+                inlineField('Total', report['maintenance_total']),
+                inlineField('Working Condition', report['working_condition']),
+                inlineField('To Service or Repair', report['service_repair']),
+              ]),
+              section('MAINTENANCE / ELECTRICAL / EQUIPMENT'),
+              reportArea('Report', report['maintenance_report'],
+                  flex: narrativeFlex(report['maintenance_report'])),
+              section('ORSANO'),
+              pw.Row(children: [
+                orsanoCell('Agama', orsano['agama']),
+                orsanoCell('S.K', orsano['sk']),
+                orsanoCell('S.M', orsano['sm']),
+                orsanoCell('Umum', orsano['umum']),
+                orsanoCell('Novel', orsano['novel']),
+                orsanoCell('Alat Tulis', orsano['alat_tulis']),
+                orsanoCell('Tadika', orsano['tadika']),
+                orsanoCell('Kanak Kanak', orsano['kanak']),
+                orsanoCell('Quran', orsano['quran']),
+                orsanoCell('Others', orsano['others']),
+              ]),
+              reportArea('Report Crew', report['report_crew'],
+                  flex: narrativeFlex(report['report_crew'])),
+              reportArea(
+                  'Recommandation / Demand / Sales', report['recommendation'],
+                  flex: narrativeFlex(report['recommendation'])),
+              pw.Row(children: [
+                bottomBox(
+                  'Reported By:',
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(text(report['reported_by']),
+                            style: pw.TextStyle(
+                                fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+                bottomBox(
+                  'Branch Stamp',
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 3),
+                    child: pw.Align(
+                      alignment: pw.Alignment.topCenter,
+                      child: pw.Column(
+                        mainAxisSize: pw.MainAxisSize.min,
+                        children: [
+                          if (branchStampImage != null)
+                            pw.SizedBox(
+                              width: 105,
+                              height: 56,
+                              child: pw.Image(branchStampImage,
+                                  fit: pw.BoxFit.contain),
+                            )
+                          else
+                            pw.Text(text(report['branch_id']).toUpperCase(),
+                                style: pw.TextStyle(
+                                    color: blue,
+                                    fontSize: 7,
+                                    fontWeight: pw.FontWeight.bold)),
+                          pw.SizedBox(height: 3),
+                          pw.Text(branchStampCode(),
+                              style: pw.TextStyle(
+                                  color: blue,
+                                  fontSize: 8,
                                   fontWeight: pw.FontWeight.bold)),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            bottomBox(
-              'Reviewed By:',
-              pw.Padding(
-                padding: const pw.EdgeInsets.all(8),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      text(report['reviewed_by']) == '-'
-                          ? 'Nur Muhammad Faizal'
-                          : text(report['reviewed_by']),
-                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-                    ),
-                    if (reviewedAt != '-') ...[
-                      pw.SizedBox(height: 5),
-                      pw.Text('Reviewed At:',
+                bottomBox(
+                  'Reviewed By:',
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          text(report['reviewed_by']) == '-'
+                              ? 'Nur Muhammad Faizal'
+                              : text(report['reviewed_by']),
                           style: pw.TextStyle(
-                              fontSize: 7, fontWeight: pw.FontWeight.bold)),
-                      pw.Text(reviewedAt,
-                          style: const pw.TextStyle(fontSize: 8)),
-                    ],
-                  ],
+                              fontSize: 8, fontWeight: pw.FontWeight.bold),
+                        ),
+                        if (reviewedAt != '-') ...[
+                          pw.SizedBox(height: 5),
+                          pw.Text('Reviewed At:',
+                              style: pw.TextStyle(
+                                  fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                          pw.Text(reviewedAt,
+                              style: const pw.TextStyle(fontSize: 8)),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            bottomBox(
-              'Comment by HQ:',
-              pw.Padding(
-                padding: const pw.EdgeInsets.all(8),
-                child: pw.Column(children: [
-                  pw.Text(text(report['hq_comment']),
-                      style: const pw.TextStyle(fontSize: 8)),
-                  pw.Spacer(),
-                ]),
-              ),
-              flex: 2,
-            ),
-          ]),
-        ]),
+                bottomBox(
+                  'Comment by HQ:',
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Column(children: [
+                      pw.Text(text(report['hq_comment']),
+                          style: const pw.TextStyle(fontSize: 8)),
+                      pw.Spacer(),
+                    ]),
+                  ),
+                  flex: 2,
+                ),
+              ]),
+            ]),
       ),
     ));
     return document.save();
