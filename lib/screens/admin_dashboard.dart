@@ -5655,6 +5655,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                     EmployeeProfileDetails(
                       employee: employee,
                       showSummary: false,
+                      onEdit: () {
+                        Navigator.pop(dialogContext);
+                        _showSupabaseEmployeeEdit(employee);
+                      },
                     ),
                     _employeeDetail(
                       'Employee ID',
