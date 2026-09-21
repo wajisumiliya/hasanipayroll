@@ -113,4 +113,68 @@ void main() {
       );
     },
   );
+
+  group('Attendance payroll regression rules', () {
+    test('public holiday pay is basic / 26 x 2 per worked day', () {
+      expect(
+        PayrollCalculationService.publicHolidayPay(
+          basicSalary: 1700,
+          workedDays: 1,
+        ),
+        130.77,
+      );
+    });
+
+    test('public holiday pay supports multiple worked days', () {
+      expect(
+        PayrollCalculationService.publicHolidayPay(
+          basicSalary: 2600,
+          workedDays: 2,
+        ),
+        400,
+      );
+    });
+
+    test('OT without approved minutes is not payable', () {
+      expect(PayrollCalculationService.approvedOvertimeHours(null), 0);
+      expect(PayrollCalculationService.approvedOvertimeHours(0), 0);
+    });
+
+    test('approved OT pays only the approved duration', () {
+      expect(PayrollCalculationService.approvedOvertimeHours(75), 1.25);
+    });
+
+    test('unpaid day cannot also create shortage deduction', () {
+      expect(
+        PayrollCalculationService.shouldApplyShortageDeduction(
+          isUnpaid: true,
+          isPublicHoliday: false,
+          worked: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('public holiday cannot create normal shortage deduction', () {
+      expect(
+        PayrollCalculationService.shouldApplyShortageDeduction(
+          isUnpaid: false,
+          isPublicHoliday: true,
+          worked: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('normal worked day can create shortage deduction', () {
+      expect(
+        PayrollCalculationService.shouldApplyShortageDeduction(
+          isUnpaid: false,
+          isPublicHoliday: false,
+          worked: true,
+        ),
+        isTrue,
+      );
+    });
+  });
 }

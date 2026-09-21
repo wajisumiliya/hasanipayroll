@@ -81,8 +81,8 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
           backgroundColor: _blue,
           foregroundColor: Colors.white,
           elevation: 0,
-          title: Text(_title,
-              style: const TextStyle(fontWeight: FontWeight.w800)),
+          title:
+              Text(_title, style: const TextStyle(fontWeight: FontWeight.w800)),
           actions: [
             const AppReloadButton(color: Colors.white),
             IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
@@ -96,8 +96,7 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
         height: 78,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-              colors: [_blue, Color(0xFF2368C4), _red],
-              stops: [0, .55, .55]),
+              colors: [_blue, Color(0xFF2368C4), _red], stops: [0, .55, .55]),
           boxShadow: [
             BoxShadow(
                 color: _blue.withValues(alpha: .22),
@@ -119,8 +118,10 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
             const SizedBox(width: 22),
             const Icon(Icons.calendar_today_outlined, color: Colors.white70),
             const SizedBox(width: 9),
-            Text('${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            Text(
+                '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w700)),
             const SizedBox(width: 24),
             CircleAvatar(
               radius: 19,
@@ -203,7 +204,8 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
             padding: const EdgeInsets.only(bottom: 16),
             child: Text('Hasani Books Edar Sdn Bhd',
                 style: TextStyle(
-                    fontSize: 10, color: dark ? Colors.white54 : Colors.black45)),
+                    fontSize: 10,
+                    color: dark ? Colors.white54 : Colors.black45)),
           ),
         ]),
       );
@@ -227,7 +229,8 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
                   letterSpacing: 1)),
           const SizedBox(height: 5),
           Text('Final approvals only',
-              style: TextStyle(color: dark ? Colors.white60 : Colors.black54, fontSize: 12)),
+              style: TextStyle(
+                  color: dark ? Colors.white60 : Colors.black54, fontSize: 12)),
         ]),
       );
 
@@ -247,7 +250,8 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
             height: 54,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: selected ? accent.withValues(alpha: dark ? .22 : .12) : null,
+              color:
+                  selected ? accent.withValues(alpha: dark ? .22 : .12) : null,
               borderRadius: BorderRadius.circular(13),
               border: selected
                   ? Border.all(color: accent.withValues(alpha: .55))
@@ -260,7 +264,8 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
                 decoration: BoxDecoration(
                     color: accent.withValues(alpha: dark ? .25 : .13),
                     borderRadius: BorderRadius.circular(11)),
-                child: Icon(item.$2, color: selected && dark ? Colors.white : accent),
+                child: Icon(item.$2,
+                    color: selected && dark ? Colors.white : accent),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -269,7 +274,8 @@ class _RequestAdminDashboardState extends State<RequestAdminDashboard> {
                         color: dark
                             ? (selected ? Colors.white : Colors.white70)
                             : (selected ? _blue : const Color(0xFF303747)),
-                        fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
+                        fontWeight:
+                            selected ? FontWeight.w800 : FontWeight.w600)),
               ),
               if (selected) Icon(Icons.chevron_right_rounded, color: accent),
             ]),
@@ -302,11 +308,16 @@ class _RequestAdminOtPageState extends State<_RequestAdminOtPage> {
                   ? TextField(
                       controller: duration,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Approved minutes'))
+                      decoration:
+                          const InputDecoration(labelText: 'Approved minutes'))
                   : const Text('Confirm rejection of this OT request?'),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(approve ? 'Approve' : 'Reject')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancel')),
+                FilledButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(approve ? 'Approve' : 'Reject')),
               ],
             ));
     if (confirmed == true) {
@@ -323,34 +334,47 @@ class _RequestAdminOtPageState extends State<_RequestAdminOtPage> {
               employeeId: row['employee_id']?.toString(),
               type: approve ? 'approval' : 'rejection')
           .catchError((_) {});
-      if (mounted) setState(() => future = SupabaseService.getPendingOtRequests());
+      if (mounted)
+        setState(() => future = SupabaseService.getPendingOtRequests());
     }
     duration.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
-      future: future,
-      builder: (_, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final rows = snapshot.data!.where((r) => r['status'] == 'pending_admin').toList();
-        if (rows.isEmpty) return const Center(child: Text('No OT requests awaiting final approval.'));
-        return ListView.builder(
-            padding: const EdgeInsets.all(18),
-            itemCount: rows.length,
-            itemBuilder: (_, i) {
-              final row = rows[i];
-              return Card(
-                  child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.more_time)),
-                title: Text('${row['employee_name'] ?? row['employee_id']} - ${row['overtime_date'] ?? ''}',
-                    style: const TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: Text('${row['branch_id'] ?? ''}\nBranch approved by ${row['branch_approved_name'] ?? '-'}'),
-                trailing: Wrap(spacing: 6, children: [
-                  OutlinedButton(onPressed: () => review(row, false), child: const Text('Reject')),
-                  FilledButton(onPressed: () => review(row, true), child: const Text('Approve')),
-                ]),
-              ));
-            });
-      });
+  Widget build(BuildContext context) =>
+      FutureBuilder<List<Map<String, dynamic>>>(
+          future: future,
+          builder: (_, snapshot) {
+            if (!snapshot.hasData)
+              return const Center(child: CircularProgressIndicator());
+            final rows = snapshot.data!
+                .where((r) => r['status'] == 'pending_admin')
+                .toList();
+            if (rows.isEmpty)
+              return const Center(
+                  child: Text('No OT requests awaiting final approval.'));
+            return ListView.builder(
+                padding: const EdgeInsets.all(18),
+                itemCount: rows.length,
+                itemBuilder: (_, i) {
+                  final row = rows[i];
+                  return Card(
+                      child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.more_time)),
+                    title: Text(
+                        '${row['employee_name'] ?? row['employee_id']} - ${row['overtime_date'] ?? ''}',
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    subtitle: Text(
+                        '${row['branch_id'] ?? ''}\nBranch approved by ${row['branch_approved_name'] ?? '-'}'),
+                    trailing: Wrap(spacing: 6, children: [
+                      OutlinedButton(
+                          onPressed: () => review(row, false),
+                          child: const Text('Reject')),
+                      FilledButton(
+                          onPressed: () => review(row, true),
+                          child: const Text('Approve')),
+                    ]),
+                  ));
+                });
+          });
 }
