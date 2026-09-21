@@ -2056,8 +2056,6 @@ class SupabaseService {
 
       final int calculatedOvertimeMinutes = 0;
 
-      final String otStatus = otAuthorized ? 'true' : 'false';
-
       // ==========================================================
       // 7. DATE
       // ==========================================================
@@ -2198,7 +2196,7 @@ class SupabaseService {
         // OT AUTHORIZATION
         // --------------------------------------------------------
 
-        'ot_authorized': otStatus,
+        'ot_authorized': otAuthorized,
         'ot_requested': otRequested,
 
         // --------------------------------------------------------
