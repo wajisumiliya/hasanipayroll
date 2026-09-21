@@ -23,7 +23,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   static int _visibleSecureCards = 0;
 
   Employee get employee => widget.employee;
-  String get _branch => employee.branchId.trim().isEmpty ? '-' : employee.branchId;
+  String get _branch =>
+      employee.branchId.trim().isEmpty ? '-' : employee.branchId;
   String get _joining => employee.joiningDate == null
       ? '-'
       : DateFormat('dd MMM yyyy').format(employee.joiningDate!);
@@ -115,10 +116,13 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                     Expanded(
                       child: Column(
                         children: [
-                          _info(Icons.person_outline, 'Designation', employee.designation),
-                          _info(Icons.apartment_outlined, 'Department', employee.department),
+                          _info(Icons.person_outline, 'Designation',
+                              employee.designation),
+                          _info(Icons.apartment_outlined, 'Department',
+                              employee.department),
                           _info(Icons.location_on_outlined, 'Branch', _branch),
-                          _info(Icons.calendar_month_outlined, 'Joining Date', _joining),
+                          _info(Icons.calendar_month_outlined, 'Joining Date',
+                              _joining),
                         ],
                       ),
                     ),
@@ -135,12 +139,15 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: navy),
                             ),
-                            child: const Icon(Icons.qr_code_2, color: Colors.black, size: 68),
+                            child: const Icon(Icons.qr_code_2,
+                                color: Colors.black, size: 68),
                           ),
                           const SizedBox(height: 3),
                           Text(employee.employeeId,
                               style: const TextStyle(
-                                  color: navy, fontSize: 9, fontWeight: FontWeight.w800)),
+                                  color: navy,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800)),
                           const Text('Scan to verify',
                               style: TextStyle(color: navy, fontSize: 7)),
                         ],
@@ -161,7 +168,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 ),
                 const Text(
                   'PEOPLE  •  KNOWLEDGE  •  PROGRESS',
-                  style: TextStyle(color: Colors.white70, fontSize: 7, letterSpacing: 1.2),
+                  style: TextStyle(
+                      color: Colors.white70, fontSize: 7, letterSpacing: 1.2),
                 ),
               ],
             ),
@@ -185,26 +193,32 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 _value(Icons.menu_book_rounded, 'Knowledge', 'We Learn'),
                 _value(Icons.groups_rounded, 'People', 'We Grow'),
                 _value(Icons.trending_up_rounded, 'Progress', 'We Achieve'),
-                _value(Icons.handshake_outlined, 'Integrity', 'We Always Do the Right Thing'),
+                _value(Icons.handshake_outlined, 'Integrity',
+                    'We Always Do the Right Thing'),
                 const Divider(height: 20, color: navy),
                 const Text('IMPORTANT NOTES', style: _sectionStyle),
                 const SizedBox(height: 8),
-                _note('1. This digital card is the property of Hasani Books Sdn Bhd.'),
-                _note('2. It must be used only for authorised company identification.'),
+                _note(
+                    '1. This digital card is the property of Hasani Books Sdn Bhd.'),
+                _note(
+                    '2. It must be used only for authorised company identification.'),
                 _note('3. This employee card is non-transferable.'),
                 _note('4. If any information is incorrect, please contact HR.'),
-                _note('5. Card access ends when employment with the company ends.'),
+                _note(
+                    '5. Card access ends when employment with the company ends.'),
                 const Spacer(),
                 const Row(children: [
                   Icon(Icons.email_outlined, color: navy, size: 18),
                   SizedBox(width: 7),
-                  Text('hr@hasanibooks.com', style: TextStyle(color: navy, fontSize: 11)),
+                  Text('hr@hasanibooks.com',
+                      style: TextStyle(color: navy, fontSize: 11)),
                 ]),
                 const SizedBox(height: 7),
                 const Row(children: [
                   Icon(Icons.language, color: navy, size: 18),
                   SizedBox(width: 7),
-                  Text('www.hasanibooks.com', style: TextStyle(color: navy, fontSize: 11)),
+                  Text('www.hasanibooks.com',
+                      style: TextStyle(color: navy, fontSize: 11)),
                 ]),
                 const SizedBox(height: 18),
                 const Center(
@@ -224,7 +238,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         ),
       );
 
-  Widget _shell({required Widget background, required Widget child}) => Container(
+  Widget _shell({required Widget background, required Widget child}) =>
+      Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
@@ -238,7 +253,10 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
             ),
           ],
         ),
-        child: Stack(children: [Positioned.fill(child: background), Positioned.fill(child: child)]),
+        child: Stack(children: [
+          Positioned.fill(child: background),
+          Positioned.fill(child: child)
+        ]),
       );
 
   Widget _logo({bool showValues = false}) => Row(
@@ -255,7 +273,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Text(
                     'hasani BOOKS',
-                    style: TextStyle(color: navy, fontSize: 24, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                        color: navy, fontSize: 24, fontWeight: FontWeight.w900),
                   ),
                 ),
                 const Text(
@@ -287,7 +306,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         alignment: Alignment.center,
         child: Text(
           initial,
-          style: const TextStyle(color: navy, fontSize: 62, fontWeight: FontWeight.w900),
+          style: const TextStyle(
+              color: navy, fontSize: 62, fontWeight: FontWeight.w900),
         ),
       );
     }
@@ -328,13 +348,17 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
           SizedBox(width: 35, child: Icon(icon, color: navy, size: 23)),
           const SizedBox(width: 6),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: TextStyle(color: navy.withValues(alpha: .60), fontSize: 10)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label,
+                  style: TextStyle(
+                      color: navy.withValues(alpha: .60), fontSize: 10)),
               Text(
                 value.trim().isEmpty ? '-' : value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: navy, fontSize: 13, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                    color: navy, fontSize: 13, fontWeight: FontWeight.w800),
               ),
             ]),
           ),
@@ -351,11 +375,14 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
           const Icon(Icons.qr_code_2_rounded, color: navy, size: 30),
           const SizedBox(width: 9),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('DIGITAL EMPLOYEE CARD',
-                  style: TextStyle(color: navy, fontSize: 10, fontWeight: FontWeight.w900)),
+                  style: TextStyle(
+                      color: navy, fontSize: 10, fontWeight: FontWeight.w900)),
               Text(employee.employeeId,
-                  style: TextStyle(color: navy.withValues(alpha: .65), fontSize: 10)),
+                  style: TextStyle(
+                      color: navy.withValues(alpha: .65), fontSize: 10)),
             ]),
           ),
           const Icon(Icons.verified, color: Color(0xFF16A34A), size: 25),
@@ -368,15 +395,20 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
           Container(
             width: 35,
             height: 35,
-            decoration: BoxDecoration(color: pale, borderRadius: BorderRadius.circular(11)),
+            decoration: BoxDecoration(
+                color: pale, borderRadius: BorderRadius.circular(11)),
             child: Icon(icon, color: navy, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title,
-                  style: const TextStyle(color: navy, fontWeight: FontWeight.w900, fontSize: 13)),
-              Text(subtitle, style: TextStyle(color: navy.withValues(alpha: .7), fontSize: 11)),
+                  style: const TextStyle(
+                      color: navy, fontWeight: FontWeight.w900, fontSize: 13)),
+              Text(subtitle,
+                  style: TextStyle(
+                      color: navy.withValues(alpha: .7), fontSize: 11)),
             ]),
           ),
         ]),
@@ -384,7 +416,9 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
 
   Widget _note(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 5),
-        child: Text(text, style: TextStyle(color: navy.withValues(alpha: .88), fontSize: 10.5)),
+        child: Text(text,
+            style:
+                TextStyle(color: navy.withValues(alpha: .88), fontSize: 10.5)),
       );
 
   static const _sectionStyle = TextStyle(
@@ -425,7 +459,8 @@ class _IdentityFrontBackground extends StatelessWidget {
               width: 205,
               height: 225,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF062D69), Color(0xFF174CA4)]),
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF062D69), Color(0xFF174CA4)]),
                 borderRadius: BorderRadius.circular(50),
               ),
             ),
@@ -457,7 +492,8 @@ class _IdentityFrontBackground extends StatelessWidget {
           right: 20,
           top: 160,
           child: Icon(Icons.menu_book_rounded,
-              size: 300, color: const Color(0xFF174CA4).withValues(alpha: .035)),
+              size: 300,
+              color: const Color(0xFF174CA4).withValues(alpha: .035)),
         ),
       ]);
 }
@@ -481,7 +517,8 @@ class _IdentityBackBackground extends StatelessWidget {
           right: -110,
           top: 150,
           child: Icon(Icons.apartment_rounded,
-              size: 350, color: const Color(0xFF174CA4).withValues(alpha: .035)),
+              size: 350,
+              color: const Color(0xFF174CA4).withValues(alpha: .035)),
         ),
         const Positioned(
           left: 0,
@@ -489,7 +526,8 @@ class _IdentityBackBackground extends StatelessWidget {
           bottom: 0,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF062D69), Color(0xFF07418C)]),
+              gradient: LinearGradient(
+                  colors: [Color(0xFF062D69), Color(0xFF07418C)]),
             ),
             child: SizedBox(height: 105),
           ),
