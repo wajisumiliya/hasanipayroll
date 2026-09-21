@@ -1534,7 +1534,8 @@ class SupabaseService {
       query = query.ilike('branch_id', branchId.trim());
     }
     if (reportDate != null) {
-      query = query.eq('report_date', DateFormat('yyyy-MM-dd').format(reportDate));
+      query =
+          query.eq('report_date', DateFormat('yyyy-MM-dd').format(reportDate));
     }
     return _mapList(await query.order('report_date', ascending: false));
   }
