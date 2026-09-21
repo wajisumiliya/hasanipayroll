@@ -4442,20 +4442,18 @@ class _AdminDashboardState extends State<AdminDashboard>
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    ChoiceChip(
-                      avatar: const Icon(Icons.apps_rounded, size: 17),
-                      label: const Text('All Branches'),
+                    _employeeBranchFilterButton(
+                      label: 'All Branches',
                       selected: _adminEmployeeBranchFilter == null,
-                      onSelected: (_) =>
+                      onTap: () =>
                           setState(() => _adminEmployeeBranchFilter = null),
                     ),
                     for (final branch in branchNames) ...[
                       const SizedBox(width: 8),
-                      ChoiceChip(
-                        avatar: Icon(_payrollBranchIcon(branch), size: 17),
-                        label: Text(branch),
+                      _employeeBranchFilterButton(
+                        label: branch,
                         selected: _adminEmployeeBranchFilter == branch,
-                        onSelected: (_) => setState(
+                        onTap: () => setState(
                           () => _adminEmployeeBranchFilter = branch,
                         ),
                       ),
@@ -4790,6 +4788,75 @@ class _AdminDashboardState extends State<AdminDashboard>
           },
         );
       },
+    );
+  }
+
+  Widget _employeeBranchFilterButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final allBranches = label == 'All Branches';
+    final colors = allBranches
+        ? const [Color(0xFF289BFF), Color(0xFF0754D8)]
+        : _payrollBranchColors(label);
+    final icon =
+        allBranches ? Icons.grid_view_rounded : _payrollBranchIcon(label);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 48,
+          padding: const EdgeInsets.fromLTRB(7, 6, 13, 6),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? LinearGradient(colors: colors)
+                : const LinearGradient(
+                    colors: [Colors.white, Color(0xFFF7FAFF)]),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color:
+                  selected ? colors.last : colors.first.withValues(alpha: .45),
+              width: selected ? 1.8 : 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colors.last.withValues(alpha: selected ? .25 : .10),
+                blurRadius: selected ? 11 : 6,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                gradient: selected
+                    ? const LinearGradient(
+                        colors: [Color(0x44FFFFFF), Color(0x11FFFFFF)],
+                      )
+                    : LinearGradient(colors: colors),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                color: selected ? Colors.white : const Color(0xFF26344F),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .2,
+              ),
+            ),
+          ]),
+        ),
+      ),
     );
   }
 
