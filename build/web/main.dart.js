@@ -36799,80 +36799,79 @@ case 2:return A.w(o.at(-1),r)}})
 return A.y($async$aNr,r)},
 aNO(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p){var s="",r=""
 return A.bRT(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p)},
-bRT(b8,b9,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,d0,d1,d2,d3){var s=0,r=A.z(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4,b5,b6,b7
-var $async$aNO=A.v(function(d4,d5){if(d4===1){o.push(d5)
-s=p}for(;;)switch(s){case 0:b5=""
-b6=""
+bRT(b7,b8,b9,c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,d0,d1,d2){var s=0,r=A.z(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4,b5,b6
+var $async$aNO=A.v(function(d3,d4){if(d3===1){o.push(d4)
+s=p}for(;;)switch(s){case 0:b4=""
+b5=""
 p=4
 n=new A.aNS()
 m=new A.aNQ(n)
 l=new A.aNR()
 k=new A.aNP()
-j=m.$2(d2,d3)
-i=m.$2(c4,c5)
-h=m.$2(b8,b9)
-g=m.$2(b5,b6)
+j=m.$2(d1,d2)
+i=m.$2(c3,c4)
+h=m.$2(b7,b8)
+g=m.$2(b4,b5)
 f=i+h+g
 e=j-f
 if(e<0)e=0
 d=0
-c=c6?"true":"false"
-b=A.aNj(c2)
-a7=B.f.v(c3)
-a=a7+"_"+A.h(b)
+c=A.aNj(c1)
+a6=B.f.v(c2)
+b=a6+"_"+A.h(c)
+a7=B.f.v(d1)
+a8=a7.length===0
+a9=!1
+if(!a8)if(a7!=="-"){b0=B.f.v(d2)
+b0=b0.length!==0&&b0!=="-"
+a9=b0}a=a9
+a0=B.f.v(c9)
+if(J.ac(a0)===0)if(a){a1=n.$1(d1)
+a0=a1!=null&&a1>480?"Late":"Present"}else a0="OFF"
+if(!B.boD.n(0,a0)){a6=A.bV("Invalid attendance status: "+A.h(a0))
+throw A.c(a6)}b0=B.f.v(b9)
+if(a8)a7="-"
 a8=B.f.v(d2)
-a9=a8.length===0
-b0=!1
-if(!a9)if(a8!=="-"){b1=B.f.v(d3)
-b1=b1.length!==0&&b1!=="-"
-b0=b1}a0=b0
-a1=B.f.v(d0)
-if(J.ac(a1)===0)if(a0){a2=n.$1(d2)
-a1=a2!=null&&a2>480?"Late":"Present"}else a1="OFF"
-if(!B.boD.n(0,a1)){a7=A.bV("Invalid attendance status: "+A.h(a1))
-throw A.c(a7)}b1=B.f.v(c0)
-if(a9)a8="-"
-a9=B.f.v(d3)
-if(a9.length===0)a9="-"
-b2=t.N
-b3=t.z
-a3=A.a7(["id",a,"employee_id",a7,"branch_id",b1,"attendance_date",b,"check_in",a8,"check_out",a9,"status",a1,"morning_in",k.$1(c4),"morning_out",k.$1(c5),"afternoon_in",k.$1(b8),"afternoon_out",k.$1(b9),"evening_in",k.$1(b5),"evening_out",k.$1(b6),"overtime_in",k.$1(c8),"overtime_out",k.$1(c9),"ot_authorized",c,"ot_requested",c7,"work_minutes",j,"break_minutes",f,"overtime_minutes",d,"net_working_minutes",e,"work_duration",l.$1(j),"break_duration",l.$1(f),"overtime_duration",l.$1(d),"net_working_duration",l.$1(e)],b2,b3)
+if(a8.length===0)a8="-"
+b1=t.N
+b2=t.z
+a2=A.a7(["id",b,"employee_id",a6,"branch_id",b0,"attendance_date",c,"check_in",a7,"check_out",a8,"status",a0,"morning_in",k.$1(c3),"morning_out",k.$1(c4),"afternoon_in",k.$1(b7),"afternoon_out",k.$1(b8),"evening_in",k.$1(b4),"evening_out",k.$1(b5),"overtime_in",k.$1(c7),"overtime_out",k.$1(c8),"ot_authorized",c5,"ot_requested",c6,"work_minutes",j,"break_minutes",f,"overtime_minutes",d,"net_working_minutes",e,"work_duration",l.$1(j),"break_duration",l.$1(f),"overtime_duration",l.$1(d),"net_working_duration",l.$1(e)],b1,b2)
 A.az().$1(u.o)
 A.az().$1("SAVING MONTHLY ATTENDANCE")
-A.az().$1("Employee: "+a7)
-A.az().$1("Branch: "+b1)
-A.az().$1("Date: "+A.h(b))
-A.az().$1("Working: "+d2+" -> "+d3)
+A.az().$1("Employee: "+a6)
+A.az().$1("Branch: "+b0)
+A.az().$1("Date: "+A.h(c))
+A.az().$1("Working: "+d1+" -> "+d2)
 A.az().$1("Work minutes: "+A.h(j))
-A.az().$1("Morning break: "+c4+" -> "+c5+" = "+A.h(i))
-A.az().$1("Afternoon break: "+b8+" -> "+b9+" = "+A.h(h))
-A.az().$1("Evening break: "+A.h(b5)+" -> "+A.h(b6)+" = "+A.h(g))
+A.az().$1("Morning break: "+c3+" -> "+c4+" = "+A.h(i))
+A.az().$1("Afternoon break: "+b7+" -> "+b8+" = "+A.h(h))
+A.az().$1("Evening break: "+A.h(b4)+" -> "+A.h(b5)+" = "+A.h(g))
 A.az().$1("TOTAL BREAK: "+A.h(f))
 A.az().$1("NET WORKING: "+A.h(e)+" ("+A.h(l.$1(e))+")")
 A.az().$1("NORMAL TARGET: 450 (7:30)")
 A.az().$1("AUTOMATIC OT: "+A.h(d)+" ("+A.h(l.$1(d))+")")
-A.az().$1("OT AUTHORIZATION: "+A.h(c))
+A.az().$1("OT AUTHORIZATION: "+c5)
 A.az().$1(u.o)
-b1=$.bj().b
-b1===$&&A.a()
+b0=$.bj().b
+b0===$&&A.a()
 s=7
-return A.k(b1.b8("attendance").uP(a3,"employee_id,attendance_date").cT(0).xO(0),$async$aNO)
-case 7:a4=d5
-b3=A.ce(t.f.a(a4),b2,b3)
-q=b3
+return A.k(b0.b8("attendance").uP(a2,"employee_id,attendance_date").cT(0).xO(0),$async$aNO)
+case 7:a3=d4
+b2=A.ce(t.f.a(a3),b1,b2)
+q=b2
 s=1
 break
 p=2
 s=6
 break
 case 4:p=3
-b7=o.pop()
-a5=A.Z(b7)
-a6=A.aI(b7)
-A.az().$1("SAVE MONTHLY ATTENDANCE ERROR: "+A.h(a5))
+b6=o.pop()
+a4=A.Z(b6)
+a5=A.aI(b6)
+A.az().$1("SAVE MONTHLY ATTENDANCE ERROR: "+A.h(a4))
+A.az().$1(A.h(a4))
 A.az().$1(A.h(a5))
-A.az().$1(A.h(a6))
-throw b7
+throw b6
 s=6
 break
 case 3:s=2
