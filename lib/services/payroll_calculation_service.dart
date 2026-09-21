@@ -14,6 +14,31 @@ class PayrollCalculationService {
     return basicSalary;
   }
 
+  /// Public-holiday pay for days actually worked.
+  ///
+  /// The payroll rule is basic salary / 26 x 2 for each approved PH day.
+  static double publicHolidayPay({
+    required double basicSalary,
+    required int workedDays,
+  }) {
+    if (basicSalary <= 0 || workedDays <= 0) return 0;
+    return _roundMoney((basicSalary / 26) * 2 * workedDays);
+  }
+
+  /// Payable overtime comes only from Admin-approved minutes.
+  static double approvedOvertimeHours(int? approvedMinutes) {
+    if (approvedMinutes == null || approvedMinutes <= 0) return 0;
+    return approvedMinutes / 60.0;
+  }
+
+  /// Prevents a normal late/shortage deduction on UNPAID or PH rows.
+  static bool shouldApplyShortageDeduction({
+    required bool isUnpaid,
+    required bool isPublicHoliday,
+    required bool worked,
+  }) =>
+      !isUnpaid && !isPublicHoliday && worked;
+
   static double grossEarnings({
     required double basicSalary,
     required double fwSalary,
@@ -64,6 +89,9 @@ class PayrollCalculationService {
         late +
         other;
   }
+
+  static double _roundMoney(double value) =>
+      (value * 100).roundToDouble() / 100;
 
   static double netPay({
     required double gross,
