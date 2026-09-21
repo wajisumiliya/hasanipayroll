@@ -8245,9 +8245,29 @@ class _AdminDashboardState extends State<AdminDashboard>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const CircleAvatar(
-                                  radius: 20,
-                                  child: Icon(Icons.store_outlined, size: 21),
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: _payrollBranchColors(name),
+                                    ),
+                                    borderRadius: BorderRadius.circular(15),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _payrollBranchColors(name)
+                                            .last
+                                            .withValues(alpha: .3),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    _payrollBranchIcon(name),
+                                    color: Colors.white,
+                                    size: 27,
+                                  ),
                                 ),
                                 const Spacer(),
                                 Text(
@@ -11781,10 +11801,34 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const CircleAvatar(
-                                        radius: 24,
+                                      Container(
+                                        width: 54,
+                                        height: 54,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: _payrollBranchColors(
+                                              branchNames[branchId] ?? branchId,
+                                            ),
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: _payrollBranchColors(
+                                                branchNames[branchId] ??
+                                                    branchId,
+                                              ).last.withValues(alpha: .3),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 5),
+                                            ),
+                                          ],
+                                        ),
                                         child: Icon(
-                                          Icons.account_tree_outlined,
+                                          _payrollBranchIcon(
+                                            branchNames[branchId] ?? branchId,
+                                          ),
+                                          color: Colors.white,
+                                          size: 30,
                                         ),
                                       ),
                                       const Spacer(),
