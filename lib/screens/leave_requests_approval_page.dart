@@ -203,6 +203,16 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
               'rejected'
             ]
                 .map((status) => ChoiceChip(
+                      avatar: Icon(
+                        switch (status) {
+                          'all' => Icons.apps_rounded,
+                          'pending_branch' => Icons.store_rounded,
+                          'pending_admin' => Icons.admin_panel_settings_rounded,
+                          'approved' => Icons.verified_rounded,
+                          _ => Icons.cancel_rounded,
+                        },
+                        size: 17,
+                      ),
                       label: Text(status.replaceAll('_', ' ').toUpperCase()),
                       selected: _filter == status,
                       onSelected: (_) => setState(() => _filter = status),
@@ -648,8 +658,31 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
             color: Colors.white, borderRadius: BorderRadius.circular(18)),
-        child: Text(message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54)),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF9A55FF), Color(0xFF6425E5)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x446425E5),
+                  blurRadius: 14,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.flight_takeoff_rounded,
+                color: Colors.white, size: 38),
+          ),
+          const SizedBox(height: 14),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: Colors.black54, fontWeight: FontWeight.w700)),
+        ]),
       );
 }

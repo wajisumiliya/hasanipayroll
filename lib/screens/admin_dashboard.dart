@@ -7471,7 +7471,18 @@ class _AdminDashboardState extends State<AdminDashboard>
                 final requests =
                     snapshot.data ?? const <Map<String, dynamic>>[];
                 if (requests.isEmpty) {
-                  return const Center(child: Text('No OT requests.'));
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _PowerEmptyIcon(
+                            Icons.more_time_rounded, Color(0xFF7C3AED)),
+                        SizedBox(height: 12),
+                        Text('No OT requests.',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  );
                 }
                 final grouped = <String, List<Map<String, dynamic>>>{};
                 for (final request in requests) {
@@ -7593,7 +7604,18 @@ class _AdminDashboardState extends State<AdminDashboard>
                 final requests =
                     snapshot.data ?? const <Map<String, dynamic>>[];
                 if (requests.isEmpty) {
-                  return const Center(child: Text('No pending OT requests.'));
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _PowerEmptyIcon(
+                            Icons.more_time_rounded, Color(0xFF7C3AED)),
+                        SizedBox(height: 12),
+                        Text('No pending OT requests.',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  );
                 }
                 return ListView.separated(
                   itemCount: requests.length,
@@ -12395,24 +12417,44 @@ class _AdminDashboardState extends State<AdminDashboard>
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [Colors.white, color.withValues(alpha: .08)],
+        ),
         borderRadius: BorderRadius.circular(14),
-        border: _hasaniOuterBorder(1.8),
+        border: Border.all(color: color.withValues(alpha: .55), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: .12),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(colors: [
+                color.withValues(alpha: .95),
+                Color.lerp(color, Colors.black, .18)!,
+              ]),
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: .28),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Icon(
               icon,
-              color: color,
+              color: Colors.white,
+              size: 28,
             ),
           ),
           const SizedBox(width: 14),
@@ -17009,6 +17051,18 @@ class _AdminDashboardState extends State<AdminDashboard>
     Widget child,
   ) {
     final isDashboard = selectedPage == 0;
+    final panelStyle = switch (title) {
+      'Payroll Management' => const (
+          Icons.account_balance_wallet_rounded,
+          Color(0xFF1769E8)
+        ),
+      'Payroll Report' => const (Icons.analytics_rounded, Color(0xFF7C3AED)),
+      'Settings' => const (Icons.settings_rounded, Color(0xFF1769E8)),
+      'Quick actions' => const (Icons.bolt_rounded, Color(0xFF1769E8)),
+      'System status' => const (Icons.monitor_heart_rounded, Color(0xFFED334F)),
+      'Employee List' => const (Icons.groups_rounded, Color(0xFF1769E8)),
+      _ => const (Icons.dashboard_customize_rounded, Color(0xFF243B8F)),
+    };
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -17027,12 +17081,38 @@ class _AdminDashboardState extends State<AdminDashboard>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    panelStyle.$2.withValues(alpha: .95),
+                    Color.lerp(panelStyle.$2, Colors.black, .18)!,
+                  ]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: panelStyle.$2.withValues(alpha: .22),
+                      blurRadius: 9,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(panelStyle.$1, color: Colors.white, size: 23),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 18),
           child,
@@ -17193,12 +17273,36 @@ class _AdminDashboardState extends State<AdminDashboard>
     String title,
     String value,
   ) {
+    final icon = switch (title) {
+      'Employees' || 'Active Employees' => Icons.groups_rounded,
+      'Payroll Records' => Icons.receipt_long_rounded,
+      'Attendance Records' => Icons.event_available_rounded,
+      'Departments' => Icons.business_center_rounded,
+      'Branches' => Icons.store_rounded,
+      'Vacation Employees' => Icons.flight_rounded,
+      'New Joiners' => Icons.person_add_alt_1_rounded,
+      'Gross Payroll' || 'Net Payroll' => Icons.payments_rounded,
+      'Total Deductions' => Icons.remove_circle_rounded,
+      _ => Icons.analytics_rounded,
+    };
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: 6,
       ),
       child: Row(
         children: [
+          Container(
+            width: 32,
+            height: 32,
+            margin: const EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF289BFF), Color(0xFF0754D8)],
+              ),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: Colors.white, size: 17),
+          ),
           Expanded(
             child: Text(
               title,
@@ -17240,6 +17344,34 @@ class _AdminDashboardState extends State<AdminDashboard>
       ),
     );
   }
+}
+
+class _PowerEmptyIcon extends StatelessWidget {
+  const _PowerEmptyIcon(this.icon, this.color);
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            color.withValues(alpha: .95),
+            Color.lerp(color, Colors.black, .18)!,
+          ]),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: .25),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: Colors.white, size: 38),
+      );
 }
 
 class _AdminDigitalClock extends StatefulWidget {
