@@ -2,12 +2,21 @@ create table if not exists public.employee_aquariums (
   employee_id text primary key,
   total_feed integer not null default 0 check (total_feed >= 0),
   available_food integer not null default 0 check (available_food >= 0),
-  fish_count integer not null default 1 check (fish_count >= 1),
+  fish_count integer not null default 2 check (fish_count between 2 and 5),
   updated_at timestamptz not null default now()
 );
 
 alter table public.employee_aquariums
   add column if not exists available_food integer not null default 0;
+
+alter table public.employee_aquariums alter column fish_count set default 2;
+update public.employee_aquariums
+set fish_count = greatest(2, least(5, fish_count));
+alter table public.employee_aquariums
+  drop constraint if exists employee_aquariums_fish_count_check;
+alter table public.employee_aquariums
+  add constraint employee_aquariums_fish_count_check
+  check (fish_count between 2 and 5);
 
 create table if not exists public.employee_aquarium_logins (
   id bigint generated always as identity primary key,
@@ -75,13 +84,16 @@ begin
     v_employee_id,
     0,
     1,
-    1 + case when v_weekly_logins % 5 = 0 then 1 else 0 end,
+    2 + case when v_weekly_logins % 4 = 0 then 1 else 0 end,
     now()
   )
   on conflict (employee_id) do update set
     available_food = employee_aquariums.available_food + 1,
-    fish_count = employee_aquariums.fish_count
-      + case when v_weekly_logins % 5 = 0 then 1 else 0 end,
+    fish_count = least(
+      5,
+      employee_aquariums.fish_count
+        + case when v_weekly_logins % 4 = 0 then 1 else 0 end
+    ),
     updated_at = now()
   returning * into v_progress;
 
@@ -92,10 +104,11 @@ begin
     'fish_count', v_progress.fish_count,
     'weekly_logins', v_weekly_logins,
     'logins_until_next_fish', case
-      when v_weekly_logins % 5 = 0 then 5
-      else 5 - (v_weekly_logins % 5)
+      when v_progress.fish_count >= 5 then 0
+      when v_weekly_logins % 4 = 0 then 4
+      else 4 - (v_weekly_logins % 4)
     end,
-    'fish_awarded', v_weekly_logins % 5 = 0
+    'fish_awarded', v_weekly_logins % 4 = 0 and v_progress.fish_count <= 5
   );
 end;
 $$;
@@ -145,11 +158,12 @@ begin
     'employee_id', v_employee_id,
     'total_feed', coalesce(v_progress.total_feed, 0),
     'available_food', coalesce(v_progress.available_food, 0),
-    'fish_count', coalesce(v_progress.fish_count, 1),
+    'fish_count', coalesce(v_progress.fish_count, 2),
     'weekly_logins', v_weekly_logins,
     'logins_until_next_fish', case
-      when v_weekly_logins % 5 = 0 and v_weekly_logins > 0 then 5
-      else 5 - (v_weekly_logins % 5)
+      when coalesce(v_progress.fish_count, 2) >= 5 then 0
+      when v_weekly_logins % 4 = 0 and v_weekly_logins > 0 then 4
+      else 4 - (v_weekly_logins % 4)
     end,
     'fish_awarded', false,
     'fed', v_fed
@@ -189,11 +203,12 @@ begin
     'employee_id', v_employee_id,
     'total_feed', coalesce(v_progress.total_feed, 0),
     'available_food', coalesce(v_progress.available_food, 0),
-    'fish_count', coalesce(v_progress.fish_count, 1),
+    'fish_count', coalesce(v_progress.fish_count, 2),
     'weekly_logins', v_weekly_logins,
     'logins_until_next_fish', case
-      when v_weekly_logins % 5 = 0 and v_weekly_logins > 0 then 5
-      else 5 - (v_weekly_logins % 5)
+      when coalesce(v_progress.fish_count, 2) >= 5 then 0
+      when v_weekly_logins % 4 = 0 and v_weekly_logins > 0 then 4
+      else 4 - (v_weekly_logins % 4)
     end,
     'fish_awarded', false
   );

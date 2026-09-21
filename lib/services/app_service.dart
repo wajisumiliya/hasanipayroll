@@ -116,7 +116,7 @@ class EmployeeAquariumProgress {
   const EmployeeAquariumProgress({
     this.totalFeed = 0,
     this.availableFood = 0,
-    this.fishCount = 1,
+    this.fishCount = 2,
     this.weeklyLogins = 0,
     this.loginsUntilNextFish = 5,
     this.fishAwarded = false,
@@ -133,7 +133,7 @@ class EmployeeAquariumProgress {
       EmployeeAquariumProgress(
         totalFeed: int.tryParse('${json['total_feed'] ?? 0}') ?? 0,
         availableFood: int.tryParse('${json['available_food'] ?? 0}') ?? 0,
-        fishCount: int.tryParse('${json['fish_count'] ?? 1}') ?? 1,
+        fishCount: int.tryParse('${json['fish_count'] ?? 2}') ?? 2,
         weeklyLogins: int.tryParse('${json['weekly_logins'] ?? 0}') ?? 0,
         loginsUntilNextFish:
             int.tryParse('${json['logins_until_next_fish'] ?? 5}') ?? 5,

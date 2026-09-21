@@ -1010,6 +1010,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget _aquariumCard() {
     final progress = service.employeeAquariumProgress;
     return EmployeeAquariumCard(
+      employeeId: employeeId,
       fishCount: progress.fishCount,
       totalFeed: progress.totalFeed,
       availableFood: progress.availableFood,

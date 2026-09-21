@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class EmployeeAquariumCard extends StatefulWidget {
   const EmployeeAquariumCard(
       {super.key,
+      required this.employeeId,
       required this.fishCount,
       required this.totalFeed,
       required this.availableFood,
@@ -11,6 +12,7 @@ class EmployeeAquariumCard extends StatefulWidget {
       required this.loginsUntilNextFish,
       required this.onFeed,
       this.loading = false});
+  final String employeeId;
   final int fishCount,
       totalFeed,
       availableFood,
@@ -26,6 +28,7 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   bool _feeding = false;
+  bool _thanking = false;
   double _feedStart = 0;
 
   @override
@@ -54,8 +57,15 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
       setState(() => _feeding = false);
       return;
     }
-    await Future<void>.delayed(const Duration(milliseconds: 1800));
-    if (mounted) setState(() => _feeding = false);
+    await Future<void>.delayed(const Duration(milliseconds: 1050));
+    if (mounted) setState(() => _thanking = true);
+    await Future<void>.delayed(const Duration(milliseconds: 1250));
+    if (mounted) {
+      setState(() {
+        _feeding = false;
+        _thanking = false;
+      });
+    }
   }
 
   @override
@@ -85,8 +95,10 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                     animation: _controller,
                     builder: (_, __) => CustomPaint(
                         painter: _AquariumPainter(
-                            fishCount: widget.fishCount.clamp(1, 12),
-                            growth: math.min(1, .42 + widget.totalFeed * .025),
+                            employeeId: widget.employeeId,
+                            fishCount: widget.fishCount.clamp(2, 5),
+                            growth:
+                                math.min(1.25, .78 + widget.totalFeed * .018),
                             progress: _controller.value,
                             feeding: _feeding,
                             feedStart: _feedStart)))),
@@ -133,7 +145,7 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                             : 'NO FOOD'),
                       ),
                     ]),
-                    SizedBox(height: compact ? 88 : 108),
+                    SizedBox(height: compact ? 128 : 148),
                     Wrap(spacing: 8, runSpacing: 8, children: [
                       _stat(Icons.set_meal_rounded, '${widget.fishCount}',
                           'Fish'),
@@ -141,26 +153,62 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                           'Eaten'),
                       _stat(Icons.inventory_2_rounded,
                           '${widget.availableFood}', 'Food ready'),
-                      _stat(Icons.login_rounded, '${widget.weeklyLogins} / 5',
+                      _stat(
+                          Icons.login_rounded,
+                          widget.fishCount >= 5
+                              ? 'MAX'
+                              : '${widget.weeklyLogins % 4} / 4',
                           'This week'),
                     ]),
                     const SizedBox(height: 13),
                     ClipRRect(
                         borderRadius: BorderRadius.circular(20),
                         child: LinearProgressIndicator(
-                            value: (widget.weeklyLogins % 5) / 5,
+                            value: widget.fishCount >= 5
+                                ? 1
+                                : (widget.weeklyLogins % 4) / 4,
                             minHeight: 7,
                             color: const Color(0xFFFFD95A),
                             backgroundColor: Colors.white24)),
                     const SizedBox(height: 7),
                     Text(
-                        '${widget.loginsUntilNextFish} more login${widget.loginsUntilNextFish == 1 ? '' : 's'} to welcome a new fish',
+                        widget.fishCount >= 5
+                            ? 'Aquarium complete — maximum 5 fish reached!'
+                            : '${widget.loginsUntilNextFish} more login${widget.loginsUntilNextFish == 1 ? '' : 's'} to welcome a new fish',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w700)),
                   ],
                 )),
+            Positioned(
+              top: compact ? 88 : 96,
+              right: compact ? 20 : 34,
+              child: AnimatedScale(
+                scale: _thanking ? 1 : .75,
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.elasticOut,
+                child: AnimatedOpacity(
+                  opacity: _thanking ? 1 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x33000000), blurRadius: 10)
+                      ],
+                    ),
+                    child: const Text('Yum! Thank you!  ❤',
+                        style: TextStyle(
+                            color: Color(0xFF075485),
+                            fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              ),
+            ),
           ]);
         }),
       );
@@ -193,17 +241,64 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
 
 class _AquariumPainter extends CustomPainter {
   const _AquariumPainter(
-      {required this.fishCount,
+      {required this.employeeId,
+      required this.fishCount,
       required this.growth,
       required this.progress,
       required this.feeding,
       required this.feedStart});
   final int fishCount;
+  final String employeeId;
   final double growth, progress, feedStart;
   final bool feeding;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Soft glass highlights and light rays make the water feel dimensional.
+    final rayPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0x22FFFFFF), Color(0x00FFFFFF)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * .08, 0)
+        ..lineTo(size.width * .30, 0)
+        ..lineTo(size.width * .48, size.height)
+        ..lineTo(size.width * .31, size.height)
+        ..close(),
+      rayPaint,
+    );
+
+    final floorY = size.height * .69;
+    canvas.drawRect(Rect.fromLTRB(0, floorY, size.width, size.height),
+        Paint()..color = const Color(0xFF075B78).withValues(alpha: .30));
+    final sand = Paint()
+      ..color = const Color(0xFFD9B868).withValues(alpha: .46);
+    canvas.drawPath(
+        Path()
+          ..moveTo(0, size.height * .82)
+          ..quadraticBezierTo(size.width * .25, size.height * .75,
+              size.width * .48, size.height * .84)
+          ..quadraticBezierTo(size.width * .72, size.height * .91, size.width,
+              size.height * .78)
+          ..lineTo(size.width, size.height)
+          ..lineTo(0, size.height)
+          ..close(),
+        sand);
+    final plant = Paint()
+      ..color = const Color(0xFF28B982).withValues(alpha: .78)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    for (final x in [size.width * .09, size.width * .15, size.width * .87]) {
+      canvas.drawPath(
+          Path()
+            ..moveTo(x, size.height * .88)
+            ..quadraticBezierTo(
+                x - 12, size.height * .68, x + 3, size.height * .56),
+          plant);
+    }
+
     final bubble = Paint()..color = Colors.white.withValues(alpha: .18);
     for (var i = 0; i < 10; i++) {
       final phase = (progress + i * .13) % 1;
@@ -214,44 +309,78 @@ class _AquariumPainter extends CustomPainter {
           bubble);
     }
     if (feeding) {
-      final elapsed = (progress - feedStart + 1) % 1;
+      final elapsed = math.min(1.0, ((progress - feedStart + 1) % 1) / .33);
       final foodPaint = Paint()..color = const Color(0xFFFFC928);
       for (var i = 0; i < 7; i++) {
-        final fall = ((elapsed * 4) + i * .11) % 1;
+        final fall = (elapsed * 1.25 - i * .08).clamp(0.0, 1.0);
+        if (fall >= 1) continue;
         canvas.drawCircle(
-            Offset(size.width * (.43 + (i % 4) * .045), 48 + fall * 90),
+            Offset(size.width * (.67 + (i % 4) * .025),
+                58 + fall * size.height * .34),
             2.5,
             foodPaint);
       }
     }
-    const colors = [
-      Color(0xFFFFD54F),
-      Color(0xFFFF8A65),
-      Color(0xFF7CFFCB),
-      Color(0xFFBFA5FF)
-    ];
+    final identitySeed = employeeId.codeUnits.fold<int>(
+        0, (value, character) => (value * 31 + character) & 0x7fffffff);
+    final baseHue = (identitySeed % 360).toDouble();
+    final colors = List<Color>.generate(
+      5,
+      (index) => HSLColor.fromAHSL(
+        1,
+        (baseHue + index * 71 + (identitySeed % 29)) % 360,
+        .76 - (index.isOdd ? .08 : 0),
+        .57 + (index % 3) * .035,
+      ).toColor(),
+    );
     for (var i = 0; i < fishCount; i++) {
-      final direction = i.isEven ? 1.0 : -1.0;
-      final travel = (progress * (.45 + i * .035) + i * .17) % 1;
-      final x = direction > 0
-          ? -25 + travel * (size.width + 50)
-          : size.width + 25 - travel * (size.width + 50);
-      final y = size.height * (.31 + (i % 4) * .085) +
-          math.sin(progress * math.pi * 2 + i) * 6;
+      final phase = (progress * (.52 + i * .037) + i * .173) % 1;
+      // Cosine easing slows the fish at each glass wall before it turns.
+      final pingPong = .5 - .5 * math.cos(phase * math.pi * 2);
+      final movingRight = math.sin(phase * math.pi * 2) > 0;
+      final margin = 34.0 + (i % 3) * 5;
+      var x = margin + pingPong * math.max(0, size.width - margin * 2);
+      var y = size.height * (.32 + (i % 4) * .085) +
+          math.sin(progress * math.pi * 2 * (.7 + i * .04) + i * 1.7) * 10;
+
+      var feedApproach = 0.0;
+      if (feeding) {
+        final elapsed = math.min(1.0, ((progress - feedStart + 1) % 1) / .33);
+        feedApproach = Curves.easeInOut.transform(math.sin(elapsed * math.pi));
+        final targetX = size.width * .70;
+        final targetY = 58 + size.height * .34;
+        x = x + (targetX - x) * feedApproach;
+        y = y + (targetY - y) * feedApproach;
+      }
+
+      final verticalSlope =
+          math.cos(progress * math.pi * 2 * (.7 + i * .04) + i * 1.7) * .15;
+      final angle = verticalSlope * (movingRight ? 1 : -1);
       final scale = growth * (.80 + (i % 3) * .11);
       final paint = Paint()
         ..color = colors[i % colors.length].withValues(alpha: .95);
       canvas.save();
       canvas.translate(x, y);
-      canvas.scale(direction * scale, scale);
+      canvas.rotate(angle);
+      canvas.scale((movingRight ? 1.0 : -1.0) * scale, scale);
       canvas.drawOval(const Rect.fromLTWH(-13, -7, 26, 14), paint);
+      final tailSwing = math.sin(progress * math.pi * 12 + i) * 3;
       canvas.drawPath(
           Path()
             ..moveTo(-11, 0)
-            ..lineTo(-22, -9)
-            ..lineTo(-22, 9)
+            ..lineTo(-22, -9 + tailSwing)
+            ..lineTo(-22, 9 + tailSwing)
             ..close(),
           paint);
+      canvas.drawArc(
+          const Rect.fromLTWH(-5, -5, 11, 10),
+          -.9,
+          1.5,
+          false,
+          Paint()
+            ..color = Colors.white.withValues(alpha: .20)
+            ..strokeWidth = 1.2
+            ..style = PaintingStyle.stroke);
       canvas.drawCircle(
           const Offset(7, -2), 1.6, Paint()..color = const Color(0xFF082B4A));
       canvas.restore();
