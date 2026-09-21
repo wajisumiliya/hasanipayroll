@@ -9410,6 +9410,48 @@ class _AdminDashboardState extends State<AdminDashboard>
     required List<Map<String, dynamic>> employees,
     required DateTime month,
   }) async {
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    final requiredDays = {
+      for (var day = 1; day <= daysInMonth; day++) day,
+    };
+    List<Map<String, dynamic>> attendanceRows;
+    try {
+      attendanceRows = await SupabaseService.getAttendanceByBranch(branchName);
+    } catch (error) {
+      if (mounted) {
+        _message('Unable to verify attendance readiness: $error');
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    final submittedDaysByEmployee = <String, Set<int>>{};
+    for (final row in attendanceRows) {
+      final date = DateTime.tryParse(row['attendance_date']?.toString() ?? '');
+      if (date == null ||
+          date.year != month.year ||
+          date.month != month.month ||
+          !_attendanceBool(row['is_submitted'])) {
+        continue;
+      }
+      final id = _normalizeBranchValue(row['employee_id']);
+      if (id.isNotEmpty) {
+        submittedDaysByEmployee.putIfAbsent(id, () => <int>{}).add(date.day);
+      }
+    }
+
+    final missingDaysByEmployee = <String, List<int>>{};
+    for (final employee in employees) {
+      final id = _normalizeBranchValue(employee['employee_id']);
+      final submitted = submittedDaysByEmployee[id] ?? const <int>{};
+      missingDaysByEmployee[id] = requiredDays.difference(submitted).toList()
+        ..sort();
+    }
+    final readyIds = missingDaysByEmployee.entries
+        .where((entry) => entry.value.isEmpty)
+        .map((entry) => entry.key)
+        .toSet();
+
     final selectedIds = <String>{};
     bool selectAll = false;
     bool overwriteExisting = true;
@@ -9421,7 +9463,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           builder: (context, setSelectionState) {
             final allIds = employees
                 .map((e) => _normalizeBranchValue(e['employee_id']))
-                .where((id) => id.isNotEmpty)
+                .where((id) => id.isNotEmpty && readyIds.contains(id))
                 .toSet();
 
             return AlertDialog(
@@ -9447,9 +9489,34 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Select only the employees you want to generate payroll for.',
-                      style: TextStyle(color: Colors.black54),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: readyIds.length == employees.length
+                            ? const Color(0xFFE8F7EE)
+                            : const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Row(children: [
+                        Icon(
+                          readyIds.length == employees.length
+                              ? Icons.verified_outlined
+                              : Icons.warning_amber_rounded,
+                          color: readyIds.length == employees.length
+                              ? const Color(0xFF168653)
+                              : const Color(0xFFB26700),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            '${readyIds.length} ready • '
+                            '${employees.length - readyIds.length} need follow-up • '
+                            '$daysInMonth submitted days required',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ]),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -9494,32 +9561,59 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     (employee['name'] ?? employeeId).toString();
                                 final checked =
                                     selectedIds.contains(employeeId);
+                                final missing =
+                                    missingDaysByEmployee[employeeId] ??
+                                        requiredDays.toList();
+                                final attendanceReady = missing.isEmpty;
 
                                 return CheckboxListTile(
                                   value: checked,
-                                  onChanged: (value) {
-                                    setSelectionState(() {
-                                      if (value == true) {
-                                        selectedIds.add(employeeId);
-                                      } else {
-                                        selectedIds.remove(employeeId);
-                                        selectAll = false;
-                                      }
+                                  onChanged: !attendanceReady
+                                      ? null
+                                      : (value) {
+                                          setSelectionState(() {
+                                            if (value == true) {
+                                              selectedIds.add(employeeId);
+                                            } else {
+                                              selectedIds.remove(employeeId);
+                                              selectAll = false;
+                                            }
 
-                                      if (selectedIds.length == allIds.length &&
-                                          allIds.isNotEmpty) {
-                                        selectAll = true;
-                                      }
-                                    });
-                                  },
+                                            if (selectedIds.length ==
+                                                    allIds.length &&
+                                                allIds.isNotEmpty) {
+                                              selectAll = true;
+                                            }
+                                          });
+                                        },
                                   title: Text(
                                     name,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  subtitle: Text(employeeId),
-                                  secondary: const Icon(Icons.person_outline),
+                                  subtitle: Text(
+                                    attendanceReady
+                                        ? '$employeeId • Attendance complete ($daysInMonth/$daysInMonth)'
+                                        : '$employeeId • Missing ${missing.length} day(s): '
+                                            '${missing.map((day) => day.toString().padLeft(2, '0')).join(', ')}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: attendanceReady
+                                          ? const Color(0xFF168653)
+                                          : const Color(0xFFC13B31),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  secondary: Icon(
+                                    attendanceReady
+                                        ? Icons.verified_user_outlined
+                                        : Icons.person_off_outlined,
+                                    color: attendanceReady
+                                        ? const Color(0xFF168653)
+                                        : const Color(0xFFC13B31),
+                                  ),
                                 );
                               },
                             ),
