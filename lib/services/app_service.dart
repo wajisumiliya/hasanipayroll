@@ -115,6 +115,7 @@ class FirstLoginOtpState {
 class EmployeeAquariumProgress {
   const EmployeeAquariumProgress({
     this.totalFeed = 0,
+    this.availableFood = 0,
     this.fishCount = 1,
     this.weeklyLogins = 0,
     this.loginsUntilNextFish = 5,
@@ -122,6 +123,7 @@ class EmployeeAquariumProgress {
   });
 
   final int totalFeed;
+  final int availableFood;
   final int fishCount;
   final int weeklyLogins;
   final int loginsUntilNextFish;
@@ -130,6 +132,7 @@ class EmployeeAquariumProgress {
   factory EmployeeAquariumProgress.fromJson(Map<String, dynamic> json) =>
       EmployeeAquariumProgress(
         totalFeed: int.tryParse('${json['total_feed'] ?? 0}') ?? 0,
+        availableFood: int.tryParse('${json['available_food'] ?? 0}') ?? 0,
         fishCount: int.tryParse('${json['fish_count'] ?? 1}') ?? 1,
         weeklyLogins: int.tryParse('${json['weekly_logins'] ?? 0}') ?? 0,
         loginsUntilNextFish:
@@ -271,6 +274,26 @@ class AppService extends ChangeNotifier {
     } catch (error) {
       debugPrint('Employee aquarium load error: $error');
     }
+  }
+
+  Future<bool> feedEmployeeAquarium() async {
+    if (_currentUser?.isEmployee != true ||
+        _employeeAquariumProgress.availableFood < 1) {
+      return false;
+    }
+    try {
+      final response = await _supabase.rpc('feed_employee_aquarium');
+      if (response is Map) {
+        final data = Map<String, dynamic>.from(response);
+        final fed = data['fed'] == true;
+        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(data);
+        notifyListeners();
+        return fed;
+      }
+    } catch (error) {
+      debugPrint('Employee aquarium feeding error: $error');
+    }
+    return false;
   }
 
   Future<void> _recordEmployeeAquariumLogin() async {

@@ -74,6 +74,12 @@ class _EmployeePortalState extends State<EmployeePortal>
     if (mounted) setState(() => _aquariumLoading = false);
   }
 
+  Future<bool> _feedAquarium() async {
+    final fed = await service.feedEmployeeAquarium();
+    if (mounted) setState(() {});
+    return fed;
+  }
+
   Future<void> _loadEmployeeNotifications() async {
     if (employeeId.isEmpty || _notificationsLoading) return;
     _notificationsLoading = true;
@@ -1006,9 +1012,11 @@ class _EmployeePortalState extends State<EmployeePortal>
     return EmployeeAquariumCard(
       fishCount: progress.fishCount,
       totalFeed: progress.totalFeed,
+      availableFood: progress.availableFood,
       weeklyLogins: progress.weeklyLogins,
       loginsUntilNextFish: progress.loginsUntilNextFish,
       loading: _aquariumLoading,
+      onFeed: _feedAquarium,
     );
   }
 
