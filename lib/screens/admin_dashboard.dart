@@ -9354,10 +9354,36 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              const CircleAvatar(
-                                                radius: 24,
+                                              Container(
+                                                width: 54,
+                                                height: 54,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors:
+                                                        _payrollBranchColors(
+                                                      branchId,
+                                                    ),
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color:
+                                                          _payrollBranchColors(
+                                                        branchId,
+                                                      ).last.withValues(
+                                                                alpha: .28,
+                                                              ),
+                                                      blurRadius: 12,
+                                                      offset:
+                                                          const Offset(0, 5),
+                                                    ),
+                                                  ],
+                                                ),
                                                 child: Icon(
-                                                  Icons.account_tree_outlined,
+                                                  _payrollBranchIcon(branchId),
+                                                  color: Colors.white,
+                                                  size: 30,
                                                 ),
                                               ),
                                               const Spacer(),
@@ -9404,6 +9430,34 @@ class _AdminDashboardState extends State<AdminDashboard>
       },
     );
   }
+
+  IconData _payrollBranchIcon(String branch) =>
+      switch (branch.trim().toUpperCase()) {
+        'ALOR SETAR' => Icons.location_city_rounded,
+        'AMANJAYA' => Icons.auto_awesome_rounded,
+        'ASTANA' => Icons.account_balance_rounded,
+        'GURUN' => Icons.terrain_rounded,
+        'JITRA' => Icons.hub_rounded,
+        'KULIM' => Icons.factory_rounded,
+        'LANGKAWI' => Icons.flight_takeoff_rounded,
+        'PRAI' || 'PERAI' => Icons.anchor_rounded,
+        'SUNGAI PETANI' => Icons.storefront_rounded,
+        _ => Icons.business_rounded,
+      };
+
+  List<Color> _payrollBranchColors(String branch) =>
+      switch (branch.trim().toUpperCase()) {
+        'ALOR SETAR' => const [Color(0xFF174CA4), Color(0xFF0A2C68)],
+        'AMANJAYA' => const [Color(0xFF8E44AD), Color(0xFF512E7D)],
+        'ASTANA' => const [Color(0xFF0F8B8D), Color(0xFF075E62)],
+        'GURUN' => const [Color(0xFF2E9B55), Color(0xFF176B3A)],
+        'JITRA' => const [Color(0xFFE05252), Color(0xFF9D2424)],
+        'KULIM' => const [Color(0xFFF09A24), Color(0xFFB85C00)],
+        'LANGKAWI' => const [Color(0xFF168AAD), Color(0xFF075985)],
+        'PRAI' || 'PERAI' => const [Color(0xFF536DFE), Color(0xFF283593)],
+        'SUNGAI PETANI' => const [Color(0xFFE83E8C), Color(0xFF9D174D)],
+        _ => const [Color(0xFF64748B), Color(0xFF334155)],
+      };
 
   Future<void> _showPayrollEmployeeSelection({
     required String branchName,
@@ -9621,13 +9675,42 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  secondary: Icon(
-                                    attendanceReady
-                                        ? Icons.verified_user_outlined
-                                        : Icons.person_off_outlined,
-                                    color: attendanceReady
-                                        ? const Color(0xFF168653)
-                                        : const Color(0xFFC13B31),
+                                  secondary: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      EmployeePhoto(
+                                        name: name,
+                                        photoUrl:
+                                            employee['photo_url']?.toString(),
+                                        radius: 23,
+                                        borderColor: attendanceReady
+                                            ? const Color(0xFF168653)
+                                            : const Color(0xFFC13B31),
+                                      ),
+                                      Positioned(
+                                        right: -3,
+                                        bottom: -3,
+                                        child: Container(
+                                          width: 18,
+                                          height: 18,
+                                          decoration: BoxDecoration(
+                                            color: attendanceReady
+                                                ? const Color(0xFF168653)
+                                                : const Color(0xFFC13B31),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                                color: Colors.white, width: 2),
+                                          ),
+                                          child: Icon(
+                                            attendanceReady
+                                                ? Icons.check_rounded
+                                                : Icons.priority_high_rounded,
+                                            color: Colors.white,
+                                            size: 11,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 );
                               },
