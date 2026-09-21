@@ -18,6 +18,7 @@ import 'supabase_service.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
+import '../widgets/employee_aquarium_card.dart';
 import '../widgets/premium_portal_sidebar.dart';
 
 class EmployeePortal extends StatefulWidget {
@@ -40,6 +41,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   bool _showBirthdayCelebration = false;
   List<Map<String, dynamic>> _notifications = const [];
   bool _notificationsLoading = false;
+  bool _aquariumLoading = false;
 
   @override
   void initState() {
@@ -58,10 +60,18 @@ class _EmployeePortalState extends State<EmployeePortal>
       });
     }
     _loadEmployeeNotifications();
+    _refreshAquarium();
     _notificationRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _loadEmployeeNotifications(),
     );
+  }
+
+  Future<void> _refreshAquarium() async {
+    if (_aquariumLoading) return;
+    setState(() => _aquariumLoading = true);
+    await service.refreshEmployeeAquarium();
+    if (mounted) setState(() => _aquariumLoading = false);
   }
 
   Future<void> _loadEmployeeNotifications() async {
@@ -929,6 +939,8 @@ class _EmployeePortalState extends State<EmployeePortal>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _welcome(),
+            const SizedBox(height: 16),
+            _aquariumCard(),
             const SizedBox(height: 24),
             _emptyPayroll(),
           ],
@@ -949,6 +961,8 @@ class _EmployeePortalState extends State<EmployeePortal>
               if (compact) ...[
                 _welcome(),
                 const SizedBox(height: 12),
+                _aquariumCard(),
+                const SizedBox(height: 12),
                 _salary(payroll),
                 const SizedBox(height: 12),
                 _quickAccessPanel(),
@@ -959,7 +973,13 @@ class _EmployeePortalState extends State<EmployeePortal>
                     Expanded(
                       child: Align(
                         alignment: Alignment.topLeft,
-                        child: _welcome(),
+                        child: Column(
+                          children: [
+                            _welcome(),
+                            const SizedBox(height: 16),
+                            _aquariumCard(),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -978,6 +998,17 @@ class _EmployeePortalState extends State<EmployeePortal>
           ),
         );
       },
+    );
+  }
+
+  Widget _aquariumCard() {
+    final progress = service.employeeAquariumProgress;
+    return EmployeeAquariumCard(
+      fishCount: progress.fishCount,
+      totalFeed: progress.totalFeed,
+      weeklyLogins: progress.weeklyLogins,
+      loginsUntilNextFish: progress.loginsUntilNextFish,
+      loading: _aquariumLoading,
     );
   }
 

@@ -112,6 +112,32 @@ class FirstLoginOtpState {
   }
 }
 
+class EmployeeAquariumProgress {
+  const EmployeeAquariumProgress({
+    this.totalFeed = 0,
+    this.fishCount = 1,
+    this.weeklyLogins = 0,
+    this.loginsUntilNextFish = 5,
+    this.fishAwarded = false,
+  });
+
+  final int totalFeed;
+  final int fishCount;
+  final int weeklyLogins;
+  final int loginsUntilNextFish;
+  final bool fishAwarded;
+
+  factory EmployeeAquariumProgress.fromJson(Map<String, dynamic> json) =>
+      EmployeeAquariumProgress(
+        totalFeed: int.tryParse('${json['total_feed'] ?? 0}') ?? 0,
+        fishCount: int.tryParse('${json['fish_count'] ?? 1}') ?? 1,
+        weeklyLogins: int.tryParse('${json['weekly_logins'] ?? 0}') ?? 0,
+        loginsUntilNextFish:
+            int.tryParse('${json['logins_until_next_fish'] ?? 5}') ?? 5,
+        fishAwarded: json['fish_awarded'] == true,
+      );
+}
+
 // ============================================================================
 // APP SERVICE
 // ============================================================================
@@ -210,6 +236,8 @@ class AppService extends ChangeNotifier {
   app_user? _currentUser;
   String? _accessToken;
   String? _branchLoginActivityId;
+  EmployeeAquariumProgress _employeeAquariumProgress =
+      const EmployeeAquariumProgress();
 
   app_user? get currentUser => _currentUser;
 
@@ -226,6 +254,40 @@ class AppService extends ChangeNotifier {
   String? get currentBranchId => _currentUser?.branchId;
 
   String? get currentEmployeeId => _currentUser?.employeeId;
+
+  EmployeeAquariumProgress get employeeAquariumProgress =>
+      _employeeAquariumProgress;
+
+  Future<void> refreshEmployeeAquarium() async {
+    if (_currentUser?.isEmployee != true) return;
+    try {
+      final response = await _supabase.rpc('get_employee_aquarium');
+      if (response is Map) {
+        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(
+          Map<String, dynamic>.from(response),
+        );
+        notifyListeners();
+      }
+    } catch (error) {
+      debugPrint('Employee aquarium load error: $error');
+    }
+  }
+
+  Future<void> _recordEmployeeAquariumLogin() async {
+    if (_currentUser?.isEmployee != true) return;
+    try {
+      final response = await _supabase.rpc('record_employee_aquarium_login');
+      if (response is Map) {
+        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(
+          Map<String, dynamic>.from(response),
+        );
+        notifyListeners();
+      }
+    } catch (error) {
+      // Engagement features must never block payroll portal access.
+      debugPrint('Employee aquarium login error: $error');
+    }
+  }
 
   Employee? get employee => currentEmployee;
 
@@ -1072,6 +1134,7 @@ class AppService extends ChangeNotifier {
       await _persistCurrentUser();
       notifyListeners();
       await _loadDataForCurrentUser();
+      await _recordEmployeeAquariumLogin();
 
       if (_currentUser?.isBranch == true) {
         try {
@@ -1274,6 +1337,7 @@ class AppService extends ChangeNotifier {
       await _persistCurrentUser();
       notifyListeners();
       await _loadDataForCurrentUser();
+      await _recordEmployeeAquariumLogin();
       return null;
     } catch (e) {
       debugPrint('COMPLETE FIRST LOGIN ERROR: $e');
@@ -1338,6 +1402,7 @@ class AppService extends ChangeNotifier {
 
     _currentUser = null;
     _accessToken = null;
+    _employeeAquariumProgress = const EmployeeAquariumProgress();
     _supabase.rest.setAuth(null);
     await _clearStoredUser();
 
