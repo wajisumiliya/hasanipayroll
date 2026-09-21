@@ -9441,8 +9441,18 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
 
     final missingDaysByEmployee = <String, List<int>>{};
+    final attendanceExemptIds = <String>{};
     for (final employee in employees) {
       final id = _normalizeBranchValue(employee['employee_id']);
+      final attendanceExempt =
+          _attendanceBool(employee['is_management_staff']) ||
+              _attendanceBool(employee['is_temp_staff']) ||
+              _attendanceBool(employee['is_other_staff']);
+      if (attendanceExempt) {
+        attendanceExemptIds.add(id);
+        missingDaysByEmployee[id] = const <int>[];
+        continue;
+      }
       final submitted = submittedDaysByEmployee[id] ?? const <int>{};
       missingDaysByEmployee[id] = requiredDays.difference(submitted).toList()
         ..sort();
@@ -9565,6 +9575,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     missingDaysByEmployee[employeeId] ??
                                         requiredDays.toList();
                                 final attendanceReady = missing.isEmpty;
+                                final attendanceExempt =
+                                    attendanceExemptIds.contains(employeeId);
 
                                 return CheckboxListTile(
                                   value: checked,
@@ -9593,10 +9605,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     ),
                                   ),
                                   subtitle: Text(
-                                    attendanceReady
-                                        ? '$employeeId • Attendance complete ($daysInMonth/$daysInMonth)'
-                                        : '$employeeId • Missing ${missing.length} day(s): '
-                                            '${missing.map((day) => day.toString().padLeft(2, '0')).join(', ')}',
+                                    attendanceExempt
+                                        ? '$employeeId • Attendance not required '
+                                            '(${_attendanceBool(employee['is_management_staff']) ? 'Management Staff' : _attendanceBool(employee['is_temp_staff']) ? 'Temporary Staff' : 'Other Staff'})'
+                                        : attendanceReady
+                                            ? '$employeeId • Attendance complete ($daysInMonth/$daysInMonth)'
+                                            : '$employeeId • Missing ${missing.length} day(s): '
+                                                '${missing.map((day) => day.toString().padLeft(2, '0')).join(', ')}',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
