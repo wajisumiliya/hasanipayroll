@@ -22,6 +22,7 @@ class PremiumPortalSidebar extends StatelessWidget {
     required this.profileName,
     required this.profileDetail,
     required this.profileIcon,
+    this.profileImageAsset,
     required this.items,
     required this.onLogout,
   });
@@ -30,6 +31,7 @@ class PremiumPortalSidebar extends StatelessWidget {
   final String profileName;
   final String profileDetail;
   final IconData profileIcon;
+  final String? profileImageAsset;
   final List<PremiumPortalSidebarItem> items;
   final VoidCallback onLogout;
 
@@ -215,7 +217,12 @@ class PremiumPortalSidebar extends StatelessWidget {
             height: 39,
             decoration: const BoxDecoration(
                 color: Color(0x1AFFFFFF), shape: BoxShape.circle),
-            child: Icon(profileIcon, color: _gold, size: 20),
+            child: profileImageAsset == null
+                ? Icon(profileIcon, color: _gold, size: 20)
+                : Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Image.asset(profileImageAsset!, fit: BoxFit.contain),
+                  ),
           ),
           const SizedBox(width: 10),
           Expanded(

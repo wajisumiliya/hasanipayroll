@@ -343,6 +343,7 @@ class _BranchPortalState extends State<BranchPortal>
       profileName: branchDisplayName,
       profileDetail: service.currentUser?.displayName ?? 'Branch account',
       profileIcon: Icons.storefront_rounded,
+      profileImageAsset: 'assets/hasani_books_logo.jpg',
       items: [
         item('Dashboard', Icons.grid_view_rounded, 0),
         item('Attendance', Icons.event_available_rounded, 1),
@@ -412,26 +413,26 @@ class _BranchPortalState extends State<BranchPortal>
           Container(
             margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
             decoration: BoxDecoration(
-              color: const Color(0xFFED1C24).withValues(alpha: .06),
+              color: const Color(0xFF69BFFF).withValues(alpha: .08),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: const Color(0xFFED1C24).withValues(alpha: .22),
+                color: const Color(0xFF69BFFF).withValues(alpha: .28),
               ),
             ),
             child: ListTile(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              leading: const Icon(Icons.logout, color: Color(0xFFED1C24)),
+              leading: const Icon(Icons.logout, color: Color(0xFF399EE8)),
               title: const Text(
                 'Logout',
                 style: TextStyle(
-                  color: Color(0xFFED1C24),
+                  color: Color(0xFF399EE8),
                   fontWeight: FontWeight.w800,
                 ),
               ),
               trailing: const Icon(Icons.arrow_forward_ios_rounded,
-                  size: 13, color: Color(0xFFED1C24)),
+                  size: 13, color: Color(0xFF399EE8)),
               onTap: logout,
             ),
           ),
@@ -504,8 +505,17 @@ class _BranchPortalState extends State<BranchPortal>
             ),
             child: Row(
               children: [
-                const Icon(Icons.storefront_outlined,
-                    color: Color(0xFF15965D), size: 20),
+                Container(
+                  width: 34,
+                  height: 34,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Image.asset('assets/hasani_books_logo.jpg',
+                      fit: BoxFit.contain),
+                ),
                 const SizedBox(width: 9),
                 Expanded(
                   child: Column(
@@ -679,8 +689,8 @@ class _BranchPortalState extends State<BranchPortal>
           colors: [
             Color(0xFF123C8C),
             Color(0xFF2368C4),
-            Color(0xFFE72D3B),
-            Color(0xFFB9152A),
+            Color(0xFF72C7FF),
+            Color(0xFF2D8FE8),
           ],
         ),
         boxShadow: [
@@ -944,7 +954,7 @@ class _BranchPortalState extends State<BranchPortal>
         title: 'Upcoming Birthdays',
         subtitle: 'Celebrations in the next 3 days',
         icon: Icons.cake_outlined,
-        color: const Color(0xFFED1C24),
+        color: const Color(0xFF69BFFF),
         events: birthdays,
         birthday: true,
       );
@@ -1118,7 +1128,7 @@ class _BranchPortalState extends State<BranchPortal>
                 birthday ? 'Happy Birthday!' : 'Work Anniversary!',
                 style: TextStyle(
                   color: birthday
-                      ? const Color(0xFFED1C24)
+                      ? const Color(0xFF69BFFF)
                       : const Color(0xFF243B8F),
                   fontSize: 25,
                   fontWeight: FontWeight.w900,
@@ -1174,7 +1184,7 @@ class _BranchPortalState extends State<BranchPortal>
     int? years,
   }) {
     final colors = birthday
-        ? const [Color(0xFFED1C24), Color(0xFFFF8A34), Color(0xFFFFD166)]
+        ? const [Color(0xFF69BFFF), Color(0xFF94D6FF), Color(0xFFC8ECFF)]
         : const [Color(0xFF243B8F), Color(0xFF315AD9), Color(0xFF73D6AE)];
     return showGeneralDialog<void>(
       context: context,
@@ -3154,7 +3164,7 @@ class _BranchPortalState extends State<BranchPortal>
                         gradient: const LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Color(0xFF243B8F), Color(0xFFED1C24)],
+                          colors: [Color(0xFF243B8F), Color(0xFF69BFFF)],
                         ),
                         borderRadius: BorderRadius.circular(99),
                       ),
@@ -3179,8 +3189,17 @@ class _BranchPortalState extends State<BranchPortal>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.storefront_outlined,
-                              size: 14, color: Color(0xFF243B8F)),
+                          Container(
+                            width: 27,
+                            height: 22,
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Image.asset('assets/hasani_books_logo.jpg',
+                                fit: BoxFit.contain),
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             branchDisplayName,
@@ -3231,7 +3250,7 @@ class _BranchPortalState extends State<BranchPortal>
           children: [
             Icon(
               icon,
-              color: const Color(0xFFED1C24),
+              color: const Color(0xFF69BFFF),
             ),
             const SizedBox(height: 8),
             Text(

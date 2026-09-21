@@ -49,7 +49,7 @@ class _DashboardHeaderPainter extends CustomPainter {
 
     final red = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFE72D3B), Color(0xFFB9152A)],
+        colors: [Color(0xFF72C7FF), Color(0xFF2D8FE8)],
       ).createShader(Offset.zero & size);
     final redArea = Path()
       ..moveTo(size.width * .54, 0)
@@ -2087,7 +2087,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                               width,
                               'EPF',
                               Icons.savings_outlined,
-                              const Color(0xFFED1C24),
+                              const Color(0xFF69BFFF),
                               imageBytes: dashboardEpfLogoBytes,
                               fallbackLabel: 'KWSP',
                             ),
@@ -2103,7 +2103,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                               width,
                               'EIS',
                               Icons.shield_outlined,
-                              const Color(0xFFED1C24),
+                              const Color(0xFF69BFFF),
                               imageBytes: dashboardEisLogoBytes,
                               fallbackLabel: 'EIS',
                             ),
@@ -2119,7 +2119,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                               width,
                               'Payroll Summary',
                               Icons.summarize_outlined,
-                              const Color(0xFFED1C24),
+                              const Color(0xFF69BFFF),
                               assetName: 'assets/hb_payroll_icon.png',
                             ),
                           ],
@@ -2410,7 +2410,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     _compactPayrollMetric(width, 'Basic pay', basicPay,
                         Icons.badge_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(width, 'Bonus', bonus,
-                        Icons.card_giftcard_outlined, const Color(0xFFED1C24)),
+                        Icons.card_giftcard_outlined, const Color(0xFF69BFFF)),
                     _compactPayrollMetric(
                       width,
                       'EPF',
@@ -2425,12 +2425,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                         'Gross payroll',
                         totalGross,
                         Icons.account_balance_wallet_outlined,
-                        const Color(0xFFED1C24),
+                        const Color(0xFF69BFFF),
                         onTap: onGrossTap),
                     _compactPayrollMetric(width, 'Allowances', allowances,
                         Icons.add_card_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(width, 'Deductions', totalDeductions,
-                        Icons.remove_circle_outline, const Color(0xFFED1C24)),
+                        Icons.remove_circle_outline, const Color(0xFF69BFFF)),
                     _compactPayrollMetric(
                         width,
                         'SOCSO',
@@ -2440,12 +2440,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                         employerValue: socsoEmployer,
                         assetName: 'assets/official_socso_logo.png'),
                     _compactPayrollMetric(width, 'Net payroll', totalNet,
-                        Icons.payments_outlined, const Color(0xFFED1C24),
+                        Icons.payments_outlined, const Color(0xFF69BFFF),
                         onTap: onNetTap),
                     _compactPayrollMetric(width, 'Overtime', overtime,
                         Icons.schedule_outlined, const Color(0xFF243B8F)),
                     _compactPayrollMetric(width, 'PCB', pcb,
-                        Icons.receipt_long_outlined, const Color(0xFFED1C24)),
+                        Icons.receipt_long_outlined, const Color(0xFF69BFFF)),
                     _compactPayrollMetric(
                       width,
                       'EIS',
@@ -2460,7 +2460,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       'Employer contributions',
                       employerContributions,
                       Icons.business_center_outlined,
-                      const Color(0xFFED1C24),
+                      const Color(0xFF69BFFF),
                     ),
                   ],
                 );
@@ -2697,7 +2697,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         card('TEMP', temp, Icons.badge_outlined, const Color(0xFFF59E0B)),
         card('Management', management, Icons.business_center_outlined,
             const Color(0xFF7C3AED)),
-        card('Foreigners', foreign, Icons.public, const Color(0xFFED1C24)),
+        card('Foreigners', foreign, Icons.public, const Color(0xFF69BFFF)),
         card('Total', total, Icons.groups_2_outlined, const Color(0xFF169B71)),
       ],
     );
@@ -2963,11 +2963,10 @@ class _AdminDashboardState extends State<AdminDashboard>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    selected ? Icons.apps_rounded : Icons.storefront_rounded,
-                    size: 17,
-                    color: selected ? Colors.white : accent,
-                  ),
+                  branch.key == null
+                      ? Icon(Icons.apps_rounded,
+                          size: 17, color: selected ? Colors.white : accent)
+                      : _hasaniBranchLogo(24),
                   const SizedBox(width: 7),
                   Text(
                     branch.value,
@@ -3047,7 +3046,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 title: 'Active employees',
                 value: activeEmployees,
                 icon: Icons.verified_user_outlined,
-                color: const Color(0xFFED1C24),
+                color: const Color(0xFF69BFFF),
                 detail: 'Currently active',
                 onTap: () => _showEmployeeDetails(
                     'Active Employees', employees.where(_isActive).toList()),
@@ -3258,7 +3257,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
 
     return Column(children: [
-      panel('Upcoming birthdays', Icons.cake_outlined, const Color(0xFFED1C24),
+      panel('Upcoming birthdays', Icons.cake_outlined, const Color(0xFF69BFFF),
           birthdays, false),
       const SizedBox(height: 10),
       panel('Upcoming work anniversaries', Icons.workspace_premium_outlined,
@@ -4800,8 +4799,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     final colors = allBranches
         ? const [Color(0xFF289BFF), Color(0xFF0754D8)]
         : _payrollBranchColors(label);
-    final icon =
-        allBranches ? Icons.grid_view_rounded : _payrollBranchIcon(label);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -4842,7 +4839,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                     : LinearGradient(colors: colors),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
+              child: allBranches
+                  ? const Icon(Icons.grid_view_rounded,
+                      color: Colors.white, size: 20)
+                  : _hasaniBranchLogo(30),
             ),
             const SizedBox(width: 8),
             Text(
@@ -8459,7 +8459,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         side: BorderSide(
                           color: index.isEven
                               ? const Color(0xFF243B8F)
-                              : const Color(0xFFED1C24),
+                              : const Color(0xFF69BFFF),
                           width: 1.8,
                         ),
                       ),
@@ -8676,7 +8676,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             side: BorderSide(
                               color: index.isEven
                                   ? const Color(0xFF243B8F)
-                                  : const Color(0xFFED1C24),
+                                  : const Color(0xFF69BFFF),
                               width: 1.8,
                             ),
                           ),
@@ -8703,11 +8703,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       ),
                                     ],
                                   ),
-                                  child: Icon(
-                                    _payrollBranchIcon(name),
-                                    color: Colors.white,
-                                    size: 27,
-                                  ),
+                                  child: _hasaniBranchLogo(42),
                                 ),
                                 const Spacer(),
                                 Text(
@@ -8865,7 +8861,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       label: 'Pending',
                       count: pendingCount,
                       icon: Icons.schedule_outlined,
-                      color: const Color(0xFFED1C24),
+                      color: const Color(0xFF69BFFF),
                       selected: _attendanceSubmissionFilter == 'pending',
                       onTap: () => setState(
                         () => _attendanceSubmissionFilter = 'pending',
@@ -8950,7 +8946,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           .any((r) => _attendanceBool(r['is_submitted']));
                       final accent = index.isEven
                           ? const Color(0xFF243B8F)
-                          : const Color(0xFFED1C24);
+                          : const Color(0xFF69BFFF);
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(18),
@@ -9841,11 +9837,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                     ),
                                                   ],
                                                 ),
-                                                child: Icon(
-                                                  _payrollBranchIcon(branchId),
-                                                  color: Colors.white,
-                                                  size: 30,
-                                                ),
+                                                child: _hasaniBranchLogo(47),
                                               ),
                                               const Spacer(),
                                               Text(
@@ -9891,6 +9883,23 @@ class _AdminDashboardState extends State<AdminDashboard>
       },
     );
   }
+
+  Widget _hasaniBranchLogo(double size) => Container(
+        width: size,
+        height: size,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(size * .24),
+          boxShadow: const [
+            BoxShadow(color: Color(0x22000000), blurRadius: 5),
+          ],
+        ),
+        child: Image.asset(
+          'assets/hasani_books_logo.jpg',
+          fit: BoxFit.contain,
+        ),
+      );
 
   IconData _payrollBranchIcon(String branch) =>
       switch (branch.trim().toUpperCase()) {
@@ -11545,7 +11554,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             children: [
               _adminPayslipTotal('Gross', gross, const Color(0xFF243B8F)),
               _adminPayslipTotal(
-                  'Deduction', deduction, const Color(0xFFED1C24)),
+                  'Deduction', deduction, const Color(0xFF69BFFF)),
               _adminPayslipTotal('Net', net, const Color(0xFF07833D)),
             ],
           ),
@@ -12221,7 +12230,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 side: BorderSide(
                                   color: index.isEven
                                       ? const Color(0xFF243B8F)
-                                      : const Color(0xFFED1C24),
+                                      : const Color(0xFF69BFFF),
                                   width: 1.8,
                                 ),
                               ),
@@ -12264,13 +12273,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             ),
                                           ],
                                         ),
-                                        child: Icon(
-                                          _payrollBranchIcon(
-                                            branchNames[branchId] ?? branchId,
-                                          ),
-                                          color: Colors.white,
-                                          size: 27,
-                                        ),
+                                        child: _hasaniBranchLogo(42),
                                       ),
                                       const Spacer(),
                                       Text(
@@ -17042,8 +17045,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   Border _hasaniOuterBorder([double width = 2]) => Border(
         top: BorderSide(color: const Color(0xFF243B8F), width: width),
         left: BorderSide(color: const Color(0xFF243B8F), width: width),
-        right: BorderSide(color: const Color(0xFFED1C24), width: width),
-        bottom: BorderSide(color: const Color(0xFFED1C24), width: width),
+        right: BorderSide(color: const Color(0xFF69BFFF), width: width),
+        bottom: BorderSide(color: const Color(0xFF69BFFF), width: width),
       );
 
   Widget _panel(
@@ -17059,7 +17062,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'Payroll Report' => const (Icons.analytics_rounded, Color(0xFF7C3AED)),
       'Settings' => const (Icons.settings_rounded, Color(0xFF1769E8)),
       'Quick actions' => const (Icons.bolt_rounded, Color(0xFF1769E8)),
-      'System status' => const (Icons.monitor_heart_rounded, Color(0xFFED334F)),
+      'System status' => const (Icons.monitor_heart_rounded, Color(0xFF69BFFF)),
       'Employee List' => const (Icons.groups_rounded, Color(0xFF1769E8)),
       _ => const (Icons.dashboard_customize_rounded, Color(0xFF243B8F)),
     };
