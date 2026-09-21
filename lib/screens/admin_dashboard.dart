@@ -2230,7 +2230,11 @@ class _AdminDashboardState extends State<AdminDashboard>
       width: double.infinity,
       padding: EdgeInsets.all(compact ? 16 : 20),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF8FCFF), Color(0xFFEEF6FF)],
+        ),
         borderRadius: BorderRadius.circular(26),
         border: _hasaniOuterBorder(2.2),
         boxShadow: [
@@ -2310,7 +2314,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         Text(
                           'SYSTEM LIVE',
                           style: TextStyle(
-                            color: Color(0xFF9BE6C7),
+                            color: Color(0xFF168653),
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.1,
@@ -2621,8 +2625,28 @@ class _AdminDashboardState extends State<AdminDashboard>
             ),
             child: Row(
               children: [
-                Icon(icon, size: 19, color: color),
-                const SizedBox(width: 7),
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withValues(alpha: .95),
+                        Color.lerp(color, Colors.black, .18)!,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: .25),
+                        blurRadius: 9,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, size: 20, color: Colors.white),
+                ),
+                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2686,31 +2710,59 @@ class _AdminDashboardState extends State<AdminDashboard>
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
           child: Ink(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: .045),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  accent.withValues(alpha: .075),
+                ],
+              ),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: accent.withValues(alpha: .7)),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: .10),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 34,
-                  height: 34,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: .13),
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        accent.withValues(alpha: .92),
+                        Color.lerp(accent, Colors.black, .16)!,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: .25),
+                        blurRadius: 9,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   padding: assetName == null
                       ? EdgeInsets.zero
                       : const EdgeInsets.all(3),
                   child: assetName == null
-                      ? Icon(icon, color: accent, size: 18)
+                      ? Icon(icon, color: Colors.white, size: 23)
                       : Image.asset(
                           assetName,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) =>
-                              Icon(icon, color: accent, size: 18),
+                              Icon(icon, color: Colors.white, size: 21),
                         ),
                 ),
                 const SizedBox(width: 10),
@@ -2766,8 +2818,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
                 if (onTap != null)
-                  const Icon(Icons.arrow_outward,
-                      color: Colors.black38, size: 15),
+                  Container(
+                    width: 25,
+                    height: 25,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.chevron_right_rounded,
+                        color: accent, size: 18),
+                  ),
               ],
             ),
           ),
@@ -2864,7 +2924,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
               decoration: BoxDecoration(
                 color: selected
-                    ? const Color(0xFF243B8F).withValues(alpha: .12)
+                    ? const Color(0xFF1267E8)
                     : Colors.white.withValues(alpha: .72),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
@@ -2887,16 +2947,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    selected ? Icons.check_circle : Icons.storefront_outlined,
+                    selected ? Icons.apps_rounded : Icons.storefront_rounded,
                     size: 17,
-                    color: accent,
+                    color: selected ? Colors.white : accent,
                   ),
                   const SizedBox(width: 7),
                   Text(
                     branch.value,
                     style: TextStyle(
-                      color:
-                          selected ? const Color(0xFF243B8F) : Colors.black87,
+                      color: selected ? Colors.white : Colors.black87,
                       fontSize: 12,
                       fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                     ),
