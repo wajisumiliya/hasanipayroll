@@ -9896,7 +9896,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           ],
         ),
         child: Image.asset(
-          'assets/hasani_books_logo.jpg',
+          'assets/hasani_books_payslip_logo.jpeg',
           fit: BoxFit.contain,
         ),
       );

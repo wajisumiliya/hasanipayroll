@@ -343,7 +343,7 @@ class _BranchPortalState extends State<BranchPortal>
       profileName: branchDisplayName,
       profileDetail: service.currentUser?.displayName ?? 'Branch account',
       profileIcon: Icons.storefront_rounded,
-      profileImageAsset: 'assets/hasani_books_logo.jpg',
+      profileImageAsset: 'assets/hasani_books_payslip_logo.jpeg',
       items: [
         item('Dashboard', Icons.grid_view_rounded, 0),
         item('Attendance', Icons.event_available_rounded, 1),
@@ -513,7 +513,7 @@ class _BranchPortalState extends State<BranchPortal>
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: Image.asset('assets/hasani_books_logo.jpg',
+                  child: Image.asset('assets/hasani_books_payslip_logo.jpeg',
                       fit: BoxFit.contain),
                 ),
                 const SizedBox(width: 9),
@@ -3197,7 +3197,8 @@ class _BranchPortalState extends State<BranchPortal>
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: Image.asset('assets/hasani_books_logo.jpg',
+                            child: Image.asset(
+                                'assets/hasani_books_payslip_logo.jpeg',
                                 fit: BoxFit.contain),
                           ),
                           const SizedBox(width: 6),

@@ -1008,9 +1008,31 @@ class _LoginScreenState extends State<LoginScreen>
     final foreground = theme.foreground;
     return Row(
       children: [
-        Icon(Icons.calendar_month_outlined,
-            color: theme.accent1, size: compact ? 19 : 22),
-        const SizedBox(width: 10),
+        Container(
+          width: compact ? 34 : 40,
+          height: compact ? 34 : 40,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [theme.accent1, theme.accent2],
+            ),
+            borderRadius: BorderRadius.circular(compact ? 10 : 12),
+            boxShadow: [
+              BoxShadow(
+                color: theme.accent1.withValues(alpha: .28),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.calendar_month_rounded,
+            color: Colors.white,
+            size: compact ? 19 : 22,
+          ),
+        ),
+        const SizedBox(width: 11),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1035,31 +1057,62 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           ),
         ),
-        Icon(_weatherIcon(_weatherCode), color: theme.accent1, size: 23),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              _weatherLoading
-                  ? 'Loading...'
-                  : _temperature == null
-                      ? '--°C'
-                      : '${_temperature!.round()}°C',
-              style: TextStyle(
-                color: foreground,
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-              ),
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 9 : 11,
+            vertical: compact ? 6 : 7,
+          ),
+          decoration: BoxDecoration(
+            color: theme.accent1.withValues(alpha: theme.isLight ? .10 : .16),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.accent1.withValues(alpha: .32),
             ),
-            Text(
-              _weatherDescription(_weatherCode),
-              style: TextStyle(
-                color: foreground.withValues(alpha: .62),
-                fontSize: 9,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: compact ? 27 : 30,
+                height: compact ? 27 : 30,
+                decoration: BoxDecoration(
+                  color: theme.accent1.withValues(alpha: .16),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _weatherIcon(_weatherCode),
+                  color: theme.accent1,
+                  size: compact ? 17 : 19,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 7),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _weatherLoading
+                        ? 'Loading...'
+                        : _temperature == null
+                            ? '--°C'
+                            : '${_temperature!.round()}°C',
+                    style: TextStyle(
+                      color: foreground,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    _weatherDescription(_weatherCode),
+                    style: TextStyle(
+                      color: foreground.withValues(alpha: .66),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
