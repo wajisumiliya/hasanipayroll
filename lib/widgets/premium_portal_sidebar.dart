@@ -112,8 +112,10 @@ class PremiumPortalSidebar extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Image.asset('assets/hasani_books_logo.jpg', width: 176,
-                errorBuilder: (context, error, stackTrace) => const Text('HASANI BOOKS',
+            child: Image.asset('assets/hasani_books_logo.jpg',
+                width: 176,
+                errorBuilder: (context, error, stackTrace) => const Text(
+                    'HASANI BOOKS',
                     style: TextStyle(
                         color: _navy,
                         fontWeight: FontWeight.w900,
@@ -148,9 +150,42 @@ class PremiumPortalSidebar extends StatelessWidget {
                   : null,
             ),
             child: Row(children: [
-              Icon(item.icon,
-                  color: item.selected ? _navy : Colors.white, size: 21),
-              const SizedBox(width: 13),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  gradient: item.selected
+                      ? const LinearGradient(
+                          colors: [Color(0xFFFFF4B8), Color(0xFFFFD85A)],
+                        )
+                      : const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF28B6FF), Color(0xFF0754D8)],
+                        ),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(
+                    color: item.selected
+                        ? const Color(0x66FFFFFF)
+                        : const Color(0x554EDBFF),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: item.selected
+                          ? const Color(0x55F5C451)
+                          : const Color(0x660A78FF),
+                      blurRadius: item.selected ? 8 : 11,
+                      spreadRadius: item.selected ? 0 : 1,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  item.icon,
+                  color: item.selected ? _navy : Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 11),
               Expanded(
                 child: Text(item.label,
                     overflow: TextOverflow.ellipsis,
@@ -178,8 +213,8 @@ class PremiumPortalSidebar extends StatelessWidget {
           Container(
             width: 39,
             height: 39,
-            decoration:
-                const BoxDecoration(color: Color(0x1AFFFFFF), shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+                color: Color(0x1AFFFFFF), shape: BoxShape.circle),
             child: Icon(profileIcon, color: _gold, size: 20),
           ),
           const SizedBox(width: 10),
@@ -195,7 +230,8 @@ class PremiumPortalSidebar extends StatelessWidget {
               Text(profileDetail,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFFAAB4C3), fontSize: 11)),
+                  style:
+                      const TextStyle(color: Color(0xFFAAB4C3), fontSize: 11)),
             ]),
           ),
         ]),

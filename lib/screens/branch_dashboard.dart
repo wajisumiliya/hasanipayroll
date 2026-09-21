@@ -344,12 +344,12 @@ class _BranchPortalState extends State<BranchPortal>
       profileDetail: service.currentUser?.displayName ?? 'Branch account',
       profileIcon: Icons.storefront_rounded,
       items: [
-        item('Dashboard', Icons.dashboard_outlined, 0),
-        item('Attendance', Icons.fact_check_outlined, 1),
-        item('Employees', Icons.people_outline, 2),
-        item('OT Requests', Icons.more_time_outlined, 3),
-        item('Leave Requests', Icons.flight_takeoff_outlined, 4),
-        item('Daily Report', Icons.assignment_outlined, 5),
+        item('Dashboard', Icons.grid_view_rounded, 0),
+        item('Attendance', Icons.event_available_rounded, 1),
+        item('Employees', Icons.groups_rounded, 2),
+        item('OT Requests', Icons.more_time_rounded, 3),
+        item('Leave Requests', Icons.flight_rounded, 4),
+        item('Daily Report', Icons.article_rounded, 5),
       ],
       onLogout: logout,
     );
