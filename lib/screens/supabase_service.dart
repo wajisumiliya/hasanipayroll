@@ -2297,7 +2297,7 @@ class SupabaseService {
       );
 
       debugPrint(
-        'OT AUTHORIZATION: $otStatus',
+        'OT AUTHORIZATION: $otAuthorized',
       );
 
       debugPrint(
