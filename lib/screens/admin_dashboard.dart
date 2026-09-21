@@ -134,6 +134,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   final TextEditingController _payslipEmployeeSearchController =
       TextEditingController();
   String _adminEmployeeSearch = '';
+  String? _adminEmployeeBranchFilter;
   String _attendanceEmployeeSearch = '';
   String _payslipEmployeeSearch = '';
   bool _payslipShowActiveEmployees = true;
@@ -2609,7 +2610,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           onTap: () => _showEmployeeDetails('$label Employees', employees),
           borderRadius: BorderRadius.circular(14),
           child: Container(
-            width: 108,
+            width: 122,
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
             decoration: BoxDecoration(
               color: color.withValues(alpha: .08),
@@ -2647,29 +2648,39 @@ class _AdminDashboardState extends State<AdminDashboard>
                   child: Icon(icon, size: 20, color: Colors.white),
                 ),
                 const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      employees.length.toString(),
-                      style: const TextStyle(
-                        color: Color(0xFF20242D),
-                        fontSize: 19,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        employees.length.toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF20242D),
+                          fontSize: 19,
+                          height: 1,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      label.toUpperCase(),
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 8.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: .45,
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          label.toUpperCase(),
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .35,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -2760,7 +2771,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ? Icon(icon, color: Colors.white, size: 23)
                       : Image.asset(
                           assetName,
-                          fit: BoxFit.contain,
+                          fit: assetName == 'assets/dashboard_epf_kwsp.png'
+                              ? BoxFit.cover
+                              : BoxFit.contain,
+                          alignment:
+                              assetName == 'assets/dashboard_epf_kwsp.png'
+                                  ? Alignment.centerLeft
+                                  : Alignment.center,
                           errorBuilder: (_, __, ___) =>
                               Icon(icon, color: Colors.white, size: 21),
                         ),
@@ -2970,19 +2987,33 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _dashboardSectionTitle(String title, String subtitle) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Color(0xFF20242D),
-            fontSize: 19,
-            fontWeight: FontWeight.w800,
+        Container(
+          width: 5,
+          height: 45,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1769E8),
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
-        const SizedBox(height: 3),
-        Text(subtitle, style: const TextStyle(color: Colors.black54)),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF102247),
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(subtitle, style: const TextStyle(color: Color(0xFF64739A))),
+          ],
+        ),
       ],
     );
   }
@@ -3063,32 +3094,69 @@ class _AdminDashboardState extends State<AdminDashboard>
   }) {
     return SizedBox(
       width: width,
-      height: 78,
+      height: 108,
       child: Material(
-        color: color.withValues(alpha: .07),
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.all(11),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.white, color.withValues(alpha: .09)],
+              ),
               border: Border.all(color: color.withValues(alpha: .65)),
               borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: .10),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Row(children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(width: 10),
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    color.withValues(alpha: .95),
+                    Color.lerp(color, Colors.black, .18)!,
+                  ]),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: .24),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 34),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('$value  $title',
+                    Text('$value',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 3),
+                        style: const TextStyle(
+                            color: Color(0xFF102247),
+                            fontSize: 25,
+                            fontWeight: FontWeight.w900)),
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Color(0xFF102247),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800)),
                     Text(detail,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -3096,6 +3164,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                             fontSize: 10, color: Colors.black54)),
                   ],
                 ),
+              ),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child:
+                    Icon(Icons.arrow_forward_rounded, color: color, size: 20),
               ),
             ]),
           ),
@@ -3119,13 +3197,26 @@ class _AdminDashboardState extends State<AdminDashboard>
         constraints: const BoxConstraints(minHeight: 78),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: .06),
+          gradient: LinearGradient(
+            colors: [Colors.white, color.withValues(alpha: .08)],
+          ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: color.withValues(alpha: .45)),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: color, size: 21),
-          const SizedBox(width: 10),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                color.withValues(alpha: .95),
+                Color.lerp(color, Colors.black, .18)!,
+              ]),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(icon, color: Colors.white, size: 25),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3264,7 +3355,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _dashboardActionDock() {
     return _panel(
-      'Command shortcuts',
+      'Quick actions',
       Wrap(
         spacing: 10,
         runSpacing: 10,
@@ -3451,7 +3542,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final coverage =
         employees == 0 ? 0 : (activeEmployees / employees * 100).round();
     return _panel(
-      'Operational pulse',
+      'System status',
       Column(
         children: [
           _dashboardPulseRow(
@@ -3494,13 +3585,23 @@ class _AdminDashboardState extends State<AdminDashboard>
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(11),
+                gradient: LinearGradient(colors: [
+                  accent.withValues(alpha: .95),
+                  Color.lerp(accent, Colors.black, .15)!,
+                ]),
+                borderRadius: BorderRadius.circular(13),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: .20),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: accent, size: 18),
+              child: Icon(icon, color: Colors.white, size: 23),
             ),
             const SizedBox(width: 11),
             Expanded(
@@ -4252,20 +4353,46 @@ class _AdminDashboardState extends State<AdminDashboard>
         final allEmployees = snapshot.data ?? [];
         final compactEmployeeView = MediaQuery.sizeOf(context).width < 760;
         final search = _adminEmployeeSearch.trim().toLowerCase();
-        final employees = search.isEmpty
-            ? allEmployees
-            : allEmployees.where((employee) {
-                return [
-                  employee['employee_id'],
-                  employee['name'],
-                  employee['department'],
-                  employee['designation'],
-                  employee['email'],
-                  employee['branch_id'],
-                  employee['branch_name'],
-                ].any((value) =>
-                    value?.toString().toLowerCase().contains(search) == true);
-              }).toList();
+        final branchNames = allEmployees
+            .map((employee) => employee['branch_id']?.toString().trim() ?? '')
+            .where((branch) => branch.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+        final employees = allEmployees.where((employee) {
+          final branch = employee['branch_id']?.toString().trim() ?? '';
+          if (_adminEmployeeBranchFilter != null &&
+              branch.toUpperCase() !=
+                  _adminEmployeeBranchFilter!.toUpperCase()) {
+            return false;
+          }
+          if (search.isEmpty) return true;
+          return [
+            employee['employee_id'],
+            employee['name'],
+            employee['department'],
+            employee['designation'],
+            employee['email'],
+            employee['branch_id'],
+            employee['branch_name'],
+          ].any((value) =>
+              value?.toString().toLowerCase().contains(search) == true);
+        }).toList()
+          ..sort((a, b) {
+            if (_adminEmployeeBranchFilter != null) {
+              final aCount = service
+                  .employeePayroll(a['employee_id']?.toString() ?? '')
+                  .length;
+              final bCount = service
+                  .employeePayroll(b['employee_id']?.toString() ?? '')
+                  .length;
+              final countOrder = bCount.compareTo(aCount);
+              if (countOrder != 0) return countOrder;
+            }
+            return (a['name']?.toString() ?? '')
+                .toLowerCase()
+                .compareTo((b['name']?.toString() ?? '').toLowerCase());
+          });
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -4321,8 +4448,36 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
               ),
               const SizedBox(height: 16),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      avatar: const Icon(Icons.apps_rounded, size: 17),
+                      label: const Text('All Branches'),
+                      selected: _adminEmployeeBranchFilter == null,
+                      onSelected: (_) =>
+                          setState(() => _adminEmployeeBranchFilter = null),
+                    ),
+                    for (final branch in branchNames) ...[
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        avatar: Icon(_payrollBranchIcon(branch), size: 17),
+                        label: Text(branch),
+                        selected: _adminEmployeeBranchFilter == branch,
+                        onSelected: (_) => setState(
+                          () => _adminEmployeeBranchFilter = branch,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               _panel(
-                'Employee List',
+                _adminEmployeeBranchFilter == null
+                    ? 'Employee List'
+                    : '${_adminEmployeeBranchFilter!} • Payslip Order',
                 employees.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.all(30),
@@ -4332,195 +4487,288 @@ class _AdminDashboardState extends State<AdminDashboard>
                           ),
                         ),
                       )
-                    : Column(
-                        children: employees.map((employee) {
-                          final String employeeId =
-                              employee['employee_id']?.toString() ?? '';
+                    : _adminEmployeeBranchFilter != null
+                        ? _branchEmployeePayslipGrid(employees)
+                        : Column(
+                            children: employees.map((employee) {
+                              final String employeeId =
+                                  employee['employee_id']?.toString() ?? '';
 
-                          final String name =
-                              employee['name']?.toString() ?? '';
+                              final String name =
+                                  employee['name']?.toString() ?? '';
 
-                          final String department =
-                              employee['department']?.toString() ?? '';
+                              final String department =
+                                  employee['department']?.toString() ?? '';
 
-                          final String branchId =
-                              employee['branch_id']?.toString() ?? '';
+                              final String branchId =
+                                  employee['branch_id']?.toString() ?? '';
 
-                          final String designation =
-                              employee['designation']?.toString() ?? '';
+                              final String designation =
+                                  employee['designation']?.toString() ?? '';
 
-                          return Card(
-                            elevation: 0,
-                            margin: const EdgeInsets.only(
-                              bottom: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              side: const BorderSide(
-                                color: Color(0xFF243B8F),
-                                width: 1.8,
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: EmployeePhoto(
-                                name: name,
-                                photoUrl: employee['photo_url']?.toString(),
-                                radius: 22,
-                              ),
-                              title: Text(
-                                name.isEmpty ? 'Unnamed Employee' : name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                              return Card(
+                                elevation: 0,
+                                margin: const EdgeInsets.only(
+                                  bottom: 8,
                                 ),
-                              ),
-                              subtitle: Text(
-                                '$employeeId • '
-                                '$department • '
-                                '$branchId'
-                                '${designation.isEmpty ? '' : ' • $designation'}',
-                              ),
-                              trailing: compactEmployeeView
-                                  ? PopupMenuButton<String>(
-                                      tooltip: 'Employee actions',
-                                      icon: const Icon(Icons.more_vert),
-                                      onSelected: (action) {
-                                        switch (action) {
-                                          case 'view':
-                                            _showSupabaseEmployee(employee);
-                                            break;
-                                          case 'edit':
-                                            _showSupabaseEmployeeEdit(employee);
-                                            break;
-                                          case 'transfer':
-                                            _showTransferEmployee(employee);
-                                            break;
-                                          case 'login':
-                                            _createOrResetApplicationLogin(
-                                                employee);
-                                            break;
-                                          case 'delete':
-                                            _confirmSupabaseEmployeeDelete(
-                                                employeeId, name);
-                                            break;
-                                        }
-                                      },
-                                      itemBuilder: (_) => const [
-                                        PopupMenuItem(
-                                          value: 'view',
-                                          child: ListTile(
-                                            leading:
-                                                Icon(Icons.visibility_outlined),
-                                            title: Text('View'),
-                                          ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'edit',
-                                          child: ListTile(
-                                            leading: Icon(Icons.edit,
-                                                color: Colors.blue),
-                                            title: Text('Edit'),
-                                          ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'transfer',
-                                          child: ListTile(
-                                            leading: Icon(Icons.swap_horiz,
-                                                color: Colors.orange),
-                                            title: Text('Transfer'),
-                                          ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'login',
-                                          child: ListTile(
-                                            leading: Icon(
-                                                Icons.manage_accounts_outlined,
-                                                color: Colors.purple),
-                                            title: Text('Application login'),
-                                          ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'delete',
-                                          child: ListTile(
-                                            leading: Icon(Icons.delete_outline,
-                                                color: Colors.red),
-                                            title: Text('Delete'),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Wrap(
-                                      children: [
-                                        // VIEW
-                                        IconButton(
-                                          tooltip: 'View',
-                                          icon: const Icon(
-                                            Icons.visibility_outlined,
-                                          ),
-                                          onPressed: () {
-                                            _showSupabaseEmployee(
-                                              employee,
-                                            );
-                                          },
-                                        ),
-
-                                        // EDIT
-                                        IconButton(
-                                          tooltip: 'Edit',
-                                          icon: const Icon(
-                                            Icons.edit,
-                                            color: Colors.blue,
-                                          ),
-                                          onPressed: () {
-                                            _showSupabaseEmployeeEdit(employee);
-                                          },
-                                        ),
-                                        IconButton(
-                                          tooltip: 'Transfer staff',
-                                          icon: const Icon(Icons.swap_horiz,
-                                              color: Colors.orange),
-                                          onPressed: () =>
-                                              _showTransferEmployee(employee),
-                                        ),
-
-                                        IconButton(
-                                          tooltip:
-                                              'Create/reset application login',
-                                          icon: const Icon(
-                                            Icons.manage_accounts_outlined,
-                                            color: Colors.purple,
-                                          ),
-                                          onPressed: () =>
-                                              _createOrResetApplicationLogin(
-                                                  employee),
-                                        ),
-                                        // DELETE
-                                        IconButton(
-                                          tooltip: 'Delete',
-                                          icon: const Icon(
-                                            Icons.delete_outline,
-                                            color: Colors.red,
-                                          ),
-                                          onPressed: () {
-                                            _confirmSupabaseEmployeeDelete(
-                                              employeeId,
-                                              name,
-                                            );
-                                          },
-                                        ),
-                                      ],
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                  side: const BorderSide(
+                                    color: Color(0xFF243B8F),
+                                    width: 1.8,
+                                  ),
+                                ),
+                                child: ListTile(
+                                  leading: EmployeePhoto(
+                                    name: name,
+                                    photoUrl: employee['photo_url']?.toString(),
+                                    radius: 22,
+                                  ),
+                                  title: Text(
+                                    name.isEmpty ? 'Unnamed Employee' : name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
-                              onTap: () {
-                                _showSupabaseEmployee(
-                                  employee,
-                                );
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                                  ),
+                                  subtitle: Text(
+                                    '$employeeId • '
+                                    '$department • '
+                                    '$branchId'
+                                    '${designation.isEmpty ? '' : ' • $designation'}',
+                                  ),
+                                  trailing: compactEmployeeView
+                                      ? PopupMenuButton<String>(
+                                          tooltip: 'Employee actions',
+                                          icon: const Icon(Icons.more_vert),
+                                          onSelected: (action) {
+                                            switch (action) {
+                                              case 'view':
+                                                _showSupabaseEmployee(employee);
+                                                break;
+                                              case 'edit':
+                                                _showSupabaseEmployeeEdit(
+                                                    employee);
+                                                break;
+                                              case 'transfer':
+                                                _showTransferEmployee(employee);
+                                                break;
+                                              case 'login':
+                                                _createOrResetApplicationLogin(
+                                                    employee);
+                                                break;
+                                              case 'delete':
+                                                _confirmSupabaseEmployeeDelete(
+                                                    employeeId, name);
+                                                break;
+                                            }
+                                          },
+                                          itemBuilder: (_) => const [
+                                            PopupMenuItem(
+                                              value: 'view',
+                                              child: ListTile(
+                                                leading: Icon(
+                                                    Icons.visibility_outlined),
+                                                title: Text('View'),
+                                              ),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'edit',
+                                              child: ListTile(
+                                                leading: Icon(Icons.edit,
+                                                    color: Colors.blue),
+                                                title: Text('Edit'),
+                                              ),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'transfer',
+                                              child: ListTile(
+                                                leading: Icon(Icons.swap_horiz,
+                                                    color: Colors.orange),
+                                                title: Text('Transfer'),
+                                              ),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'login',
+                                              child: ListTile(
+                                                leading: Icon(
+                                                    Icons
+                                                        .manage_accounts_outlined,
+                                                    color: Colors.purple),
+                                                title:
+                                                    Text('Application login'),
+                                              ),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: ListTile(
+                                                leading: Icon(
+                                                    Icons.delete_outline,
+                                                    color: Colors.red),
+                                                title: Text('Delete'),
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Wrap(
+                                          children: [
+                                            // VIEW
+                                            IconButton(
+                                              tooltip: 'View',
+                                              icon: const Icon(
+                                                Icons.visibility_outlined,
+                                              ),
+                                              onPressed: () {
+                                                _showSupabaseEmployee(
+                                                  employee,
+                                                );
+                                              },
+                                            ),
+
+                                            // EDIT
+                                            IconButton(
+                                              tooltip: 'Edit',
+                                              icon: const Icon(
+                                                Icons.edit,
+                                                color: Colors.blue,
+                                              ),
+                                              onPressed: () {
+                                                _showSupabaseEmployeeEdit(
+                                                    employee);
+                                              },
+                                            ),
+                                            IconButton(
+                                              tooltip: 'Transfer staff',
+                                              icon: const Icon(Icons.swap_horiz,
+                                                  color: Colors.orange),
+                                              onPressed: () =>
+                                                  _showTransferEmployee(
+                                                      employee),
+                                            ),
+
+                                            IconButton(
+                                              tooltip:
+                                                  'Create/reset application login',
+                                              icon: const Icon(
+                                                Icons.manage_accounts_outlined,
+                                                color: Colors.purple,
+                                              ),
+                                              onPressed: () =>
+                                                  _createOrResetApplicationLogin(
+                                                      employee),
+                                            ),
+                                            // DELETE
+                                            IconButton(
+                                              tooltip: 'Delete',
+                                              icon: const Icon(
+                                                Icons.delete_outline,
+                                                color: Colors.red,
+                                              ),
+                                              onPressed: () {
+                                                _confirmSupabaseEmployeeDelete(
+                                                  employeeId,
+                                                  name,
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                  onTap: () {
+                                    _showSupabaseEmployee(
+                                      employee,
+                                    );
+                                  },
+                                ),
+                              );
+                            }).toList(),
+                          ),
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _branchEmployeePayslipGrid(
+    List<Map<String, dynamic>> employees,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 1050
+            ? 4
+            : constraints.maxWidth >= 720
+                ? 3
+                : constraints.maxWidth >= 440
+                    ? 2
+                    : 1;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: employees.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            mainAxisExtent: 92,
+          ),
+          itemBuilder: (context, index) {
+            final employee = employees[index];
+            final employeeId = employee['employee_id']?.toString() ?? '';
+            final name = employee['name']?.toString() ?? 'Employee';
+            final branch = employee['branch_id']?.toString() ?? '';
+            final payslipCount = service.employeePayroll(employeeId).length;
+            return InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => setState(() {
+                selectedPayslipEmployeeId = employeeId;
+                selectedEmployeePayslipYear = null;
+                selectedPage = 12;
+              }),
+              child: Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.white, Color(0xFFF4F8FF)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFD7DFEC)),
+                ),
+                child: Row(children: [
+                  EmployeePhoto(
+                    name: name,
+                    photoUrl: employee['photo_url']?.toString(),
+                    radius: 25,
+                    borderColor: const Color(0xFF243B8F),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w800)),
+                        Text('$employeeId • $branch',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.black54, fontSize: 11)),
+                        Text('$payslipCount payslips',
+                            style: const TextStyle(
+                                color: Color(0xFF243B8F),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded),
+                ]),
+              ),
+            );
+          },
         );
       },
     );
@@ -8854,11 +9102,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                     children: [
                       Text(
                         title,
-                        maxLines: 1,
-                        softWrap: false,
+                        maxLines: 2,
+                        softWrap: true,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF20242D),
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -11821,10 +12070,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 290,
-                            mainAxisExtent: 155,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
+                            maxCrossAxisExtent: 240,
+                            mainAxisExtent: 132,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
                           ),
                           itemCount: branchIds.length,
                           itemBuilder: (context, index) {
@@ -11855,14 +12104,14 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   if (mounted) setState(() {});
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.all(18),
+                                  padding: const EdgeInsets.all(14),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Container(
-                                        width: 54,
-                                        height: 54,
+                                        width: 48,
+                                        height: 48,
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
                                             colors: _payrollBranchColors(
@@ -11887,7 +12136,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             branchNames[branchId] ?? branchId,
                                           ),
                                           color: Colors.white,
-                                          size: 30,
+                                          size: 27,
                                         ),
                                       ),
                                       const Spacer(),
@@ -16766,34 +17015,56 @@ class _AdminDashboardState extends State<AdminDashboard>
     IconData icon,
     VoidCallback onTap,
   ) {
-    final isDashboard = selectedPage == 0;
-    final theme = _portalTheme;
+    final palette = switch (title) {
+      'Employees' => const (Color(0xFF289BFF), Color(0xFF0754D8)),
+      'Payroll' => const (Color(0xFF35D879), Color(0xFF08A84F)),
+      'Edit Payroll' => const (Color(0xFFFFB52D), Color(0xFFF07A00)),
+      'Attendance' => const (Color(0xFFFFB52D), Color(0xFFF07A00)),
+      'Import CSV' => const (Color(0xFF2DD4D7), Color(0xFF0698AD)),
+      'Reports' => const (Color(0xFF9A55FF), Color(0xFF6425E5)),
+      _ => const (Color(0xFFFF5570), Color(0xFFE51D43)),
+    };
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(
-        12,
-      ),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
         width: 150,
-        padding: const EdgeInsets.all(16),
+        height: 132,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDashboard
-              ? Colors.white.withValues(alpha: .18)
-              : const Color(0xFFF7F8FA),
-          borderRadius: BorderRadius.circular(
-            12,
+          gradient: LinearGradient(
+            colors: [Colors.white, palette.$1.withValues(alpha: .07)],
           ),
-          border: Border.all(
-            color: isDashboard ? const Color(0xFFE1E4E8) : Colors.black12,
-          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: palette.$1.withValues(alpha: .24)),
+          boxShadow: [
+            BoxShadow(
+              color: palette.$1.withValues(alpha: .10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: isDashboard ? theme.accent : const Color(0xFF2D55D8),
+            Container(
+              width: 55,
+              height: 55,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [palette.$1, palette.$2]),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.$1.withValues(alpha: .30),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 29),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               title,
               style: TextStyle(
