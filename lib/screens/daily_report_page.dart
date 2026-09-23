@@ -53,12 +53,17 @@ class _DailyReportPageState extends State<DailyReportPage> {
   DateTime? date;
   DateTime? reportFilterDate;
   bool saving = false;
+  bool _unlocked = false;
+  bool _unlocking = false;
   late Future<List<Map<String, dynamic>>> reports;
 
   @override
   void initState() {
     super.initState();
     reports = _load();
+    if (!widget.adminMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _unlock());
+    }
   }
 
   Future<List<Map<String, dynamic>>> _load() => SupabaseService.getDailyReports(
@@ -161,7 +166,17 @@ class _DailyReportPageState extends State<DailyReportPage> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) {
+    if (!widget.adminMode && !_unlocked) {
+      return Center(
+        child: FilledButton.icon(
+          onPressed: _unlocking ? null : _unlock,
+          icon: const Icon(Icons.lock_outline),
+          label: Text(_unlocking ? 'Checking PIN...' : 'Unlock Daily Report'),
+        ),
+      );
+    }
+    return ListView(
         padding: const EdgeInsets.all(18),
         children: [
           if (!widget.adminMode) _reportForm(),
@@ -188,6 +203,102 @@ class _DailyReportPageState extends State<DailyReportPage> {
           ),
         ],
       );
+  }
+
+  Future<void> _unlock() async {
+    if (_unlocking || _unlocked || !mounted) return;
+    setState(() => _unlocking = true);
+    try {
+      final pin = await _requestPin(
+        title: 'Daily Report Security',
+        label: 'Enter 4-digit PIN',
+      );
+      if (pin == null || !mounted) return;
+      final result = await SupabaseService.verifyDailyReportPin(pin);
+      if (result['valid'] != true) {
+        _message('Incorrect daily report PIN.');
+        return;
+      }
+      if (result['must_change'] == true) {
+        final newPin = await _requestNewPin();
+        if (newPin == null || !mounted) return;
+        await SupabaseService.changeDailyReportPin(
+          currentPin: pin,
+          newPin: newPin,
+        );
+      }
+      if (mounted) setState(() => _unlocked = true);
+    } catch (_) {
+      _message('Unable to unlock Daily Report. Please try again.');
+    } finally {
+      if (mounted) setState(() => _unlocking = false);
+    }
+  }
+
+  Future<String?> _requestPin({
+    required String title,
+    required String label,
+  }) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.lock_outline, color: blue),
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          maxLength: 4,
+          decoration: InputDecoration(labelText: label, counterText: ''),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (RegExp(r'^\d{4}$').hasMatch(value)) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  Future<String?> _requestNewPin() async {
+    final pin = await _requestPin(
+      title: 'Change Default PIN',
+      label: 'Create a new 4-digit PIN',
+    );
+    if (pin == null) return null;
+    if (pin == '2026') {
+      _message('Your new PIN must be different from 2026.');
+      return null;
+    }
+    final confirmation = await _requestPin(
+      title: 'Confirm New PIN',
+      label: 'Enter the new PIN again',
+    );
+    if (confirmation != pin) {
+      _message('The two PINs do not match.');
+      return null;
+    }
+    return pin;
+  }
+
+  void _message(String text) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
 
   Widget _historyDateFilter() => Container(
         constraints: const BoxConstraints(maxWidth: 420),
