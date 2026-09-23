@@ -3846,35 +3846,33 @@ async function ensureAdminAccount() {
     throw new Error("ADMIN_PASSWORD must contain at least 12 characters.");
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-  const updated = await pool.query(
-    `UPDATE public."app_user"
-     SET "username" = 'ADMIN',
-         "email" = $1,
-         "passwordHash" = $2,
-         "role" = 'ADMIN',
-         "isActive" = TRUE,
-         "mustChangePassword" = FALSE,
-         "passwordChangedAt" = NOW(),
-         "updatedAt" = NOW()
+  const existing = await pool.query(
+    `SELECT "id"
+     FROM public."app_user"
      WHERE UPPER(TRIM(COALESCE("username", ''))) = 'ADMIN'
         OR LOWER(TRIM(COALESCE("email", ''))) = $1
-     RETURNING "id"`,
-    [email, passwordHash],
+     LIMIT 1`,
+    [email],
   );
 
-  if (updated.rows.length === 0) {
-    await pool.query(
-      `INSERT INTO public."app_user" (
-         "id", "username", "email", "passwordHash", "role",
-         "isActive", "mustChangePassword", "passwordChangedAt",
-         "createdAt", "updatedAt"
-       ) VALUES ($1, 'ADMIN', $2, $3, 'ADMIN', TRUE, FALSE, NOW(), NOW(), NOW())`,
-      [crypto.randomUUID(), email, passwordHash],
-    );
+  // ADMIN_PASSWORD is a bootstrap credential only. Never overwrite an
+  // existing admin password during a restart or redeploy.
+  if (existing.rows.length > 0) {
+    console.log("Admin account already exists; startup password left unchanged.");
+    return;
   }
 
-  console.log("Admin account synchronized from environment configuration.");
+  const passwordHash = await bcrypt.hash(password, 12);
+  await pool.query(
+    `INSERT INTO public."app_user" (
+       "id", "username", "email", "passwordHash", "role",
+       "isActive", "mustChangePassword", "passwordChangedAt",
+       "createdAt", "updatedAt"
+     ) VALUES ($1, 'ADMIN', $2, $3, 'ADMIN', TRUE, FALSE, NOW(), NOW(), NOW())`,
+    [crypto.randomUUID(), email, passwordHash],
+  );
+
+  console.log("Admin account created from environment configuration.");
 }
 
 // ============================================================
