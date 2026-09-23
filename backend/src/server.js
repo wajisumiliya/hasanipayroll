@@ -1712,10 +1712,10 @@ app.post(
       client = await pool.connect();
       await client.query("BEGIN");
       const employeeResult = await client.query(
-        `UPDATE public.employees
-         SET is_active = $2
-         WHERE employee_id = $1
-         RETURNING employee_id`,
+        `UPDATE public."Employee"
+         SET "isActive" = $2
+         WHERE "employeeId" = $1
+         RETURNING "employeeId"`,
         [employeeId, isActive],
       );
 
