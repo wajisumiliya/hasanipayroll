@@ -53,12 +53,17 @@ class _DailyReportPageState extends State<DailyReportPage> {
   DateTime? date;
   DateTime? reportFilterDate;
   bool saving = false;
+  bool unlocked = false;
+  bool unlocking = false;
   late Future<List<Map<String, dynamic>>> reports;
 
   @override
   void initState() {
     super.initState();
     reports = _load();
+    if (!widget.adminMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _unlock());
+    }
   }
 
   Future<List<Map<String, dynamic>>> _load() => SupabaseService.getDailyReports(
@@ -161,7 +166,17 @@ class _DailyReportPageState extends State<DailyReportPage> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) {
+    if (!widget.adminMode && !unlocked) {
+      return Center(
+        child: FilledButton.icon(
+          onPressed: unlocking ? null : _unlock,
+          icon: const Icon(Icons.lock_outline),
+          label: Text(unlocking ? 'Checking...' : 'Unlock Daily Report'),
+        ),
+      );
+    }
+    return ListView(
         padding: const EdgeInsets.all(18),
         children: [
           if (!widget.adminMode) _reportForm(),
@@ -188,6 +203,173 @@ class _DailyReportPageState extends State<DailyReportPage> {
           ),
         ],
       );
+  }
+
+  Future<void> _unlock() async {
+    if (unlocking || unlocked || !mounted) return;
+    setState(() => unlocking = true);
+    try {
+      final controller = TextEditingController();
+      String? error;
+      final pin = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (_, setDialogState) => AlertDialog(
+            icon: const Icon(Icons.lock_outline, color: blue),
+            title: const Text('Daily Report Security'),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              decoration: InputDecoration(
+                labelText: '4-digit PIN',
+                counterText: '',
+                errorText: error,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final value = controller.text.trim();
+                  if (RegExp(r'^\d{4}$').hasMatch(value)) {
+                    Navigator.pop(dialogContext, value);
+                  } else {
+                    setDialogState(() => error = 'Enter exactly 4 digits.');
+                  }
+                },
+                child: const Text('Unlock'),
+              ),
+            ],
+          ),
+        ),
+      );
+      controller.dispose();
+      if (pin == null || !mounted) return;
+
+      final result = await SupabaseService.verifyDailyReportPin(pin);
+      if (result['valid'] != true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Incorrect daily report PIN.')),
+          );
+        }
+        return;
+      }
+      if (result['must_change'] == true && !await _changeDefaultPin(pin)) {
+        return;
+      }
+      if (mounted) setState(() => unlocked = true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to unlock Daily Report: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => unlocking = false);
+    }
+  }
+
+  Future<bool> _changeDefaultPin(String currentPin) async {
+    final newPin = TextEditingController();
+    final confirmation = TextEditingController();
+    String? error;
+    var busy = false;
+    final changed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          icon: const Icon(Icons.password_rounded, color: blue),
+          title: const Text('Create a New PIN'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'The default PIN must be changed before the Daily Report can open.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: newPin,
+                autofocus: true,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                decoration: InputDecoration(
+                  labelText: 'New 4-digit PIN',
+                  counterText: '',
+                  errorText: error,
+                ),
+              ),
+              TextField(
+                controller: confirmation,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm new PIN',
+                  counterText: '',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: busy ? null : () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      final value = newPin.text.trim();
+                      String? message;
+                      if (!RegExp(r'^\d{4}$').hasMatch(value)) {
+                        message = 'Enter exactly 4 digits.';
+                      } else if (value == '2026') {
+                        message = 'Choose a PIN different from 2026.';
+                      } else if (value != confirmation.text.trim()) {
+                        message = 'The PINs do not match.';
+                      }
+                      if (message != null) {
+                        setDialogState(() => error = message);
+                        return;
+                      }
+                      setDialogState(() => busy = true);
+                      try {
+                        await SupabaseService.changeDailyReportPin(
+                          currentPin: currentPin,
+                          newPin: value,
+                        );
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext, true);
+                        }
+                      } catch (_) {
+                        if (dialogContext.mounted) {
+                          setDialogState(() {
+                            busy = false;
+                            error = 'Unable to save the new PIN.';
+                          });
+                        }
+                      }
+                    },
+              child: Text(busy ? 'Saving...' : 'Save & Open'),
+            ),
+          ],
+        ),
+      ),
+    );
+    newPin.dispose();
+    confirmation.dispose();
+    return changed == true;
+  }
 
   Widget _historyDateFilter() => Container(
         constraints: const BoxConstraints(maxWidth: 420),
