@@ -177,32 +177,31 @@ class _DailyReportPageState extends State<DailyReportPage> {
       );
     }
     return ListView(
-        padding: const EdgeInsets.all(18),
-        children: [
-          if (!widget.adminMode) _reportForm(),
-          if (!widget.adminMode) const SizedBox(height: 24),
-          Text(widget.adminMode ? 'Submitted Daily Reports' : 'Report History',
-              style:
-                  const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
-          _historyDateFilter(),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: reports,
-            builder: (_, snapshot) {
-              if (!snapshot.hasData)
-                return const Center(child: CircularProgressIndicator());
-              final rows = snapshot.data!;
-              if (rows.isEmpty)
-                return const Center(
-                    child: Padding(
-                        padding: EdgeInsets.all(30),
-                        child: Text('No daily reports yet.')));
-              return Column(children: rows.map(_reportTile).toList());
-            },
-          ),
-        ],
-      );
+      padding: const EdgeInsets.all(18),
+      children: [
+        if (!widget.adminMode) _reportForm(),
+        if (!widget.adminMode) const SizedBox(height: 24),
+        Text(widget.adminMode ? 'Submitted Daily Reports' : 'Report History',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 12),
+        _historyDateFilter(),
+        const SizedBox(height: 12),
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: reports,
+          builder: (_, snapshot) {
+            if (!snapshot.hasData)
+              return const Center(child: CircularProgressIndicator());
+            final rows = snapshot.data!;
+            if (rows.isEmpty)
+              return const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(30),
+                      child: Text('No daily reports yet.')));
+            return Column(children: rows.map(_reportTile).toList());
+          },
+        ),
+      ],
+    );
   }
 
   Future<void> _unlock() async {
@@ -297,7 +296,8 @@ class _DailyReportPageState extends State<DailyReportPage> {
   }
 
   void _message(String text) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    if (mounted)
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   Widget _historyDateFilter() => Container(
