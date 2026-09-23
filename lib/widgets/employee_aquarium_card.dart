@@ -81,10 +81,17 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                 Color(0xFF087DB5),
                 Color(0xFF20B7C9)
               ]),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: const Color(0x887FD8F2), width: 1.4),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x33055B8E), blurRadius: 22, offset: Offset(0, 10))
+                color: Color(0x66031E3B),
+                blurRadius: 30,
+                offset: Offset(0, 16)),
+            BoxShadow(
+                color: Color(0x5533D5E8),
+                blurRadius: 12,
+                offset: Offset(-3, -3)),
           ],
         ),
         child: LayoutBuilder(builder: (_, constraints) {
@@ -216,17 +223,33 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
   Widget _badge(IconData icon) => Container(
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .16),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0x55FFFFFF), Color(0x14002550)],
+          ),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24)),
+          border: Border.all(color: Colors.white38),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x44002040), blurRadius: 7, offset: Offset(0, 4)),
+          ]),
       child: Icon(icon, color: Colors.white));
 
   Widget _stat(IconData icon, String value, String label) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-          color: const Color(0xCC06365E),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xE60C527A), Color(0xE604294E)],
+          ),
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white24)),
+          border: Border.all(color: Colors.white30),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x55001832), blurRadius: 6, offset: Offset(0, 4)),
+          ]),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 16, color: const Color(0xFFFFD95A)),
         const SizedBox(width: 6),

@@ -802,45 +802,97 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
         child: _page(),
       ),
-      bottomNavigationBar: NavigationBar(
-        indicatorColor: dailyTheme.accent.withValues(alpha: .22),
-        selectedIndex: selectedMobileIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            tab = mobilePages[index];
-          });
-        },
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Payslips',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Attendance',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.more_time_outlined),
-            selectedIcon: Icon(Icons.more_time),
-            label: 'OT Request',
-          ),
-          if (_isLocalEmployee)
-            const NavigationDestination(
-              icon: Icon(Icons.flight_takeoff_outlined),
-              selectedIcon: Icon(Icons.flight_takeoff),
-              label: 'Leave',
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8FAFD),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x3308255F),
+              blurRadius: 22,
+              offset: Offset(0, -7),
             ),
-        ],
+          ],
+        ),
+        child: NavigationBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          height: 72,
+          indicatorColor: Colors.transparent,
+          selectedIndex: selectedMobileIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              tab = mobilePages[index];
+            });
+          },
+          destinations: [
+            NavigationDestination(
+              icon: _mobileNavIcon(Icons.home_outlined, false),
+              selectedIcon: _mobileNavIcon(Icons.home_rounded, true),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: _mobileNavIcon(Icons.receipt_long_outlined, false),
+              selectedIcon: _mobileNavIcon(Icons.receipt_long_rounded, true),
+              label: 'Payslips',
+            ),
+            NavigationDestination(
+              icon: _mobileNavIcon(Icons.calendar_month_outlined, false),
+              selectedIcon: _mobileNavIcon(Icons.calendar_month_rounded, true),
+              label: 'Attendance',
+            ),
+            NavigationDestination(
+              icon: _mobileNavIcon(Icons.more_time_outlined, false),
+              selectedIcon: _mobileNavIcon(Icons.more_time_rounded, true),
+              label: 'OT Request',
+            ),
+            if (_isLocalEmployee)
+              NavigationDestination(
+                icon: _mobileNavIcon(Icons.flight_takeoff_outlined, false),
+                selectedIcon:
+                    _mobileNavIcon(Icons.flight_takeoff_rounded, true),
+                label: 'Leave',
+              ),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _mobileNavIcon(IconData icon, bool selected) => AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        width: 42,
+        height: 36,
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF315E8F), Color(0xFF061D4D)],
+                )
+              : const LinearGradient(
+                  colors: [Color(0xFFFFFFFF), Color(0xFFE7EDF5)],
+                ),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(
+            color: selected ? const Color(0xFF6F94BE) : const Color(0xFFD3DDE9),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF08255F)
+                  .withValues(alpha: selected ? .32 : .14),
+              blurRadius: selected ? 9 : 5,
+              offset: Offset(0, selected ? 5 : 3),
+            ),
+            const BoxShadow(
+              color: Color(0xCCFFFFFF),
+              blurRadius: 2,
+              offset: Offset(-1, -1),
+            ),
+          ],
+        ),
+        child: Icon(icon,
+            size: 21, color: selected ? Colors.white : const Color(0xFF405570)),
+      );
 
   // =============================================================
   // TITLES
@@ -1873,32 +1925,31 @@ class _EmployeePortalState extends State<EmployeePortal>
     required PayrollRecord? payroll,
     bool mobileCompact = false,
   }) {
-    const colors = [
-      Color(0xFF2F6FED),
-      Color(0xFFEC4775),
-      Color(0xFF1FB874),
-      Color(0xFF8B43E6),
-      Color(0xFFE5AF13),
-      Color(0xFF14AEC5),
-    ];
-    final accent = colors[(month - 1) % colors.length];
+    const accent = Color(0xFF0B347C);
     final available = payroll != null;
 
     if (mobileCompact) {
       return Material(
-        color: available ? accent.withValues(alpha: .08) : Colors.grey.shade50,
+        color: const Color(0xFFF7F9FC),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: available
-                ? accent.withValues(alpha: .22)
-                : Colors.grey.shade200,
+            color: available ? const Color(0xFFB9C8DB) : Colors.grey.shade200,
           ),
         ),
         child: InkWell(
           onTap: available ? () => _pdf(payroll) : null,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x2408255F),
+                    blurRadius: 7,
+                    offset: Offset(0, 4)),
+              ],
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1962,17 +2013,25 @@ class _EmployeePortalState extends State<EmployeePortal>
     return Container(
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: available ? accent.withValues(alpha: .08) : Colors.grey.shade50,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFFFFF), Color(0xFFE8EEF6)],
+        ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color:
-              available ? accent.withValues(alpha: .16) : Colors.grey.shade200,
+          color: available ? const Color(0xFFB9C8DB) : Colors.grey.shade200,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF08255F).withValues(alpha: .18),
+            blurRadius: 13,
+            offset: const Offset(0, 7),
+          ),
+          const BoxShadow(
+            color: Color(0xFFFFFFFF),
+            blurRadius: 3,
+            offset: Offset(-2, -2),
           ),
         ],
       ),
@@ -2040,7 +2099,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             child: FilledButton.icon(
               onPressed: available ? () => _pdf(payroll) : null,
               style: FilledButton.styleFrom(
-                backgroundColor: accent,
+                backgroundColor: const Color(0xFF08255F),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(0, 31),
                 padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -2069,8 +2128,15 @@ class _EmployeePortalState extends State<EmployeePortal>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .07),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFFFF), Color(0xFFE8EEF6)],
+        ),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD1DBE7)),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x2208255F), blurRadius: 9, offset: Offset(0, 5)),
+        ],
       ),
       child: Row(
         children: [
@@ -2126,7 +2192,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 icon: Icons.calendar_today_outlined,
                 label: 'Year',
                 value: '$year',
-                color: const Color(0xFF2D55D8),
+                color: const Color(0xFF0B347C),
               ),
             ),
             SizedBox(
@@ -2135,7 +2201,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 icon: Icons.payments_outlined,
                 label: 'Gross',
                 value: _moneyText(gross),
-                color: const Color(0xFF2563EB),
+                color: const Color(0xFF214E7A),
               ),
             ),
             SizedBox(
@@ -2144,7 +2210,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 icon: Icons.remove_circle_outline,
                 label: 'Year Deduction',
                 value: _moneyText(deductions),
-                color: const Color(0xFFD52B3F),
+                color: const Color(0xFF52657B),
               ),
             ),
             SizedBox(
@@ -2153,7 +2219,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 icon: Icons.account_balance_wallet_outlined,
                 label: 'Year Net',
                 value: _moneyText(net),
-                color: const Color(0xFF07833D),
+                color: const Color(0xFF08255F),
               ),
             ),
           ],

@@ -158,7 +158,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 const Spacer(),
                 const SizedBox(height: 8),
                 const Text(
-                  'HASANI BOOKS SDN BHD',
+                  'HASANI EDAR SDN BHD',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 10,
@@ -199,7 +199,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 const Text('IMPORTANT NOTES', style: _sectionStyle),
                 const SizedBox(height: 8),
                 _note(
-                    '1. This digital card is the property of Hasani Books Sdn Bhd.'),
+                    '1. This digital card is the property of Hasani Edar Sdn Bhd.'),
                 _note(
                     '2. It must be used only for authorised company identification.'),
                 _note('3. This employee card is non-transferable.'),
@@ -223,7 +223,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 const SizedBox(height: 18),
                 const Center(
                   child: Text(
-                    'HASANI BOOKS SDN BHD',
+                    'HASANI EDAR SDN BHD',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 10,
