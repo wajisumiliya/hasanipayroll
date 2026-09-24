@@ -80,32 +80,71 @@ class _EaFormsPageState extends State<EaFormsPage> {
             )
             .toList();
         if (records.isEmpty) continue;
-        double sum(String field) => _money(
-              records.fold(
+        final recordsByMonth = <int, Map<String, dynamic>>{};
+        for (final record in records) {
+          final period = DateTime.tryParse('${record['period']}');
+          if (period == null || period.year != _year) continue;
+          if (recordsByMonth.containsKey(period.month)) {
+            throw Exception(
+              '$id has more than one payroll record for '
+              '${DateFormat('MMMM yyyy').format(period)}.',
+            );
+          }
+          recordsByMonth[period.month] = record;
+        }
+        if (recordsByMonth.isEmpty) continue;
+
+        final monthlyBreakdown = <Map<String, dynamic>>[];
+        for (var month = 1; month <= 12; month++) {
+          final record = recordsByMonth[month];
+          if (record == null) continue;
+          final foreignWorkerSalary = _number(record['fw_salary']);
+          final salaryBase = foreignWorkerSalary != 0
+              ? foreignWorkerSalary
+              : _number(record['basic_salary']);
+          final salaryWages = _money(
+            salaryBase +
+                _number(record['overtime']) +
+                _number(record['cuti_umum']),
+          );
+          final commissionBonus = _money(
+            _number(record['commission']) + _number(record['bonus']),
+          );
+          final allowances = _money(
+            _number(record['elaun_kedatangan']) +
+                _number(record['elaun_perkhidmatan']) +
+                _number(record['elaun_kerajinan']) +
+                _number(record['other_earnings']) +
+                _number(record['housing_allowance']) +
+                _number(record['travel_allowance']),
+          );
+          monthlyBreakdown.add({
+            'month': month,
+            'period': '$_year-${month.toString().padLeft(2, '0')}',
+            'salary_wages': salaryWages,
+            'commission_bonus': commissionBonus,
+            'allowances': allowances,
+            'gross_income': _money(salaryWages + commissionBonus + allowances),
+            'pcb': _money(_number(record['pcb'])),
+            'zakat': _money(_number(record['zakat'])),
+            'epf_employee': _money(_number(record['epf_employee'])),
+            'socso_employee': _money(
+              _number(record['socso_employee']) +
+                  _number(record['eis_employee']),
+            ),
+          });
+        }
+
+        double annual(String field) => _money(
+              monthlyBreakdown.fold(
                 0,
-                (total, row) => total + _number(row[field]),
+                (total, month) => total + _number(month[field]),
               ),
             );
-        final salaryBase = _money(records.fold(0, (total, row) {
-          final foreignWorkerSalary = _number(row['fw_salary']);
-          return total +
-              (foreignWorkerSalary != 0
-                  ? foreignWorkerSalary
-                  : _number(row['basic_salary']));
-        }));
-        final salaryWages = _money(
-          salaryBase + sum('overtime') + sum('cuti_umum'),
-        );
-        final commissionBonus = _money(sum('commission') + sum('bonus'));
-        final allowances = _money(sum('elaun_kedatangan') +
-            sum('elaun_perkhidmatan') +
-            sum('elaun_kerajinan') +
-            sum('other_earnings') +
-            sum('housing_allowance') +
-            sum('travel_allowance'));
-        final employeeSocso = _money(
-          sum('socso_employee') + sum('eis_employee'),
-        );
+        final salaryWages = annual('salary_wages');
+        final commissionBonus = annual('commission_bonus');
+        final allowances = annual('allowances');
+        final employeeSocso = annual('socso_employee');
         rows.add({
           'employee_id': id,
           'tax_year': _year,
@@ -136,13 +175,15 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'compensation': 0,
             'total_employment_income':
                 _money(salaryWages + commissionBonus + allowances),
+            'months_included': recordsByMonth.keys.toList()..sort(),
+            'monthly_breakdown': monthlyBreakdown,
             'pension': 0,
             'other_income': 0,
-            'pcb': sum('pcb'),
+            'pcb': annual('pcb'),
             'cp38': 0,
-            'epf_employee': sum('epf_employee'),
+            'epf_employee': annual('epf_employee'),
             'socso_employee': employeeSocso,
-            'zakat': sum('zakat'),
+            'zakat': annual('zakat'),
             'tax_exempt_allowances': 0,
             'generated_date': DateFormat('dd/MM/yyyy').format(DateTime.now()),
           },
