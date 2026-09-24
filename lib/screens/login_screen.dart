@@ -77,7 +77,6 @@ class _LoginScreenState extends State<LoginScreen>
       curve: const Interval(.18, 1, curve: Curves.easeOutCubic),
     );
     _entranceController.forward();
-    _startIdleCatCycle();
     _startDateTimeAndWeather();
     _restoreSession();
   }
@@ -141,8 +140,6 @@ class _LoginScreenState extends State<LoginScreen>
     super.didChangeDependencies();
     if (_loginImagesPrecached) return;
     _loginImagesPrecached = true;
-    precacheImage(const AssetImage('assets/login_cat_cutout.png'), context);
-    precacheImage(const AssetImage('assets/login_cat_open_eyes.png'), context);
     precacheImage(const AssetImage('assets/login_natural_tree.png'), context);
   }
 
@@ -828,28 +825,53 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     Expanded(
                       flex: theme.day == 'Thursday' ? 8 : 9,
-                      child: Container(
-                        color: theme.panelBackground,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 42,
-                          vertical: 26,
-                        ),
-                        child: Column(
-                          children: [
-                            _sevenDayTopbar(theme),
-                            const SizedBox(height: 18),
-                            Expanded(
-                              child: Center(
-                                child: SingleChildScrollView(
-                                  child: ConstrainedBox(
-                                    constraints:
-                                        const BoxConstraints(maxWidth: 520),
-                                    child: _sevenDayAuthCard(theme),
-                                  ),
+                      child: ClipRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  theme.panelBackground
+                                      .withValues(
+                                        alpha: theme.isLight ? .56 : .44,
+                                      ),
+                                  theme.panelBackground
+                                      .withValues(
+                                        alpha: theme.isLight ? .72 : .60,
+                                      ),
+                                ],
+                              ),
+                              border: Border(
+                                left: BorderSide(
+                                  color: Colors.white.withValues(alpha: .16),
                                 ),
                               ),
                             ),
-                          ],
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 42,
+                              vertical: 26,
+                            ),
+                            child: Column(
+                              children: [
+                                _sevenDayTopbar(theme),
+                                const SizedBox(height: 18),
+                                Expanded(
+                                  child: Center(
+                                    child: SingleChildScrollView(
+                                      child: ConstrainedBox(
+                                        constraints:
+                                            const BoxConstraints(maxWidth: 520),
+                                        child: _sevenDayAuthCard(theme),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -976,25 +998,6 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(height: 13),
               Container(width: 46, height: 3, color: theme.accent1),
             ],
-          ),
-        ),
-        Positioned(
-          left: 6,
-          right: 6,
-          bottom: -30,
-          height: 570,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: Image.asset(
-              loading || _idleCatAwake
-                  ? 'assets/login_cat_open_eyes.png'
-                  : 'assets/login_cat_cutout.png',
-              key: ValueKey(loading || _idleCatAwake),
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              filterQuality: FilterQuality.high,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-            ),
           ),
         ),
       ],
@@ -1124,8 +1127,8 @@ class _LoginScreenState extends State<LoginScreen>
   }) {
     final foreground = theme.foreground;
     final fieldColor = theme.isLight
-        ? const Color(0xFFF7F9FC)
-        : Colors.white.withValues(alpha: .075);
+        ? Colors.white.withValues(alpha: .46)
+        : Colors.white.withValues(alpha: .085);
     final fieldText = theme.isLight ? const Color(0xFF10294D) : Colors.white;
 
     InputDecoration decoration(String label, IconData icon) {
@@ -1155,15 +1158,37 @@ class _LoginScreenState extends State<LoginScreen>
         child: Container(
           padding: EdgeInsets.all(compact ? 23 : 34),
           decoration: BoxDecoration(
-            color: theme.cardBackground,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: theme.isLight
+                  ? [
+                      Colors.white.withValues(alpha: .72),
+                      Colors.white.withValues(alpha: .42),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: .13),
+                      const Color(0xFF101722).withValues(alpha: .48),
+                    ],
+            ),
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: foreground.withValues(alpha: .14)),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: theme.isLight ? .68 : .22),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
                 color:
-                    Colors.black.withValues(alpha: theme.isLight ? .10 : .30),
-                blurRadius: 48,
-                offset: const Offset(0, 22),
+                    Colors.black.withValues(alpha: theme.isLight ? .15 : .38),
+                blurRadius: 54,
+                spreadRadius: -10,
+                offset: const Offset(0, 24),
+              ),
+              BoxShadow(
+                color: theme.accent1.withValues(alpha: .12),
+                blurRadius: 28,
+                spreadRadius: -8,
+                offset: const Offset(-8, -8),
               ),
             ],
           ),
