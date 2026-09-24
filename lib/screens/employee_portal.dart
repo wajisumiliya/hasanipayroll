@@ -15,6 +15,7 @@ import 'employee_ot_request_page.dart';
 import 'employee_leave_request_page.dart';
 import 'login_screen.dart';
 import 'supabase_service.dart';
+import 'ea_forms_page.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
@@ -541,6 +542,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         item('Attendance', Icons.calendar_month_outlined, 2),
         item('OT Request', Icons.more_time_outlined, 6),
         item('Payslip', Icons.receipt_long_outlined, 1),
+        item('EA Forms', Icons.description_outlined, 7),
         item('Bank Information', Icons.account_balance_outlined, 4),
         item('Change Password', Icons.lock_outline, 5),
       ],
@@ -777,6 +779,11 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
         title: Text(_mobileTitle()),
         actions: [
+          IconButton(
+            onPressed: () => setState(() => tab = 7),
+            tooltip: 'EA Forms',
+            icon: const Icon(Icons.description_outlined),
+          ),
           _notificationButton(color: Colors.white),
           _financialVisibilityButton(),
           const AppReloadButton(color: Colors.white),
@@ -921,6 +928,9 @@ class _EmployeePortalState extends State<EmployeePortal>
       case 6:
         return 'OT Request';
 
+      case 7:
+        return 'EA Forms';
+
       default:
         return 'Employee Portal';
     }
@@ -945,6 +955,9 @@ class _EmployeePortalState extends State<EmployeePortal>
 
       case 6:
         return 'OT Request';
+
+      case 7:
+        return 'EA Forms';
 
       default:
         return 'Employee Portal';
@@ -979,6 +992,9 @@ class _EmployeePortalState extends State<EmployeePortal>
 
       case 6:
         return EmployeeOtRequestPage(employee: employee!);
+
+      case 7:
+        return EaFormsPage.employee(employeeId: employeeId);
 
       default:
         return _dashboard();

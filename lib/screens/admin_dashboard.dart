@@ -30,6 +30,7 @@ import '../screens/attendance_dialog.dart';
 import 'monthly_roster_page.dart';
 import 'leave_requests_approval_page.dart';
 import 'daily_report_page.dart';
+import 'ea_forms_page.dart';
 import '../dashboard_brand_logos.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/employee_profile_details.dart';
@@ -340,6 +341,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Leave Requests';
       case 14:
         return 'Daily Reports';
+      case 15:
+        return 'EA Forms';
       default:
         return 'Dashboard';
     }
@@ -443,6 +446,9 @@ class _AdminDashboardState extends State<AdminDashboard>
 
       case 14:
         return const DailyReportPage.admin();
+
+      case 15:
+        return const EaFormsPage.admin();
 
       default:
         return _dashboardPage();
@@ -613,6 +619,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                       Icons.receipt_long_outlined,
                       12,
                     ),
+                    _drawerItem(
+                      'EA Forms',
+                      Icons.description_outlined,
+                      15,
+                    ),
                     _drawerActionItem(
                       'Edit Payroll',
                       Icons.edit_note_rounded,
@@ -714,6 +725,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         item('Employees', Icons.groups_rounded, 1),
         item('Payroll', Icons.account_balance_wallet_rounded, 2),
         item('Employee Payslips', Icons.badge_rounded, 12),
+        item('EA Forms', Icons.description_rounded, 15),
         PremiumPortalSidebarItem(
           label: 'Edit Payroll',
           icon: Icons.edit_document,
