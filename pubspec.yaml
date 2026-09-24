@@ -55,6 +55,7 @@ flutter:
     - assets/login_natural_tree.png
     - assets/login_days/
     - assets/branch_stamps/
+    - assets/ea_form_template/
     - assets/dashboard_epf_kwsp.png
     - assets/official_socso_logo.png
     - assets/dashboard_eis_icon.png

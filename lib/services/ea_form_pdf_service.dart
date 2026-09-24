@@ -1,164 +1,129 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+/// Draws values on the original uploaded LHDN C.P.8A page. The template
+/// remains an unmodified, edge-to-edge page background.
 class EaFormPdfService {
   static double _number(dynamic value) =>
       value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 
   static Future<Uint8List> build(Map<String, dynamic> form) async {
-    final data = Map<String, dynamic>.from(form['form_data'] as Map? ?? const {});
-    final year = form['tax_year'] ?? data['tax_year'] ?? '';
+    final data = Map<String, dynamic>.from(
+      form['form_data'] as Map? ?? const {},
+    );
+    final asset = await rootBundle.load('assets/ea_form_template/page_4.png');
+    final background = pw.MemoryImage(asset.buffer.asUint8List());
     final document = pw.Document(
-      title: 'EA Form $year - ${data['employee_name'] ?? ''}',
+      title: 'EA ${form['tax_year']} - ${data['employee_name'] ?? ''}',
       author: 'Hasani Books Edar Sdn Bhd',
     );
-    final money = (dynamic value) => _number(value).toStringAsFixed(2);
 
-    pw.Widget cell(String text,
-            {bool bold = false, pw.Alignment alignment = pw.Alignment.centerLeft}) =>
-        pw.Container(
-          alignment: alignment,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-          child: pw.Text(text,
-              style: pw.TextStyle(
-                  fontSize: 8,
-                  fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
-        );
+    String text(dynamic value) => value?.toString().trim() ?? '';
+    String money(dynamic value) {
+      final amount = _number(value);
+      return amount == 0 ? '' : amount.toStringAsFixed(2);
+    }
 
-    pw.Widget row(String code, String label, dynamic value) => pw.Table(
-          border: pw.TableBorder.all(width: .45),
-          columnWidths: const {
-            0: pw.FixedColumnWidth(30),
-            1: pw.FlexColumnWidth(),
-            2: pw.FixedColumnWidth(92),
-          },
-          children: [
-            pw.TableRow(children: [
-              cell(code, bold: true, alignment: pw.Alignment.center),
-              cell(label),
-              cell(money(value), bold: true, alignment: pw.Alignment.centerRight),
-            ])
-          ],
-        );
-
-    pw.Widget section(String title, List<pw.Widget> children) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-          children: [
-            pw.Container(
-              color: PdfColors.grey300,
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(title,
-                  style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+    pw.Widget field(
+      double left,
+      double top,
+      double width,
+      String content, {
+      double size = 7.2,
+      bool right = false,
+    }) {
+      if (content.isEmpty) return pw.SizedBox();
+      return pw.Positioned(
+        left: left,
+        top: top,
+        child: pw.SizedBox(
+          width: width,
+          height: size + 3,
+          child: pw.FittedBox(
+            fit: pw.BoxFit.scaleDown,
+            alignment: right ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
+            child: pw.Text(
+              content,
+              maxLines: 1,
+              style: pw.TextStyle(fontSize: size, color: PdfColors.black),
             ),
-            ...children,
-            pw.SizedBox(height: 8),
-          ],
-        );
-
-    document.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(28, 24, 28, 25),
-        footer: (context) => pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Text('EA $year', style: const pw.TextStyle(fontSize: 7)),
-            pw.Text('Page ${context.pageNumber} of ${context.pagesCount}',
-                style: const pw.TextStyle(fontSize: 7)),
-          ],
+          ),
         ),
-        build: (_) => [
-          pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            pw.Container(
-              width: 58,
-              height: 42,
-              alignment: pw.Alignment.center,
-              decoration: pw.BoxDecoration(border: pw.Border.all(width: 1.2)),
-              child: pw.Text('EA',
-                  style: pw.TextStyle(fontSize: 23, fontWeight: pw.FontWeight.bold)),
-            ),
-            pw.SizedBox(width: 12),
-            pw.Expanded(
-              child: pw.Column(children: [
-                pw.Text('STATEMENT OF REMUNERATION FROM EMPLOYMENT',
-                    textAlign: pw.TextAlign.center,
-                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 3),
-                pw.Text('FOR THE YEAR ENDED 31 DECEMBER $year',
-                    style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                pw.Text('C.P. 8A - Pin. 2025', style: const pw.TextStyle(fontSize: 8)),
-              ]),
-            ),
-            pw.SizedBox(width: 70, child: pw.Text('MALAYSIA', textAlign: pw.TextAlign.center,
-                style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))),
+      );
+    }
+
+    final year = text(form['tax_year'] ?? data['tax_year']);
+    document.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero,
+        build: (_) => pw.FullPage(
+          ignoreMargins: true,
+          child: pw.Stack(children: [
+            pw.Positioned.fill(child: pw.Image(background, fit: pw.BoxFit.fill)),
+
+            // Header
+            field(99, 63, 86, text(data['employer_tin'])),
+            field(380, 46, 106, text(data['income_tax_no'])),
+            field(493, 64, 92, text(data['lhdn_branch'])),
+            field(375, 64, 38, year),
+
+            // A - Butiran pekerja
+            field(190, 111, 390, text(data['employee_name'])),
+            field(128, 129, 180, text(data['designation'])),
+            field(409, 129, 176, text(data['employee_id'])),
+            field(128, 147, 180, text(data['identification_no'])),
+            field(409, 147, 176, text(data['passport_no'])),
+            field(128, 165, 180, text(data['epf_no'])),
+            field(409, 165, 176, text(data['socso_no'])),
+            field(188, 190, 120, text(data['eligible_children'])),
+            field(409, 183, 176, text(data['employment_start'])),
+            field(409, 201, 176, text(data['employment_end'])),
+
+            // B - Pendapatan penggajian, manfaat dan tempat kediaman
+            field(510, 253, 76, money(data['salary_wages']), right: true),
+            field(510, 271, 76, money(data['commission_bonus']), right: true),
+            field(510, 289, 76, money(data['allowances_overtime']), right: true),
+            field(510, 307, 76, money(data['tax_paid_by_employer']), right: true),
+            field(510, 325, 76, money(data['esos_benefit']), right: true),
+            field(510, 343, 76, money(data['gratuity']), right: true),
+            field(510, 378, 76, money(data['arrears']), right: true),
+            field(510, 396, 76, money(data['benefits_in_kind']), right: true),
+            field(510, 414, 76, money(data['living_accommodation']), right: true),
+            field(510, 432, 76, money(data['pension_refund']), right: true),
+            field(510, 450, 76, money(data['compensation']), right: true),
+
+            // C - Pencen dan lain-lain
+            field(510, 488, 76, money(data['pension']), right: true),
+            field(510, 506, 76, money(data['other_income']), right: true),
+
+            // D - Jumlah potongan
+            field(510, 557, 76, money(data['pcb']), right: true),
+            field(510, 575, 76, money(data['cp38']), right: true),
+            field(510, 593, 76, money(data['zakat']), right: true),
+            field(510, 611, 76, money(data['approved_donations']), right: true),
+            field(510, 620, 76, text(data['eligible_children'])),
+
+            // E - Caruman pekerja
+            field(85, 657, 360, 'KUMPULAN WANG SIMPANAN PEKERJA'),
+            field(510, 675, 76, money(data['epf_employee']), right: true),
+            field(510, 693, 76, money(data['socso_employee']), right: true),
+
+            // F - Elaun/manfaat dikecualikan cukai
+            field(510, 711, 76, money(data['tax_exempt_allowances']), right: true),
+
+            // Employer certification
+            field(354, 749, 225, text(data['officer_name'])),
+            field(354, 763, 225, text(data['officer_designation'])),
+            field(354, 777, 225, text(data['employer_name'])),
+            field(354, 791, 225, text(data['employer_address'])),
+            field(354, 808, 225, text(data['employer_phone'])),
+            field(76, 803, 120, text(data['generated_date'])),
           ]),
-          pw.SizedBox(height: 10),
-          pw.Container(
-            padding: const pw.EdgeInsets.all(6),
-            decoration: pw.BoxDecoration(border: pw.Border.all()),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Text('EMPLOYER INFORMATION', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 4),
-              pw.Text('Name: ${data['employer_name'] ?? 'HASANI BOOKS EDAR SDN BHD'}', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text('Employer no.: ${data['employer_no'] ?? '-'}', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text('Address: ${data['employer_address'] ?? '-'}', style: const pw.TextStyle(fontSize: 8)),
-            ]),
-          ),
-          pw.SizedBox(height: 8),
-          section('A. PARTICULARS OF EMPLOYEE', [
-            pw.Table(border: pw.TableBorder.all(width: .45), columnWidths: const {0: pw.FixedColumnWidth(135), 1: pw.FlexColumnWidth()}, children: [
-              pw.TableRow(children: [cell('Employee name', bold: true), cell('${data['employee_name'] ?? '-'}')]),
-              pw.TableRow(children: [cell('Employee / staff number', bold: true), cell('${data['employee_id'] ?? '-'}')]),
-              pw.TableRow(children: [cell('Identification / passport no.', bold: true), cell('${data['identification_no'] ?? '-'}')]),
-              pw.TableRow(children: [cell('Income tax no.', bold: true), cell('${data['income_tax_no'] ?? '-'}')]),
-              pw.TableRow(children: [cell('EPF no.', bold: true), cell('${data['epf_no'] ?? '-'}')]),
-              pw.TableRow(children: [cell('SOCSO no.', bold: true), cell('${data['socso_no'] ?? '-'}')]),
-              pw.TableRow(children: [cell('Employment period', bold: true), cell('${data['employment_period'] ?? '01/01/$year - 31/12/$year'}')]),
-            ]),
-          ]),
-          section('B. INCOME FROM EMPLOYMENT, BENEFITS AND LIVING ACCOMMODATION (RM)', [
-            row('B1(a)', 'Gross salary, wages or leave pay', data['salary_wages']),
-            row('B1(b)', 'Fees, commission and bonus', data['commission_bonus']),
-            row('B1(c)', 'Tips, allowances, overtime and other taxable income', data['allowances_overtime']),
-            row('B2', 'Benefits in kind', data['benefits_in_kind']),
-            row('B3', 'Value of living accommodation', data['living_accommodation']),
-            row('B4', 'Refund from unapproved pension/provident fund', data['pension_refund']),
-            row('B5', 'Compensation for loss of employment', data['compensation']),
-            row('B', 'TOTAL', data['total_employment_income']),
-          ]),
-          section('C. PENSION AND OTHER INCOME (RM)', [
-            row('C1', 'Pension', data['pension']),
-            row('C2', 'Annuities or other periodic payments', data['other_income']),
-          ]),
-          section('D. DEDUCTIONS / CONTRIBUTIONS (RM)', [
-            row('D1', 'Monthly Tax Deduction (PCB)', data['pcb']),
-            row('D2', 'CP38 deduction', data['cp38']),
-            row('D3', 'Employee EPF contribution', data['epf_employee']),
-            row('D4', 'Zakat paid through payroll', data['zakat']),
-          ]),
-          section('E. TAX-EXEMPT ALLOWANCES / BENEFITS (RM)', [
-            row('E', 'Tax-exempt allowances and benefits', data['tax_exempt_allowances']),
-          ]),
-          pw.Container(
-            padding: const pw.EdgeInsets.all(7),
-            decoration: pw.BoxDecoration(border: pw.Border.all()),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Text('CERTIFICATION', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 5),
-              pw.Text('This statement was generated from the employer payroll records and published to the employee portal.', style: const pw.TextStyle(fontSize: 8)),
-              pw.SizedBox(height: 16),
-              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                pw.Text('Generated: ${data['generated_date'] ?? ''}', style: const pw.TextStyle(fontSize: 8)),
-                pw.Text('Employer: HASANI BOOKS EDAR SDN BHD', style: const pw.TextStyle(fontSize: 8)),
-              ]),
-            ]),
-          ),
-          pw.SizedBox(height: 7),
-          pw.Text('Important: Please verify personal and tax information. Report any discrepancy to payroll administration.',
-              style: pw.TextStyle(fontSize: 7, fontStyle: pw.FontStyle.italic)),
-        ],
+        ),
       ),
     );
     return document.save();
