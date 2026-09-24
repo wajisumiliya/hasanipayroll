@@ -1,0 +1,235 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
+
+import '../services/ea_form_pdf_service.dart';
+import 'supabase_service.dart';
+
+class EaFormsPage extends StatefulWidget {
+  const EaFormsPage.admin({super.key})
+      : employeeId = null,
+        isAdmin = true;
+
+  const EaFormsPage.employee({super.key, required this.employeeId})
+      : isAdmin = false;
+
+  final String? employeeId;
+  final bool isAdmin;
+
+  @override
+  State<EaFormsPage> createState() => _EaFormsPageState();
+}
+
+class _EaFormsPageState extends State<EaFormsPage> {
+  int _year = DateTime.now().year - 1;
+  bool _busy = false;
+  String _search = '';
+  Future<List<Map<String, dynamic>>>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() {
+    _future = _load();
+    if (mounted) setState(() {});
+  }
+
+  Future<List<Map<String, dynamic>>> _load() async {
+    var query = SupabaseService.client
+        .from('employee_ea_forms')
+        .select()
+        .eq('tax_year', _year);
+    if (!widget.isAdmin) query = query.eq('employee_id', widget.employeeId!);
+    final rows = await query.order('employee_id');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  double _number(dynamic value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+  Future<void> _generateAll() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final start = '$_year-01-01';
+      final end = '${_year + 1}-01-01';
+      final results = await Future.wait([
+        SupabaseService.client.from('employees').select(),
+        SupabaseService.client
+            .from('payroll')
+            .select()
+            .gte('period', start)
+            .lt('period', end),
+      ]);
+      final employees = List<Map<String, dynamic>>.from(results[0]);
+      final payroll = List<Map<String, dynamic>>.from(results[1]);
+      final rows = <Map<String, dynamic>>[];
+      for (final employee in employees) {
+        final id = '${employee['employee_id'] ?? ''}'.trim();
+        if (id.isEmpty) continue;
+        final records = payroll.where((row) => '${row['employee_id']}' == id).toList();
+        if (records.isEmpty) continue;
+        double sum(String field) => records.fold(0, (total, row) => total + _number(row[field]));
+        final salary = sum('basic_salary') + sum('fw_salary');
+        final commissionBonus = sum('commission') + sum('bonus');
+        final allowances = sum('elaun_kedatangan') +
+            sum('elaun_perkhidmatan') +
+            sum('elaun_kerajinan') +
+            sum('overtime') +
+            sum('other_earnings') +
+            sum('housing_allowance') +
+            sum('travel_allowance') +
+            sum('cuti_umum');
+        rows.add({
+          'employee_id': id,
+          'tax_year': _year,
+          'generated_by': SupabaseService.client.auth.currentUser?.id,
+          'generated_at': DateTime.now().toUtc().toIso8601String(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+          'form_data': {
+            'tax_year': _year,
+            'employer_name': 'HASANI BOOKS EDAR SDN BHD',
+            'employer_no': '',
+            'employer_address': '',
+            'employee_id': id,
+            'employee_name': employee['name'] ?? '',
+            'identification_no': employee['new_ic_no'] ?? '',
+            'income_tax_no': employee['income_tax_no'] ?? '',
+            'epf_no': employee['epf_no'] ?? '',
+            'socso_no': employee['socso_no'] ?? '',
+            'employment_period': '01/01/$_year - 31/12/$_year',
+            'salary_wages': salary,
+            'commission_bonus': commissionBonus,
+            'allowances_overtime': allowances,
+            'benefits_in_kind': 0,
+            'living_accommodation': 0,
+            'pension_refund': 0,
+            'compensation': 0,
+            'total_employment_income': salary + commissionBonus + allowances,
+            'pension': 0,
+            'other_income': 0,
+            'pcb': sum('pcb'),
+            'cp38': 0,
+            'epf_employee': sum('epf_employee'),
+            'zakat': sum('zakat'),
+            'tax_exempt_allowances': 0,
+            'generated_date': DateFormat('dd/MM/yyyy').format(DateTime.now()),
+          },
+        });
+      }
+      if (rows.isEmpty) throw Exception('No payroll records found for $_year.');
+      await SupabaseService.client
+          .from('employee_ea_forms')
+          .upsert(rows, onConflict: 'employee_id,tax_year');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${rows.length} EA form(s) generated and published.'),
+      ));
+      _reload();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to generate EA forms: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openPdf(Map<String, dynamic> form) async {
+    final bytes = await EaFormPdfService.build(form);
+    final id = form['employee_id'] ?? 'employee';
+    await Printing.layoutPdf(
+      name: 'EA_${id}_${form['tax_year']}.pdf',
+      onLayout: (_) async => bytes,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final years = List.generate(8, (index) => DateTime.now().year - index);
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final rows = (snapshot.data ?? const <Map<String, dynamic>>[])
+            .where((row) {
+              final data = Map<String, dynamic>.from(row['form_data'] as Map? ?? const {});
+              final haystack = '${row['employee_id']} ${data['employee_name']}'.toLowerCase();
+              return haystack.contains(_search.toLowerCase());
+            })
+            .toList();
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(widget.isAdmin ? 'Employee EA Forms' : 'My EA Forms',
+                style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 6),
+            Text(widget.isAdmin
+                ? 'Generate and publish annual EA statements from completed payroll records.'
+                : 'EA forms published by payroll administration will appear here.'),
+            const SizedBox(height: 18),
+            Wrap(spacing: 12, runSpacing: 12, children: [
+              SizedBox(
+                width: 170,
+                child: DropdownButtonFormField<int>(
+                  initialValue: _year,
+                  decoration: const InputDecoration(labelText: 'Tax year', border: OutlineInputBorder()),
+                  items: years.map((year) => DropdownMenuItem(value: year, child: Text('$year'))).toList(),
+                  onChanged: (year) {
+                    if (year == null) return;
+                    _year = year;
+                    _reload();
+                  },
+                ),
+              ),
+              if (widget.isAdmin)
+                FilledButton.icon(
+                  onPressed: _busy ? null : _generateAll,
+                  icon: _busy
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.auto_awesome_outlined),
+                  label: Text(_busy ? 'Generating...' : 'Generate & publish'),
+                ),
+              if (widget.isAdmin)
+                SizedBox(
+                  width: 280,
+                  child: TextField(
+                    decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search employee', border: OutlineInputBorder()),
+                    onChanged: (value) => setState(() => _search = value),
+                  ),
+                ),
+            ]),
+            const SizedBox(height: 18),
+            if (snapshot.connectionState == ConnectionState.waiting)
+              const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+            else if (snapshot.hasError)
+              Card(child: Padding(padding: const EdgeInsets.all(20), child: Text('Unable to load EA forms. Apply the EA form database migration first.\n\n${snapshot.error}')))
+            else if (rows.isEmpty)
+              const Card(child: Padding(padding: EdgeInsets.all(28), child: Center(child: Text('No EA forms have been generated for this year.'))))
+            else
+              ...rows.map((row) {
+                final data = Map<String, dynamic>.from(row['form_data'] as Map? ?? const {});
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.description_outlined)),
+                    title: Text('${data['employee_name'] ?? row['employee_id']}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    subtitle: Text('EA ${row['tax_year']} • ${row['employee_id']} • Published ${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${row['generated_at']}')?.toLocal() ?? DateTime.now())}'),
+                    trailing: FilledButton.tonalIcon(
+                      onPressed: () => _openPdf(row),
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      label: const Text('View PDF'),
+                    ),
+                  ),
+                );
+              }),
+          ],
+        );
+      },
+    );
+  }
+}
