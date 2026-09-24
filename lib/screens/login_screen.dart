@@ -825,53 +825,44 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     Expanded(
                       flex: theme.day == 'Thursday' ? 8 : 9,
-                      child: ClipRect(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  theme.panelBackground
-                                      .withValues(
-                                        alpha: theme.isLight ? .56 : .44,
-                                      ),
-                                  theme.panelBackground
-                                      .withValues(
-                                        alpha: theme.isLight ? .72 : .60,
-                                      ),
-                                ],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Colors.transparent,
+                              theme.pageBackground.withValues(
+                                alpha: theme.isLight ? .16 : .24,
                               ),
-                              border: Border(
-                                left: BorderSide(
-                                  color: Colors.white.withValues(alpha: .16),
-                                ),
-                              ),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 42,
-                              vertical: 26,
-                            ),
-                            child: Column(
-                              children: [
-                                _sevenDayTopbar(theme),
-                                const SizedBox(height: 18),
-                                Expanded(
-                                  child: Center(
-                                    child: SingleChildScrollView(
-                                      child: ConstrainedBox(
-                                        constraints:
-                                            const BoxConstraints(maxWidth: 520),
-                                        child: _sevenDayAuthCard(theme),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            ],
+                          ),
+                          border: Border(
+                            left: BorderSide(
+                              color: Colors.white.withValues(alpha: .18),
                             ),
                           ),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 42,
+                          vertical: 26,
+                        ),
+                        child: Column(
+                          children: [
+                            _sevenDayTopbar(theme),
+                            const SizedBox(height: 18),
+                            Expanded(
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 520),
+                                    child: _sevenDayAuthCard(theme),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -1127,8 +1118,8 @@ class _LoginScreenState extends State<LoginScreen>
   }) {
     final foreground = theme.foreground;
     final fieldColor = theme.isLight
-        ? Colors.white.withValues(alpha: .46)
-        : Colors.white.withValues(alpha: .085);
+        ? Colors.white.withValues(alpha: .30)
+        : Colors.white.withValues(alpha: .10);
     final fieldText = theme.isLight ? const Color(0xFF10294D) : Colors.white;
 
     InputDecoration decoration(String label, IconData icon) {
@@ -1154,7 +1145,7 @@ class _LoginScreenState extends State<LoginScreen>
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
         child: Container(
           padding: EdgeInsets.all(compact ? 23 : 34),
           decoration: BoxDecoration(
@@ -1163,18 +1154,18 @@ class _LoginScreenState extends State<LoginScreen>
               end: Alignment.bottomRight,
               colors: theme.isLight
                   ? [
-                      Colors.white.withValues(alpha: .72),
-                      Colors.white.withValues(alpha: .42),
+                      Colors.white.withValues(alpha: .48),
+                      Colors.white.withValues(alpha: .18),
                     ]
                   : [
-                      Colors.white.withValues(alpha: .13),
-                      const Color(0xFF101722).withValues(alpha: .48),
+                      Colors.white.withValues(alpha: .16),
+                      const Color(0xFF101722).withValues(alpha: .26),
                     ],
             ),
             borderRadius: BorderRadius.circular(26),
             border: Border.all(
               color: Colors.white.withValues(alpha: theme.isLight ? .68 : .22),
-              width: 1.2,
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
@@ -1460,21 +1451,6 @@ class _LoginScreenState extends State<LoginScreen>
                     width: 52,
                     child: Divider(color: Color(0xFFF2C15A), thickness: 3)),
               ],
-            ),
-          ),
-          Positioned(
-            left: -42,
-            bottom: 24,
-            child: Image.asset(
-              loading || _idleCatAwake
-                  ? 'assets/login_cat_open_eyes.png'
-                  : 'assets/login_cat_cutout.png',
-              key: ValueKey(loading || _idleCatAwake),
-              width: 455,
-              height: 505,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomLeft,
-              filterQuality: FilterQuality.high,
             ),
           ),
           const Positioned(
@@ -1786,16 +1762,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 const SizedBox(width: 56),
                                 Expanded(
                                   flex: 11,
-                                  child: _entrance(
-                                    _desktopCatHero(
-                                      theme,
-                                      height: (constraints.maxHeight - 90)
-                                          .clamp(480.0, 720.0),
-                                      bottomExtension: 95,
-                                    ),
-                                    _heroEntrance,
-                                    42,
-                                  ),
+                                  child: const SizedBox.shrink(),
                                 ),
                               ],
                             ),
@@ -1821,49 +1788,6 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _desktopCatHero(
-    _DailyLoginTheme theme, {
-    required double height,
-    required double bottomExtension,
-  }) {
-    return Transform.translate(
-      offset: Offset(0, bottomExtension),
-      child: SizedBox(
-        height: height,
-        width: double.infinity,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Align(
-              alignment: Alignment.bottomLeft,
-              child: Transform.translate(
-                offset: const Offset(-155, 0),
-                child: Image.asset(
-                  loading || _idleCatAwake
-                      ? 'assets/login_cat_open_eyes.png'
-                      : 'assets/login_cat_cutout.png',
-                  key: ValueKey(loading || _idleCatAwake),
-                  width: double.infinity,
-                  height: height,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomRight,
-                  filterQuality: FilterQuality.high,
-                  errorBuilder: (_, error, __) => Center(
-                    child: Icon(
-                      Icons.pets_rounded,
-                      size: 180,
-                      color: theme.accent1.withValues(alpha: .8),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
