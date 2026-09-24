@@ -107,64 +107,107 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                       ),
                       const SizedBox(height: 12),
                       _portraitPhoto(),
-                      const SizedBox(height: 11),
-                      Text(
-                        employee.name.toUpperCase(),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: navy,
-                          fontSize: 20,
-                          height: 1.05,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: .35,
-                        ),
-                      ),
-                      Container(
-                        width: 170,
-                        height: 2,
-                        margin: const EdgeInsets.only(top: 5, bottom: 10),
-                        color: red,
-                      ),
-                      _badgeDetail('Employee ID', employee.employeeId),
-                      _badgeDetail('Designation', employee.designation),
-                      _badgeDetail('Department', employee.department),
-                      _badgeDetail('Branch', _branch),
-                      _badgeDetail('Joining Date', _joining),
-                      _badgeDetail('Mobile No.', employee.phone),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: employee.isActive
-                              ? const Color(0xFFDCFCE7)
-                              : const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          employee.isActive ? 'ACTIVE EMPLOYEE' : 'INACTIVE',
-                          style: TextStyle(
-                            color: employee.isActive
-                                ? const Color(0xFF166534)
-                                : const Color(0xFF991B1B),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1,
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xFF123F86), Color(0xFF031C4C)],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: .18),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                employee.name.toUpperCase(),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 19,
+                                  height: 1.05,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: .35,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                employee.designation.trim().isEmpty
+                                    ? 'EMPLOYEE'
+                                    : employee.designation.toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFFDCEAFF),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                              Container(
+                                width: 68,
+                                height: 2,
+                                margin:
+                                    const EdgeInsets.only(top: 6, bottom: 9),
+                                color: red,
+                              ),
+                              _badgeDetail('Employee ID', employee.employeeId),
+                              _badgeDetail('Department', employee.department),
+                              _badgeDetail('Branch', _branch),
+                              _badgeDetail('Joining Date', _joining),
+                              _badgeDetail('Mobile', employee.phone),
+                              const Spacer(),
+                              const Text(
+                                'HASANI EDAR SDN BHD',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      const Text(
-                        'HASANI EDAR SDN BHD',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 7),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color:
+                              employee.isActive ? red : const Color(0xFF6B7280),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.person_rounded,
+                              color: Colors.white,
+                              size: 17,
+                            ),
+                            const SizedBox(width: 7),
+                            Text(
+                              employee.isActive
+                                  ? 'ACTIVE EMPLOYEE'
+                                  : 'INACTIVE EMPLOYEE',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -176,22 +219,24 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
               width: 84,
               height: 42,
               decoration: BoxDecoration(
-                color: navy,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF8FAFC), Color(0xFF94A3B8)],
+                ),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(18),
                   bottom: Radius.circular(12),
                 ),
-                border: Border.all(color: blue, width: 3),
+                border: Border.all(color: const Color(0xFF64748B), width: 3),
               ),
               alignment: Alignment.center,
               child: Container(
                 width: 35,
                 height: 13,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDBD4CC),
+                  color: navy,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: const Color(0xFFB08A45),
+                    color: const Color(0xFFE2E8F0),
                     width: 2,
                   ),
                 ),
@@ -207,12 +252,12 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 94,
+              width: 88,
               child: Text(
                 label,
                 style: const TextStyle(
-                  color: Color(0xFF1F2937),
-                  fontSize: 11,
+                  color: Color(0xFFCADCFA),
+                  fontSize: 10,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -220,8 +265,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
             const Text(
               ':',
               style: TextStyle(
-                color: Color(0xFF1F2937),
-                fontSize: 11,
+                color: Color(0xFFED1C24),
+                fontSize: 10,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -232,8 +277,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Color(0xFF111827),
-                  fontSize: 11,
+                  color: Colors.white,
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -416,12 +461,17 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: navy.withValues(alpha: .18)),
+          border: Border.all(color: const Color(0xFF94A3B8), width: 3),
           boxShadow: [
             BoxShadow(
-              color: navy.withValues(alpha: .18),
-              blurRadius: 28,
-              offset: const Offset(0, 12),
+              color: navy.withValues(alpha: .28),
+              blurRadius: 30,
+              offset: const Offset(0, 14),
+            ),
+            const BoxShadow(
+              color: Color(0x99FFFFFF),
+              blurRadius: 2,
+              offset: Offset(-2, -2),
             ),
           ],
         ),

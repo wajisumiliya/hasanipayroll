@@ -50,6 +50,8 @@ class _EaFormsPageState extends State<EaFormsPage> {
   double _number(dynamic value) =>
       value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 
+  double _money(double value) => (value * 100).roundToDouble() / 100;
+
   Future<void> _generateAll() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -70,19 +72,40 @@ class _EaFormsPageState extends State<EaFormsPage> {
       for (final employee in employees) {
         final id = '${employee['employee_id'] ?? ''}'.trim();
         if (id.isEmpty) continue;
-        final records = payroll.where((row) => '${row['employee_id']}' == id).toList();
+        final records = payroll
+            .where(
+              (row) =>
+                  '${row['employee_id']}'.trim().toUpperCase() ==
+                  id.toUpperCase(),
+            )
+            .toList();
         if (records.isEmpty) continue;
-        double sum(String field) => records.fold(0, (total, row) => total + _number(row[field]));
-        final salary = sum('basic_salary') + sum('fw_salary');
-        final commissionBonus = sum('commission') + sum('bonus');
-        final allowances = sum('elaun_kedatangan') +
+        double sum(String field) => _money(
+              records.fold(
+                0,
+                (total, row) => total + _number(row[field]),
+              ),
+            );
+        final salaryBase = _money(records.fold(0, (total, row) {
+          final foreignWorkerSalary = _number(row['fw_salary']);
+          return total +
+              (foreignWorkerSalary != 0
+                  ? foreignWorkerSalary
+                  : _number(row['basic_salary']));
+        }));
+        final salaryWages = _money(
+          salaryBase + sum('overtime') + sum('cuti_umum'),
+        );
+        final commissionBonus = _money(sum('commission') + sum('bonus'));
+        final allowances = _money(sum('elaun_kedatangan') +
             sum('elaun_perkhidmatan') +
             sum('elaun_kerajinan') +
-            sum('overtime') +
             sum('other_earnings') +
             sum('housing_allowance') +
-            sum('travel_allowance') +
-            sum('cuti_umum');
+            sum('travel_allowance'));
+        final employeeSocso = _money(
+          sum('socso_employee') + sum('eis_employee'),
+        );
         rows.add({
           'employee_id': id,
           'tax_year': _year,
@@ -104,20 +127,21 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'employment_start': employee['joining_date'] ?? '',
             'employment_end': '',
             'eligible_children': '',
-            'salary_wages': salary,
+            'salary_wages': salaryWages,
             'commission_bonus': commissionBonus,
             'allowances_overtime': allowances,
             'benefits_in_kind': 0,
             'living_accommodation': 0,
             'pension_refund': 0,
             'compensation': 0,
-            'total_employment_income': salary + commissionBonus + allowances,
+            'total_employment_income':
+                _money(salaryWages + commissionBonus + allowances),
             'pension': 0,
             'other_income': 0,
             'pcb': sum('pcb'),
             'cp38': 0,
             'epf_employee': sum('epf_employee'),
-            'socso_employee': sum('socso_employee'),
+            'socso_employee': employeeSocso,
             'zakat': sum('zakat'),
             'tax_exempt_allowances': 0,
             'generated_date': DateFormat('dd/MM/yyyy').format(DateTime.now()),
@@ -159,18 +183,20 @@ class _EaFormsPageState extends State<EaFormsPage> {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _future,
       builder: (context, snapshot) {
-        final rows = (snapshot.data ?? const <Map<String, dynamic>>[])
-            .where((row) {
-              final data = Map<String, dynamic>.from(row['form_data'] as Map? ?? const {});
-              final haystack = '${row['employee_id']} ${data['employee_name']}'.toLowerCase();
-              return haystack.contains(_search.toLowerCase());
-            })
-            .toList();
+        final rows =
+            (snapshot.data ?? const <Map<String, dynamic>>[]).where((row) {
+          final data =
+              Map<String, dynamic>.from(row['form_data'] as Map? ?? const {});
+          final haystack =
+              '${row['employee_id']} ${data['employee_name']}'.toLowerCase();
+          return haystack.contains(_search.toLowerCase());
+        }).toList();
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
             Text(widget.isAdmin ? 'Employee EA Forms' : 'My EA Forms',
-                style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
+                style:
+                    const TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
             Text(widget.isAdmin
                 ? 'Generate and publish annual EA statements from completed payroll records.'
@@ -181,8 +207,12 @@ class _EaFormsPageState extends State<EaFormsPage> {
                 width: 170,
                 child: DropdownButtonFormField<int>(
                   initialValue: _year,
-                  decoration: const InputDecoration(labelText: 'Tax year', border: OutlineInputBorder()),
-                  items: years.map((year) => DropdownMenuItem(value: year, child: Text('$year'))).toList(),
+                  decoration: const InputDecoration(
+                      labelText: 'Tax year', border: OutlineInputBorder()),
+                  items: years
+                      .map((year) =>
+                          DropdownMenuItem(value: year, child: Text('$year')))
+                      .toList(),
                   onChanged: (year) {
                     if (year == null) return;
                     _year = year;
@@ -194,7 +224,10 @@ class _EaFormsPageState extends State<EaFormsPage> {
                 FilledButton.icon(
                   onPressed: _busy ? null : _generateAll,
                   icon: _busy
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.auto_awesome_outlined),
                   label: Text(_busy ? 'Generating...' : 'Generate & publish'),
                 ),
@@ -202,27 +235,47 @@ class _EaFormsPageState extends State<EaFormsPage> {
                 SizedBox(
                   width: 280,
                   child: TextField(
-                    decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search employee', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Search employee',
+                        border: OutlineInputBorder()),
                     onChanged: (value) => setState(() => _search = value),
                   ),
                 ),
             ]),
             const SizedBox(height: 18),
             if (snapshot.connectionState == ConnectionState.waiting)
-              const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator()))
             else if (snapshot.hasError)
-              Card(child: Padding(padding: const EdgeInsets.all(20), child: Text('Unable to load EA forms. Apply the EA form database migration first.\n\n${snapshot.error}')))
+              Card(
+                  child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                          'Unable to load EA forms. Apply the EA form database migration first.\n\n${snapshot.error}')))
             else if (rows.isEmpty)
-              const Card(child: Padding(padding: EdgeInsets.all(28), child: Center(child: Text('No EA forms have been generated for this year.'))))
+              const Card(
+                  child: Padding(
+                      padding: EdgeInsets.all(28),
+                      child: Center(
+                          child: Text(
+                              'No EA forms have been generated for this year.'))))
             else
               ...rows.map((row) {
-                final data = Map<String, dynamic>.from(row['form_data'] as Map? ?? const {});
+                final data = Map<String, dynamic>.from(
+                    row['form_data'] as Map? ?? const {});
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.description_outlined)),
-                    title: Text('${data['employee_name'] ?? row['employee_id']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text('EA ${row['tax_year']} • ${row['employee_id']} • Published ${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${row['generated_at']}')?.toLocal() ?? DateTime.now())}'),
+                    leading: const CircleAvatar(
+                        child: Icon(Icons.description_outlined)),
+                    title: Text(
+                        '${data['employee_name'] ?? row['employee_id']}',
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    subtitle: Text(
+                        'EA ${row['tax_year']} • ${row['employee_id']} • Published ${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${row['generated_at']}')?.toLocal() ?? DateTime.now())}'),
                     trailing: FilledButton.tonalIcon(
                       onPressed: () => _openPdf(row),
                       icon: const Icon(Icons.picture_as_pdf_outlined),
