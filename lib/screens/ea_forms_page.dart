@@ -73,7 +73,6 @@ class _EaFormsPageState extends State<EaFormsPage> {
       final end = '${_year + 1}-01-01';
       final results = await Future.wait([
         SupabaseService.client.from('employees').select(),
-        SupabaseService.client.from('employee_salary_defaults').select(),
         SupabaseService.client
             .from('payroll')
             .select()
@@ -81,12 +80,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
             .lt('period', end),
       ]);
       final employees = List<Map<String, dynamic>>.from(results[0]);
-      final salaryDefaults = List<Map<String, dynamic>>.from(results[1]);
-      final payroll = List<Map<String, dynamic>>.from(results[2]);
-      final defaultsByEmployee = <String, Map<String, dynamic>>{
-        for (final row in salaryDefaults)
-          '${row['employee_id'] ?? ''}'.trim().toUpperCase(): row,
-      };
+      final payroll = List<Map<String, dynamic>>.from(results[1]);
       final rows = <Map<String, dynamic>>[];
       for (final employee in employees) {
         final id = '${employee['employee_id'] ?? ''}'.trim();
@@ -98,8 +92,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
                   id.toUpperCase(),
             )
             .toList();
-        final salaryDefault = defaultsByEmployee[id.toUpperCase()];
-        if (records.isEmpty && salaryDefault == null) continue;
+        if (records.isEmpty) continue;
         final recordsByMonth = <int, Map<String, dynamic>>{};
         for (final record in records) {
           final period = DateTime.tryParse('${record['period']}');
@@ -112,74 +105,30 @@ class _EaFormsPageState extends State<EaFormsPage> {
           }
           recordsByMonth[period.month] = record;
         }
-        final joiningDate =
-            DateTime.tryParse('${employee['joining_date'] ?? ''}');
-        if (joiningDate != null && joiningDate.year > _year) continue;
-        final firstMonth = joiningDate != null && joiningDate.year == _year
-            ? joiningDate.month
-            : 1;
-
-        // The most recent payslip is the authoritative monthly source for
-        // statutory deductions. EA generation must cover every employment
-        // month, not only months for which a duplicate payroll row happened
-        // to be created.
-        Map<String, dynamic>? monthlyStatutorySource;
-        if (recordsByMonth.isNotEmpty) {
-          final latestMonth = recordsByMonth.keys.reduce(
-            (current, month) => month > current ? month : current,
-          );
-          monthlyStatutorySource = recordsByMonth[latestMonth];
-        }
-        final isActive = employee['is_active'] == null ||
-            employee['is_active'] == true ||
-            '${employee['is_active']}'.toLowerCase() == 'true';
-        final lastMonth = !isActive && recordsByMonth.isNotEmpty
-            ? recordsByMonth.keys.reduce(
-                (current, month) => month > current ? month : current,
-              )
-            : 12;
-
-        final configuredForeignSalary = _number(salaryDefault?['fw_salary']);
-        final configuredBasicSalary = configuredForeignSalary != 0
-            ? configuredForeignSalary
-            : _number(salaryDefault?['basic_salary']);
-        final configuredAllowances = _money(
-          _number(salaryDefault?['elaun_kedatangan']) +
-              _number(salaryDefault?['elaun_perkhidmatan']) +
-              _number(salaryDefault?['elaun_kerajinan']),
-        );
+        if (recordsByMonth.isEmpty) continue;
 
         final monthlyBreakdown = <Map<String, dynamic>>[];
-        for (var month = firstMonth; month <= lastMonth; month++) {
+        for (var month = 1; month <= 12; month++) {
           final record = recordsByMonth[month];
-          final foreignWorkerSalary = _number(record?['fw_salary']);
-          final recordSalary = foreignWorkerSalary != 0
+          if (record == null) continue;
+          final foreignWorkerSalary = _number(record['fw_salary']);
+          final salaryBase = foreignWorkerSalary != 0
               ? foreignWorkerSalary
-              : _number(record?['basic_salary']);
-          final salaryBase =
-              configuredBasicSalary != 0 ? configuredBasicSalary : recordSalary;
+              : _number(record['basic_salary']);
           final salaryWages = _money(
             salaryBase +
-                _number(record?['overtime']) +
-                _number(record?['cuti_umum']),
+                _number(record['overtime']) +
+                _number(record['cuti_umum']),
           );
           final commissionBonus = _money(
-            _number(record?['commission']) + _number(record?['bonus']),
-          );
-          final recordFixedAllowances = _money(
-            _number(record?['elaun_kedatangan']) +
-                _number(record?['elaun_perkhidmatan']) +
-                _number(record?['elaun_kerajinan']),
+            _number(record['commission']) + _number(record['bonus']),
           );
           final allowances = _money(
-            (configuredAllowances != 0
-                    ? configuredAllowances
-                    : recordFixedAllowances) +
-                _number(record?['other_earnings']) +
-                _number(record?['housing_allowance']) +
-                _number(record?['travel_allowance']),
+            _number(record['elaun_kedatangan']) +
+                _number(record['elaun_perkhidmatan']) +
+                _number(record['elaun_kerajinan']) +
+                _number(record['other_earnings']),
           );
-          final statutory = monthlyStatutorySource ?? record;
           monthlyBreakdown.add({
             'month': month,
             'period': '$_year-${month.toString().padLeft(2, '0')}',
@@ -187,14 +136,12 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'commission_bonus': commissionBonus,
             'allowances': allowances,
             'gross_income': _money(salaryWages + commissionBonus + allowances),
-            'pcb': _money(_number(statutory?['pcb'])),
-            'zakat': _money(_number(
-              salaryDefault?['zakat'] ?? statutory?['zakat'],
-            )),
-            'epf_employee': _money(_number(statutory?['epf_employee'])),
+            'pcb': _money(_number(record['pcb'])),
+            'zakat': _money(_number(record['zakat'])),
+            'epf_employee': _money(_number(record['epf_employee'])),
             'socso_employee': _money(
-              _number(statutory?['socso_employee']) +
-                  _number(statutory?['eis_employee']),
+              _number(record['socso_employee']) +
+                  _number(record['eis_employee']),
             ),
           });
         }
@@ -239,9 +186,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'compensation': 0,
             'total_employment_income':
                 _money(salaryWages + commissionBonus + allowances),
-            'months_included': [
-              for (var month = firstMonth; month <= lastMonth; month++) month,
-            ],
+            'months_included': recordsByMonth.keys.toList()..sort(),
             'monthly_breakdown': monthlyBreakdown,
             'pension': 0,
             'other_income': 0,
