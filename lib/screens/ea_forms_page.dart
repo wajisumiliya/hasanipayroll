@@ -69,18 +69,15 @@ class _EaFormsPageState extends State<EaFormsPage> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final start = '$_year-01-01';
-      final end = '${_year + 1}-01-01';
       final results = await Future.wait([
         SupabaseService.client.from('employees').select(),
-        SupabaseService.client
-            .from('payroll')
-            .select()
-            .gte('period', start)
-            .lt('period', end),
+        SupabaseService.getPayroll(),
       ]);
       final employees = List<Map<String, dynamic>>.from(results[0]);
-      final payroll = List<Map<String, dynamic>>.from(results[1]);
+      final payroll = List<Map<String, dynamic>>.from(results[1]).where((row) {
+        final period = DateTime.tryParse('${row['period']}');
+        return period != null && period.year == _year;
+      }).toList();
       final rows = <Map<String, dynamic>>[];
       for (final employee in employees) {
         final id = '${employee['employee_id'] ?? ''}'.trim();
@@ -127,7 +124,9 @@ class _EaFormsPageState extends State<EaFormsPage> {
             _number(record['elaun_kedatangan']) +
                 _number(record['elaun_perkhidmatan']) +
                 _number(record['elaun_kerajinan']) +
-                _number(record['other_earnings']),
+                _number(record['other_earnings']) +
+                _number(record['housing_allowance']) +
+                _number(record['travel_allowance']),
           );
           monthlyBreakdown.add({
             'month': month,
