@@ -18,7 +18,7 @@ class EaFormPdfService {
     final background = pw.MemoryImage(asset.buffer.asUint8List());
     final document = pw.Document(
       title: 'EA ${form['tax_year']} - ${data['employee_name'] ?? ''}',
-      author: 'Hasani Books Edar Sdn Bhd',
+      author: 'Hasani Edar Sdn Bhd',
     );
 
     String text(dynamic value) => value?.toString().trim() ?? '';
@@ -67,61 +67,61 @@ class EaFormPdfService {
 
             // Header
             field(99, 63, 86, text(data['employer_tin'])),
-            field(380, 46, 106, text(data['income_tax_no'])),
+            field(424, 48, 136, text(data['income_tax_no'])),
             field(493, 64, 92, text(data['lhdn_branch'])),
             field(375, 64, 38, year),
 
             // A - Butiran pekerja
-            field(190, 117, 390, text(data['employee_name'])),
-            field(145, 132, 166, text(data['designation'])),
-            field(432, 132, 153, text(data['employee_id'])),
-            field(145, 148, 166, text(data['identification_no'])),
-            field(432, 148, 153, text(data['passport_no'])),
-            field(145, 164, 166, text(data['epf_no'])),
-            field(432, 164, 153, text(data['socso_no'])),
-            field(188, 190, 120, text(data['eligible_children'])),
-            field(432, 188, 153, text(data['employment_start'])),
-            field(432, 204, 153, text(data['employment_end'])),
+            field(260, 109, 320, text(data['employee_name'])),
+            field(145, 123, 166, text(data['designation'])),
+            field(432, 123, 153, text(data['employee_id'])),
+            field(145, 137, 166, text(data['identification_no'])),
+            field(432, 137, 153, text(data['passport_no'])),
+            field(145, 151, 166, text(data['epf_no'])),
+            field(432, 151, 153, text(data['socso_no'])),
+            field(188, 178, 120, text(data['eligible_children'])),
+            field(432, 178, 153, text(data['employment_start'])),
+            field(432, 195, 153, text(data['employment_end'])),
 
             // B - Pendapatan penggajian, manfaat dan tempat kediaman
-            field(480, 253, 74, money(data['salary_wages']), right: true),
-            field(480, 271, 74, money(data['commission_bonus']), right: true),
-            field(480, 289, 74, money(data['allowances_overtime']), right: true),
-            field(480, 307, 74, money(data['tax_paid_by_employer']), right: true),
-            field(480, 325, 74, money(data['esos_benefit']), right: true),
-            field(480, 343, 74, money(data['gratuity']), right: true),
-            field(480, 378, 74, money(data['arrears']), right: true),
-            field(480, 396, 74, money(data['benefits_in_kind']), right: true),
-            field(480, 414, 74, money(data['living_accommodation']), right: true),
-            field(480, 432, 74, money(data['pension_refund']), right: true),
-            field(480, 450, 74, money(data['compensation']), right: true),
+            field(480, 244, 74, money(data['salary_wages']), right: true),
+            field(480, 258, 74, money(data['commission_bonus']), right: true),
+            field(480, 272, 74, money(data['allowances_overtime']), right: true),
+            field(480, 287, 74, money(data['tax_paid_by_employer']), right: true),
+            field(480, 301, 74, money(data['esos_benefit']), right: true),
+            field(480, 315, 74, money(data['gratuity']), right: true),
+            field(480, 372, 74, money(data['arrears']), right: true),
+            field(480, 386, 74, money(data['benefits_in_kind']), right: true),
+            field(480, 400, 74, money(data['living_accommodation']), right: true),
+            field(480, 414, 74, money(data['pension_refund']), right: true),
+            field(480, 429, 74, money(data['compensation']), right: true),
 
             // C - Pencen dan lain-lain
-            field(480, 488, 74, money(data['pension']), right: true),
-            field(480, 506, 74, money(data['other_income']), right: true),
+            field(480, 453, 74, money(data['pension']), right: true),
+            field(480, 467, 74, money(data['other_income']), right: true),
 
             // D - Jumlah potongan
-            field(480, 529, 74, money(data['pcb']), right: true),
-            field(480, 547, 74, money(data['cp38']), right: true),
-            field(480, 565, 74, money(data['zakat']), right: true),
-            field(480, 583, 74, money(data['approved_donations']), right: true),
-            field(480, 637, 74, text(data['eligible_children']), right: true),
+            field(480, 522, 74, money(data['pcb']), right: true),
+            field(480, 535, 74, money(data['cp38']), right: true),
+            field(480, 548, 74, money(data['zakat']), right: true),
+            field(480, 561, 74, money(data['approved_donations']), right: true),
+            field(480, 614, 74, text(data['eligible_children']), right: true),
 
             // E - Caruman pekerja
-            field(177, 663, 270, 'KUMPULAN WANG SIMPANAN PEKERJA'),
-            field(480, 680, 74, money(data['epf_employee']), right: true),
-            field(480, 697, 74, money(data['socso_employee']), right: true),
+            field(185, 654, 262, 'KUMPULAN WANG SIMPANAN PEKERJA', size: 5.8),
+            field(480, 678, 74, money(data['epf_employee']), right: true),
+            field(480, 695, 74, money(data['socso_employee']), right: true),
 
             // F - Elaun/manfaat dikecualikan cukai
-            field(480, 714, 74, money(data['tax_exempt_allowances']), right: true),
+            field(480, 708, 74, money(data['tax_exempt_allowances']), right: true),
 
             // Employer certification
-            field(354, 749, 225, text(data['officer_name'])),
-            field(354, 763, 225, text(data['officer_designation'])),
-            field(354, 777, 225, text(data['employer_name']), size: 6.2),
-            field(354, 791, 225, text(data['employer_address']), size: 6.2),
-            field(354, 808, 225, text(data['employer_phone'])),
-            field(93, 802, 103, text(data['generated_date'])),
+            field(354, 738, 225, text(data['officer_name'])),
+            field(354, 751, 225, text(data['officer_designation'])),
+            field(354, 765, 225, text(data['employer_name']), size: 6.2),
+            field(354, 778, 225, text(data['employer_address']), size: 6.2),
+            field(354, 791, 225, text(data['employer_phone'])),
+            field(93, 791, 103, text(data['generated_date'])),
           ]),
         ),
       ),

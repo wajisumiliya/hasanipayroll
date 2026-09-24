@@ -35,6 +35,7 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   int tab = 0;
   int? _selectedPayslipYear;
+  bool _mobileShowsEaForms = false;
   bool _showFinancialDetails = false;
   late final AnimationController _birthdayController;
   Timer? _birthdayCelebrationTimer;
@@ -779,11 +780,6 @@ class _EmployeePortalState extends State<EmployeePortal>
         ),
         title: Text(_mobileTitle()),
         actions: [
-          IconButton(
-            onPressed: () => setState(() => tab = 7),
-            tooltip: 'EA Forms',
-            icon: const Icon(Icons.description_outlined),
-          ),
           _notificationButton(color: Colors.white),
           _financialVisibilityButton(),
           const AppReloadButton(color: Colors.white),
@@ -829,6 +825,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           onDestinationSelected: (index) {
             setState(() {
               tab = mobilePages[index];
+              if (tab == 1) _mobileShowsEaForms = false;
             });
           },
           destinations: [
@@ -939,7 +936,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   String _mobileTitle() {
     switch (tab) {
       case 1:
-        return 'My Payslips';
+        return 'Payroll Documents';
 
       case 2:
         return 'Attendance';
@@ -974,7 +971,9 @@ class _EmployeePortalState extends State<EmployeePortal>
         return _dashboard();
 
       case 1:
-        return _payslips();
+        return MediaQuery.sizeOf(context).width < 900
+            ? _mobilePayrollDocuments()
+            : _payslips();
 
       case 2:
         return _attendance();
@@ -2349,6 +2348,41 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
   // PAYSLIPS
   // =============================================================
+
+  Widget _mobilePayrollDocuments() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+          child: SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment<bool>(
+                value: false,
+                icon: Icon(Icons.receipt_long_outlined),
+                label: Text('Payslips'),
+              ),
+              ButtonSegment<bool>(
+                value: true,
+                icon: Icon(Icons.description_outlined),
+                label: Text('EA Forms'),
+              ),
+            ],
+            selected: {_mobileShowsEaForms},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) {
+              setState(() => _mobileShowsEaForms = selection.first);
+            },
+          ),
+        ),
+        Expanded(
+          child: _mobileShowsEaForms
+              ? EaFormsPage.employee(employeeId: employeeId)
+              : _payslips(),
+        ),
+      ],
+    );
+  }
 
   Widget _payslips() {
     final compact = MediaQuery.sizeOf(context).width < 600;

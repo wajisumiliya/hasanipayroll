@@ -64,11 +64,183 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
       return Center(
         child: SizedBox(
           width: cardWidth,
-          child: _front(),
+          child: _badgeFront(),
         ),
       );
     });
   }
+
+  Widget _badgeFront() => AspectRatio(
+        aspectRatio: .62,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            Positioned.fill(
+              top: 22,
+              child: _shell(
+                background: const _BadgeFrontBackground(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 34, 24, 22),
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        'assets/hasani_books_payslip_logo.jpeg',
+                        height: 52,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Text(
+                          'HASANI BOOKS',
+                          style: TextStyle(
+                            color: navy,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        'EMPLOYEE IDENTIFICATION CARD',
+                        style: TextStyle(
+                          color: navy,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _portraitPhoto(),
+                      const SizedBox(height: 11),
+                      Text(
+                        employee.name.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: navy,
+                          fontSize: 20,
+                          height: 1.05,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .35,
+                        ),
+                      ),
+                      Container(
+                        width: 170,
+                        height: 2,
+                        margin: const EdgeInsets.only(top: 5, bottom: 10),
+                        color: red,
+                      ),
+                      _badgeDetail('Employee ID', employee.employeeId),
+                      _badgeDetail('Designation', employee.designation),
+                      _badgeDetail('Department', employee.department),
+                      _badgeDetail('Branch', _branch),
+                      _badgeDetail('Joining Date', _joining),
+                      _badgeDetail('Mobile No.', employee.phone),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: employee.isActive
+                              ? const Color(0xFFDCFCE7)
+                              : const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          employee.isActive ? 'ACTIVE EMPLOYEE' : 'INACTIVE',
+                          style: TextStyle(
+                            color: employee.isActive
+                                ? const Color(0xFF166534)
+                                : const Color(0xFF991B1B),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'HASANI EDAR SDN BHD',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              width: 84,
+              height: 42,
+              decoration: BoxDecoration(
+                color: navy,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(18),
+                  bottom: Radius.circular(12),
+                ),
+                border: Border.all(color: blue, width: 3),
+              ),
+              alignment: Alignment.center,
+              child: Container(
+                width: 35,
+                height: 13,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDBD4CC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFB08A45),
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _badgeDetail(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 94,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF1F2937),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const Text(
+              ':',
+              style: TextStyle(
+                color: Color(0xFF1F2937),
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                value.trim().isEmpty ? '-' : value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF111827),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _front() => AspectRatio(
         aspectRatio: .68,
@@ -313,8 +485,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
     }
 
     return Container(
-      width: 165,
-      height: 150,
+      width: 145,
+      height: 165,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -433,6 +605,107 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
     fontWeight: FontWeight.w900,
     letterSpacing: 1.5,
   );
+}
+
+class _BadgeFrontBackground extends StatelessWidget {
+  const _BadgeFrontBackground();
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.white, Color(0xFFF8FBFF), Color(0xFFEFF5FC)],
+              ),
+            ),
+            child: SizedBox.expand(),
+          ),
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: ColoredBox(
+              color: Color(0xFFED1C24),
+              child: SizedBox(height: 8),
+            ),
+          ),
+          Positioned(
+            right: 20,
+            top: 145,
+            child: Wrap(
+              direction: Axis.vertical,
+              spacing: 5,
+              children: List.generate(
+                7,
+                (row) => Row(
+                  children: List.generate(
+                    3,
+                    (column) => Container(
+                      width: 5,
+                      height: 5,
+                      margin: const EdgeInsets.only(left: 5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF062D69).withValues(
+                          alpha: .16 + (row * .02),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -70,
+            right: -25,
+            bottom: 43,
+            child: Transform.rotate(
+              angle: .08,
+              child: Container(
+                height: 52,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFED1C24),
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(120),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -70,
+            right: -20,
+            bottom: -28,
+            child: Container(
+              height: 104,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF062D69), Color(0xFF16127A)],
+                ),
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(150),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -32,
+            top: 190,
+            child: Transform.rotate(
+              angle: -.32,
+              child: Container(
+                width: 90,
+                height: 14,
+                color: const Color(0xFF174CA4),
+              ),
+            ),
+          ),
+        ],
+      );
 }
 
 class _IdentityFrontBackground extends StatelessWidget {
