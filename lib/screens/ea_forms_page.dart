@@ -22,6 +22,7 @@ class EaFormsPage extends StatefulWidget {
 
 class _EaFormsPageState extends State<EaFormsPage> {
   int _year = DateTime.now().year - 1;
+  DateTime _generatedDate = DateUtils.dateOnly(DateTime.now());
   bool _busy = false;
   String _search = '';
   Future<List<Map<String, dynamic>>>? _future;
@@ -52,6 +53,18 @@ class _EaFormsPageState extends State<EaFormsPage> {
 
   double _money(double value) => (value * 100).roundToDouble() / 100;
 
+  Future<void> _selectGeneratedDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _generatedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100, 12, 31),
+      helpText: 'Select EA generated date',
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _generatedDate = DateUtils.dateOnly(selected));
+  }
+
   Future<void> _generateAll() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -60,6 +73,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
       final end = '${_year + 1}-01-01';
       final results = await Future.wait([
         SupabaseService.client.from('employees').select(),
+        SupabaseService.client.from('employee_salary_defaults').select(),
         SupabaseService.client
             .from('payroll')
             .select()
@@ -67,7 +81,12 @@ class _EaFormsPageState extends State<EaFormsPage> {
             .lt('period', end),
       ]);
       final employees = List<Map<String, dynamic>>.from(results[0]);
-      final payroll = List<Map<String, dynamic>>.from(results[1]);
+      final salaryDefaults = List<Map<String, dynamic>>.from(results[1]);
+      final payroll = List<Map<String, dynamic>>.from(results[2]);
+      final defaultsByEmployee = <String, Map<String, dynamic>>{
+        for (final row in salaryDefaults)
+          '${row['employee_id'] ?? ''}'.trim().toUpperCase(): row,
+      };
       final rows = <Map<String, dynamic>>[];
       for (final employee in employees) {
         final id = '${employee['employee_id'] ?? ''}'.trim();
@@ -79,7 +98,8 @@ class _EaFormsPageState extends State<EaFormsPage> {
                   id.toUpperCase(),
             )
             .toList();
-        if (records.isEmpty) continue;
+        final salaryDefault = defaultsByEmployee[id.toUpperCase()];
+        if (records.isEmpty && salaryDefault == null) continue;
         final recordsByMonth = <int, Map<String, dynamic>>{};
         for (final record in records) {
           final period = DateTime.tryParse('${record['period']}');
@@ -92,32 +112,74 @@ class _EaFormsPageState extends State<EaFormsPage> {
           }
           recordsByMonth[period.month] = record;
         }
-        if (recordsByMonth.isEmpty) continue;
+        final joiningDate =
+            DateTime.tryParse('${employee['joining_date'] ?? ''}');
+        if (joiningDate != null && joiningDate.year > _year) continue;
+        final firstMonth = joiningDate != null && joiningDate.year == _year
+            ? joiningDate.month
+            : 1;
+
+        // The most recent payslip is the authoritative monthly source for
+        // statutory deductions. EA generation must cover every employment
+        // month, not only months for which a duplicate payroll row happened
+        // to be created.
+        Map<String, dynamic>? monthlyStatutorySource;
+        if (recordsByMonth.isNotEmpty) {
+          final latestMonth = recordsByMonth.keys.reduce(
+            (current, month) => month > current ? month : current,
+          );
+          monthlyStatutorySource = recordsByMonth[latestMonth];
+        }
+        final isActive = employee['is_active'] == null ||
+            employee['is_active'] == true ||
+            '${employee['is_active']}'.toLowerCase() == 'true';
+        final lastMonth = !isActive && recordsByMonth.isNotEmpty
+            ? recordsByMonth.keys.reduce(
+                (current, month) => month > current ? month : current,
+              )
+            : 12;
+
+        final configuredForeignSalary = _number(salaryDefault?['fw_salary']);
+        final configuredBasicSalary = configuredForeignSalary != 0
+            ? configuredForeignSalary
+            : _number(salaryDefault?['basic_salary']);
+        final configuredAllowances = _money(
+          _number(salaryDefault?['elaun_kedatangan']) +
+              _number(salaryDefault?['elaun_perkhidmatan']) +
+              _number(salaryDefault?['elaun_kerajinan']),
+        );
 
         final monthlyBreakdown = <Map<String, dynamic>>[];
-        for (var month = 1; month <= 12; month++) {
+        for (var month = firstMonth; month <= lastMonth; month++) {
           final record = recordsByMonth[month];
-          if (record == null) continue;
-          final foreignWorkerSalary = _number(record['fw_salary']);
-          final salaryBase = foreignWorkerSalary != 0
+          final foreignWorkerSalary = _number(record?['fw_salary']);
+          final recordSalary = foreignWorkerSalary != 0
               ? foreignWorkerSalary
-              : _number(record['basic_salary']);
+              : _number(record?['basic_salary']);
+          final salaryBase =
+              configuredBasicSalary != 0 ? configuredBasicSalary : recordSalary;
           final salaryWages = _money(
             salaryBase +
-                _number(record['overtime']) +
-                _number(record['cuti_umum']),
+                _number(record?['overtime']) +
+                _number(record?['cuti_umum']),
           );
           final commissionBonus = _money(
-            _number(record['commission']) + _number(record['bonus']),
+            _number(record?['commission']) + _number(record?['bonus']),
+          );
+          final recordFixedAllowances = _money(
+            _number(record?['elaun_kedatangan']) +
+                _number(record?['elaun_perkhidmatan']) +
+                _number(record?['elaun_kerajinan']),
           );
           final allowances = _money(
-            _number(record['elaun_kedatangan']) +
-                _number(record['elaun_perkhidmatan']) +
-                _number(record['elaun_kerajinan']) +
-                _number(record['other_earnings']) +
-                _number(record['housing_allowance']) +
-                _number(record['travel_allowance']),
+            (configuredAllowances != 0
+                    ? configuredAllowances
+                    : recordFixedAllowances) +
+                _number(record?['other_earnings']) +
+                _number(record?['housing_allowance']) +
+                _number(record?['travel_allowance']),
           );
+          final statutory = monthlyStatutorySource ?? record;
           monthlyBreakdown.add({
             'month': month,
             'period': '$_year-${month.toString().padLeft(2, '0')}',
@@ -125,12 +187,14 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'commission_bonus': commissionBonus,
             'allowances': allowances,
             'gross_income': _money(salaryWages + commissionBonus + allowances),
-            'pcb': _money(_number(record['pcb'])),
-            'zakat': _money(_number(record['zakat'])),
-            'epf_employee': _money(_number(record['epf_employee'])),
+            'pcb': _money(_number(statutory?['pcb'])),
+            'zakat': _money(_number(
+              salaryDefault?['zakat'] ?? statutory?['zakat'],
+            )),
+            'epf_employee': _money(_number(statutory?['epf_employee'])),
             'socso_employee': _money(
-              _number(record['socso_employee']) +
-                  _number(record['eis_employee']),
+              _number(statutory?['socso_employee']) +
+                  _number(statutory?['eis_employee']),
             ),
           });
         }
@@ -175,7 +239,9 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'compensation': 0,
             'total_employment_income':
                 _money(salaryWages + commissionBonus + allowances),
-            'months_included': recordsByMonth.keys.toList()..sort(),
+            'months_included': [
+              for (var month = firstMonth; month <= lastMonth; month++) month,
+            ],
             'monthly_breakdown': monthlyBreakdown,
             'pension': 0,
             'other_income': 0,
@@ -185,7 +251,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'socso_employee': employeeSocso,
             'zakat': annual('zakat'),
             'tax_exempt_allowances': 0,
-            'generated_date': DateFormat('dd/MM/yyyy').format(DateTime.now()),
+            'generated_date': DateFormat('dd/MM/yyyy').format(_generatedDate),
           },
         });
       }
@@ -261,6 +327,18 @@ class _EaFormsPageState extends State<EaFormsPage> {
                   },
                 ),
               ),
+              if (widget.isAdmin)
+                SizedBox(
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: _busy ? null : _selectGeneratedDate,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(
+                      'Generated date: '
+                      '${DateFormat('dd/MM/yyyy').format(_generatedDate)}',
+                    ),
+                  ),
+                ),
               if (widget.isAdmin)
                 FilledButton.icon(
                   onPressed: _busy ? null : _generateAll,
