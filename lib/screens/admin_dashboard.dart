@@ -4828,32 +4828,39 @@ class _AdminDashboardState extends State<AdminDashboard>
             ],
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                gradient: selected
-                    ? const LinearGradient(
-                        colors: [Color(0x44FFFFFF), Color(0x11FFFFFF)],
-                      )
-                    : LinearGradient(colors: colors),
-                borderRadius: BorderRadius.circular(9),
+            if (allBranches)
+              const SizedBox(
+                width: 42,
+                child: Icon(
+                  Icons.grid_view_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  label.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: selected ? Colors.white : const Color(0xFF18233A),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .65,
+                    height: 1,
+                    shadows: selected
+                        ? const [
+                            Shadow(
+                              color: Color(0x55000000),
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                ),
               ),
-              child: allBranches
-                  ? const Icon(Icons.grid_view_rounded,
-                      color: Colors.white, size: 20)
-                  : _hasaniBranchLogo(30),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF26344F),
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .2,
-              ),
-            ),
           ]),
         ),
       ),
