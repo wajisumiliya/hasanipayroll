@@ -176,7 +176,12 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                                 'Department', employee.department),
                             _horizontalDetail('Branch', _branch),
                             _horizontalDetail('Joined', _joining),
-                            _horizontalDetail('Mobile', employee.phone),
+                            _horizontalDetail(
+                              'Email',
+                              employee.email,
+                              valueSize: 7.2,
+                              maxLines: 2,
+                            ),
                             const Spacer(),
                             Row(
                               children: [
@@ -245,7 +250,13 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         ),
       );
 
-  Widget _horizontalDetail(String label, String value) => Padding(
+  Widget _horizontalDetail(
+    String label,
+    String value, {
+    double valueSize = 8.5,
+    int maxLines = 1,
+  }) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: 4),
         child: Row(
           children: [
@@ -253,7 +264,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
               width: 69,
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFFAFC8ED),
                   fontSize: 8,
                   fontWeight: FontWeight.w700,
@@ -272,11 +283,11 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
             Expanded(
               child: Text(
                 value.trim().isEmpty ? '-' : value,
-                maxLines: 1,
+                maxLines: maxLines,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 8.5,
+                  fontSize: valueSize,
                   fontWeight: FontWeight.w800,
                 ),
               ),
