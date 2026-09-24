@@ -64,11 +64,226 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
       return Center(
         child: SizedBox(
           width: cardWidth,
-          child: _badgeFront(),
+          child: _horizontalPremiumCard(),
         ),
       );
     });
   }
+
+  Widget _horizontalPremiumCard() => AspectRatio(
+        aspectRatio: 1.58,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            Positioned.fill(
+              top: 12,
+              child: _shell(
+                background: const _HorizontalPremiumBackground(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 18, 15),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 112,
+                        child: Column(
+                          children: [
+                            Image.asset(
+                              'assets/hasani_books_payslip_logo.jpeg',
+                              height: 37,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Text(
+                                'HASANI BOOKS',
+                                style: TextStyle(
+                                  color: navy,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 7),
+                            _portraitPhoto(width: 98, height: 116),
+                            const Spacer(),
+                            Text(
+                              employee.employeeId,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.verified_user_rounded,
+                                  color: Color(0xFFED1C24),
+                                  size: 16,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'EMPLOYEE IDENTITY',
+                                  style: TextStyle(
+                                    color: Color(0xFFBFD7FF),
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              employee.name.toUpperCase(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                height: 1.02,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: .25,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              employee.designation.trim().isEmpty
+                                  ? 'EMPLOYEE'
+                                  : employee.designation.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFFFFC4C7),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: .8,
+                              ),
+                            ),
+                            Container(
+                              width: 58,
+                              height: 2,
+                              margin: const EdgeInsets.symmetric(vertical: 7),
+                              color: red,
+                            ),
+                            _horizontalDetail(
+                                'Department', employee.department),
+                            _horizontalDetail('Branch', _branch),
+                            _horizontalDetail('Joined', _joining),
+                            _horizontalDetail('Mobile', employee.phone),
+                            const Spacer(),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: employee.isActive
+                                        ? const Color(0xFF16A34A)
+                                        : const Color(0xFF6B7280),
+                                    borderRadius: BorderRadius.circular(99),
+                                  ),
+                                  child: Text(
+                                    employee.isActive ? 'ACTIVE' : 'INACTIVE',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 7.5,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: .8,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                const Text(
+                                  'HASANI EDAR SDN BHD',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 6.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: .7,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              width: 68,
+              height: 25,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF8FAFC), Color(0xFF94A3B8)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF64748B), width: 2),
+              ),
+              alignment: Alignment.center,
+              child: Container(
+                width: 31,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: navy,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _horizontalDetail(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 69,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFFAFC8ED),
+                  fontSize: 8,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Text(
+              ':',
+              style: TextStyle(
+                color: Color(0xFFED1C24),
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                value.trim().isEmpty ? '-' : value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _badgeFront() => AspectRatio(
         aspectRatio: .62,
@@ -518,7 +733,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         ],
       );
 
-  Widget _portraitPhoto() {
+  Widget _portraitPhoto({double width = 145, double height = 165}) {
     Widget fallback() {
       final initial = employee.name.trim().isEmpty
           ? '?'
@@ -535,8 +750,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
     }
 
     return Container(
-      width: 145,
-      height: 165,
+      width: width,
+      height: height,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -655,6 +870,90 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
     fontWeight: FontWeight.w900,
     letterSpacing: 1.5,
   );
+}
+
+class _HorizontalPremiumBackground extends StatelessWidget {
+  const _HorizontalPremiumBackground();
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0D3B78),
+                  Color(0xFF061D4D),
+                  Color(0xFF020A20)
+                ],
+              ),
+            ),
+            child: SizedBox.expand(),
+          ),
+          Positioned(
+            left: -70,
+            top: -55,
+            child: Container(
+              width: 230,
+              height: 155,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(90),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -45,
+            top: 96,
+            child: Transform.rotate(
+              angle: -.2,
+              child: Container(
+                width: 205,
+                height: 13,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFED1C24),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: -35,
+            top: -40,
+            child: Container(
+              width: 150,
+              height: 120,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: .08),
+                  width: 18,
+                ),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 16,
+            bottom: 18,
+            child: Icon(
+              Icons.menu_book_rounded,
+              size: 100,
+              color: Colors.white.withValues(alpha: .025),
+            ),
+          ),
+          const Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: ColoredBox(
+              color: Color(0xFFED1C24),
+              child: SizedBox(width: 5),
+            ),
+          ),
+        ],
+      );
 }
 
 class _BadgeFrontBackground extends StatelessWidget {
