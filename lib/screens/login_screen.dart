@@ -77,7 +77,6 @@ class _LoginScreenState extends State<LoginScreen>
       curve: const Interval(.18, 1, curve: Curves.easeOutCubic),
     );
     _entranceController.forward();
-    _startIdleCatCycle();
     _startDateTimeAndWeather();
     _restoreSession();
   }
@@ -141,8 +140,6 @@ class _LoginScreenState extends State<LoginScreen>
     super.didChangeDependencies();
     if (_loginImagesPrecached) return;
     _loginImagesPrecached = true;
-    precacheImage(const AssetImage('assets/login_cat_cutout.png'), context);
-    precacheImage(const AssetImage('assets/login_cat_open_eyes.png'), context);
     precacheImage(const AssetImage('assets/login_natural_tree.png'), context);
   }
 
@@ -829,7 +826,23 @@ class _LoginScreenState extends State<LoginScreen>
                     Expanded(
                       flex: theme.day == 'Thursday' ? 8 : 9,
                       child: Container(
-                        color: theme.panelBackground,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Colors.transparent,
+                              theme.pageBackground.withValues(
+                                alpha: theme.isLight ? .16 : .24,
+                              ),
+                            ],
+                          ),
+                          border: Border(
+                            left: BorderSide(
+                              color: Colors.white.withValues(alpha: .18),
+                            ),
+                          ),
+                        ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 42,
                           vertical: 26,
@@ -978,25 +991,6 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           ),
         ),
-        Positioned(
-          left: 6,
-          right: 6,
-          bottom: -30,
-          height: 570,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: Image.asset(
-              loading || _idleCatAwake
-                  ? 'assets/login_cat_open_eyes.png'
-                  : 'assets/login_cat_cutout.png',
-              key: ValueKey(loading || _idleCatAwake),
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomCenter,
-              filterQuality: FilterQuality.high,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1124,8 +1118,8 @@ class _LoginScreenState extends State<LoginScreen>
   }) {
     final foreground = theme.foreground;
     final fieldColor = theme.isLight
-        ? const Color(0xFFF7F9FC)
-        : Colors.white.withValues(alpha: .075);
+        ? Colors.white.withValues(alpha: .30)
+        : Colors.white.withValues(alpha: .10);
     final fieldText = theme.isLight ? const Color(0xFF10294D) : Colors.white;
 
     InputDecoration decoration(String label, IconData icon) {
@@ -1151,19 +1145,41 @@ class _LoginScreenState extends State<LoginScreen>
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
         child: Container(
           padding: EdgeInsets.all(compact ? 23 : 34),
           decoration: BoxDecoration(
-            color: theme.cardBackground,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: theme.isLight
+                  ? [
+                      Colors.white.withValues(alpha: .48),
+                      Colors.white.withValues(alpha: .18),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: .16),
+                      const Color(0xFF101722).withValues(alpha: .26),
+                    ],
+            ),
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: foreground.withValues(alpha: .14)),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: theme.isLight ? .68 : .22),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
                 color:
-                    Colors.black.withValues(alpha: theme.isLight ? .10 : .30),
-                blurRadius: 48,
-                offset: const Offset(0, 22),
+                    Colors.black.withValues(alpha: theme.isLight ? .15 : .38),
+                blurRadius: 54,
+                spreadRadius: -10,
+                offset: const Offset(0, 24),
+              ),
+              BoxShadow(
+                color: theme.accent1.withValues(alpha: .12),
+                blurRadius: 28,
+                spreadRadius: -8,
+                offset: const Offset(-8, -8),
               ),
             ],
           ),
@@ -1435,21 +1451,6 @@ class _LoginScreenState extends State<LoginScreen>
                     width: 52,
                     child: Divider(color: Color(0xFFF2C15A), thickness: 3)),
               ],
-            ),
-          ),
-          Positioned(
-            left: -42,
-            bottom: 24,
-            child: Image.asset(
-              loading || _idleCatAwake
-                  ? 'assets/login_cat_open_eyes.png'
-                  : 'assets/login_cat_cutout.png',
-              key: ValueKey(loading || _idleCatAwake),
-              width: 455,
-              height: 505,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomLeft,
-              filterQuality: FilterQuality.high,
             ),
           ),
           const Positioned(
@@ -1761,16 +1762,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 const SizedBox(width: 56),
                                 Expanded(
                                   flex: 11,
-                                  child: _entrance(
-                                    _desktopCatHero(
-                                      theme,
-                                      height: (constraints.maxHeight - 90)
-                                          .clamp(480.0, 720.0),
-                                      bottomExtension: 95,
-                                    ),
-                                    _heroEntrance,
-                                    42,
-                                  ),
+                                  child: const SizedBox.shrink(),
                                 ),
                               ],
                             ),
@@ -1796,49 +1788,6 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _desktopCatHero(
-    _DailyLoginTheme theme, {
-    required double height,
-    required double bottomExtension,
-  }) {
-    return Transform.translate(
-      offset: Offset(0, bottomExtension),
-      child: SizedBox(
-        height: height,
-        width: double.infinity,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Align(
-              alignment: Alignment.bottomLeft,
-              child: Transform.translate(
-                offset: const Offset(-155, 0),
-                child: Image.asset(
-                  loading || _idleCatAwake
-                      ? 'assets/login_cat_open_eyes.png'
-                      : 'assets/login_cat_cutout.png',
-                  key: ValueKey(loading || _idleCatAwake),
-                  width: double.infinity,
-                  height: height,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomRight,
-                  filterQuality: FilterQuality.high,
-                  errorBuilder: (_, error, __) => Center(
-                    child: Icon(
-                      Icons.pets_rounded,
-                      size: 180,
-                      color: theme.accent1.withValues(alpha: .8),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
