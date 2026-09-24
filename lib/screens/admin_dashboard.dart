@@ -2964,18 +2964,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   branch.key == null
-                      ? Icon(Icons.apps_rounded,
-                          size: 17, color: selected ? Colors.white : accent)
-                      : _hasaniBranchLogo(24),
-                  const SizedBox(width: 7),
-                  Text(
-                    branch.value,
-                    style: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
-                      fontSize: 12,
-                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    ),
-                  ),
+                      ? Icon(
+                          Icons.apps_rounded,
+                          size: 28,
+                          color: selected ? Colors.white : accent,
+                        )
+                      : _branchStamp(branch.value, width: 104, height: 40),
                 ],
               ),
             ),
@@ -4828,32 +4822,17 @@ class _AdminDashboardState extends State<AdminDashboard>
             ],
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                gradient: selected
-                    ? const LinearGradient(
-                        colors: [Color(0x44FFFFFF), Color(0x11FFFFFF)],
-                      )
-                    : LinearGradient(colors: colors),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: allBranches
-                  ? const Icon(Icons.grid_view_rounded,
-                      color: Colors.white, size: 20)
-                  : _hasaniBranchLogo(30),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF26344F),
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .2,
-              ),
-            ),
+            if (allBranches)
+              const SizedBox(
+                width: 42,
+                child: Icon(
+                  Icons.grid_view_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              )
+            else
+              _branchStamp(label, width: 112, height: 38),
           ]),
         ),
       ),
@@ -8681,51 +8660,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                             ),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: _payrollBranchColors(name),
-                                    ),
-                                    borderRadius: BorderRadius.circular(15),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _payrollBranchColors(name)
-                                            .last
-                                            .withValues(alpha: .3),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: _hasaniBranchLogo(42),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  name,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 6),
-                                const Row(
-                                  children: [
-                                    Text('View Attendance',
-                                        style: TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 12)),
-                                    Spacer(),
-                                    Icon(Icons.arrow_forward, size: 17),
-                                  ],
-                                ),
-                              ],
+                            padding: const EdgeInsets.all(8),
+                            child: Center(
+                              child: _branchStamp(
+                                name,
+                                width: 205,
+                                height: 112,
+                              ),
                             ),
                           ),
                         ),
@@ -9812,8 +9753,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Container(
-                                                width: 54,
-                                                height: 54,
+                                                width: double.infinity,
+                                                height: 105,
                                                 decoration: BoxDecoration(
                                                   gradient: LinearGradient(
                                                     colors:
@@ -9837,9 +9778,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                     ),
                                                   ],
                                                 ),
-                                                child: _hasaniBranchLogo(47),
+                                                child: _branchStamp(
+                                                  branchNames[branchId] ??
+                                                      branchId,
+                                                  width: 220,
+                                                  height: 105,
+                                                ),
                                               ),
                                               const Spacer(),
+                                              if (false)
                                               Text(
                                                 branchNames[branchId] ??
                                                     branchId,
@@ -9850,7 +9797,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                   fontWeight: FontWeight.w800,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
+                                              if (false)
+                                                const SizedBox(height: 4),
+                                              if (false)
                                               Text(
                                                 '${branchEmployees.length} employee(s) • Select to generate',
                                                 style: const TextStyle(
@@ -9900,6 +9849,39 @@ class _AdminDashboardState extends State<AdminDashboard>
           fit: BoxFit.contain,
         ),
       );
+
+  Widget _branchStamp(
+    String branchName, {
+    double width = 150,
+    double height = 76,
+  }) {
+    final normalized = branchName.trim().toUpperCase();
+    const aliases = <String, String>{
+      'SP': 'SUNGAI PETANI',
+      'SP HQ': 'SUNGAI PETANI',
+      'SP-HQ': 'SUNGAI PETANI',
+      'SP-HQ-EDAR': 'SUNGAI PETANI',
+      'SUNGAI PETANI HQ': 'SUNGAI PETANI',
+    };
+    final assetName = aliases[normalized] ?? normalized;
+
+    return Semantics(
+      label: branchName,
+      button: true,
+      image: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.asset(
+          'assets/branch_stamps/$assetName.png',
+          width: width,
+          height: height,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, __, ___) => _hasaniBranchLogo(height),
+        ),
+      ),
+    );
+  }
 
   IconData _payrollBranchIcon(String branch) =>
       switch (branch.trim().toUpperCase()) {
@@ -12252,8 +12234,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Container(
-                                        width: 48,
-                                        height: 48,
+                                        width: double.infinity,
+                                        height: 100,
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
                                             colors: _payrollBranchColors(
@@ -12273,9 +12255,14 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             ),
                                           ],
                                         ),
-                                        child: _hasaniBranchLogo(42),
+                                        child: _branchStamp(
+                                          branchNames[branchId] ?? branchId,
+                                          width: 200,
+                                          height: 100,
+                                        ),
                                       ),
                                       const Spacer(),
+                                      if (false)
                                       Text(
                                         branchNames[branchId] ?? branchId,
                                         maxLines: 1,
@@ -12285,7 +12272,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+                                      if (false)
+                                        const SizedBox(height: 4),
+                                      if (false)
                                       Text(
                                         '${branchEmployees.length} employee(s)',
                                         style: const TextStyle(
