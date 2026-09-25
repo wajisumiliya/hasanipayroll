@@ -103,7 +103,10 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                     builder: (_, __) => CustomPaint(
                         painter: _AquariumPainter(
                             employeeId: widget.employeeId,
-                            fishCount: widget.fishCount.clamp(2, 5),
+                            // Keep the earned count unchanged in the stats, but
+                            // make the aquarium feel alive even for new users.
+                            fishCount:
+                                math.max(5, widget.fishCount).clamp(5, 8),
                             growth:
                                 math.min(1.25, .78 + widget.totalFeed * .018),
                             progress: _controller.value,
@@ -380,34 +383,97 @@ class _AquariumPainter extends CustomPainter {
           math.cos(progress * math.pi * 2 * (.7 + i * .04) + i * 1.7) * .15;
       final angle = verticalSlope * (movingRight ? 1 : -1);
       final scale = growth * (.80 + (i % 3) * .11);
-      final paint = Paint()
-        ..color = colors[i % colors.length].withValues(alpha: .95);
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(angle);
       canvas.scale((movingRight ? 1.0 : -1.0) * scale, scale);
-      canvas.drawOval(const Rect.fromLTWH(-13, -7, 26, 14), paint);
-      final tailSwing = math.sin(progress * math.pi * 12 + i) * 3;
-      canvas.drawPath(
-          Path()
-            ..moveTo(-11, 0)
-            ..lineTo(-22, -9 + tailSwing)
-            ..lineTo(-22, 9 + tailSwing)
-            ..close(),
-          paint);
-      canvas.drawArc(
-          const Rect.fromLTWH(-5, -5, 11, 10),
-          -.9,
-          1.5,
-          false,
-          Paint()
-            ..color = Colors.white.withValues(alpha: .20)
-            ..strokeWidth = 1.2
-            ..style = PaintingStyle.stroke);
-      canvas.drawCircle(
-          const Offset(7, -2), 1.6, Paint()..color = const Color(0xFF082B4A));
+      _drawBettaFish(
+        canvas,
+        colors[i % colors.length],
+        progress * math.pi * 2,
+        i,
+      );
       canvas.restore();
     }
+  }
+
+  void _drawBettaFish(Canvas canvas, Color color, double time, int fishIndex) {
+    final wave = math.sin(time * 6.2 + fishIndex * 1.37);
+    final finWave = math.sin(time * 4.8 + fishIndex * .91);
+    final dark = HSLColor.fromColor(color)
+        .withLightness((HSLColor.fromColor(color).lightness - .20).clamp(0, 1))
+        .toColor();
+    final light = HSLColor.fromColor(color)
+        .withLightness((HSLColor.fromColor(color).lightness + .18).clamp(0, 1))
+        .toColor();
+
+    // A broad, layered fan tail gives the fish its Betta silhouette. Each
+    // control point moves at a slightly different rate for a soft fabric-like
+    // swimming motion instead of a rigid pivot.
+    final tail = Path()
+      ..moveTo(-9, -3)
+      ..cubicTo(-17, -14 - wave * 2, -30, -16 + finWave * 2, -32, -5 + wave * 3)
+      ..cubicTo(-29, -1, -29, 2, -33, 7 + finWave * 2)
+      ..cubicTo(-26, 17 + wave * 2, -16, 13 - finWave * 2, -9, 4)
+      ..close();
+    canvas.drawPath(
+      tail,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            color.withValues(alpha: .88),
+            light.withValues(alpha: .55),
+            dark.withValues(alpha: .72),
+          ],
+        ).createShader(const Rect.fromLTWH(-34, -18, 27, 36)),
+    );
+
+    final dorsalFin = Path()
+      ..moveTo(-8, -5)
+      ..quadraticBezierTo(-4, -14 - finWave * 2, 5, -7)
+      ..lineTo(7, -4)
+      ..close();
+    final lowerFin = Path()
+      ..moveTo(-5, 5)
+      ..quadraticBezierTo(1, 16 + wave * 2, 9, 5)
+      ..close();
+    final finPaint = Paint()
+      ..color = light.withValues(alpha: .62)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(dorsalFin, finPaint);
+    canvas.drawPath(lowerFin, finPaint);
+
+    canvas.drawOval(
+      const Rect.fromLTWH(-12, -7, 26, 14),
+      Paint()
+        ..shader = LinearGradient(
+          colors: [dark, color, light],
+          stops: const [0, .55, 1],
+        ).createShader(const Rect.fromLTWH(-12, -7, 26, 14)),
+    );
+
+    // Translucent pectoral fins flutter independently from the tail.
+    canvas.save();
+    canvas.rotate(finWave * .16);
+    canvas.drawOval(
+      const Rect.fromLTWH(-1, 1, 10, 4),
+      Paint()..color = Colors.white.withValues(alpha: .24),
+    );
+    canvas.restore();
+    canvas.drawArc(
+      const Rect.fromLTWH(-5, -5, 12, 10),
+      -.9,
+      1.5,
+      false,
+      Paint()
+        ..color = Colors.white.withValues(alpha: .24)
+        ..strokeWidth = 1.1
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawCircle(
+        const Offset(8, -2), 1.7, Paint()..color = const Color(0xFF04192E));
+    canvas.drawCircle(
+        const Offset(8.5, -2.5), .55, Paint()..color = Colors.white);
   }
 
   @override
