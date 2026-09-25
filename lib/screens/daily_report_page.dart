@@ -60,6 +60,9 @@ class _DailyReportPageState extends State<DailyReportPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.adminMode) {
+      reportFilterDate = DateUtils.dateOnly(DateTime.now());
+    }
     reports = _load();
     if (!widget.adminMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _unlock());
@@ -197,7 +200,9 @@ class _DailyReportPageState extends State<DailyReportPage> {
                   child: Padding(
                       padding: EdgeInsets.all(30),
                       child: Text('No daily reports yet.')));
-            return Column(children: rows.map(_reportTile).toList());
+            return widget.adminMode
+                ? _adminReportsByBranch(rows)
+                : Column(children: rows.map(_reportTile).toList());
           },
         ),
       ],
@@ -300,39 +305,156 @@ class _DailyReportPageState extends State<DailyReportPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
-  Widget _historyDateFilter() => Container(
-        constraints: const BoxConstraints(maxWidth: 420),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+  Widget _historyDateFilter() {
+    final selected = reportFilterDate ?? DateTime.now();
+    final currentYear = DateTime.now().year;
+    final years = List.generate(5, (index) => currentYear + 1 - index);
+    final days = DateTime(selected.year, selected.month + 1, 0).day;
+
+    void updateDate({int? year, int? month, int? day}) {
+      final nextYear = year ?? selected.year;
+      final nextMonth = month ?? selected.month;
+      final maxDay = DateTime(nextYear, nextMonth + 1, 0).day;
+      final nextDay = (day ?? selected.day).clamp(1, maxDay);
+      setState(() {
+        reportFilterDate = DateTime(nextYear, nextMonth, nextDay);
+        reports = _load();
+      });
+    }
+
+    return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: const Color(0xFFC8D3F4)),
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(children: [
-          IconButton(
-            tooltip: 'Choose report date',
-            onPressed: _pickHistoryDate,
-            icon: const Icon(Icons.calendar_month_outlined, color: blue),
-          ),
-          Expanded(
-            child: Text(
-              reportFilterDate == null
-                  ? 'All report dates - choose year, month and date'
-                  : 'Reports for ${DateFormat('dd MMMM yyyy').format(reportFilterDate!)}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_month_outlined, color: blue),
+                  SizedBox(width: 8),
+                  Text('Select report date',
+                      style: TextStyle(fontWeight: FontWeight.w900)),
+                ],
+              ),
             ),
-          ),
-          if (reportFilterDate != null)
-            IconButton(
-              tooltip: 'Show all dates',
-              onPressed: () => setState(() {
-                reportFilterDate = null;
-                reports = _load();
-              }),
-              icon: const Icon(Icons.clear),
+            SizedBox(
+              width: 120,
+              child: DropdownButtonFormField<int>(
+                initialValue: selected.year,
+                decoration: const InputDecoration(
+                    labelText: 'Year', border: OutlineInputBorder()),
+                items: years
+                    .map((year) => DropdownMenuItem(
+                          value: year,
+                          child: Text('$year'),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) updateDate(year: value);
+                },
+              ),
             ),
-        ]),
-      );
+            SizedBox(
+              width: 150,
+              child: DropdownButtonFormField<int>(
+                initialValue: selected.month,
+                decoration: const InputDecoration(
+                    labelText: 'Month', border: OutlineInputBorder()),
+                items: List.generate(
+                  12,
+                  (index) => DropdownMenuItem(
+                    value: index + 1,
+                    child: Text(
+                        DateFormat('MMMM').format(DateTime(2000, index + 1))),
+                  ),
+                ),
+                onChanged: (value) {
+                  if (value != null) updateDate(month: value);
+                },
+              ),
+            ),
+            SizedBox(
+              width: 105,
+              child: DropdownButtonFormField<int>(
+                initialValue: selected.day.clamp(1, days),
+                decoration: const InputDecoration(
+                    labelText: 'Day', border: OutlineInputBorder()),
+                items: List.generate(
+                  days,
+                  (index) => DropdownMenuItem(
+                    value: index + 1,
+                    child: Text('${index + 1}'),
+                  ),
+                ),
+                onChanged: (value) {
+                  if (value != null) updateDate(day: value);
+                },
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _pickHistoryDate,
+              icon: const Icon(Icons.edit_calendar_outlined),
+              label: Text(DateFormat('dd MMM yyyy').format(selected)),
+            ),
+          ],
+        ));
+  }
+
+  Widget _adminReportsByBranch(List<Map<String, dynamic>> rows) {
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final row in rows) {
+      final branch = '${row['branch_id'] ?? 'UNASSIGNED'}'.trim().toUpperCase();
+      grouped.putIfAbsent(branch, () => []).add(row);
+    }
+    final branches = grouped.keys.toList()..sort();
+    return Column(
+      children: branches.map((branch) {
+        final branchRows = grouped[branch]!;
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFF),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: blue, width: 1.4),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.storefront_rounded, color: blue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(branch,
+                        style: const TextStyle(
+                            color: blue,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900)),
+                  ),
+                  Text('${branchRows.length} report(s)',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ...branchRows.map(_reportTile),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
 
   Widget _reportForm() => Center(
         child: Container(
