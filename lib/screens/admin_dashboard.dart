@@ -4778,12 +4778,64 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  String? _branchBadgeAsset(String branch) {
+    return switch (branch.trim().toUpperCase()) {
+      'AMANJAYA' => 'assets/branch_badges/amanjaya.png',
+      'ASTANA' => 'assets/branch_badges/astana.png',
+      'GURUN' => 'assets/branch_badges/gurun.png',
+      'JITRA' => 'assets/branch_badges/jitra.png',
+      'KULIM' => 'assets/branch_badges/kulim.png',
+      'LANGKAWI' => 'assets/branch_badges/langkawi.png',
+      'PRAI' => 'assets/branch_badges/prai.png',
+      'SUNGAI PETANI' => 'assets/branch_badges/sungai_petani.png',
+      _ => null,
+    };
+  }
+
   Widget _employeeBranchFilterButton({
     required String label,
     required bool selected,
     required VoidCallback onTap,
   }) {
     final allBranches = label.trim().toLowerCase() == 'all branches';
+    final badgeAsset = allBranches ? null : _branchBadgeAsset(label);
+
+    if (badgeAsset != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(13),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 48,
+            constraints: BoxConstraints(
+              minWidth: label.trim().length > 10 ? 142 : 98,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(13),
+              color: selected ? const Color(0x140066D7) : Colors.transparent,
+              boxShadow: selected
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x330066D7),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Image.asset(
+              badgeAsset,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -4791,8 +4843,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         borderRadius: BorderRadius.circular(9),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          height: 42,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             gradient: selected
                 ? const LinearGradient(
@@ -4835,7 +4887,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: selected ? Colors.white : const Color(0xFF062A68),
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w900,
                 letterSpacing: allBranches ? 0 : .2,
                 height: 1,

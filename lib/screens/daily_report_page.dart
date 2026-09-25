@@ -417,42 +417,141 @@ class _DailyReportPageState extends State<DailyReportPage> {
       grouped.putIfAbsent(branch, () => []).add(row);
     }
     final branches = grouped.keys.toList()..sort();
-    return Column(
-      children: branches.map((branch) {
-        final branchRows = grouped[branch]!;
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+    return LayoutBuilder(builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 1100
+          ? 4
+          : constraints.maxWidth >= 720
+              ? 3
+              : constraints.maxWidth >= 480
+                  ? 2
+                  : 1;
+      const gap = 12.0;
+      final width = (constraints.maxWidth - (gap * (columns - 1))) / columns;
+      return Wrap(
+        spacing: gap,
+        runSpacing: gap,
+        children: branches.map((branch) {
+          return SizedBox(
+            width: width,
+            child: _branchReportFlashcard(branch, grouped[branch]!),
+          );
+        }).toList(),
+      );
+    });
+  }
+
+  Widget _branchReportFlashcard(
+    String branch,
+    List<Map<String, dynamic>> branchRows,
+  ) {
+    final report = branchRows.first;
+    final summary = '${report['maintenance_report'] ?? ''}'.trim();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _review(report),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: 174,
+          padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
             color: const Color(0xFFF8FAFF),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: blue, width: 1.4),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x16062D69),
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.storefront_rounded, color: blue),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(branch,
-                        style: const TextStyle(
-                            color: blue,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900)),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: blue,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(Icons.storefront_rounded,
+                        color: Colors.white, size: 18),
                   ),
-                  Text('${branchRows.length} report(s)',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      branch,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: blue,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE7EDFF),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${branchRows.length}',
+                      style: const TextStyle(
+                        color: blue,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              ...branchRows.map(_reportTile),
+              const SizedBox(height: 10),
+              Text(
+                DateFormat('dd MMMM yyyy').format(
+                  DateTime.tryParse('${report['report_date']}') ??
+                      reportFilterDate ??
+                      DateTime.now(),
+                ),
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Submitted ${_malaysiaTimestamp(report['submitted_at'])}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.black54, fontSize: 10.5),
+              ),
+              Text(
+                'Reported by ${report['reported_by'] ?? '-'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.black54, fontSize: 10.5),
+              ),
+              const SizedBox(height: 5),
+              Expanded(
+                child: Text(
+                  summary.isEmpty ? 'No maintenance remarks.' : summary,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, height: 1.25),
+                ),
+              ),
+              const Align(
+                alignment: Alignment.bottomRight,
+                child: Icon(Icons.visibility_outlined, color: blue, size: 19),
+              ),
             ],
           ),
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
 
