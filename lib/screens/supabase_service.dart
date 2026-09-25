@@ -1107,6 +1107,38 @@ class SupabaseService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getPayrollForYear(int year) async {
+    try {
+      const pageSize = 1000;
+      final payrollRows = <Map<String, dynamic>>[];
+      final start = '${year.toString().padLeft(4, '0')}-01-01';
+      final end = '${(year + 1).toString().padLeft(4, '0')}-01-01';
+      var offset = 0;
+
+      while (true) {
+        final response = await client
+            .from('payroll')
+            .select()
+            .gte('period', start)
+            .lt('period', end)
+            .order('period', ascending: true)
+            .order('employee_id', ascending: true)
+            .range(offset, offset + pageSize - 1);
+        final page = _mapList(response);
+        payrollRows.addAll(page);
+
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      return payrollRows;
+    } catch (e, stackTrace) {
+      debugPrint('GET YEARLY PAYROLL ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getPayrollForMonth(
     DateTime month,
   ) async {

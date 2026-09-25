@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/ea_form_pdf_service.dart';
 import 'supabase_service.dart';
@@ -26,11 +29,58 @@ class _EaFormsPageState extends State<EaFormsPage> {
   bool _busy = false;
   String _search = '';
   Future<List<Map<String, dynamic>>>? _future;
+  RealtimeChannel? _realtimeChannel;
+  Timer? _realtimeReloadTimer;
 
   @override
   void initState() {
     super.initState();
     _reload();
+    _subscribeToEaFormChanges();
+  }
+
+  void _subscribeToEaFormChanges() {
+    final channel = SupabaseService.client.channel(
+      'ea-forms-${widget.isAdmin ? 'admin' : widget.employeeId}-$hashCode',
+    );
+    if (widget.isAdmin) {
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'employee_ea_forms',
+        callback: (_) => _scheduleRealtimeReload(),
+      );
+    } else {
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'employee_ea_forms',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'employee_id',
+          value: widget.employeeId!,
+        ),
+        callback: (_) => _scheduleRealtimeReload(),
+      );
+    }
+    _realtimeChannel = channel..subscribe();
+  }
+
+  void _scheduleRealtimeReload() {
+    _realtimeReloadTimer?.cancel();
+    _realtimeReloadTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) _reload();
+    });
+  }
+
+  @override
+  void dispose() {
+    _realtimeReloadTimer?.cancel();
+    final channel = _realtimeChannel;
+    if (channel != null) {
+      SupabaseService.client.removeChannel(channel);
+    }
+    super.dispose();
   }
 
   void _reload() {
@@ -69,15 +119,9 @@ class _EaFormsPageState extends State<EaFormsPage> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final start = '$_year-01-01';
-      final end = '${_year + 1}-01-01';
       final results = await Future.wait([
         SupabaseService.client.from('employees').select(),
-        SupabaseService.client
-            .from('payroll')
-            .select()
-            .gte('period', start)
-            .lt('period', end),
+        SupabaseService.getPayrollForYear(_year),
       ]);
       final employees = List<Map<String, dynamic>>.from(results[0]);
       final payroll = List<Map<String, dynamic>>.from(results[1]);
@@ -93,58 +137,40 @@ class _EaFormsPageState extends State<EaFormsPage> {
             )
             .toList();
         if (records.isEmpty) continue;
-        final recordsByMonth = <int, Map<String, dynamic>>{};
+        final monthlyBreakdown = <Map<String, dynamic>>[];
+        final monthsIncluded = <int>{};
         for (final record in records) {
           final period = DateTime.tryParse('${record['period']}');
           if (period == null || period.year != _year) continue;
-          if (recordsByMonth.containsKey(period.month)) {
-            throw Exception(
-              '$id has more than one payroll record for '
-              '${DateFormat('MMMM yyyy').format(period)}.',
-            );
-          }
-          recordsByMonth[period.month] = record;
-        }
-        if (recordsByMonth.isEmpty) continue;
-
-        final monthlyBreakdown = <Map<String, dynamic>>[];
-        for (var month = 1; month <= 12; month++) {
-          final record = recordsByMonth[month];
-          if (record == null) continue;
-          final foreignWorkerSalary = _number(record['fw_salary']);
-          final salaryBase = foreignWorkerSalary != 0
-              ? foreignWorkerSalary
-              : _number(record['basic_salary']);
+          monthsIncluded.add(period.month);
           final salaryWages = _money(
-            salaryBase +
+            _number(record['basic_salary']) +
+                _number(record['fw_salary']) +
                 _number(record['overtime']) +
-                _number(record['cuti_umum']),
-          );
-          final commissionBonus = _money(
-            _number(record['commission']) + _number(record['bonus']),
+                _number(record['cuti_umum']) -
+                _number(record['late_deduction']) -
+                _number(record['unpaid_deduction']),
           );
           final allowances = _money(
             _number(record['elaun_kedatangan']) +
                 _number(record['elaun_perkhidmatan']) +
-                _number(record['elaun_kerajinan']) +
-                _number(record['other_earnings']),
+                _number(record['elaun_kerajinan']),
           );
           monthlyBreakdown.add({
-            'month': month,
-            'period': '$_year-${month.toString().padLeft(2, '0')}',
+            'month': period.month,
+            'period': '$_year-${period.month.toString().padLeft(2, '0')}',
             'salary_wages': salaryWages,
-            'commission_bonus': commissionBonus,
+            'commission_bonus': 0.0,
             'allowances': allowances,
-            'gross_income': _money(salaryWages + commissionBonus + allowances),
+            'gross_income': _money(salaryWages + allowances),
             'pcb': _money(_number(record['pcb'])),
             'zakat': _money(_number(record['zakat'])),
             'epf_employee': _money(_number(record['epf_employee'])),
-            'socso_employee': _money(
-              _number(record['socso_employee']) +
-                  _number(record['eis_employee']),
-            ),
+            'socso_employee': _money(_number(record['socso_employee'])),
+            'eis_employee': _money(_number(record['eis_employee'])),
           });
         }
+        if (monthlyBreakdown.isEmpty) continue;
 
         double annual(String field) => _money(
               monthlyBreakdown.fold(
@@ -156,6 +182,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
         final commissionBonus = annual('commission_bonus');
         final allowances = annual('allowances');
         final employeeSocso = annual('socso_employee');
+        final employeeEis = annual('eis_employee');
         rows.add({
           'employee_id': id,
           'tax_year': _year,
@@ -186,7 +213,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'compensation': 0,
             'total_employment_income':
                 _money(salaryWages + commissionBonus + allowances),
-            'months_included': recordsByMonth.keys.toList()..sort(),
+            'months_included': monthsIncluded.toList()..sort(),
             'monthly_breakdown': monthlyBreakdown,
             'pension': 0,
             'other_income': 0,
@@ -194,6 +221,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'cp38': 0,
             'epf_employee': annual('epf_employee'),
             'socso_employee': employeeSocso,
+            'eis_employee': employeeEis,
             'zakat': annual('zakat'),
             'tax_exempt_allowances': 0,
             'generated_date': DateFormat('dd/MM/yyyy').format(_generatedDate),
