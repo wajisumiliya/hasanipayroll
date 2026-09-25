@@ -103,10 +103,7 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                     builder: (_, __) => CustomPaint(
                         painter: _AquariumPainter(
                             employeeId: widget.employeeId,
-                            // Keep the earned count unchanged in the stats, but
-                            // make the aquarium feel alive even for new users.
-                            fishCount:
-                                math.max(5, widget.fishCount).clamp(5, 8),
+                            fishCount: widget.fishCount.clamp(2, 10),
                             growth:
                                 math.min(1.25, .78 + widget.totalFeed * .018),
                             progress: _controller.value,
@@ -165,7 +162,7 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                           '${widget.availableFood}', 'Food ready'),
                       _stat(
                           Icons.login_rounded,
-                          widget.fishCount >= 5
+                          widget.fishCount >= 10
                               ? 'MAX'
                               : '${widget.weeklyLogins % 4} / 4',
                           'This week'),
@@ -174,7 +171,7 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                     ClipRRect(
                         borderRadius: BorderRadius.circular(20),
                         child: LinearProgressIndicator(
-                            value: widget.fishCount >= 5
+                            value: widget.fishCount >= 10
                                 ? 1
                                 : (widget.weeklyLogins % 4) / 4,
                             minHeight: 7,
@@ -182,8 +179,8 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                             backgroundColor: Colors.white24)),
                     const SizedBox(height: 7),
                     Text(
-                        widget.fishCount >= 5
-                            ? 'Aquarium complete — maximum 5 fish reached!'
+                        widget.fishCount >= 10
+                            ? 'Aquarium complete — maximum 10 fish reached!'
                             : '${widget.loginsUntilNextFish} more login${widget.loginsUntilNextFish == 1 ? '' : 's'} to welcome a new fish',
                         style: const TextStyle(
                             color: Colors.white,
@@ -311,12 +308,64 @@ class _AquariumPainter extends CustomPainter {
           ..lineTo(0, size.height)
           ..close(),
         sand);
+
+    final gravelColors = [
+      const Color(0xFFC9A35E),
+      const Color(0xFF8E7757),
+      const Color(0xFFE0C77C),
+      const Color(0xFF718B7B),
+    ];
+    for (var i = 0; i < 34; i++) {
+      final gx = size.width * ((i * .083 + .017) % 1);
+      final gy = size.height * (.84 + (i % 4) * .035);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(gx, gy),
+          width: 7 + (i % 4).toDouble(),
+          height: 4 + (i % 3).toDouble(),
+        ),
+        Paint()
+          ..color =
+              gravelColors[i % gravelColors.length].withValues(alpha: .80),
+      );
+    }
+
+    final caveRect = Rect.fromLTWH(size.width * .69, size.height * .69,
+        size.width * .14, size.height * .18);
+    canvas.drawOval(caveRect, Paint()..color = const Color(0xFF415D63));
+    canvas.drawOval(
+      Rect.fromLTWH(size.width * .725, size.height * .745, size.width * .07,
+          size.height * .12),
+      Paint()..color = const Color(0xFF062F43),
+    );
+
+    final filterX = size.width * .94;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(filterX, size.height * .17, 11, size.height * .27),
+        const Radius.circular(4),
+      ),
+      Paint()..color = const Color(0x88445F6D),
+    );
+    canvas.drawLine(
+      Offset(filterX + 5, size.height * .17),
+      Offset(filterX - 14, size.height * .17),
+      Paint()
+        ..color = const Color(0xAA5F7C88)
+        ..strokeWidth = 4,
+    );
     final plant = Paint()
       ..color = const Color(0xFF28B982).withValues(alpha: .78)
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
-    for (final x in [size.width * .09, size.width * .15, size.width * .87]) {
+    for (final x in [
+      size.width * .07,
+      size.width * .12,
+      size.width * .18,
+      size.width * .87,
+      size.width * .92,
+    ]) {
       canvas.drawPath(
           Path()
             ..moveTo(x, size.height * .88)
@@ -333,6 +382,18 @@ class _AquariumPainter extends CustomPainter {
               size.height * (.76 - phase * .58)),
           2.0 + (i % 3) * 1.3,
           bubble);
+    }
+    for (var i = 0; i < 8; i++) {
+      final phase = (progress * 1.35 + i * .105) % 1;
+      canvas.drawCircle(
+        Offset(filterX - 10 + math.sin(phase * math.pi * 5) * 4,
+            size.height * (.66 - phase * .48)),
+        1.8 + (i % 3),
+        Paint()
+          ..color = Colors.white.withValues(alpha: .28)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1,
+      );
     }
     if (feeding) {
       final elapsed = math.min(1.0, ((progress - feedStart + 1) % 1) / .33);
@@ -382,7 +443,8 @@ class _AquariumPainter extends CustomPainter {
       final verticalSlope =
           math.cos(progress * math.pi * 2 * (.7 + i * .04) + i * 1.7) * .15;
       final angle = verticalSlope * (movingRight ? 1 : -1);
-      final scale = growth * (.80 + (i % 3) * .11);
+      final sizeStep = fishCount <= 1 ? 0.0 : i / (fishCount - 1);
+      final scale = growth * (.56 + sizeStep * .58);
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(angle);
