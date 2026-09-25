@@ -27,6 +27,9 @@ class EaFormPdfService {
       return amount == 0 ? '' : amount.toStringAsFixed(2);
     }
 
+    final sectionCTotal =
+        _number(data['salary_wages']) + _number(data['allowances_overtime']);
+
     pw.Widget field(
       double left,
       double top,
@@ -34,6 +37,7 @@ class EaFormPdfService {
       String content, {
       double size = 6.7,
       bool right = false,
+      bool bold = false,
     }) {
       if (content.isEmpty) return pw.SizedBox();
       return pw.Positioned(
@@ -44,16 +48,31 @@ class EaFormPdfService {
           height: size + 3,
           child: pw.FittedBox(
             fit: pw.BoxFit.scaleDown,
-            alignment: right ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
+            alignment:
+                right ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
             child: pw.Text(
               content,
               maxLines: 1,
-              style: pw.TextStyle(fontSize: size, color: PdfColors.black),
+              style: pw.TextStyle(
+                fontSize: size,
+                color: PdfColors.black,
+                fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
             ),
           ),
         ),
       );
     }
+
+    pw.Widget amountField(double top, dynamic value) => field(
+          480,
+          top,
+          74,
+          money(value),
+          size: 7.5,
+          right: true,
+          bold: true,
+        );
 
     final year = text(form['tax_year'] ?? data['tax_year']);
     document.addPage(
@@ -63,7 +82,8 @@ class EaFormPdfService {
         build: (_) => pw.FullPage(
           ignoreMargins: true,
           child: pw.Stack(children: [
-            pw.Positioned.fill(child: pw.Image(background, fit: pw.BoxFit.fill)),
+            pw.Positioned.fill(
+                child: pw.Image(background, fit: pw.BoxFit.fill)),
 
             // Header
             field(99, 63, 86, text(data['employer_tin'])),
@@ -84,36 +104,37 @@ class EaFormPdfService {
             field(432, 195, 153, text(data['employment_end'])),
 
             // B - Pendapatan penggajian, manfaat dan tempat kediaman
-            field(480, 244, 74, money(data['salary_wages']), right: true),
-            field(480, 258, 74, money(data['commission_bonus']), right: true),
-            field(480, 272, 74, money(data['allowances_overtime']), right: true),
-            field(480, 287, 74, money(data['tax_paid_by_employer']), right: true),
-            field(480, 301, 74, money(data['esos_benefit']), right: true),
-            field(480, 315, 74, money(data['gratuity']), right: true),
-            field(480, 372, 74, money(data['arrears']), right: true),
-            field(480, 386, 74, money(data['benefits_in_kind']), right: true),
-            field(480, 400, 74, money(data['living_accommodation']), right: true),
-            field(480, 414, 74, money(data['pension_refund']), right: true),
-            field(480, 429, 74, money(data['compensation']), right: true),
+            amountField(244, data['salary_wages']),
+            amountField(258, data['commission_bonus']),
+            amountField(272, data['allowances_overtime']),
+            amountField(287, data['tax_paid_by_employer']),
+            amountField(301, data['esos_benefit']),
+            amountField(315, data['gratuity']),
+            amountField(372, data['arrears']),
+            amountField(386, data['benefits_in_kind']),
+            amountField(400, data['living_accommodation']),
+            amountField(414, data['pension_refund']),
+            amountField(429, data['compensation']),
 
             // C - Pencen dan lain-lain
-            field(480, 453, 74, money(data['pension']), right: true),
-            field(480, 467, 74, money(data['other_income']), right: true),
+            amountField(453, data['pension']),
+            amountField(467, data['other_income']),
+            amountField(484, sectionCTotal),
 
             // D - Jumlah potongan
-            field(480, 522, 74, money(data['pcb']), right: true),
-            field(480, 535, 74, money(data['cp38']), right: true),
-            field(480, 548, 74, money(data['zakat']), right: true),
-            field(480, 561, 74, money(data['approved_donations']), right: true),
+            amountField(522, data['pcb']),
+            amountField(535, data['cp38']),
+            amountField(548, data['zakat']),
+            amountField(561, data['approved_donations']),
             field(480, 614, 74, text(data['eligible_children']), right: true),
 
             // E - Caruman pekerja
             field(185, 654, 262, 'KUMPULAN WANG SIMPANAN PEKERJA', size: 5.8),
-            field(480, 678, 74, money(data['epf_employee']), right: true),
-            field(480, 695, 74, money(data['socso_employee']), right: true),
+            amountField(678, data['epf_employee']),
+            amountField(695, data['socso_employee']),
 
             // F - Elaun/manfaat dikecualikan cukai
-            field(480, 708, 74, money(data['tax_exempt_allowances']), right: true),
+            amountField(708, data['tax_exempt_allowances']),
 
             // Employer certification
             field(354, 738, 225, text(data['officer_name'])),

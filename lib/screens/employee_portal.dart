@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/payroll.dart';
 import '../services/app_service.dart';
@@ -40,6 +41,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   late final AnimationController _birthdayController;
   Timer? _birthdayCelebrationTimer;
   Timer? _notificationRefreshTimer;
+  RealtimeChannel? _notificationChannel;
   bool _showBirthdayCelebration = false;
   List<Map<String, dynamic>> _notifications = const [];
   bool _notificationsLoading = false;
@@ -62,11 +64,30 @@ class _EmployeePortalState extends State<EmployeePortal>
       });
     }
     _loadEmployeeNotifications();
+    _subscribeToNotifications();
     _refreshAquarium();
     _notificationRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _loadEmployeeNotifications(),
     );
+  }
+
+  void _subscribeToNotifications() {
+    if (employeeId.isEmpty) return;
+    _notificationChannel = SupabaseService.client
+        .channel('employee-notifications-$employeeId-$hashCode')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'app_notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'employee_id',
+            value: employeeId,
+          ),
+          callback: (_) => _loadEmployeeNotifications(),
+        )
+        .subscribe();
   }
 
   Future<void> _refreshAquarium() async {
@@ -217,6 +238,10 @@ class _EmployeePortalState extends State<EmployeePortal>
   void dispose() {
     _birthdayCelebrationTimer?.cancel();
     _notificationRefreshTimer?.cancel();
+    final notificationChannel = _notificationChannel;
+    if (notificationChannel != null) {
+      SupabaseService.client.removeChannel(notificationChannel);
+    }
     _birthdayController.dispose();
     super.dispose();
   }

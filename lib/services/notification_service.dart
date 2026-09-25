@@ -222,4 +222,31 @@ class NotificationService {
       type: 'payslip',
     );
   }
+
+  static Future<void> sendEaFormsAvailable({
+    required Iterable<String> employeeIds,
+    required int taxYear,
+  }) async {
+    final ids = employeeIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    if (ids.isEmpty) return;
+
+    final response = await SupabaseService.client.functions.invoke(
+      _sendFunctionName,
+      body: {
+        'title': 'EA Form Available',
+        'body': 'Your EA form for $taxYear is ready to view.',
+        'type': 'ea_form',
+        'audience': 'employee',
+        'employee_ids': ids,
+        'tax_year': taxYear,
+      },
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw Exception('Notification service returned ${response.status}.');
+    }
+  }
 }
