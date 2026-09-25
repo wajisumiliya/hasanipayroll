@@ -2937,10 +2937,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       const MapEntry(null, 'All branches'),
       ...branches.map((branch) => MapEntry(branch.key, branch.value)),
     ];
-    return Wrap(
-      spacing: 5,
-      runSpacing: 7,
-      children: options
+    return LayoutBuilder(builder: (context, constraints) {
+      final buttons = options
           .map(
             (branch) => _employeeBranchFilterButton(
               label: branch.value,
@@ -2948,8 +2946,31 @@ class _AdminDashboardState extends State<AdminDashboard>
               onTap: () => onChanged(branch.key),
             ),
           )
-          .toList(),
-    );
+          .toList();
+      final availablePerButton =
+          (constraints.maxWidth - (5 * (buttons.length - 1))) / buttons.length;
+      if (availablePerButton >= 88) {
+        return Row(
+          children: [
+            for (var index = 0; index < buttons.length; index++) ...[
+              Expanded(child: buttons[index]),
+              if (index != buttons.length - 1) const SizedBox(width: 5),
+            ],
+          ],
+        );
+      }
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < buttons.length; index++) ...[
+              buttons[index],
+              if (index != buttons.length - 1) const SizedBox(width: 5),
+            ],
+          ],
+        ),
+      );
+    });
   }
 
   Widget _dashboardSectionTitle(String title, String subtitle) {
@@ -4770,8 +4791,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         borderRadius: BorderRadius.circular(9),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 11),
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             gradient: selected
                 ? const LinearGradient(
@@ -4806,7 +4827,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               Icon(
                 Icons.grid_view_rounded,
                 color: selected ? Colors.white : const Color(0xFF075FC5),
-                size: 15,
+                size: 17,
               ),
             if (allBranches) const SizedBox(width: 6),
             Text(
@@ -4814,7 +4835,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: selected ? Colors.white : const Color(0xFF062A68),
-                fontSize: 10.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w900,
                 letterSpacing: allBranches ? 0 : .2,
                 height: 1,
@@ -8618,94 +8639,27 @@ class _AdminDashboardState extends State<AdminDashboard>
                     child: Center(child: Text('No branches found.')),
                   )
                 else
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 240,
-                      mainAxisExtent: 132,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: branches.length,
-                    itemBuilder: (context, index) {
-                      final branch = branches[index];
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 8,
+                    children: branches.map((branch) {
                       final id = (branch['id'] ?? branch['branch_id'] ?? '')
                           .toString();
                       final name =
                           (branch['name'] ?? branch['branch_name'] ?? id)
                               .toString();
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: id.isEmpty
-                            ? null
-                            : () => setState(() {
-                                  selectedAttendanceBranchId = id;
-                                  _attendanceSubmissionFilter = 'submitted';
-                                }),
-                        child: Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                            side: BorderSide(
-                              color: index.isEven
-                                  ? const Color(0xFF243B8F)
-                                  : const Color(0xFF69BFFF),
-                              width: 1.8,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: _payrollBranchColors(name),
-                                    ),
-                                    borderRadius: BorderRadius.circular(15),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _payrollBranchColors(name)
-                                            .last
-                                            .withValues(alpha: .3),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: _hasaniBranchLogo(42),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  name,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 6),
-                                const Row(
-                                  children: [
-                                    Text('View Attendance',
-                                        style: TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 12)),
-                                    Spacer(),
-                                    Icon(Icons.arrow_forward, size: 17),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      return _employeeBranchFilterButton(
+                        label: name,
+                        selected: false,
+                        onTap: () {
+                          if (id.isEmpty) return;
+                          setState(() {
+                            selectedAttendanceBranchId = id;
+                            _attendanceSubmissionFilter = 'submitted';
+                          });
+                        },
                       );
-                    },
+                    }).toList(),
                   ),
               ],
             ),
@@ -9870,9 +9824,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             BoxShadow(color: Color(0x22000000), blurRadius: 5),
           ],
         ),
-        child: Image.asset(
-          'assets/hasani_books_payslip_logo.jpeg',
-          fit: BoxFit.contain,
+        child: const Icon(
+          Icons.storefront_rounded,
+          color: Color(0xFF075FC5),
         ),
       );
 
@@ -12182,97 +12136,27 @@ class _AdminDashboardState extends State<AdminDashboard>
                           ),
                         )
                       else
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 240,
-                            mainAxisExtent: 132,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
-                          itemCount: branchIds.length,
-                          itemBuilder: (context, index) {
-                            final branchId = branchIds[index];
+                        Wrap(
+                          spacing: 5,
+                          runSpacing: 8,
+                          children: branchIds.map((branchId) {
                             final branchEmployees =
                                 branchGroups[branchId] ?? [];
-
-                            return Card(
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(
-                                  color: index.isEven
-                                      ? const Color(0xFF243B8F)
-                                      : const Color(0xFF69BFFF),
-                                  width: 1.8,
-                                ),
-                              ),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () async {
-                                  await _showPayrollEmployeeSelection(
-                                    branchName:
-                                        branchNames[branchId] ?? branchId,
-                                    employees: branchEmployees,
-                                    month: selectedPayrollMonth,
-                                  );
-                                  if (mounted) setState(() {});
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: _payrollBranchColors(
-                                              branchNames[branchId] ?? branchId,
-                                            ),
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: _payrollBranchColors(
-                                                branchNames[branchId] ??
-                                                    branchId,
-                                              ).last.withValues(alpha: .3),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 5),
-                                            ),
-                                          ],
-                                        ),
-                                        child: _hasaniBranchLogo(42),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        branchNames[branchId] ?? branchId,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${branchEmployees.length} employee(s)',
-                                        style: const TextStyle(
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                            return _employeeBranchFilterButton(
+                              label: branchNames[branchId] ?? branchId,
+                              selected: selectedPayrollBranchId == branchId,
+                              onTap: () async {
+                                setState(
+                                    () => selectedPayrollBranchId = branchId);
+                                await _showPayrollEmployeeSelection(
+                                  branchName: branchNames[branchId] ?? branchId,
+                                  employees: branchEmployees,
+                                  month: selectedPayrollMonth,
+                                );
+                                if (mounted) setState(() {});
+                              },
                             );
-                          },
+                          }).toList(),
                         ),
                     ],
                   ),

@@ -72,181 +72,247 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
 
   Widget _horizontalPremiumCard() => AspectRatio(
         aspectRatio: 1.58,
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            Positioned.fill(
-              top: 12,
-              child: _shell(
-                background: const _HorizontalPremiumBackground(),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 18, 15),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 112,
-                        child: Column(
-                          children: [
-                            Image.asset(
-                              'assets/hasani_books_payslip_logo.jpeg',
-                              height: 37,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: const Color(0xFF090A0C),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFD6AD5C), width: 2.2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x66000000),
+                blurRadius: 24,
+                offset: Offset(0, 12),
+              ),
+              BoxShadow(
+                color: Color(0x55E8C778),
+                blurRadius: 5,
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              const Positioned.fill(child: _BlackGoldBackground()),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 13),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 108,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            height: 34,
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(
+                                color: const Color(0xFFD6AD5C),
+                              ),
+                            ),
+                            child: Image.asset(
+                              'assets/hasani_books_logo.jpg',
                               fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Text(
-                                'HASANI BOOKS',
-                                style: TextStyle(
-                                  color: navy,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 7),
-                            _portraitPhoto(width: 98, height: 116),
-                            const Spacer(),
-                            Text(
-                              employee.employeeId,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.verified_user_rounded,
-                                  color: Color(0xFFED1C24),
-                                  size: 16,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'EMPLOYEE IDENTITY',
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Text(
+                                  'HASANI BOOKS',
                                   style: TextStyle(
-                                    color: Color(0xFFBFD7FF),
-                                    fontSize: 8,
+                                    color: Color(0xFF111111),
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.6,
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              employee.name.toUpperCase(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                height: 1.02,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: .25,
                               ),
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              employee.designation.trim().isEmpty
-                                  ? 'EMPLOYEE'
-                                  : employee.designation.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFFFFC4C7),
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: .8,
-                              ),
+                          ),
+                          const SizedBox(height: 8),
+                          _blackGoldPortrait(),
+                          const Spacer(),
+                          const Text(
+                            'HASANI EDAR SDN BHD',
+                            style: TextStyle(
+                              color: Color(0xFFE8C778),
+                              fontSize: 6.4,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: .9,
                             ),
-                            Container(
-                              width: 58,
-                              height: 2,
-                              margin: const EdgeInsets.symmetric(vertical: 7),
-                              color: red,
-                            ),
-                            _horizontalDetail(
-                                'Department', employee.department),
-                            _horizontalDetail('Branch', _branch),
-                            _horizontalDetail('Joined', _joining),
-                            _horizontalDetail(
-                              'Email',
-                              employee.email,
-                              valueSize: 7.2,
-                              maxLines: 2,
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 9,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: employee.isActive
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF6B7280),
-                                    borderRadius: BorderRadius.circular(99),
-                                  ),
-                                  child: Text(
-                                    employee.isActive ? 'ACTIVE' : 'INACTIVE',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 7.5,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: .8,
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                const Text(
-                                  'HASANI EDAR SDN BHD',
-                                  style: TextStyle(
-                                    color: Colors.white60,
-                                    fontSize: 6.5,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: .7,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.verified_user_rounded,
+                                color: Color(0xFFE8C778),
+                                size: 14,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'EMPLOYEE IDENTITY',
+                                style: TextStyle(
+                                  color: Color(0xFFD6AD5C),
+                                  fontSize: 7.2,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            employee.name.toUpperCase(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFFF2D38A),
+                              fontSize: 16.5,
+                              height: 1.02,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: .25,
+                            ),
+                          ),
+                          Container(
+                            width: 86,
+                            height: 2,
+                            margin: const EdgeInsets.only(top: 5, bottom: 7),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFFEF233C), Color(0xFFD6AD5C)],
+                              ),
+                            ),
+                          ),
+                          _horizontalDetail('Employee ID', employee.employeeId),
+                          _horizontalDetail(
+                            'Designation',
+                            employee.designation.trim().isEmpty
+                                ? 'EMPLOYEE'
+                                : employee.designation,
+                          ),
+                          _horizontalDetail('Department', employee.department),
+                          _horizontalDetail('Branch', _branch),
+                          _horizontalDetail('Joined', _joining),
+                          _horizontalDetail(
+                            'Email',
+                            employee.email,
+                            valueSize: 7.1,
+                          ),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF111315),
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(
+                                    color: employee.isActive
+                                        ? const Color(0xFF59C984)
+                                        : const Color(0xFF9CA3AF),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 5,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: employee.isActive
+                                            ? const Color(0xFF59C984)
+                                            : const Color(0xFF9CA3AF),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      employee.isActive ? 'ACTIVE' : 'INACTIVE',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 6.8,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: .7,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              const Text(
+                                'KNOWLEDGE • PEOPLE • PROGRESS',
+                                style: TextStyle(
+                                  color: Color(0xFFB89550),
+                                  fontSize: 4.8,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: .45,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _blackGoldPortrait() => Container(
+        width: 102,
+        height: 119,
+        padding: const EdgeInsets.all(2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFD6AD5C),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: const [
+            BoxShadow(color: Color(0x44000000), blurRadius: 10),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(11.5),
+          child: employee.photoUrl.trim().isEmpty
+              ? Container(
+                  color: const Color(0xFFE9EAEC),
+                  alignment: Alignment.center,
+                  child: Text(
+                    employee.name.trim().isEmpty
+                        ? '?'
+                        : employee.name.trim()[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Color(0xFF17191D),
+                      fontSize: 46,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                )
+              : Image.network(
+                  employee.photoUrl,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                  errorBuilder: (_, __, ___) => const ColoredBox(
+                    color: Color(0xFFE9EAEC),
+                    child: Center(
+                      child: Icon(
+                        Icons.person_rounded,
+                        color: Color(0xFF17191D),
+                        size: 52,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Container(
-              width: 68,
-              height: 25,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFF8FAFC), Color(0xFF94A3B8)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF64748B), width: 2),
-              ),
-              alignment: Alignment.center,
-              child: Container(
-                width: 31,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: navy,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
         ),
       );
 
@@ -265,7 +331,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: Color(0xFFAFC8ED),
+                  color: Color(0xFFC7A85E),
                   fontSize: 8,
                   fontWeight: FontWeight.w700,
                 ),
@@ -274,7 +340,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
             const Text(
               ':',
               style: TextStyle(
-                color: Color(0xFFED1C24),
+                color: Color(0xFFD6AD5C),
                 fontSize: 8,
                 fontWeight: FontWeight.w900,
               ),
@@ -286,7 +352,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                 maxLines: maxLines,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFFF7F3E8),
                   fontSize: valueSize,
                   fontWeight: FontWeight.w800,
                 ),
@@ -883,8 +949,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   );
 }
 
-class _HorizontalPremiumBackground extends StatelessWidget {
-  const _HorizontalPremiumBackground();
+class _BlackGoldBackground extends StatelessWidget {
+  const _BlackGoldBackground();
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -895,72 +961,71 @@ class _HorizontalPremiumBackground extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF0D3B78),
-                  Color(0xFF061D4D),
-                  Color(0xFF020A20)
+                  Color(0xFF17191D),
+                  Color(0xFF090A0C),
+                  Color(0xFF12100D),
                 ],
               ),
             ),
             child: SizedBox.expand(),
           ),
           Positioned(
-            left: -70,
-            top: -55,
-            child: Container(
-              width: 230,
-              height: 155,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(90),
-              ),
-            ),
-          ),
-          Positioned(
-            left: -45,
-            top: 96,
+            right: -42,
+            bottom: -24,
             child: Transform.rotate(
-              angle: -.2,
+              angle: -.27,
               child: Container(
-                width: 205,
-                height: 13,
+                width: 190,
+                height: 74,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFED1C24),
-                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0x00D6AD5C),
+                      Color(0xAAE8C778),
+                      Color(0xFFD6AD5C),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(80),
                 ),
               ),
             ),
           ),
           Positioned(
-            right: -35,
-            top: -40,
+            right: -18,
+            bottom: 9,
             child: Container(
-              width: 150,
-              height: 120,
+              width: 145,
+              height: 4,
               decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: .08),
-                  width: 18,
-                ),
-                shape: BoxShape.circle,
+                color: const Color(0xFFEF233C),
+                borderRadius: BorderRadius.circular(20),
               ),
             ),
           ),
           Positioned(
-            right: 16,
-            bottom: 18,
+            right: 20,
+            top: 55,
             child: Icon(
               Icons.menu_book_rounded,
-              size: 100,
-              color: Colors.white.withValues(alpha: .025),
+              size: 112,
+              color: const Color(0xFFD6AD5C).withValues(alpha: .07),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 0,
+            right: 0,
             top: 0,
-            bottom: 0,
-            child: ColoredBox(
-              color: Color(0xFFED1C24),
-              child: SizedBox(width: 5),
+            child: Container(
+              height: 1,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0x00E8C778),
+                    Color(0xFFE8C778),
+                    Color(0x00E8C778),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
