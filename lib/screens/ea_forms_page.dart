@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/ea_form_pdf_service.dart';
+import '../services/notification_service.dart';
 import 'supabase_service.dart';
 
 class EaFormsPage extends StatefulWidget {
@@ -217,6 +218,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
             'monthly_breakdown': monthlyBreakdown,
             'pension': 0,
             'other_income': 0,
+            'section_c_total': _money(salaryWages + allowances),
             'pcb': annual('pcb'),
             'cp38': 0,
             'epf_employee': annual('epf_employee'),
@@ -232,9 +234,22 @@ class _EaFormsPageState extends State<EaFormsPage> {
       await SupabaseService.client
           .from('employee_ea_forms')
           .upsert(rows, onConflict: 'employee_id,tax_year');
+      String? notificationWarning;
+      try {
+        await NotificationService.sendEaFormsAvailable(
+          employeeIds: rows.map((row) => '${row['employee_id']}'),
+          taxYear: _year,
+        );
+      } catch (error) {
+        notificationWarning = ' Employee notifications failed: $error';
+        debugPrint('EA form notification error: $error');
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${rows.length} EA form(s) generated and published.'),
+        content: Text(
+          '${rows.length} EA form(s) generated and published.'
+          '${notificationWarning ?? ' Employees notified.'}',
+        ),
       ));
       _reload();
     } catch (error) {

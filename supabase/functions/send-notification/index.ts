@@ -19,20 +19,38 @@ Deno.serve(async (request) => {
       return json({ error: 'Invalid notification request.' }, 400);
     }
 
+    const employeeIds = Array.isArray(input.employee_ids)
+      ? [...new Set(input.employee_ids
+        .map((value: unknown) => String(value).trim())
+        .filter((value: string) => value.length > 0))]
+      : [];
+    if (employeeIds.length > 0 && audience !== 'employee') {
+      return json({ error: 'Employee batches require employee audience.' }, 400);
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
-    let query = supabase.from('notification_devices').select('token');
+    let query = supabase.from('notification_devices').select('token, employee_id');
     if (audience === 'branch') query = query.eq('branch_id', input.branch_id);
-    if (audience === 'employee') query = query.eq('employee_id', input.employee_id);
+    if (audience === 'employee' && employeeIds.length > 0) {
+      query = query.in('employee_id', employeeIds);
+    } else if (audience === 'employee') {
+      query = query.eq('employee_id', input.employee_id);
+    }
     const { data: devices, error } = await query;
     if (error) throw error;
 
     const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT')!);
     const accessToken = await firebaseAccessToken(serviceAccount);
-    const tokens = [...new Set((devices ?? []).map((row) => row.token))];
-    const results = await Promise.all(tokens.map((token) => fetch(
+    const devicesByToken = new Map<string, string>();
+    for (const device of devices ?? []) {
+      if (!devicesByToken.has(device.token)) {
+        devicesByToken.set(device.token, String(device.employee_id ?? ''));
+      }
+    }
+    const results = await Promise.all([...devicesByToken.entries()].map(([token, employeeId]) => fetch(
       `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
       {
         method: 'POST',
@@ -47,21 +65,38 @@ Deno.serve(async (request) => {
             type: String(input.type ?? 'information'),
             audience,
             branch_id: String(input.branch_id ?? ''),
-            employee_id: String(input.employee_id ?? ''),
+            employee_id: employeeId || String(input.employee_id ?? ''),
+            tax_year: String(input.tax_year ?? ''),
           },
           webpush: { fcm_options: { link: '/' } },
         }}),
       },
     )));
 
-    await supabase.from('app_notifications').insert({
-      title, body,
-      notification_type: input.type ?? 'information',
-      audience,
-      branch_id: input.branch_id || null,
-      employee_id: input.employee_id || null,
+    const notifications = employeeIds.length > 0
+      ? employeeIds.map((employeeId) => ({
+        title, body,
+        notification_type: input.type ?? 'information',
+        audience: 'employee',
+        branch_id: null,
+        employee_id: employeeId,
+      }))
+      : [{
+        title, body,
+        notification_type: input.type ?? 'information',
+        audience,
+        branch_id: input.branch_id || null,
+        employee_id: input.employee_id || null,
+      }];
+    const { error: notificationError } = await supabase
+      .from('app_notifications')
+      .insert(notifications);
+    if (notificationError) throw notificationError;
+    return json({
+      sent: results.filter((result) => result.ok).length,
+      total: devicesByToken.size,
+      inbox: notifications.length,
     });
-    return json({ sent: results.filter((result) => result.ok).length, total: tokens.length });
   } catch (error) {
     return json({ error: String(error) }, 500);
   }

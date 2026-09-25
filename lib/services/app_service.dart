@@ -511,6 +511,7 @@ class AppService extends ChangeNotifier {
       _currentUser = app_user.fromJson(Map<String, dynamic>.from(savedUser));
       _supabase.rest.setAuth(token);
       _supabase.storage.setAuth(token);
+      await _supabase.realtime.setAuth(token);
 
       try {
         final validation = await _getAuth('/api/auth/me');
@@ -519,6 +520,7 @@ class AppService extends ChangeNotifier {
           _currentUser = null;
           _accessToken = null;
           _supabase.rest.setAuth(null);
+          await _supabase.realtime.setAuth(null);
           notifyListeners();
           return;
         }
@@ -549,6 +551,7 @@ class AppService extends ChangeNotifier {
       _currentUser = null;
       _accessToken = null;
       _supabase.rest.setAuth(null);
+      await _supabase.realtime.setAuth(null);
     }
     notifyListeners();
   }
@@ -1152,6 +1155,7 @@ class AppService extends ChangeNotifier {
       }
       _supabase.rest.setAuth(_accessToken);
       _supabase.storage.setAuth(_accessToken!);
+      await _supabase.realtime.setAuth(_accessToken);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -1355,6 +1359,7 @@ class AppService extends ChangeNotifier {
       }
       _supabase.rest.setAuth(_accessToken);
       _supabase.storage.setAuth(_accessToken!);
+      await _supabase.realtime.setAuth(_accessToken);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -1427,6 +1432,7 @@ class AppService extends ChangeNotifier {
     _accessToken = null;
     _employeeAquariumProgress = const EmployeeAquariumProgress();
     _supabase.rest.setAuth(null);
+    await _supabase.realtime.setAuth(null);
     await _clearStoredUser();
 
     notifyListeners();
