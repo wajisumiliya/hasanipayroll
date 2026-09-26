@@ -36,7 +36,7 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
   bool _feeding = false;
   bool _thanking = false;
   bool _cleaning = false;
-  bool _nightMode = false;
+  bool _nightMode = true;
   double _feedStart = 0;
 
   @override
@@ -94,26 +94,26 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
               end: Alignment.bottomRight,
               colors: _nightMode
                   ? const [
-                      Color(0xFF031429),
-                      Color(0xFF052E52),
-                      Color(0xFF07516B),
+                      Color(0xFF03070D),
+                      Color(0xFF071C2A),
+                      Color(0xFF06394A),
                     ]
                   : const [
                       Color(0xFF073B72),
                       Color(0xFF087DB5),
                       Color(0xFF20B7C9),
                     ]),
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: const Color(0x887FD8F2), width: 1.4),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFFD7B65D), width: 2.2),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x66031E3B),
-                blurRadius: 30,
-                offset: Offset(0, 16)),
+                color: Color(0x99000612),
+                blurRadius: 34,
+                offset: Offset(0, 18)),
             BoxShadow(
-                color: Color(0x5533D5E8),
-                blurRadius: 12,
-                offset: Offset(-3, -3)),
+                color: Color(0x66E8C86D),
+                blurRadius: 16,
+                offset: Offset(0, -2)),
           ],
         ),
         child: LayoutBuilder(builder: (_, constraints) {
@@ -146,13 +146,13 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                            Text('MY LOGIN AQUARIUM',
+                            Text('THE GRAND AQUARIUM',
                                 style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
+                                    color: Color(0xFFFFE9A9),
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.1)),
-                            Text('Login to collect food, then feed your fish',
+                                    letterSpacing: 1.5)),
+                            Text('A living collection shaped by every login',
                                 style: TextStyle(
                                     color: Color(0xCCFFFFFF), fontSize: 11)),
                           ])),
@@ -169,8 +169,8 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                         FilledButton.icon(
                           onPressed: _cleaning ? null : _clean,
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFEFF7FA),
-                            foregroundColor: const Color(0xFF075485),
+                            backgroundColor: const Color(0xFFFFE8A3),
+                            foregroundColor: const Color(0xFF302000),
                           ),
                           icon: _cleaning
                               ? const SizedBox.square(
@@ -189,8 +189,8 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                             ? _feed
                             : null,
                         style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFD54F),
-                            foregroundColor: const Color(0xFF073B72),
+                            backgroundColor: const Color(0xFFE1BD5B),
+                            foregroundColor: const Color(0xFF211600),
                             disabledBackgroundColor: Colors.white24,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 10)),
@@ -279,15 +279,15 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0x55FFFFFF), Color(0x14002550)],
+            colors: [Color(0xFFE4C668), Color(0xFF7B5B17)],
           ),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white38),
+          border: Border.all(color: const Color(0xFFFFE9A9)),
           boxShadow: const [
             BoxShadow(
                 color: Color(0x44002040), blurRadius: 7, offset: Offset(0, 4)),
           ]),
-      child: Icon(icon, color: Colors.white));
+      child: Icon(icon, color: const Color(0xFF151006)));
 
   Widget _stat(IconData icon, String value, String label) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -295,10 +295,10 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xE60C527A), Color(0xE604294E)],
+            colors: [Color(0xF0152029), Color(0xF0030A11)],
           ),
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white30),
+          border: Border.all(color: const Color(0x99D7B65D)),
           boxShadow: const [
             BoxShadow(
                 color: Color(0x55001832), blurRadius: 6, offset: Offset(0, 4)),
@@ -336,6 +336,25 @@ class _AquariumPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Polished metal canopy and base turn the tank into a display piece.
+    final gold = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF6F5014), Color(0xFFFFE7A0), Color(0xFF9A7428)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, 10));
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, 7), gold);
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.height - 7, size.width, 7),
+      gold,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(10, 7, 2, size.height - 14),
+      Paint()..color = const Color(0x66FFE7A0),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(size.width - 12, 7, 2, size.height - 14),
+      Paint()..color = const Color(0x66FFE7A0),
+    );
+
     if (nightMode) {
       for (var i = 0; i < 5; i++) {
         final lightX = size.width * (.14 + i * .18);
@@ -358,7 +377,14 @@ class _AquariumPainter extends CustomPainter {
             Rect.fromCenter(center: Offset(lightX, 4), width: 26, height: 7),
             const Radius.circular(4),
           ),
-          Paint()..color = const Color(0xFF8FF7FF),
+          Paint()
+            ..shader = const LinearGradient(
+              colors: [Color(0xFFFFF3BA), Color(0xFF63E9FF)],
+            ).createShader(Rect.fromCenter(
+              center: Offset(lightX, 4),
+              width: 26,
+              height: 7,
+            )),
         );
       }
     }
@@ -375,6 +401,58 @@ class _AquariumPainter extends CustomPainter {
         ..lineTo(size.width * .31, size.height)
         ..close(),
       rayPaint,
+    );
+
+    // Moving surface reflections and suspended particles keep the water from
+    // looking like a flat background.
+    final surfaceLight = Paint()
+      ..color = Colors.white.withValues(alpha: nightMode ? .18 : .12)
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    for (var i = 0; i < 7; i++) {
+      final phase = progress * math.pi * 2 + i * .9;
+      final x = size.width * (.07 + i * .145) + math.sin(phase) * 10;
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset(x, 13 + (i % 2) * 5),
+          width: 34,
+          height: 8,
+        ),
+        0,
+        math.pi,
+        false,
+        surfaceLight,
+      );
+    }
+    final particlePaint = Paint()
+      ..color = const Color(0xFFC8F7F4).withValues(alpha: .16);
+    for (var i = 0; i < 22; i++) {
+      final drift = (progress * (.05 + (i % 4) * .012) + i * .071) % 1;
+      canvas.drawCircle(
+        Offset(
+          size.width * ((i * .137 + drift * .08) % 1),
+          size.height * (.16 + ((i * .113 + drift) % .58)),
+        ),
+        .7 + (i % 3) * .45,
+        particlePaint,
+      );
+    }
+
+    // A faint panoramic reflection across the curved glass.
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * .03, size.height * .12)
+        ..quadraticBezierTo(
+          size.width * .48,
+          size.height * .03,
+          size.width * .84,
+          size.height * .15,
+        ),
+      Paint()
+        ..color = Colors.white.withValues(alpha: .10)
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke,
     );
 
     final floorY = size.height * .69;
@@ -422,6 +500,37 @@ class _AquariumPainter extends CustomPainter {
       Rect.fromLTWH(size.width * .725, size.height * .745, size.width * .07,
           size.height * .12),
       Paint()..color = const Color(0xFF062F43),
+    );
+
+    // Layered river stones and driftwood create a more natural habitat.
+    for (var i = 0; i < 5; i++) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(size.width * (.24 + i * .045),
+              size.height * (.82 + (i % 2) * .025)),
+          width: 29 - i * 2,
+          height: 13 + (i % 2) * 3,
+        ),
+        Paint()
+          ..color = Color.lerp(
+            const Color(0xFF314A4B),
+            const Color(0xFF8C7658),
+            i / 5,
+          )!,
+      );
+    }
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * .30, size.height * .83)
+        ..cubicTo(size.width * .39, size.height * .72, size.width * .49,
+            size.height * .78, size.width * .58, size.height * .70)
+        ..cubicTo(size.width * .50, size.height * .84, size.width * .39,
+            size.height * .88, size.width * .30, size.height * .86),
+      Paint()
+        ..color = const Color(0xFF694A31)
+        ..strokeWidth = 8
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke,
     );
 
     final filterX = size.width * .94;
@@ -478,12 +587,21 @@ class _AquariumPainter extends CustomPainter {
       size.width * .87,
       size.width * .92,
     ]) {
+      final sway = math.sin(progress * math.pi * 2 + x * .03) * 9;
       canvas.drawPath(
           Path()
             ..moveTo(x, size.height * .88)
-            ..quadraticBezierTo(
-                x - 12, size.height * .68, x + 3, size.height * .56),
+            ..quadraticBezierTo(x - 12 + sway * .35, size.height * .68,
+                x + 3 + sway, size.height * .56),
           plant);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(x - 5 + sway * .45, size.height * .67),
+          width: 15,
+          height: 6,
+        ),
+        Paint()..color = const Color(0xAA35C98D),
+      );
     }
 
     final bubble = Paint()..color = Colors.white.withValues(alpha: .18);
@@ -564,6 +682,10 @@ class _AquariumPainter extends CustomPainter {
       canvas.translate(x, y);
       canvas.rotate(angle);
       canvas.scale((movingRight ? 1.0 : -1.0) * scale, scale);
+      canvas.drawOval(
+        const Rect.fromLTWH(-15, 7, 31, 6),
+        Paint()..color = Colors.black.withValues(alpha: .10),
+      );
       _drawBettaFish(
         canvas,
         colors[i % colors.length],

@@ -9945,7 +9945,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'KULIM' => Icons.factory_rounded,
         'LANGKAWI' => Icons.flight_takeoff_rounded,
         'PRAI' || 'PERAI' => Icons.anchor_rounded,
-        'SUNGAI PETANI' => Icons.storefront_rounded,
+        'SUNGAI PETANI' || 'SP-EDAR' => Icons.storefront_rounded,
         _ => Icons.business_rounded,
       };
 
@@ -9959,7 +9959,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         'KULIM' => const [Color(0xFFF09A24), Color(0xFFB85C00)],
         'LANGKAWI' => const [Color(0xFF168AAD), Color(0xFF075985)],
         'PRAI' || 'PERAI' => const [Color(0xFF536DFE), Color(0xFF283593)],
-        'SUNGAI PETANI' => const [Color(0xFFE83E8C), Color(0xFF9D174D)],
+        'SUNGAI PETANI' || 'SP-EDAR' => const [
+            Color(0xFFE83E8C),
+            Color(0xFF9D174D)
+          ],
         _ => const [Color(0xFF64748B), Color(0xFF334155)],
       };
 
@@ -14240,7 +14243,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'langkawi',
       ];
       const preferredSheetNames = <String, String>{
-        'sungaipetani': 'Sungai Petani',
+        'sungaipetani': 'SP-EDAR',
         'prai': 'Prai',
         'alorsetar': 'AlorSetar',
         'jitra': 'Jitra',
@@ -14293,7 +14296,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       var isFirstSheet = true;
       for (final branchId in sortedBranchIds) {
         final branchName = branchId == sungaiPetaniForeignerGroup
-            ? 'Sungai Petani-Foreigner'
+            ? 'SP-EDAR-Foreigner'
             : branchId == temporaryStaffGroup
                 ? 'Temporary Staff'
                 : preferredSheetNames[canonicalBranchKey(branchId)] ??
@@ -14547,8 +14550,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         'langkawi',
       ];
       const branchLabels = <String, String>{
-        'sungaipetani': 'Sungai Petani',
-        '__SUNGAI_PETANI_FOREIGNER__': 'Sungai Petani - Foreign Staff',
+        'sungaipetani': 'SP-EDAR',
+        '__SUNGAI_PETANI_FOREIGNER__': 'SP-EDAR - Foreign Staff',
         '__TEMPORARY_STAFF__': 'Temporary Staff',
         'prai': 'Prai',
         'alorsetar': 'Alor Setar',

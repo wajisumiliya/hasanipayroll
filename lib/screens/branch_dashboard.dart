@@ -88,7 +88,7 @@ class _BranchPortalState extends State<BranchPortal>
   }
 
   String get branchDisplayName => isFrnSession
-      ? '${branch?.branchName ?? 'SUNGAI PETANI'} FRN'
+      ? '${branch?.branchName ?? 'SP-EDAR'} FRN'
       : branch?.branchName ?? branchId;
 
   List<Employee> get employees =>

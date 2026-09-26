@@ -23,8 +23,12 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   static int _visibleSecureCards = 0;
 
   Employee get employee => widget.employee;
-  String get _branch =>
-      employee.branchId.trim().isEmpty ? '-' : employee.branchId;
+  String get _branch {
+    final value = employee.branchId.trim();
+    if (value.isEmpty) return '-';
+    return value.toUpperCase() == 'SUNGAI PETANI' ? 'SP-EDAR' : value;
+  }
+
   String get _joining => employee.joiningDate == null
       ? '-'
       : DateFormat('dd MMM yyyy').format(employee.joiningDate!);

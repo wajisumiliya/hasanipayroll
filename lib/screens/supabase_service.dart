@@ -782,7 +782,18 @@ class SupabaseService {
       final response =
           await client.from('branches').select().order('name', ascending: true);
 
-      return _mapList(response);
+      return _mapList(response).map((branch) {
+        final row = Map<String, dynamic>.from(branch);
+        final name = (row['name'] ?? row['branch_name'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
+        if (name == 'SUNGAI PETANI') {
+          row['name'] = 'SP-EDAR';
+          if (row.containsKey('branch_name')) row['branch_name'] = 'SP-EDAR';
+        }
+        return row;
+      }).toList();
     } catch (e, stackTrace) {
       debugPrint('GET BRANCHES ERROR: $e');
       debugPrint('$stackTrace');

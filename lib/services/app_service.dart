@@ -490,7 +490,7 @@ class AppService extends ChangeNotifier {
     ),
     Branch(
       id: 'SUNGAI PETANI',
-      name: 'SUNGAI PETANI',
+      name: 'SP-EDAR',
       location: 'SUNGAI PETANI',
       username: 'SUNGAI PETANI',
     ),
@@ -1497,6 +1497,7 @@ class AppService extends ChangeNotifier {
     var id = _normalise(branchId);
 
     const branchLoginAliases = <String, String>{
+      'SP-EDAR': 'SUNGAI PETANI',
       'HBSP': 'SUNGAI PETANI',
       'HBAMJ': 'AMANJAYA',
       'HBAS': 'ALOR SETAR',
