@@ -4520,28 +4520,23 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
               ),
               const SizedBox(height: 16),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
+              _responsiveBranchButtonRow(
+                buttons: [
+                  _employeeBranchFilterButton(
+                    label: 'All Branches',
+                    selected: _adminEmployeeBranchFilter == null,
+                    onTap: () =>
+                        setState(() => _adminEmployeeBranchFilter = null),
+                  ),
+                  for (final branch in branchNames)
                     _employeeBranchFilterButton(
-                      label: 'All Branches',
-                      selected: _adminEmployeeBranchFilter == null,
-                      onTap: () =>
-                          setState(() => _adminEmployeeBranchFilter = null),
-                    ),
-                    for (final branch in branchNames) ...[
-                      const SizedBox(width: 5),
-                      _employeeBranchFilterButton(
-                        label: branch,
-                        selected: _adminEmployeeBranchFilter == branch,
-                        onTap: () => setState(
-                          () => _adminEmployeeBranchFilter = branch,
-                        ),
+                      label: branch,
+                      selected: _adminEmployeeBranchFilter == branch,
+                      onTap: () => setState(
+                        () => _adminEmployeeBranchFilter = branch,
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               _panel(
@@ -4958,6 +4953,41 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _responsiveBranchButtonRow({
+    required List<Widget> buttons,
+    double spacing = 5,
+  }) {
+    if (buttons.isEmpty) return const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final usableWidth =
+            constraints.maxWidth - spacing * (buttons.length - 1);
+        final widthPerButton = usableWidth / buttons.length;
+        if (widthPerButton >= 94) {
+          return Row(
+            children: [
+              for (var index = 0; index < buttons.length; index++) ...[
+                Expanded(child: buttons[index]),
+                if (index != buttons.length - 1) SizedBox(width: spacing),
+              ],
+            ],
+          );
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var index = 0; index < buttons.length; index++) ...[
+                buttons[index],
+                if (index != buttons.length - 1) SizedBox(width: spacing),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -8742,31 +8772,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                     child: Center(child: Text('No branches found.')),
                   )
                 else
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: branches.map((branch) {
-                        final id = (branch['id'] ?? branch['branch_id'] ?? '')
-                            .toString();
-                        final name =
-                            (branch['name'] ?? branch['branch_name'] ?? id)
-                                .toString();
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: _employeeBranchFilterButton(
-                            label: name,
-                            selected: false,
-                            onTap: () {
-                              if (id.isEmpty) return;
-                              setState(() {
-                                selectedAttendanceBranchId = id;
-                                _attendanceSubmissionFilter = 'submitted';
-                              });
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                  _responsiveBranchButtonRow(
+                    spacing: 8,
+                    buttons: branches.map((branch) {
+                      final id = (branch['id'] ?? branch['branch_id'] ?? '')
+                          .toString();
+                      final name =
+                          (branch['name'] ?? branch['branch_name'] ?? id)
+                              .toString();
+                      return _employeeBranchFilterButton(
+                        label: name,
+                        selected: false,
+                        onTap: () {
+                          if (id.isEmpty) return;
+                          setState(() {
+                            selectedAttendanceBranchId = id;
+                            _attendanceSubmissionFilter = 'submitted';
+                          });
+                        },
+                      );
+                    }).toList(),
                   ),
               ],
             ),
@@ -12239,32 +12264,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                           ),
                         )
                       else
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: branchIds.map((branchId) {
-                              final branchEmployees =
-                                  branchGroups[branchId] ?? [];
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: _employeeBranchFilterButton(
-                                  label: branchNames[branchId] ?? branchId,
-                                  selected: selectedPayrollBranchId == branchId,
-                                  onTap: () async {
-                                    setState(() =>
-                                        selectedPayrollBranchId = branchId);
-                                    await _showPayrollEmployeeSelection(
-                                      branchName:
-                                          branchNames[branchId] ?? branchId,
-                                      employees: branchEmployees,
-                                      month: selectedPayrollMonth,
-                                    );
-                                    if (mounted) setState(() {});
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                          ),
+                        _responsiveBranchButtonRow(
+                          spacing: 8,
+                          buttons: branchIds.map((branchId) {
+                            final branchEmployees =
+                                branchGroups[branchId] ?? [];
+                            return _employeeBranchFilterButton(
+                              label: branchNames[branchId] ?? branchId,
+                              selected: selectedPayrollBranchId == branchId,
+                              onTap: () async {
+                                setState(
+                                    () => selectedPayrollBranchId = branchId);
+                                await _showPayrollEmployeeSelection(
+                                  branchName: branchNames[branchId] ?? branchId,
+                                  employees: branchEmployees,
+                                  month: selectedPayrollMonth,
+                                );
+                                if (mounted) setState(() {});
+                              },
+                            );
+                          }).toList(),
                         ),
                     ],
                   ),

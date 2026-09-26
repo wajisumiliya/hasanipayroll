@@ -33,6 +33,10 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
       ? '-'
       : DateFormat('dd MMM yyyy').format(employee.joiningDate!);
 
+  String get _dateOfBirth => employee.birthday == null
+      ? '-'
+      : DateFormat('dd MMM yyyy').format(employee.birthday!);
+
   @override
   void initState() {
     super.initState();
@@ -117,17 +121,15 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                               ),
                             ),
                             child: Image.asset(
-                              'assets/hasani_books_logo.jpg',
+                              'assets/hasani_books_logo_card.jpg',
                               fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Center(
-                                child: Text(
-                                  'HASANI BOOKS',
-                                  style: TextStyle(
-                                    color: Color(0xFF111111),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
+                              filterQuality: FilterQuality.high,
+                              gaplessPlayback: true,
+                              errorBuilder: (_, __, ___) => Image.asset(
+                                'assets/hasani_books_payslip_logo.jpeg',
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                                errorBuilder: (_, __, ___) => const SizedBox(),
                               ),
                             ),
                           ),
@@ -204,9 +206,9 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                           _horizontalDetail('Branch', _branch),
                           _horizontalDetail('Joined', _joining),
                           _horizontalDetail(
-                            'Email',
-                            employee.email,
-                            valueSize: 9.2,
+                            'Date of Birth',
+                            _dateOfBirth,
+                            valueSize: 10,
                           ),
                           const Spacer(),
                           Row(
@@ -255,10 +257,16 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                               const Text(
                                 'KNOWLEDGE • PEOPLE • PROGRESS',
                                 style: TextStyle(
-                                  color: Color(0xFFB89550),
-                                  fontSize: 5.8,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: .45,
+                                  color: Color(0xFFFFE49A),
+                                  fontSize: 7.2,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: .35,
+                                  shadows: [
+                                    Shadow(
+                                      color: Color(0xCC000000),
+                                      blurRadius: 3,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -784,15 +792,20 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Image.asset(
-                  'assets/hasani_books_logo.jpg',
+                  'assets/hasani_books_logo_card.jpg',
                   height: 37,
-                  cacheWidth: 900,
+                  cacheWidth: 1400,
                   alignment: Alignment.centerLeft,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Text(
-                    'hasani BOOKS',
-                    style: TextStyle(
-                        color: navy, fontSize: 24, fontWeight: FontWeight.w900),
+                  filterQuality: FilterQuality.high,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/hasani_books_payslip_logo.jpeg',
+                    height: 37,
+                    alignment: Alignment.centerLeft,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (_, __, ___) => const SizedBox(),
                   ),
                 ),
                 const Text(

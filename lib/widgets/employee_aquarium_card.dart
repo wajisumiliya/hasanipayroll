@@ -387,6 +387,48 @@ class _AquariumPainter extends CustomPainter {
             )),
         );
       }
+
+      // Animated RGB spotlights sweep slowly across the luxury display.
+      for (var i = 0; i < 4; i++) {
+        final phase = progress * math.pi * 2 + i * math.pi / 2;
+        final lampX = size.width * (.22 + i * .19);
+        final targetX = lampX + math.sin(phase) * size.width * .18;
+        final color = HSVColor.fromAHSV(
+          1,
+          (progress * 360 + i * 92) % 360,
+          .78,
+          1,
+        ).toColor();
+        canvas.drawPath(
+          Path()
+            ..moveTo(lampX - 7, 7)
+            ..lineTo(lampX + 7, 7)
+            ..lineTo(targetX + 46, size.height * .82)
+            ..lineTo(targetX - 46, size.height * .82)
+            ..close(),
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                color.withValues(alpha: .25),
+                color.withValues(alpha: .03),
+              ],
+            ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+        );
+        canvas.drawCircle(
+          Offset(lampX, 9),
+          5.5,
+          Paint()
+            ..color = color
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
+        );
+        canvas.drawCircle(
+          Offset(lampX, 9),
+          2.6,
+          Paint()..color = Colors.white,
+        );
+      }
     }
     // Soft glass highlights and light rays make the water feel dimensional.
     final rayPaint = Paint()
@@ -471,6 +513,32 @@ class _AquariumPainter extends CustomPainter {
           ..lineTo(0, size.height)
           ..close(),
         sand);
+
+    if (nightMode) {
+      // Colored caustics glide over the sand with the moving spotlights.
+      for (var i = 0; i < 5; i++) {
+        final phase = progress * math.pi * 2 + i * 1.25;
+        final color = HSVColor.fromAHSV(
+          1,
+          (progress * 360 + i * 74) % 360,
+          .72,
+          1,
+        ).toColor();
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(
+              size.width * (.13 + i * .19) + math.sin(phase) * 18,
+              size.height * (.84 + math.cos(phase) * .015),
+            ),
+            width: 58,
+            height: 10,
+          ),
+          Paint()
+            ..color = color.withValues(alpha: .20)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        );
+      }
+    }
 
     final gravelColors = [
       const Color(0xFFC9A35E),
