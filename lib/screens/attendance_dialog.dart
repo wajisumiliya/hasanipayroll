@@ -1579,6 +1579,17 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return (actualIn - shiftIn).clamp(0, 24 * 60).toInt();
   }
 
+  int _calculateEarlyOutMinutes(int day, AttendanceDayControllers c) {
+    const checkoutGraceMinutes = 15;
+    final actualOut = _clockMinutes(c.workingOut.text);
+    final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
+    final shiftOut = _clockMinutes(roster?['shift_end']?.toString() ?? '');
+    if (actualOut == null || shiftOut == null) return 0;
+    return (shiftOut - actualOut - checkoutGraceMinutes)
+        .clamp(0, 24 * 60)
+        .toInt();
+  }
+
   String _calculatedAttendanceStatus(
     int day,
     AttendanceDayControllers c,
@@ -1597,8 +1608,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     final shiftOut = _clockMinutes(roster['shift_end']?.toString() ?? '');
     final actualOut = _clockMinutes(c.workingOut.text);
     final isLate = shiftIn != null && actualIn > shiftIn;
+    // Checkout alone receives a 15-minute grace period. Check-in has no grace:
+    // even one minute after shift start remains Late.
     final isEarlyOut =
-        actualOut != null && shiftOut != null && actualOut < shiftOut;
+        actualOut != null && shiftOut != null && actualOut < shiftOut - 15;
 
     if (isLate && isEarlyOut) return 'Late + Early Out';
     if (isLate) return 'Late';
@@ -1619,6 +1632,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     final lateMinutes = actualIn != null && shiftIn != null
         ? (actualIn - shiftIn).clamp(0, 1440)
         : 0;
+    final earlyOutMinutes = _calculateEarlyOutMinutes(day, c);
 
     Color background;
     Color foreground;
@@ -1654,9 +1668,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         foreground = const Color(0xFF2E7D32);
     }
 
-    final displayStatus = lateMinutes > 0 && effectiveStatus.contains('Late')
-        ? '$effectiveStatus ($lateMinutes min)'
-        : effectiveStatus;
+    final displayStatus = switch ((lateMinutes, earlyOutMinutes)) {
+      (> 0, > 0) =>
+        '$effectiveStatus (Late $lateMinutes min · Early $earlyOutMinutes min)',
+      (> 0, _) when effectiveStatus.contains('Late') =>
+        '$effectiveStatus ($lateMinutes min)',
+      (_, > 0) => '$effectiveStatus ($earlyOutMinutes min)',
+      _ => effectiveStatus,
+    };
     final child = Container(
       width: double.infinity,
       height: double.infinity,

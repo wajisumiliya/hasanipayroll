@@ -10,15 +10,21 @@ class EmployeeAquariumCard extends StatefulWidget {
       required this.availableFood,
       required this.weeklyLogins,
       required this.loginsUntilNextFish,
+      required this.deadFishCount,
+      required this.fishBirthDates,
       required this.onFeed,
+      required this.onClean,
       this.loading = false});
   final String employeeId;
   final int fishCount,
       totalFeed,
       availableFood,
       weeklyLogins,
-      loginsUntilNextFish;
+      loginsUntilNextFish,
+      deadFishCount;
+  final List<DateTime> fishBirthDates;
   final Future<bool> Function() onFeed;
+  final Future<bool> Function() onClean;
   final bool loading;
   @override
   State<EmployeeAquariumCard> createState() => _EmployeeAquariumCardState();
@@ -29,6 +35,8 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
   late final AnimationController _controller;
   bool _feeding = false;
   bool _thanking = false;
+  bool _cleaning = false;
+  bool _nightMode = false;
   double _feedStart = 0;
 
   @override
@@ -68,19 +76,33 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
     }
   }
 
+  Future<void> _clean() async {
+    if (_cleaning || widget.deadFishCount < 1) return;
+    setState(() => _cleaning = true);
+    await widget.onClean();
+    if (mounted) setState(() => _cleaning = false);
+  }
+
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => AnimatedContainer(
+        duration: const Duration(milliseconds: 550),
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF073B72),
-                Color(0xFF087DB5),
-                Color(0xFF20B7C9)
-              ]),
+              colors: _nightMode
+                  ? const [
+                      Color(0xFF031429),
+                      Color(0xFF052E52),
+                      Color(0xFF07516B),
+                    ]
+                  : const [
+                      Color(0xFF073B72),
+                      Color(0xFF087DB5),
+                      Color(0xFF20B7C9),
+                    ]),
           borderRadius: BorderRadius.circular(26),
           border: Border.all(color: const Color(0x887FD8F2), width: 1.4),
           boxShadow: const [
@@ -104,6 +126,9 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                         painter: _AquariumPainter(
                             employeeId: widget.employeeId,
                             fishCount: widget.fishCount.clamp(2, 10),
+                            fishBirthDates: widget.fishBirthDates,
+                            deadFishCount: widget.deadFishCount,
+                            nightMode: _nightMode,
                             growth:
                                 math.min(1.25, .78 + widget.totalFeed * .018),
                             progress: _controller.value,
@@ -131,6 +156,34 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                                 style: TextStyle(
                                     color: Color(0xCCFFFFFF), fontSize: 11)),
                           ])),
+                      IconButton.filledTonal(
+                        tooltip: _nightMode ? 'Day view' : 'Night view',
+                        onPressed: () =>
+                            setState(() => _nightMode = !_nightMode),
+                        icon: Icon(_nightMode
+                            ? Icons.light_mode_rounded
+                            : Icons.dark_mode_rounded),
+                      ),
+                      const SizedBox(width: 6),
+                      if (widget.deadFishCount > 0) ...[
+                        FilledButton.icon(
+                          onPressed: _cleaning ? null : _clean,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFEFF7FA),
+                            foregroundColor: const Color(0xFF075485),
+                          ),
+                          icon: _cleaning
+                              ? const SizedBox.square(
+                                  dimension: 14,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.cleaning_services_rounded,
+                                  size: 17),
+                          label: Text('CLEAN ${widget.deadFishCount}'),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
                       FilledButton.icon(
                         onPressed: widget.availableFood > 0 && !_feeding
                             ? _feed
@@ -165,7 +218,7 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                           widget.fishCount >= 10
                               ? 'MAX'
                               : '${widget.weeklyLogins % 4} / 4',
-                          'This week'),
+                          'Login cycle'),
                     ]),
                     const SizedBox(height: 13),
                     ClipRRect(
@@ -266,17 +319,49 @@ class _AquariumPainter extends CustomPainter {
   const _AquariumPainter(
       {required this.employeeId,
       required this.fishCount,
+      required this.fishBirthDates,
+      required this.deadFishCount,
+      required this.nightMode,
       required this.growth,
       required this.progress,
       required this.feeding,
       required this.feedStart});
   final int fishCount;
+  final int deadFishCount;
+  final List<DateTime> fishBirthDates;
+  final bool nightMode;
   final String employeeId;
   final double growth, progress, feedStart;
   final bool feeding;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (nightMode) {
+      for (var i = 0; i < 5; i++) {
+        final lightX = size.width * (.14 + i * .18);
+        canvas.drawPath(
+          Path()
+            ..moveTo(lightX - 13, 0)
+            ..lineTo(lightX + 13, 0)
+            ..lineTo(lightX + 58, size.height * .72)
+            ..lineTo(lightX - 58, size.height * .72)
+            ..close(),
+          Paint()
+            ..shader = const LinearGradient(
+              colors: [Color(0x554DEBFF), Color(0x004DEBFF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(lightX, 4), width: 26, height: 7),
+            const Radius.circular(4),
+          ),
+          Paint()..color = const Color(0xFF8FF7FF),
+        );
+      }
+    }
     // Soft glass highlights and light rays make the water feel dimensional.
     final rayPaint = Paint()
       ..shader = const LinearGradient(
@@ -353,6 +438,33 @@ class _AquariumPainter extends CustomPainter {
       Paint()
         ..color = const Color(0xAA5F7C88)
         ..strokeWidth = 4,
+    );
+    // Oxygen motor, hose and diffuser stone.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * .88, size.height * .10, 34, 25),
+        const Radius.circular(6),
+      ),
+      Paint()..color = const Color(0xCC263946),
+    );
+    canvas.drawCircle(Offset(size.width * .905, size.height * .145), 5,
+        Paint()..color = const Color(0xFF70E6EC));
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * .90, size.height * .20)
+        ..cubicTo(size.width * .84, size.height * .34, size.width * .91,
+            size.height * .64, size.width * .86, size.height * .82),
+      Paint()
+        ..color = const Color(0xAA9AE8EA)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(size.width * .86, size.height * .83),
+          width: 25,
+          height: 7),
+      Paint()..color = const Color(0xFF566F75),
     );
     final plant = Paint()
       ..color = const Color(0xFF28B982).withValues(alpha: .78)
@@ -443,8 +555,11 @@ class _AquariumPainter extends CustomPainter {
       final verticalSlope =
           math.cos(progress * math.pi * 2 * (.7 + i * .04) + i * 1.7) * .15;
       final angle = verticalSlope * (movingRight ? 1 : -1);
-      final sizeStep = fishCount <= 1 ? 0.0 : i / (fishCount - 1);
-      final scale = growth * (.56 + sizeStep * .58);
+      final ageDays = i < fishBirthDates.length
+          ? DateTime.now().difference(fishBirthDates[i]).inDays.clamp(0, 90)
+          : (i < 3 ? 45 : (i == 3 ? 18 : 1));
+      final naturalGrowth = .43 + (ageDays / 45).clamp(0.0, 1.0) * .72;
+      final scale = growth * naturalGrowth;
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(angle);
@@ -455,6 +570,28 @@ class _AquariumPainter extends CustomPainter {
         progress * math.pi * 2,
         i,
       );
+      canvas.restore();
+    }
+
+    // Dead fish stay visible on the floor until the employee cleans the tank.
+    for (var i = 0; i < deadFishCount; i++) {
+      canvas.save();
+      canvas.translate(size.width * (.42 + i * .075), size.height * .82);
+      canvas.rotate(math.pi + .10 * math.sin(progress * math.pi * 2 + i));
+      canvas.scale(.62, .62);
+      _drawBettaFish(canvas, const Color(0xFF7B8588), 0, i);
+      canvas.drawLine(
+          const Offset(5, -5),
+          const Offset(10, 0),
+          Paint()
+            ..color = const Color(0xFF243238)
+            ..strokeWidth = 1.5);
+      canvas.drawLine(
+          const Offset(10, -5),
+          const Offset(5, 0),
+          Paint()
+            ..color = const Color(0xFF243238)
+            ..strokeWidth = 1.5);
       canvas.restore();
     }
   }

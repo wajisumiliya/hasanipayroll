@@ -116,10 +116,12 @@ class EmployeeAquariumProgress {
   const EmployeeAquariumProgress({
     this.totalFeed = 0,
     this.availableFood = 0,
-    this.fishCount = 2,
+    this.fishCount = 5,
     this.weeklyLogins = 0,
-    this.loginsUntilNextFish = 5,
+    this.loginsUntilNextFish = 4,
     this.fishAwarded = false,
+    this.deadFishCount = 0,
+    this.fishBirthDates = const [],
   });
 
   final int totalFeed;
@@ -128,16 +130,25 @@ class EmployeeAquariumProgress {
   final int weeklyLogins;
   final int loginsUntilNextFish;
   final bool fishAwarded;
+  final int deadFishCount;
+  final List<DateTime> fishBirthDates;
 
   factory EmployeeAquariumProgress.fromJson(Map<String, dynamic> json) =>
       EmployeeAquariumProgress(
         totalFeed: int.tryParse('${json['total_feed'] ?? 0}') ?? 0,
         availableFood: int.tryParse('${json['available_food'] ?? 0}') ?? 0,
-        fishCount: int.tryParse('${json['fish_count'] ?? 2}') ?? 2,
+        fishCount: int.tryParse('${json['fish_count'] ?? 5}') ?? 5,
         weeklyLogins: int.tryParse('${json['weekly_logins'] ?? 0}') ?? 0,
         loginsUntilNextFish:
-            int.tryParse('${json['logins_until_next_fish'] ?? 5}') ?? 5,
+            int.tryParse('${json['logins_until_next_fish'] ?? 4}') ?? 4,
         fishAwarded: json['fish_awarded'] == true,
+        deadFishCount: int.tryParse('${json['dead_fish_count'] ?? 0}') ?? 0,
+        fishBirthDates: (json['fish_birth_dates'] is List
+                ? json['fish_birth_dates'] as List
+                : const [])
+            .map((value) => DateTime.tryParse(value.toString()))
+            .whereType<DateTime>()
+            .toList(),
       );
 }
 
@@ -285,6 +296,14 @@ class AppService extends ChangeNotifier {
       final response = await _supabase.rpc('feed_employee_aquarium');
       if (response is Map) {
         final data = Map<String, dynamic>.from(response);
+        data.putIfAbsent(
+            'dead_fish_count', () => _employeeAquariumProgress.deadFishCount);
+        data.putIfAbsent(
+          'fish_birth_dates',
+          () => _employeeAquariumProgress.fishBirthDates
+              .map((date) => date.toIso8601String())
+              .toList(),
+        );
         final fed = data['fed'] == true;
         _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(data);
         notifyListeners();
@@ -292,6 +311,26 @@ class AppService extends ChangeNotifier {
       }
     } catch (error) {
       debugPrint('Employee aquarium feeding error: $error');
+    }
+    return false;
+  }
+
+  Future<bool> cleanEmployeeAquarium() async {
+    if (_currentUser?.isEmployee != true ||
+        _employeeAquariumProgress.deadFishCount < 1) {
+      return false;
+    }
+    try {
+      final response = await _supabase.rpc('clean_employee_aquarium');
+      if (response is Map) {
+        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(
+          Map<String, dynamic>.from(response),
+        );
+        notifyListeners();
+        return true;
+      }
+    } catch (error) {
+      debugPrint('Employee aquarium cleaning error: $error');
     }
     return false;
   }

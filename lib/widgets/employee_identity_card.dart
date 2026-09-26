@@ -60,7 +60,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final cardWidth = constraints.maxWidth.clamp(280.0, 390.0);
+      final cardWidth = constraints.maxWidth.clamp(320.0, 460.0);
       return Center(
         child: SizedBox(
           width: cardWidth,
@@ -71,7 +71,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   }
 
   Widget _horizontalPremiumCard() => AspectRatio(
-        aspectRatio: 1.58,
+        aspectRatio: 1.64,
         child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
@@ -94,16 +94,16 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
             children: [
               const Positioned.fill(child: _BlackGoldBackground()),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 13),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 15),
                 child: Row(
                   children: [
                     SizedBox(
-                      width: 108,
+                      width: 120,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            height: 34,
+                            height: 38,
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -127,14 +127,14 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           _blackGoldPortrait(),
                           const Spacer(),
                           const Text(
                             'HASANI EDAR SDN BHD',
                             style: TextStyle(
                               color: Color(0xFFE8C778),
-                              fontSize: 6.4,
+                              fontSize: 7.5,
                               fontWeight: FontWeight.w900,
                               letterSpacing: .9,
                             ),
@@ -142,7 +142,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,7 +159,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                                 'EMPLOYEE IDENTITY',
                                 style: TextStyle(
                                   color: Color(0xFFD6AD5C),
-                                  fontSize: 7.2,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.5,
                                 ),
@@ -173,7 +173,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Color(0xFFF2D38A),
-                              fontSize: 16.5,
+                              fontSize: 19,
                               height: 1.02,
                               fontWeight: FontWeight.w900,
                               letterSpacing: .25,
@@ -202,7 +202,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                           _horizontalDetail(
                             'Email',
                             employee.email,
-                            valueSize: 7.1,
+                            valueSize: 9.2,
                           ),
                           const Spacer(),
                           Row(
@@ -239,7 +239,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                                       employee.isActive ? 'ACTIVE' : 'INACTIVE',
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 6.8,
+                                        fontSize: 8.2,
                                         fontWeight: FontWeight.w900,
                                         letterSpacing: .7,
                                       ),
@@ -252,7 +252,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                                 'KNOWLEDGE • PEOPLE • PROGRESS',
                                 style: TextStyle(
                                   color: Color(0xFFB89550),
-                                  fontSize: 4.8,
+                                  fontSize: 5.8,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: .45,
                                 ),
@@ -271,8 +271,8 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
       );
 
   Widget _blackGoldPortrait() => Container(
-        width: 102,
-        height: 119,
+        width: 114,
+        height: 140,
         padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
           color: const Color(0xFFD6AD5C),
@@ -319,20 +319,20 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   Widget _horizontalDetail(
     String label,
     String value, {
-    double valueSize = 8.5,
+    double valueSize = 10,
     int maxLines = 1,
   }) =>
       Padding(
-        padding: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.only(bottom: 4.5),
         child: Row(
           children: [
             SizedBox(
-              width: 69,
+              width: 75,
               child: Text(
                 label,
                 style: TextStyle(
                   color: Color(0xFFC7A85E),
-                  fontSize: 8,
+                  fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -341,7 +341,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
               ':',
               style: TextStyle(
                 color: Color(0xFFD6AD5C),
-                fontSize: 8,
+                fontSize: 9.5,
                 fontWeight: FontWeight.w900,
               ),
             ),
