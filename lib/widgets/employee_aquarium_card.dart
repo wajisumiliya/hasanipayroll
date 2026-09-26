@@ -601,6 +601,46 @@ class _AquariumPainter extends CustomPainter {
         ..style = PaintingStyle.stroke,
     );
 
+    // Small floor creatures make the habitat feel alive without competing
+    // with the Betta fish. Crabs scuttle sideways while the starfish and
+    // seashells remain settled into the sand.
+    for (var i = 0; i < 2; i++) {
+      final crabPhase = progress * math.pi * 2 * (.55 + i * .08) + i * 2.4;
+      canvas.save();
+      canvas.translate(
+        size.width * (i == 0 ? .18 : .78) + math.sin(crabPhase) * 17,
+        size.height * (i == 0 ? .84 : .88),
+      );
+      canvas.scale(i == 0 ? .78 : .62);
+      _drawCrab(canvas, crabPhase, i);
+      canvas.restore();
+    }
+
+    canvas.save();
+    canvas.translate(size.width * .63, size.height * .865);
+    canvas.rotate(-.24 + math.sin(progress * math.pi * 2) * .025);
+    _drawStarfish(canvas, 12.0, const Color(0xFFFF8A55));
+    canvas.restore();
+
+    _drawSeashell(
+      canvas,
+      Offset(size.width * .39, size.height * .89),
+      12,
+      const Color(0xFFFFD6B2),
+    );
+    _drawSeashell(
+      canvas,
+      Offset(size.width * .55, size.height * .91),
+      9,
+      const Color(0xFFD9B8FF),
+    );
+    _drawSeashell(
+      canvas,
+      Offset(size.width * .91, size.height * .88),
+      10,
+      const Color(0xFFFFE49A),
+    );
+
     final filterX = size.width * .94;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -783,6 +823,128 @@ class _AquariumPainter extends CustomPainter {
             ..color = const Color(0xFF243238)
             ..strokeWidth = 1.5);
       canvas.restore();
+    }
+  }
+
+  void _drawCrab(Canvas canvas, double phase, int index) {
+    final bodyColor =
+        index.isEven ? const Color(0xFFFF695E) : const Color(0xFFFFA052);
+    final dark = Color.lerp(bodyColor, const Color(0xFF6F2630), .38)!;
+    final legPaint = Paint()
+      ..color = dark
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final step = math.sin(phase * 3) * 2.4;
+    for (var side = -1; side <= 1; side += 2) {
+      for (var leg = 0; leg < 3; leg++) {
+        final y = -1.0 + leg * 4;
+        canvas.drawPath(
+          Path()
+            ..moveTo(side * 8, y)
+            ..lineTo(side * (14 + leg * 2), y + 3 + step * side)
+            ..lineTo(side * (18 + leg * 2), y + 7),
+          legPaint,
+        );
+      }
+    }
+    canvas.drawOval(
+      const Rect.fromLTWH(-11, -7, 22, 15),
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [bodyColor, dark],
+        ).createShader(const Rect.fromLTWH(-11, -7, 22, 15)),
+    );
+    for (final side in const [-1.0, 1.0]) {
+      canvas.drawLine(const Offset(0, -5), Offset(side * 6, -12), legPaint);
+      canvas.drawCircle(
+        Offset(side * 6, -13),
+        2.3,
+        Paint()..color = const Color(0xFFF8F3DF),
+      );
+      canvas.drawCircle(
+        Offset(side * 6, -13),
+        .9,
+        Paint()..color = const Color(0xFF101419),
+      );
+      final clawLift = math.sin(phase * 2 + side) * 2;
+      canvas.drawLine(
+        Offset(side * 9, -3),
+        Offset(side * 17, -10 - clawLift),
+        legPaint,
+      );
+      canvas.drawCircle(
+        Offset(side * 19, -11 - clawLift),
+        4.4,
+        Paint()..color = bodyColor,
+      );
+      canvas.drawLine(
+        Offset(side * 19, -15 - clawLift),
+        Offset(side * 19, -8 - clawLift),
+        Paint()
+          ..color = dark
+          ..strokeWidth = 1.2,
+      );
+    }
+  }
+
+  void _drawStarfish(Canvas canvas, double radius, Color color) {
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final angle = -math.pi / 2 + i * math.pi / 5;
+      final length = i.isEven ? radius : radius * .42;
+      final point = Offset(math.cos(angle) * length, math.sin(angle) * length);
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Color.lerp(color, Colors.white, .28)!, color],
+        ).createShader(Rect.fromCircle(center: Offset.zero, radius: radius)),
+    );
+    for (var i = 0; i < 5; i++) {
+      final angle = i * math.pi * 2 / 5;
+      canvas.drawCircle(
+        Offset(math.cos(angle) * radius * .36, math.sin(angle) * radius * .36),
+        1,
+        Paint()..color = Colors.white.withValues(alpha: .45),
+      );
+    }
+  }
+
+  void _drawSeashell(Canvas canvas, Offset center, double radius, Color color) {
+    final shellRect = Rect.fromCenter(
+      center: center,
+      width: radius * 2,
+      height: radius * 1.45,
+    );
+    canvas.drawArc(
+      shellRect,
+      math.pi,
+      math.pi,
+      true,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [color, Color.lerp(color, const Color(0xFF8D5B58), .34)!],
+        ).createShader(shellRect),
+    );
+    final ridge = Paint()
+      ..color = Colors.white.withValues(alpha: .46)
+      ..strokeWidth = .9;
+    for (var i = -2; i <= 2; i++) {
+      canvas.drawLine(
+        Offset(center.dx, center.dy),
+        Offset(center.dx + i * radius * .34, center.dy - radius * .58),
+        ridge,
+      );
     }
   }
 
