@@ -1,0 +1,152 @@
+<style>
+  #branch-button-options {
+    --ink: light-dark(#062a68, #e7efff);
+    --blue: #0878df;
+    --deep: #043d91;
+    --red: #ef2638;
+    --surface: light-dark(#f3f7fc, #111a2a);
+    --panel: light-dark(#ffffff, #172237);
+    color: light-dark(#142033, #edf3ff);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    padding: 8px 2px;
+  }
+  #branch-button-options .options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  #branch-button-options .option {
+    background: var(--panel);
+    border: 1px solid light-dark(#dbe4f1, #2a3a55);
+    border-radius: 18px;
+    padding: 18px;
+  }
+  #branch-button-options .label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  #branch-button-options .tag {
+    color: light-dark(#65758a, #aebbd0);
+    font-size: 12px;
+  }
+  #branch-button-options .preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    align-items: center;
+    min-height: 62px;
+    padding: 14px;
+    background: var(--surface);
+    border-radius: 12px;
+  }
+  #branch-button-options .branch {
+    min-width: 132px;
+    height: 48px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font: 800 13px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: .2px;
+    white-space: nowrap;
+    color: var(--ink);
+    background: light-dark(#fff, #1d2940);
+  }
+  #branch-button-options .a {
+    border: 1.5px solid #1687ff;
+    border-radius: 10px;
+    box-shadow: 0 3px 0 var(--red), 0 6px 12px #002e7220;
+  }
+  #branch-button-options .a.active {
+    color: #fff;
+    background: linear-gradient(#0788e8, #0053b8);
+  }
+  #branch-button-options .b {
+    border: 1px solid light-dark(#d5deeb, #41506a);
+    border-radius: 14px;
+    box-shadow: 0 7px 18px #002e721c;
+    position: relative;
+    overflow: hidden;
+  }
+  #branch-button-options .b::after {
+    content: "";
+    position: absolute;
+    inset: auto 13px 0;
+    height: 4px;
+    border-radius: 6px 6px 0 0;
+    background: linear-gradient(90deg, var(--blue), var(--red));
+  }
+  #branch-button-options .b.active {
+    color: #fff;
+    background: var(--deep);
+  }
+  #branch-button-options .c {
+    border: 0;
+    border-radius: 24px;
+    color: light-dark(#15345f, #e9f2ff);
+    background: light-dark(#e8f2ff, #203652);
+    box-shadow: inset 0 0 0 1px light-dark(#c6dcf7, #38577d);
+  }
+  #branch-button-options .c.active {
+    color: #fff;
+    background: linear-gradient(135deg, #093f98, #0796e4);
+    box-shadow: 0 7px 16px #0069c53c;
+  }
+  #branch-button-options .d {
+    border: 1px solid light-dark(#cfd9e8, #3c4b64);
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 light-dark(#dae5f4, #0b1321);
+  }
+  #branch-button-options .d.active {
+    color: #fff;
+    border-color: #062e72;
+    background: #062e72;
+    box-shadow: 4px 4px 0 var(--red);
+  }
+  #branch-button-options i { width: 17px; height: 17px; }
+  @media (max-width: 620px) {
+    #branch-button-options .options { grid-template-columns: 1fr; }
+    #branch-button-options .branch { min-width: 122px; }
+  }
+</style>
+
+<section id="branch-button-options" aria-label="Branch button design options">
+  <div class="options">
+    <article class="option">
+      <div class="label"><span>Design A · Signature</span><span class="tag">Current style refined</span></div>
+      <div class="preview">
+        <button class="branch a active" type="button"><i data-lucide="grid-2x2" aria-hidden="true"></i>ALL BRANCHES</button>
+        <button class="branch a" type="button">ALOR SETAR</button>
+        <button class="branch a" type="button">SUNGAI PETANI</button>
+      </div>
+    </article>
+    <article class="option">
+      <div class="label"><span>Design B · Executive</span><span class="tag">Clean and premium</span></div>
+      <div class="preview">
+        <button class="branch b active" type="button"><i data-lucide="building-2" aria-hidden="true"></i>ALL BRANCHES</button>
+        <button class="branch b" type="button">ALOR SETAR</button>
+        <button class="branch b" type="button">SUNGAI PETANI</button>
+      </div>
+    </article>
+    <article class="option">
+      <div class="label"><span>Design C · Modern Pill</span><span class="tag">Soft and friendly</span></div>
+      <div class="preview">
+        <button class="branch c active" type="button"><i data-lucide="map-pin" aria-hidden="true"></i>ALL BRANCHES</button>
+        <button class="branch c" type="button">ALOR SETAR</button>
+        <button class="branch c" type="button">SUNGAI PETANI</button>
+      </div>
+    </article>
+    <article class="option">
+      <div class="label"><span>Design D · Strong Block</span><span class="tag">Bold and authoritative</span></div>
+      <div class="preview">
+        <button class="branch d active" type="button"><i data-lucide="layout-grid" aria-hidden="true"></i>ALL BRANCHES</button>
+        <button class="branch d" type="button">ALOR SETAR</button>
+        <button class="branch d" type="button">SUNGAI PETANI</button>
+      </div>
+    </article>
+  </div>
+</section>

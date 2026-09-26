@@ -1,0 +1,88 @@
+<style>
+  #dashboard-theme-concepts { font-family: Inter, ui-sans-serif, system-ui, sans-serif; padding: 4px; }
+  #dashboard-theme-concepts .themes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+  #dashboard-theme-concepts .theme-label { display:flex; align-items:center; justify-content:space-between; margin:0 2px 8px; color:light-dark(#172033,#edf3ff); font-weight:600; }
+  #dashboard-theme-concepts .theme-label small { color:light-dark(#758197,#aebbd0); font-weight:500; }
+  #dashboard-theme-concepts .dash { overflow:hidden; border-radius:18px; box-shadow:0 18px 34px #08152625; min-height:310px; }
+  #dashboard-theme-concepts .top { height:52px; padding:0 18px; display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:800; }
+  #dashboard-theme-concepts .profile { display:flex; align-items:center; gap:7px; font-size:10px; }
+  #dashboard-theme-concepts .avatar { width:27px;height:27px;border-radius:50%;display:grid;place-items:center; }
+  #dashboard-theme-concepts .content { padding:16px; }
+  #dashboard-theme-concepts .live { display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:8px;font-weight:900;letter-spacing:.6px; }
+  #dashboard-theme-concepts .live::before { content:"";width:6px;height:6px;border-radius:50%;background:currentColor; }
+  #dashboard-theme-concepts h3 { margin:9px 0 2px;font-size:21px;line-height:1.1; }
+  #dashboard-theme-concepts .sub { font-size:10px;opacity:.62; }
+  #dashboard-theme-concepts .branches { display:flex;gap:6px;margin:14px 0 12px;overflow:hidden; }
+  #dashboard-theme-concepts .branch { height:32px;min-width:82px;padding:0 9px;border-radius:18px;border:0;font-size:8px;font-weight:900;white-space:nowrap; }
+  #dashboard-theme-concepts .metrics { display:grid;grid-template-columns:repeat(3,1fr);gap:8px; }
+  #dashboard-theme-concepts .metric { min-height:59px;border-radius:13px;padding:10px;display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center; }
+  #dashboard-theme-concepts .icon { width:30px;height:30px;border-radius:9px;display:grid;place-items:center; }
+  #dashboard-theme-concepts .icon i { width:15px;height:15px; }
+  #dashboard-theme-concepts .metric span { display:block;font-size:8px;letter-spacing:.4px;opacity:.62; }
+  #dashboard-theme-concepts .metric strong { display:block;margin-top:3px;font-size:13px; }
+
+  #dashboard-theme-concepts .graphite { background:#f4f1eb;color:#20201e;border:1px solid #d7d0c4; }
+  #dashboard-theme-concepts .graphite .top { color:#fff;background:linear-gradient(110deg,#1f2428,#343a3d);border-bottom:3px solid #d69632; }
+  #dashboard-theme-concepts .graphite .avatar,#dashboard-theme-concepts .graphite .branch.active,#dashboard-theme-concepts .graphite .icon { color:#fff;background:#d18a23; }
+  #dashboard-theme-concepts .graphite .live { color:#27765f;background:#dcece4; }
+  #dashboard-theme-concepts .graphite .branch { color:#37332c;background:#e7dfd2; }
+  #dashboard-theme-concepts .graphite .metric { background:#fff;border:1px solid #ded6ca;box-shadow:0 5px 13px #46371f12; }
+
+  #dashboard-theme-concepts .emerald { background:#f7f3e8;color:#17352f;border:1px solid #cfc6a9; }
+  #dashboard-theme-concepts .emerald .top { color:#fff;background:linear-gradient(110deg,#0d493f,#167662);border-bottom:3px solid #e0bc62; }
+  #dashboard-theme-concepts .emerald .avatar,#dashboard-theme-concepts .emerald .branch.active,#dashboard-theme-concepts .emerald .icon { color:#fff;background:#b98a32; }
+  #dashboard-theme-concepts .emerald .live { color:#17604f;background:#d8ede4; }
+  #dashboard-theme-concepts .emerald .branch { color:#21594d;background:#e0eee8; }
+  #dashboard-theme-concepts .emerald .metric { background:#fffdf7;border:1px solid #ded3b7;box-shadow:0 5px 13px #385c4515; }
+
+  #dashboard-theme-concepts .plum { background:#fbf5f2;color:#32202f;border:1px solid #decacb; }
+  #dashboard-theme-concepts .plum .top { color:#fff;background:linear-gradient(110deg,#3c1738,#71345f);border-bottom:3px solid #ef775f; }
+  #dashboard-theme-concepts .plum .avatar,#dashboard-theme-concepts .plum .branch.active,#dashboard-theme-concepts .plum .icon { color:#fff;background:#df654f; }
+  #dashboard-theme-concepts .plum .live { color:#44725e;background:#e1eee6; }
+  #dashboard-theme-concepts .plum .branch { color:#633353;background:#f0dfe7; }
+  #dashboard-theme-concepts .plum .metric { background:#fff;border:1px solid #e6d5d6;box-shadow:0 5px 13px #4a203214; }
+
+  #dashboard-theme-concepts .midnight { background:#f3f0e7;color:#252418;border:1px solid #d4caa5; }
+  #dashboard-theme-concepts .midnight .top { color:#fff;background:linear-gradient(110deg,#121626,#232d47);border-bottom:3px solid #d5b04d; }
+  #dashboard-theme-concepts .midnight .avatar,#dashboard-theme-concepts .midnight .branch.active,#dashboard-theme-concepts .midnight .icon { color:#171509;background:#d6b24f; }
+  #dashboard-theme-concepts .midnight .live { color:#1d765e;background:#d9eee5; }
+  #dashboard-theme-concepts .midnight .branch { color:#33394d;background:#e1e3e8; }
+  #dashboard-theme-concepts .midnight .metric { color:#f6f0dc;background:#1b2234;border:1px solid #3d465c;box-shadow:0 7px 15px #11172724; }
+  #dashboard-theme-concepts .midnight .metric span { color:#c6cbd7;opacity:1; }
+
+  @media(max-width:760px){#dashboard-theme-concepts .themes{grid-template-columns:1fr}}
+  @media(max-width:420px){#dashboard-theme-concepts .metrics{grid-template-columns:repeat(2,1fr)}#dashboard-theme-concepts .metric:last-child{display:none}}
+</style>
+
+<section id="dashboard-theme-concepts" aria-label="Dashboard color theme concepts">
+  <div class="themes">
+    <article>
+      <div class="theme-label"><span>A · Graphite Copper</span><small>Modern · warm contrast</small></div>
+      <div class="dash graphite">
+        <div class="top"><span>DASHBOARD</span><div class="profile"><span class="avatar"><i data-lucide="user"></i></span><span>Admin User</span></div></div>
+        <div class="content"><span class="live">SYSTEM LIVE</span><h3>Payroll command centre</h3><div class="sub">Your workforce, payroll and operations — unified in real time.</div><div class="branches"><button class="branch active">ALL BRANCHES</button><button class="branch">ALOR SETAR</button><button class="branch">AMANJAYA</button><button class="branch">ASTANA</button></div><div class="metrics"><div class="metric"><span class="icon"><i data-lucide="wallet"></i></span><div><span>BASIC PAY</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="gift"></i></span><div><span>BONUS</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="users"></i></span><div><span>WORKFORCE</span><strong>227</strong></div></div></div></div>
+      </div>
+    </article>
+    <article>
+      <div class="theme-label"><span>B · Emerald Sand</span><small>Refined · natural</small></div>
+      <div class="dash emerald">
+        <div class="top"><span>DASHBOARD</span><div class="profile"><span class="avatar"><i data-lucide="user"></i></span><span>Admin User</span></div></div>
+        <div class="content"><span class="live">SYSTEM LIVE</span><h3>Payroll command centre</h3><div class="sub">Your workforce, payroll and operations — unified in real time.</div><div class="branches"><button class="branch active">ALL BRANCHES</button><button class="branch">ALOR SETAR</button><button class="branch">AMANJAYA</button><button class="branch">ASTANA</button></div><div class="metrics"><div class="metric"><span class="icon"><i data-lucide="wallet"></i></span><div><span>BASIC PAY</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="gift"></i></span><div><span>BONUS</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="users"></i></span><div><span>WORKFORCE</span><strong>227</strong></div></div></div></div>
+      </div>
+    </article>
+    <article>
+      <div class="theme-label"><span>C · Plum Coral</span><small>Distinctive · energetic</small></div>
+      <div class="dash plum">
+        <div class="top"><span>DASHBOARD</span><div class="profile"><span class="avatar"><i data-lucide="user"></i></span><span>Admin User</span></div></div>
+        <div class="content"><span class="live">SYSTEM LIVE</span><h3>Payroll command centre</h3><div class="sub">Your workforce, payroll and operations — unified in real time.</div><div class="branches"><button class="branch active">ALL BRANCHES</button><button class="branch">ALOR SETAR</button><button class="branch">AMANJAYA</button><button class="branch">ASTANA</button></div><div class="metrics"><div class="metric"><span class="icon"><i data-lucide="wallet"></i></span><div><span>BASIC PAY</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="gift"></i></span><div><span>BONUS</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="users"></i></span><div><span>WORKFORCE</span><strong>227</strong></div></div></div></div>
+      </div>
+    </article>
+    <article>
+      <div class="theme-label"><span>D · Midnight Champagne</span><small>Executive · high contrast</small></div>
+      <div class="dash midnight">
+        <div class="top"><span>DASHBOARD</span><div class="profile"><span class="avatar"><i data-lucide="user"></i></span><span>Admin User</span></div></div>
+        <div class="content"><span class="live">SYSTEM LIVE</span><h3>Payroll command centre</h3><div class="sub">Your workforce, payroll and operations — unified in real time.</div><div class="branches"><button class="branch active">ALL BRANCHES</button><button class="branch">ALOR SETAR</button><button class="branch">AMANJAYA</button><button class="branch">ASTANA</button></div><div class="metrics"><div class="metric"><span class="icon"><i data-lucide="wallet"></i></span><div><span>BASIC PAY</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="gift"></i></span><div><span>BONUS</span><strong>RM 0.00</strong></div></div><div class="metric"><span class="icon"><i data-lucide="users"></i></span><div><span>WORKFORCE</span><strong>227</strong></div></div></div></div>
+      </div>
+    </article>
+  </div>
+</section>

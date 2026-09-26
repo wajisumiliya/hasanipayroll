@@ -399,7 +399,10 @@ class AttendancePayrollService {
       // shortage calculation. A normal worked day below the target creates
       // a deduction based on basic salary / calendar days / target hours.
       if (!isUnpaid && !isPublicHoliday && worked) {
-        final shortage = dailyRequiredMinutes - workMinutes;
+        // Checkout has a 15-minute grace window. This grace is applied only
+        // to an early checkout and never offsets late check-in time.
+        final checkoutGrace = _checkoutGraceMinutes(row, roster);
+        final shortage = dailyRequiredMinutes - workMinutes - checkoutGrace;
 
         if (shortage > 0) {
           totalShortageMinutes += shortage;
@@ -952,6 +955,24 @@ class AttendancePayrollService {
     if (gross <= 0) gross += 24 * 60;
     final required = gross - _intNumber(roster['break_minutes']);
     return required > 0 ? required : null;
+  }
+
+  static int _checkoutGraceMinutes(
+    Map<String, dynamic> attendance,
+    Map<String, dynamic>? roster,
+  ) {
+    if (roster == null) return 0;
+    final shiftEnd = _clockMinutes(roster['shift_end']);
+    final actualOut = _clockMinutes(
+      attendance['check_out'] ?? attendance['working_out'],
+    );
+    if (shiftEnd == null || actualOut == null) return 0;
+
+    var earlyMinutes = shiftEnd - actualOut;
+    // Normalize overnight shifts (for example 22:00–06:00).
+    if (earlyMinutes < -12 * 60) earlyMinutes += 24 * 60;
+    if (earlyMinutes <= 0) return 0;
+    return earlyMinutes.clamp(0, 15);
   }
 
   static int? _clockMinutes(dynamic value) {
