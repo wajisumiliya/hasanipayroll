@@ -4784,73 +4784,84 @@ class _AdminDashboardState extends State<AdminDashboard>
     required VoidCallback onTap,
   }) {
     final allBranches = label.trim().toLowerCase() == 'all branches';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: selected
-                ? const LinearGradient(
-                    colors: [Color(0xFF0788E8), Color(0xFF0053B8)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  )
-                : const LinearGradient(
-                    colors: [Colors.white, Color(0xFFF8FBFF)],
+    return SizedBox(
+      width: 140,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              gradient: selected
+                  ? const LinearGradient(
+                      colors: [Color(0xFF0788E8), Color(0xFF0053B8)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    )
+                  : const LinearGradient(
+                      colors: [Colors.white, Color(0xFFF8FBFF)],
+                    ),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFF0054B7)
+                    : const Color(0xFF1687FF),
+                width: 1.2,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0xFFEF2638),
+                  blurRadius: 0,
+                  offset: Offset(0, 3),
+                ),
+                BoxShadow(
+                  color: Color(0x22002E72),
+                  blurRadius: 5,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (allBranches)
+                  Icon(
+                    Icons.grid_view_rounded,
+                    color: selected ? Colors.white : const Color(0xFF075FC5),
+                    size: 18,
                   ),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(
-              color:
-                  selected ? const Color(0xFF0054B7) : const Color(0xFF1687FF),
-              width: 1.2,
+                if (allBranches) const SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    allBranches ? 'All branches' : label.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.visible,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: selected ? Colors.white : const Color(0xFF062A68),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: allBranches ? 0 : .25,
+                      height: 1,
+                      shadows: selected
+                          ? const [
+                              Shadow(
+                                color: Color(0x55000000),
+                                blurRadius: 2,
+                                offset: Offset(0, 1),
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0xFFEF2638),
-                blurRadius: 0,
-                offset: Offset(0, 3),
-              ),
-              BoxShadow(
-                color: Color(0x22002E72),
-                blurRadius: 5,
-                offset: Offset(0, 3),
-              ),
-            ],
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (allBranches)
-              Icon(
-                Icons.grid_view_rounded,
-                color: selected ? Colors.white : const Color(0xFF075FC5),
-                size: 17,
-              ),
-            if (allBranches) const SizedBox(width: 6),
-            Text(
-              allBranches ? 'All branches' : label.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF062A68),
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: allBranches ? 0 : .2,
-                height: 1,
-                shadows: selected
-                    ? const [
-                        Shadow(
-                          color: Color(0x55000000),
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
-                        ),
-                      ]
-                    : null,
-              ),
-            ),
-          ]),
         ),
       ),
     );
