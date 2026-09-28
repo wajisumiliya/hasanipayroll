@@ -1,9 +1,9 @@
-$ErrorActionPreference = "Stop"
-
 param(
   [Parameter(Mandatory=$true)]
   [string]$BackupZip
 )
+
+$ErrorActionPreference = "Stop"
 
 # Safety rule: this verifier restores ONLY into a temporary PostgreSQL database
 # on localhost. It never accepts or uses the production Supabase database URL.
@@ -76,7 +76,10 @@ where table_schema='public'
 }
 finally {
   if ($DbName) {
-    & $Dropdb.Source "-h" "localhost" "-p" $(if ($env:HASANI_RESTORE_PORT) {$env:HASANI_RESTORE_PORT} else {"5432"}) "-U" $(if ($env:HASANI_RESTORE_USER) {$env:HASANI_RESTORE_USER} else {"postgres"}) "--if-exists" $DbName 2>$null
+    $CleanupHost = if ($HostName) { $HostName } else { "localhost" }
+    $CleanupPort = if ($Port) { $Port } else { "5432" }
+    $CleanupUser = if ($User) { $User } else { "postgres" }
+    & $Dropdb.Source "-h" $CleanupHost "-p" $CleanupPort "-U" $CleanupUser "--if-exists" $DbName 2>$null
   }
   if (Test-Path $TempRoot) { Remove-Item $TempRoot -Recurse -Force }
 }
