@@ -1,0 +1,47 @@
+name: Security History Audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/security-history.yml"
+      - ".gitignore"
+      - "backend/**"
+      - "lib/**"
+      - "supabase/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/security-history.yml"
+      - ".gitignore"
+      - "backend/**"
+      - "lib/**"
+      - "supabase/**"
+
+permissions:
+  contents: read
+
+jobs:
+  history-secrets:
+    name: Scan Git history for high-confidence secret patterns
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Scan committed history
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{30,}|sk_live_[A-Za-z0-9]{20,}|service_role[^[:space:]]*[[:space:]]*[:=][[:space:]]*["'\'' ]*[A-Za-z0-9._-]{30,}|JWT_SECRET[[:space:]]*=[[:space:]]*[^$<{[:space:]][^[:space:]]{15,}|SMTP_PASSWORD[[:space:]]*=[[:space:]]*[^$<{[:space:]][^[:space:]]{8,}'
+          if git log -p --all -- . ':!build/web/**' | grep -Eiq -- "$pattern"; then
+            echo "High-confidence secret-like material was detected in Git history."
+            echo "No matching secret value is printed. Rotate the affected credential and rewrite history before relying on deletion from the current tree."
+            exit 1
+          fi
+          echo "No high-confidence secret pattern detected in committed history."
