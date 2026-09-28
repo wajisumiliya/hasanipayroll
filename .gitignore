@@ -73,3 +73,7 @@ node_modules/
 backend/data/*.json
 !backend/data/*.example.json
 
+
+# Local Supabase backup secrets and generated backups
+backup/windows/backup_config.local.ps1
+backup/windows/HasaniPayroll_Backups/
