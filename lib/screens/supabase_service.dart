@@ -7,7 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseService {
   // Diagnostics are debug-only and must not include payroll or identity data.
   static void _debugLog(String message) {
-    if (kDebugMode) _debugLog(message);
+    if (kDebugMode) debugPrint(message);
   }
 
   static Future<List<Map<String, dynamic>>> getMonthlyRosters({
