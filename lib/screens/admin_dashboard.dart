@@ -8804,7 +8804,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<List<dynamic>> _adminAttendancePageData(String branchId) {
-    final key = '$branchId|${selectedAttendanceMonth.year}|${selectedAttendanceMonth.month}';
+    final key =
+        '$branchId|${selectedAttendanceMonth.year}|${selectedAttendanceMonth.month}';
     if (_attendancePageFuture == null || _attendancePageFutureKey != key) {
       _attendancePageFutureKey = key;
       _attendancePageFuture = Future.wait([
