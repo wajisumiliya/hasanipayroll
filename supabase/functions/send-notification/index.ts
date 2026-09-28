@@ -10,12 +10,43 @@ const cors = {
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      throw new Error('Notification service is not configured.');
+    }
+
+    // Authenticate with the caller's JWT first. Never authorize with the
+    // service-role client, because it bypasses RLS.
+    const authorization = request.headers.get('Authorization') ?? '';
+    if (!authorization.startsWith('Bearer ')) {
+      return json({ error: 'Authentication required.' }, 401);
+    }
+    const caller = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authorization } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: userData, error: userError } = await caller.auth.getUser();
+    if (userError || !userData.user) {
+      return json({ error: 'Invalid or expired authentication token.' }, 401);
+    }
+    const appRole = String(
+      userData.user.app_metadata?.app_role ?? userData.user.app_metadata?.role ?? '',
+    ).trim().toLowerCase();
+    if (appRole !== 'admin') {
+      return json({ error: 'Administrator access required.' }, 403);
+    }
+
     const input = await request.json();
     const title = String(input.title ?? '').trim();
     const body = String(input.body ?? '').trim();
     const audience = String(input.audience ?? 'all');
-    if (!title || !body || !['all', 'branch', 'employee'].includes(audience)) {
+    if (!title || !body || title.length > 160 || body.length > 2000 ||
+        !['all', 'branch', 'employee'].includes(audience)) {
       return json({ error: 'Invalid notification request.' }, 400);
     }
 
@@ -24,14 +55,26 @@ Deno.serve(async (request) => {
         .map((value: unknown) => String(value).trim())
         .filter((value: string) => value.length > 0))]
       : [];
+    if (employeeIds.length > 500) {
+      return json({ error: 'Employee batch is too large.' }, 400);
+    }
     if (employeeIds.length > 0 && audience !== 'employee') {
       return json({ error: 'Employee batches require employee audience.' }, 400);
     }
+    if (audience === 'branch' && !String(input.branch_id ?? '').trim()) {
+      return json({ error: 'Branch audience requires branch_id.' }, 400);
+    }
+    if (audience === 'employee' && employeeIds.length === 0 &&
+        !String(input.employee_id ?? '').trim()) {
+      return json({ error: 'Employee audience requires employee_id.' }, 400);
+    }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
+    // Privileged client is created only after the caller has been authenticated
+    // and authorized as an administrator.
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
     let query = supabase.from('notification_devices').select('token, employee_id');
     if (audience === 'branch') query = query.eq('branch_id', input.branch_id);
     if (audience === 'employee' && employeeIds.length > 0) {
@@ -50,14 +93,12 @@ Deno.serve(async (request) => {
         devicesByToken.set(device.token, String(device.employee_id ?? ''));
       }
     }
+
     const results = await Promise.all([...devicesByToken.entries()].map(([token, employeeId]) => fetch(
       `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
       {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: {
           token,
           notification: { title, body },
@@ -75,30 +116,26 @@ Deno.serve(async (request) => {
 
     const notifications = employeeIds.length > 0
       ? employeeIds.map((employeeId) => ({
-        title, body,
-        notification_type: input.type ?? 'information',
-        audience: 'employee',
-        branch_id: null,
-        employee_id: employeeId,
+        title, body, notification_type: input.type ?? 'information',
+        audience: 'employee', branch_id: null, employee_id: employeeId,
       }))
       : [{
-        title, body,
-        notification_type: input.type ?? 'information',
-        audience,
-        branch_id: input.branch_id || null,
-        employee_id: input.employee_id || null,
+        title, body, notification_type: input.type ?? 'information', audience,
+        branch_id: input.branch_id || null, employee_id: input.employee_id || null,
       }];
+
     const { error: notificationError } = await supabase
-      .from('app_notifications')
-      .insert(notifications);
+      .from('app_notifications').insert(notifications);
     if (notificationError) throw notificationError;
+
     return json({
       sent: results.filter((result) => result.ok).length,
       total: devicesByToken.size,
       inbox: notifications.length,
     });
   } catch (error) {
-    return json({ error: String(error) }, 500);
+    console.error('send-notification failed:', error);
+    return json({ error: 'Notification service failed.' }, 500);
   }
 });
 

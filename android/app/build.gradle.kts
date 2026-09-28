@@ -17,9 +17,7 @@ val hasReleaseSigningConfig =
 
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -29,19 +27,15 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        // Required by flutter_local_notifications
         isCoreLibraryDesugaringEnabled = true
-
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
     defaultConfig {
         applicationId = "com.hasani.payroll"
-
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -59,23 +53,23 @@ android {
 
     buildTypes {
         release {
-            signingConfig =
-                signingConfigs.getByName(
-                    if (hasReleaseSigningConfig) "release" else "debug",
-                )
+            // Never silently produce a debug-signed artifact when a release
+            // keystore is expected. CI may still compile an unsigned release;
+            // publishing requires the explicit release signing configuration.
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
 
 kotlin {
     compilerOptions {
-        jvmTarget =
-            org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
 dependencies {
-    // Required by flutter_local_notifications
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
