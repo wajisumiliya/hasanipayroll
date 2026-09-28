@@ -53,12 +53,14 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
     _Shift('10:00 AM - 10:00 PM', '10:00', '22:00', 90),
   ];
   late DateTime month;
+  late Future<List<dynamic>> _loadFuture;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initialMonth ?? DateTime.now();
     month = DateTime(initial.year, initial.month);
+    _loadFuture = _load();
   }
 
   int week = 1;
@@ -95,6 +97,7 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
     setState(() {
       month = DateTime(result.year, result.month);
       selectedIds.clear();
+      _loadFuture = _load();
     });
   }
 
@@ -136,6 +139,7 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
       setState(() {
         saving = false;
         selectedIds.clear();
+        _loadFuture = _load();
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('$count employee(s) assigned for Week $week.'),
@@ -153,7 +157,7 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
-        future: _load(),
+        future: _loadFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
