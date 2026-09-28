@@ -1,0 +1,95 @@
+name: Encrypted Supabase Backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 18 * * *" # 02:15 Malaysia time (UTC+8)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: encrypted-supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: https://qychfoxygqzmtsqtxihp.supabase.co
+      STORAGE_BUCKET: employee-photos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify required secrets
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL" || { echo "Missing SUPABASE_DB_URL"; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "Missing SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
+          test -n "$BACKUP_PASSPHRASE" || { echo "Missing BACKUP_PASSPHRASE"; exit 1; }
+
+      - name: Create PostgreSQL backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p backup/database backup/storage
+          docker run --rm \
+            -e SUPABASE_DB_URL \
+            -v "$PWD/backup/database:/backup" \
+            postgres:17 \
+            sh -c 'pg_dump --dbname="$SUPABASE_DB_URL" --format=custom --no-owner --no-acl --file=/backup/database.dump'
+          docker run --rm \
+            -e SUPABASE_DB_URL \
+            -v "$PWD/backup/database:/backup" \
+            postgres:17 \
+            sh -c 'pg_dump --dbname="$SUPABASE_DB_URL" --schema-only --no-owner --no-acl --file=/backup/schema.sql'
+
+      - name: Back up private employee photos
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          python3 scripts/backup_supabase_storage.py \
+            --url "$SUPABASE_URL" \
+            --service-role-key "$SUPABASE_SERVICE_ROLE_KEY" \
+            --bucket "$STORAGE_BUCKET" \
+            --output backup/storage
+
+      - name: Create manifest
+        run: |
+          set -euo pipefail
+          {
+            echo "created_utc=$(date -u +%FT%TZ)"
+            echo "repository=${GITHUB_REPOSITORY}"
+            echo "commit=${GITHUB_SHA}"
+            echo "database_format=PostgreSQL custom archive"
+            echo "storage_bucket=${STORAGE_BUCKET}"
+          } > backup/MANIFEST.txt
+          find backup -type f -print0 | sort -z | xargs -0 sha256sum > backup/SHA256SUMS
+
+      - name: Encrypt backup
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          tar -C backup -czf backup.tar.gz .
+          printf '%s' "$BACKUP_PASSPHRASE" | \
+            gpg --batch --yes --pinentry-mode loopback \
+              --passphrase-fd 0 --symmetric --cipher-algo AES256 \
+              --output "hasani-payroll-$(date -u +%Y%m%dT%H%M%SZ).tar.gz.gpg" backup.tar.gz
+          rm -rf backup backup.tar.gz
+
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hasani-payroll-encrypted-backup
+          path: hasani-payroll-*.tar.gz.gpg
+          if-no-files-found: error
+          retention-days: 14
