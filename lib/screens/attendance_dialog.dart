@@ -60,6 +60,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   final Set<int> _submittedDays = <int>{};
   bool _showBreakAttendanceOnMobile = false;
   String? loadError;
+  RealtimeChannel? _attendanceChannel;
   Timer? _liveRefreshTimer;
 
   String get _watermarkBranchName {
@@ -96,19 +97,46 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
     _loadAttendance();
 
-    // Employee view is read-only, so it is safe to refresh automatically.
-    // This makes a branch submission appear without the employee pressing Refresh.
+    // Employee attendance updates arrive through Realtime. Keep a slow fallback
+    // refresh in case a websocket reconnect misses an event.
     if (!widget.editable) {
+      _subscribeToAttendance();
       _liveRefreshTimer = Timer.periodic(
-        const Duration(seconds: 2),
+        const Duration(minutes: 5),
         (_) => _loadAttendance(silent: true),
       );
     }
   }
 
+  void _subscribeToAttendance() {
+    final employeeId = _employeeId().trim();
+    if (employeeId.isEmpty) return;
+
+    _attendanceChannel = SupabaseService.client
+        .channel('employee-attendance-$employeeId-$hashCode')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'attendance',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'employee_id',
+            value: employeeId,
+          ),
+          callback: (_) {
+            if (mounted) _loadAttendance(silent: true);
+          },
+        )
+        .subscribe();
+  }
+
   @override
   void dispose() {
     _liveRefreshTimer?.cancel();
+    final channel = _attendanceChannel;
+    if (channel != null) {
+      SupabaseService.client.removeChannel(channel);
+    }
     for (final controller in controllers) {
       controller.dispose();
     }
