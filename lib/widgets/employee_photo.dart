@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EmployeePhoto extends StatefulWidget {
   const EmployeePhoto({
@@ -23,60 +22,20 @@ class EmployeePhoto extends StatefulWidget {
   State<EmployeePhoto> createState() => _EmployeePhotoState();
 }
 
-class _CachedSignedUrl {
-  const _CachedSignedUrl(this.future, this.expiresAt);
-
-  final Future<String?> future;
-  final DateTime expiresAt;
-}
-
 class _EmployeePhotoState extends State<EmployeePhoto> {
-  static final Map<String, _CachedSignedUrl> _signedUrlCache = {};
-
-  String? _storagePath(String value) {
-    final clean = value.trim();
-    if (clean.isEmpty) return null;
-    if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
-      return clean;
-    }
-    final uri = Uri.tryParse(clean);
-    if (uri == null) return null;
-    const marker = '/storage/v1/object/public/employee-photos/';
-    final index = uri.path.indexOf(marker);
-    if (index < 0) return null;
-    final encoded = uri.path.substring(index + marker.length);
-    return Uri.decodeComponent(encoded);
-  }
-
-  Future<String?> _resolvedUrl() async {
+  String? _publicUrl() {
     final raw = widget.photoUrl?.trim() ?? '';
-    final path = _storagePath(raw);
-    if (path == null || path.isEmpty) return null;
-    try {
-      return await Supabase.instance.client.storage
-          .from('employee-photos')
-          .createSignedUrl(path, 3600);
-    } catch (_) {
-      return null;
-    }
-  }
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
 
-  Future<String?> _cachedResolvedUrl() {
-    final raw = widget.photoUrl?.trim() ?? '';
-    if (raw.isEmpty) return Future<String?>.value(null);
+    final encodedPath = raw
+        .split('/')
+        .where((part) => part.isNotEmpty)
+        .map(Uri.encodeComponent)
+        .join('/');
+    if (encodedPath.isEmpty) return null;
 
-    final now = DateTime.now();
-    final cached = _signedUrlCache[raw];
-    if (cached != null && now.isBefore(cached.expiresAt)) {
-      return cached.future;
-    }
-
-    final future = _resolvedUrl();
-    _signedUrlCache[raw] = _CachedSignedUrl(
-      future,
-      now.add(const Duration(minutes: 55)),
-    );
-    return future;
+    return 'https://qychfoxygqzmtsqtxihp.supabase.co/storage/v1/object/public/employee-photos/$encodedPath';
   }
 
   @override
@@ -107,10 +66,9 @@ class _EmployeePhotoState extends State<EmployeePhoto> {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: FutureBuilder<String?>(
-        future: _cachedResolvedUrl(),
-        builder: (context, snapshot) {
-          final url = snapshot.data?.trim() ?? '';
+      child: Builder(
+        builder: (context) {
+          final url = _publicUrl()?.trim() ?? '';
           if (url.isEmpty) return fallback;
           return Image.network(
             url,
