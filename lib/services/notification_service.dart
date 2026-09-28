@@ -40,33 +40,12 @@ class NotificationService {
         await _registerToken(token, employeeId, branchId);
       }
 
-      debugPrint('');
-      debugPrint(
-        '========================================',
-      );
-      debugPrint('HASANI PAYROLL FCM TOKEN');
-      debugPrint(token ?? 'FCM TOKEN NOT AVAILABLE');
-      debugPrint(
-        '========================================',
-      );
-      debugPrint('');
-
       // ============================================================
       // LISTEN FOR TOKEN CHANGES
       // ============================================================
 
       _messaging.onTokenRefresh.listen((newToken) async {
         await _registerToken(newToken, employeeId, branchId);
-        debugPrint('');
-        debugPrint(
-          '========================================',
-        );
-        debugPrint('FCM TOKEN REFRESHED');
-        debugPrint(newToken);
-        debugPrint(
-          '========================================',
-        );
-        debugPrint('');
       });
 
       // ============================================================
