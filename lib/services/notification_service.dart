@@ -63,24 +63,6 @@ class NotificationService {
           if (body.isNotEmpty) {
             await NotificationPresenter.show(title: title, body: body);
           }
-          debugPrint('');
-          debugPrint(
-            '========================================',
-          );
-          debugPrint('FCM MESSAGE RECEIVED');
-          debugPrint(
-            'Title: ${message.notification?.title ?? 'No title'}',
-          );
-          debugPrint(
-            'Body: ${message.notification?.body ?? 'No body'}',
-          );
-          debugPrint(
-            'Data: ${message.data}',
-          );
-          debugPrint(
-            '========================================',
-          );
-          debugPrint('');
         },
       );
 
@@ -90,21 +72,8 @@ class NotificationService {
 
       FirebaseMessaging.onMessageOpenedApp.listen(
         (RemoteMessage message) {
-          debugPrint('');
-          debugPrint(
-            '========================================',
-          );
-          debugPrint('NOTIFICATION CLICKED');
-          debugPrint(
-            'Message ID: ${message.messageId}',
-          );
-          debugPrint(
-            'Data: ${message.data}',
-          );
-          debugPrint(
-            '========================================',
-          );
-          debugPrint('');
+          // Do not log notification payloads or identifiers. They may contain
+          // payroll or employee information.
         },
       );
 
@@ -115,21 +84,8 @@ class NotificationService {
       final initialMessage = await _messaging.getInitialMessage();
 
       if (initialMessage != null) {
-        debugPrint('');
-        debugPrint(
-          '========================================',
-        );
-        debugPrint('APP OPENED FROM NOTIFICATION');
-        debugPrint(
-          'Message ID: ${initialMessage.messageId}',
-        );
-        debugPrint(
-          'Data: ${initialMessage.data}',
-        );
-        debugPrint(
-          '========================================',
-        );
-        debugPrint('');
+        // The payload is intentionally not logged because notifications may
+        // contain payroll or employee information.
       }
     } catch (error) {
       debugPrint(
