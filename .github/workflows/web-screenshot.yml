@@ -1,0 +1,36 @@
+name: Build Web Screenshot Artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/real-ui-screenshots
+
+permissions:
+  contents: read
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build Flutter Web
+        run: flutter build web --release --no-pub
+      - name: Upload web build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: HASANI-PAYROLL-WEB-SCREENSHOT
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 6
+          path: build/web
