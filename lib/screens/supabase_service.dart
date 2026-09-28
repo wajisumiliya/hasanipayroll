@@ -5,6 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
+  // Diagnostics are debug-only and must not include payroll or identity data.
+  static void _debugLog(String message) {
+    if (kDebugMode) _debugLog(message);
+  }
+
   static Future<List<Map<String, dynamic>>> getMonthlyRosters({
     required String branchId,
     required int year,
@@ -115,16 +120,16 @@ class SupabaseService {
         publishableKey: supabaseAnonKey,
       );
 
-      debugPrint('======================================');
-      debugPrint('SUPABASE INITIALIZED');
-      debugPrint('URL: $supabaseUrl');
-      debugPrint('======================================');
+      _debugLog('======================================');
+      _debugLog('SUPABASE INITIALIZED');
+      _debugLog('URL: $supabaseUrl');
+      _debugLog('======================================');
     } catch (e, stackTrace) {
-      debugPrint('======================================');
-      debugPrint('SUPABASE INITIALIZATION ERROR');
-      debugPrint('$e');
-      debugPrint('$stackTrace');
-      debugPrint('======================================');
+      _debugLog('======================================');
+      _debugLog('SUPABASE INITIALIZATION ERROR');
+      _debugLog('$e');
+      _debugLog('$stackTrace');
+      _debugLog('======================================');
       rethrow;
     }
   }
@@ -137,7 +142,7 @@ class SupabaseService {
     try {
       return client.auth.currentUser;
     } catch (e) {
-      debugPrint('CURRENT USER ERROR: $e');
+      _debugLog('CURRENT USER ERROR: $e');
       return null;
     }
   }
@@ -169,7 +174,7 @@ class SupabaseService {
 
       return response['id']?.toString();
     } catch (e) {
-      debugPrint('START BRANCH ACTIVITY ERROR: $e');
+      _debugLog('START BRANCH ACTIVITY ERROR: $e');
       return null;
     }
   }
@@ -183,7 +188,7 @@ class SupabaseService {
           .update({'closed_at': DateTime.now().toUtc().toIso8601String()}).eq(
               'id', activityId);
     } catch (e) {
-      debugPrint('CLOSE BRANCH ACTIVITY ERROR: $e');
+      _debugLog('CLOSE BRANCH ACTIVITY ERROR: $e');
     }
   }
 
@@ -211,8 +216,8 @@ class SupabaseService {
       });
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET BRANCH ACTIVITY LOGS ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET BRANCH ACTIVITY LOGS ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -231,12 +236,12 @@ class SupabaseService {
         password: password,
       );
 
-      debugPrint('LOGIN SUCCESS: ${response.user?.email}');
+      _debugLog('LOGIN SUCCESS');
 
       return response;
     } catch (e, stackTrace) {
-      debugPrint('LOGIN ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('LOGIN ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -244,10 +249,10 @@ class SupabaseService {
   static Future<void> signOut() async {
     try {
       await client.auth.signOut();
-      debugPrint('LOGOUT SUCCESS');
+      _debugLog('LOGOUT SUCCESS');
     } catch (e, stackTrace) {
-      debugPrint('LOGOUT ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('LOGOUT ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -260,37 +265,37 @@ class SupabaseService {
     try {
       await client.from('employees').select('employee_id').limit(1);
 
-      debugPrint('SUPABASE CONNECTION: OK');
+      _debugLog('SUPABASE CONNECTION: OK');
       return true;
     } catch (e, stackTrace) {
-      debugPrint('SUPABASE CONNECTION ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('SUPABASE CONNECTION ERROR: $e');
+      _debugLog('$stackTrace');
       return false;
     }
   }
 
   static Future<bool> testEmployeesTable() async {
     try {
-      final response = await client.from('employees').select().limit(1);
+      await client.from('employees').select('employee_id').limit(1);
 
-      debugPrint('EMPLOYEES TABLE OK: $response');
+      _debugLog('EMPLOYEES TABLE OK');
       return true;
     } catch (e, stackTrace) {
-      debugPrint('EMPLOYEES TABLE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('EMPLOYEES TABLE ERROR: $e');
+      _debugLog('$stackTrace');
       return false;
     }
   }
 
   static Future<bool> testPayrollTable() async {
     try {
-      final response = await client.from('payroll').select().limit(1);
+      await client.from('payroll').select('id').limit(1);
 
-      debugPrint('PAYROLL TABLE OK: $response');
+      _debugLog('PAYROLL TABLE OK');
       return true;
     } catch (e, stackTrace) {
-      debugPrint('PAYROLL TABLE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('PAYROLL TABLE ERROR: $e');
+      _debugLog('$stackTrace');
       return false;
     }
   }
@@ -374,8 +379,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET EMPLOYEES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET EMPLOYEES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -390,8 +395,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET ACTIVE EMPLOYEES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET ACTIVE EMPLOYEES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -406,8 +411,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET INACTIVE EMPLOYEES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET INACTIVE EMPLOYEES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -428,8 +433,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('GET EMPLOYEE ERROR [$employeeId]: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET EMPLOYEE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -504,8 +509,8 @@ class SupabaseService {
         });
       }).toList();
     } catch (e, stackTrace) {
-      debugPrint('GET EMPLOYEES BY BRANCH ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET EMPLOYEES BY BRANCH ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -530,8 +535,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET ACTIVE BRANCH EMPLOYEES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET ACTIVE BRANCH EMPLOYEES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -548,8 +553,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET EMPLOYEES BY DEPARTMENT ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET EMPLOYEES BY DEPARTMENT ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -567,8 +572,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET ACTIVE DEPARTMENT EMPLOYEES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET ACTIVE DEPARTMENT EMPLOYEES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -600,8 +605,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET BRANCH/DEPARTMENT EMPLOYEES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET BRANCH/DEPARTMENT EMPLOYEES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -639,8 +644,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET NEW JOINERS ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET NEW JOINERS ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -675,8 +680,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET ACTIVE NEW JOINERS ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET ACTIVE NEW JOINERS ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -699,8 +704,8 @@ class SupabaseService {
 
       return (response as List).length;
     } catch (e, stackTrace) {
-      debugPrint('TOTAL EMPLOYEE COUNT ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('TOTAL EMPLOYEE COUNT ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -720,8 +725,8 @@ class SupabaseService {
 
       return (response as List).length;
     } catch (e, stackTrace) {
-      debugPrint('ACTIVE EMPLOYEE COUNT ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('ACTIVE EMPLOYEE COUNT ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -767,8 +772,8 @@ class SupabaseService {
 
       return departments;
     } catch (e, stackTrace) {
-      debugPrint('GET DEPARTMENTS ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET DEPARTMENTS ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -795,8 +800,8 @@ class SupabaseService {
         return row;
       }).toList();
     } catch (e, stackTrace) {
-      debugPrint('GET BRANCHES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET BRANCHES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -835,8 +840,8 @@ class SupabaseService {
 
       return result;
     } catch (e, stackTrace) {
-      debugPrint('GET ALL BRANCHES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET ALL BRANCHES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -854,8 +859,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('ADD EMPLOYEE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('ADD EMPLOYEE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -886,8 +891,8 @@ class SupabaseService {
           .single();
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('SUBMIT EMPLOYEE REQUEST ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('SUBMIT EMPLOYEE REQUEST ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -903,8 +908,8 @@ class SupabaseService {
       final response = await query.order('requested_at', ascending: false);
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET EMPLOYEE REQUESTS ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET EMPLOYEE REQUESTS ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -940,8 +945,8 @@ class SupabaseService {
       }
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('APPROVE EMPLOYEE REQUEST ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('APPROVE EMPLOYEE REQUEST ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -961,8 +966,8 @@ class SupabaseService {
           .eq('id', requestId)
           .eq('status', 'PENDING');
     } catch (e, stackTrace) {
-      debugPrint('REJECT EMPLOYEE REQUEST ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('REJECT EMPLOYEE REQUEST ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -985,8 +990,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('UPDATE EMPLOYEE ERROR [$employeeId]: $e');
-      debugPrint('$stackTrace');
+      _debugLog('UPDATE EMPLOYEE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1035,8 +1040,8 @@ class SupabaseService {
       }
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('BRANCH UPDATE EMPLOYEE ERROR [$employeeId]: $e');
-      debugPrint('$stackTrace');
+      _debugLog('BRANCH UPDATE EMPLOYEE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1061,8 +1066,8 @@ class SupabaseService {
           )
           .select('employee_id');
     } catch (e, stackTrace) {
-      debugPrint('UPDATE EMPLOYEE STATUS ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('UPDATE EMPLOYEE STATUS ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1080,8 +1085,8 @@ class SupabaseService {
             employeeId.toString(),
           );
     } catch (e, stackTrace) {
-      debugPrint('DELETE EMPLOYEE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('DELETE EMPLOYEE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1112,8 +1117,8 @@ class SupabaseService {
 
       return payrollRows;
     } catch (e, stackTrace) {
-      debugPrint('GET PAYROLL ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET PAYROLL ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1144,8 +1149,8 @@ class SupabaseService {
 
       return payrollRows;
     } catch (e, stackTrace) {
-      debugPrint('GET YEARLY PAYROLL ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET YEARLY PAYROLL ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1168,8 +1173,8 @@ class SupabaseService {
           .order('employee_id', ascending: true);
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET MONTHLY PAYROLL ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET MONTHLY PAYROLL ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1192,8 +1197,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET EMPLOYEE PAYROLL ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET EMPLOYEE PAYROLL ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1225,8 +1230,8 @@ class SupabaseService {
         return employeeId != null && employeeIds.contains(employeeId);
       }).toList();
     } catch (e, stackTrace) {
-      debugPrint('GET PAYROLL BY BRANCH ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET PAYROLL BY BRANCH ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1240,8 +1245,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('ADD PAYROLL ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('ADD PAYROLL ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1263,8 +1268,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('UPDATE PAYROLL ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('UPDATE PAYROLL ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1278,8 +1283,8 @@ class SupabaseService {
             payrollId.toString(),
           );
     } catch (e, stackTrace) {
-      debugPrint('DELETE PAYROLL ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('DELETE PAYROLL ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1297,8 +1302,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1329,8 +1334,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET BRANCH ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET BRANCH ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1357,8 +1362,8 @@ class SupabaseService {
           .order('attendance_date', ascending: false);
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET BRANCH MONTH ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET BRANCH MONTH ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1378,8 +1383,8 @@ class SupabaseService {
           .eq('attendance_date', dateText);
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET BRANCH DATE ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET BRANCH DATE ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1392,8 +1397,8 @@ class SupabaseService {
           .order('submitted_at', ascending: false);
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET OT REQUESTS ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET OT REQUESTS ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1423,8 +1428,8 @@ class SupabaseService {
         );
       }
     } catch (e, stackTrace) {
-      debugPrint('REVIEW OT REQUEST ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('REVIEW OT REQUEST ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1668,8 +1673,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET EMPLOYEE ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET EMPLOYEE ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1717,10 +1722,10 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint(
+      _debugLog(
         'GET EMPLOYEE ATTENDANCE BY MONTH ERROR: $e',
       );
-      debugPrint('$stackTrace');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1753,8 +1758,8 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint('GET ATTENDANCE BY DATE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET ATTENDANCE BY DATE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1772,8 +1777,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('ADD ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('ADD ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1799,8 +1804,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('UPDATE ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('UPDATE ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -1829,10 +1834,10 @@ class SupabaseService {
             _dateOnlyText(date),
           );
     } catch (e, stackTrace) {
-      debugPrint(
+      _debugLog(
         'UPDATE ATTENDANCE OT AUTHORIZATION ERROR: $e',
       );
-      debugPrint('$stackTrace');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -2318,78 +2323,78 @@ class SupabaseService {
       // DEBUG
       // ==========================================================
 
-      debugPrint(
+      _debugLog(
         '====================================================',
       );
 
-      debugPrint(
+      _debugLog(
         'SAVING MONTHLY ATTENDANCE',
       );
 
-      debugPrint(
+      _debugLog(
         'Employee: ${employeeId.trim()}',
       );
 
-      debugPrint(
+      _debugLog(
         'Branch: ${branchId.trim()}',
       );
 
-      debugPrint(
+      _debugLog(
         'Date: $dateString',
       );
 
-      debugPrint(
+      _debugLog(
         'Working: $workingIn -> $workingOut',
       );
 
-      debugPrint(
+      _debugLog(
         'Work minutes: $calculatedWorkMinutes',
       );
 
-      debugPrint(
+      _debugLog(
         'Morning break: '
         '$morningIn -> $morningOut '
         '= $morningBreakMinutes',
       );
 
-      debugPrint(
+      _debugLog(
         'Afternoon break: '
         '$afternoonIn -> $afternoonOut '
         '= $afternoonBreakMinutes',
       );
 
-      debugPrint(
+      _debugLog(
         'Evening break: '
         '$eveningIn -> $eveningOut '
         '= $eveningBreakMinutes',
       );
 
-      debugPrint(
+      _debugLog(
         'TOTAL BREAK: $calculatedBreakMinutes',
       );
 
-      debugPrint(
+      _debugLog(
         'NET WORKING: '
         '$calculatedNetWorkingMinutes '
         '(${duration(calculatedNetWorkingMinutes)})',
       );
 
-      debugPrint(
+      _debugLog(
         'NORMAL TARGET: '
         '$normalWorkingMinutes (7:30)',
       );
 
-      debugPrint(
+      _debugLog(
         'AUTOMATIC OT: '
         '$calculatedOvertimeMinutes '
         '(${duration(calculatedOvertimeMinutes)})',
       );
 
-      debugPrint(
+      _debugLog(
         'OT AUTHORIZATION: $otAuthorized',
       );
 
-      debugPrint(
+      _debugLog(
         '====================================================',
       );
 
@@ -2408,12 +2413,12 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint(
+      _debugLog(
         'SAVE MONTHLY ATTENDANCE ERROR: $e',
       );
 
-      debugPrint('$e');
-      debugPrint('$stackTrace');
+      _debugLog('$e');
+      _debugLog('$stackTrace');
 
       rethrow;
     }
@@ -2431,8 +2436,8 @@ class SupabaseService {
             id.toString(),
           );
     } catch (e, stackTrace) {
-      debugPrint('DELETE ATTENDANCE ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('DELETE ATTENDANCE ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -2460,8 +2465,8 @@ class SupabaseService {
 
       return _map(response);
     } catch (e, stackTrace) {
-      debugPrint('GET APPLICATION USER ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('GET APPLICATION USER ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -2498,10 +2503,10 @@ class SupabaseService {
 
       return _mapList(response);
     } catch (e, stackTrace) {
-      debugPrint(
+      _debugLog(
         'GET DASHBOARD EMPLOYEES ERROR: $e',
       );
-      debugPrint('$stackTrace');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -2584,10 +2589,10 @@ class SupabaseService {
         'employees': employees,
       };
     } catch (e, stackTrace) {
-      debugPrint(
+      _debugLog(
         'GET DASHBOARD SUMMARY ERROR: $e',
       );
-      debugPrint('$stackTrace');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
@@ -2659,8 +2664,8 @@ class SupabaseService {
         responseByName,
       );
     } catch (e, stackTrace) {
-      debugPrint('SEARCH EMPLOYEES ERROR: $e');
-      debugPrint('$stackTrace');
+      _debugLog('SEARCH EMPLOYEES ERROR: $e');
+      _debugLog('$stackTrace');
       rethrow;
     }
   }
