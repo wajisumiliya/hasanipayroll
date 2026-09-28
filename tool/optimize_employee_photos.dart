@@ -9,19 +9,21 @@ import 'package:image/image.dart' as img;
 ///
 /// IMPORTANT:
 /// - Run this only from a trusted admin machine.
-/// - Pass a Supabase SERVICE_ROLE key at runtime. Never commit that key.
+/// - Set SUPABASE_SERVICE_ROLE_KEY in the environment. Never commit that key.
 /// - Originals are backed up before replacement.
 /// - Dry-run is the default. Add --apply to make changes.
 ///
 /// Example:
-/// dart run tool/optimize_employee_photos.dart ///   --url=https://PROJECT.supabase.co ///   --service-role=YOUR_SERVICE_ROLE_KEY
+/// SUPABASE_SERVICE_ROLE_KEY=... dart run tool/optimize_employee_photos.dart \\
+///   --url=https://PROJECT.supabase.co
 ///
 /// Apply after reviewing dry-run:
-/// dart run tool/optimize_employee_photos.dart ///   --url=https://PROJECT.supabase.co ///   --service-role=YOUR_SERVICE_ROLE_KEY --apply --limit=5
+/// SUPABASE_SERVICE_ROLE_KEY=... dart run tool/optimize_employee_photos.dart \\
+///   --url=https://PROJECT.supabase.co --apply --limit=5
 void main(List<String> args) async {
   final options = _parseArgs(args);
   final baseUrl = options['url'] ?? '';
-  final serviceRole = options['service-role'] ?? '';
+  final serviceRole = Platform.environment['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
   final apply = args.contains('--apply');
   final limit = int.tryParse(options['limit'] ?? '');
   if (limit != null && limit < 1) {
@@ -32,8 +34,8 @@ void main(List<String> args) async {
 
   if (baseUrl.isEmpty || serviceRole.isEmpty) {
     stderr.writeln(
-      'Required: --url=https://PROJECT.supabase.co '
-      '--service-role=SERVICE_ROLE_KEY [--apply] [--limit=N]',
+      'Required: SUPABASE_SERVICE_ROLE_KEY environment variable and '
+      '--url=https://PROJECT.supabase.co [--apply] [--limit=N]',
     );
     exitCode = 64;
     return;
