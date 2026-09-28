@@ -7,6 +7,7 @@ $BackupRoot = Join-Path $PSScriptRoot "HasaniPayroll_Backups"
 if (-not (Test-Path $Config)) {
   $template = @'
 # LOCAL ONLY. NEVER COMMIT THIS FILE.
+# Copy the Session Pooler database URL exactly from Supabase Dashboard -> Connect.
 $env:HASANI_SUPABASE_DB_URL = "PASTE_SESSION_POOLER_DATABASE_URL_HERE"
 $env:HASANI_SUPABASE_SERVICE_ROLE_KEY = "PASTE_SERVICE_ROLE_KEY_HERE"
 '@
@@ -20,8 +21,34 @@ $env:HASANI_SUPABASE_SERVICE_ROLE_KEY = "PASTE_SERVICE_ROLE_KEY_HERE"
 if (-not $env:HASANI_SUPABASE_DB_URL -or $env:HASANI_SUPABASE_DB_URL -like "*PASTE_*") { throw "Database URL is not configured." }
 if (-not $env:HASANI_SUPABASE_SERVICE_ROLE_KEY -or $env:HASANI_SUPABASE_SERVICE_ROLE_KEY -like "*PASTE_*") { throw "Service role key is not configured." }
 
+try {
+  $DbUri = [uri]$env:HASANI_SUPABASE_DB_URL
+} catch {
+  throw "Database URL is invalid. Copy the complete Session Pooler database URL from Supabase Dashboard -> Connect."
+}
+
+if ($DbUri.Scheme -notin @("postgres", "postgresql")) {
+  throw "Database URL must start with postgres:// or postgresql://."
+}
+if (-not $DbUri.Host) { throw "Database URL does not contain a database host." }
+if ($DbUri.UserInfo -notmatch ":") { throw "Database URL must include both database username and password." }
+
+$DbUser = ($DbUri.UserInfo -split ":", 2)[0]
+if ($DbUri.Host -like "*.pooler.supabase.com" -and $DbUser -eq "postgres") {
+  throw "Wrong Supabase pooler username. Do not use plain 'postgres' with the shared pooler. Copy the Session Pooler URL exactly from Supabase Dashboard -> Connect; for this project the pooler username should be project-qualified (postgres.$ProjectRef)."
+}
+
 $PgDump = Get-Command pg_dump -ErrorAction SilentlyContinue
 if (-not $PgDump) { throw "pg_dump is not installed or is not in PATH. Install PostgreSQL client tools first." }
+
+$Psql = Get-Command psql -ErrorAction SilentlyContinue
+if (-not $Psql) { throw "psql is not installed or is not in PATH. Install PostgreSQL client tools first." }
+
+Write-Host "0/4 Validating PostgreSQL connection..."
+& $Psql.Source "--dbname=$($env:HASANI_SUPABASE_DB_URL)" "--no-psqlrc" "--tuples-only" "--no-align" "--command=select 1;" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  throw "Database connection validation failed. Re-copy the Session Pooler URL from Supabase Dashboard -> Connect. If authentication fails, the password in the local URL is not valid. No backup files were created."
+}
 
 $Stamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
 $Work = Join-Path $BackupRoot $Stamp
