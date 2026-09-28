@@ -218,6 +218,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<List<Map<String, dynamic>>>? _otRequestsFuture;
   Future<List<dynamic>>? _attendancePageFuture;
   String? _attendancePageFutureKey;
+  Future<List<Map<String, dynamic>>>? _attendanceBranchesFuture;
   final TextEditingController _adminEmployeeSearchController =
       TextEditingController();
   final TextEditingController _attendanceEmployeeSearchController =
@@ -256,6 +257,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       duration: const Duration(milliseconds: 2200),
     )..repeat();
     service.addListener(_refresh);
+    _attendanceBranchesFuture = SupabaseService.getBranches();
   }
 
   @override
@@ -2092,7 +2094,12 @@ class _AdminDashboardState extends State<AdminDashboard>
         final totalNet = totalGross - totalDeductions;
 
         return RefreshIndicator(
-          onRefresh: () async => setState(() {}),
+          onRefresh: () async {
+            setState(() {
+              _attendanceBranchesFuture = SupabaseService.getBranches();
+            });
+            await _attendanceBranchesFuture;
+          },
           color: _portalTheme.accent,
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -8729,7 +8736,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
 
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: SupabaseService.getBranches(),
+      future: _attendanceBranchesFuture ??= SupabaseService.getBranches(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
