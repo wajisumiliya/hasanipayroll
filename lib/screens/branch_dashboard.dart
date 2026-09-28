@@ -46,6 +46,10 @@ class _BranchPortalState extends State<BranchPortal>
 
   Future<List<Map<String, dynamic>>>? _employeesFuture;
   String? _employeesFutureBranchId;
+  Future<List<Map<String, dynamic>>>? _attendanceMonthFuture;
+  String? _attendanceMonthFutureKey;
+  Future<List<Map<String, dynamic>>>? _attendanceDateFuture;
+  String? _attendanceDateFutureKey;
   final TextEditingController _employeeSearchController =
       TextEditingController();
   String _employeeSearch = '';
@@ -138,6 +142,42 @@ class _BranchPortalState extends State<BranchPortal>
     }
 
     return _employeesFuture!;
+  }
+
+  Future<List<Map<String, dynamic>>> _branchMonthAttendance() {
+    final resolvedBranchId = branch?.branchId ?? branchId;
+    final key =
+        '$resolvedBranchId|${attendanceMonth.year}|${attendanceMonth.month}';
+    if (_attendanceMonthFuture == null || _attendanceMonthFutureKey != key) {
+      _attendanceMonthFutureKey = key;
+      _attendanceMonthFuture = SupabaseService.getAttendanceByBranchMonth(
+        branchId: resolvedBranchId,
+        year: attendanceMonth.year,
+        month: attendanceMonth.month,
+      );
+    }
+    return _attendanceMonthFuture!;
+  }
+
+  Future<List<Map<String, dynamic>>> _branchDateAttendance() {
+    final resolvedBranchId = branch?.branchId ?? branchId;
+    final key =
+        '$resolvedBranchId|${DateFormat('yyyy-MM-dd').format(selectedAttendanceDate)}';
+    if (_attendanceDateFuture == null || _attendanceDateFutureKey != key) {
+      _attendanceDateFutureKey = key;
+      _attendanceDateFuture = SupabaseService.getAttendanceByBranchDate(
+        branchId: resolvedBranchId,
+        date: selectedAttendanceDate,
+      );
+    }
+    return _attendanceDateFuture!;
+  }
+
+  void _refreshAttendanceCache() {
+    _attendanceMonthFuture = null;
+    _attendanceMonthFutureKey = null;
+    _attendanceDateFuture = null;
+    _attendanceDateFutureKey = null;
   }
 
   void _refreshEmployees() {
@@ -1581,10 +1621,8 @@ class _BranchPortalState extends State<BranchPortal>
   Widget _dashboardAttendanceRegister() {
     final resolvedBranchId = branch?.branchId ?? branchId;
     return FutureBuilder<List<dynamic>>(
-      future: Future.wait<dynamic>([
-        _liveBranchEmployees(),
-        SupabaseService.getAttendanceByBranch(resolvedBranchId)
-      ]),
+      future: Future.wait<dynamic>(
+          [_liveBranchEmployees(), _branchMonthAttendance()]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -1635,8 +1673,11 @@ class _BranchPortalState extends State<BranchPortal>
                           lastDate: DateTime(DateTime.now().year + 2),
                           helpText: 'Select register month');
                       if (picked != null && mounted) {
-                        setState(() => attendanceMonth =
-                            DateTime(picked.year, picked.month));
+                        setState(() {
+                          attendanceMonth = DateTime(picked.year, picked.month);
+                          _attendanceMonthFuture = null;
+                          _attendanceMonthFutureKey = null;
+                        });
                       }
                     },
                     icon: const Icon(Icons.calendar_month, size: 18),
@@ -1907,7 +1948,11 @@ class _BranchPortalState extends State<BranchPortal>
                         lastDate: DateTime(DateTime.now().year + 2),
                       );
                       if (picked != null && mounted) {
-                        setState(() => selectedAttendanceDate = picked);
+                        setState(() {
+                          selectedAttendanceDate = picked;
+                          _attendanceDateFuture = null;
+                          _attendanceDateFutureKey = null;
+                        });
                       }
                     },
                     icon: const Icon(Icons.today_outlined),
@@ -2009,10 +2054,7 @@ class _BranchPortalState extends State<BranchPortal>
   Widget _dailyAttendanceSummary(List<Map<String, dynamic>> employees) {
     final resolvedBranchId = branch?.branchId ?? branchId;
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: SupabaseService.getAttendanceByBranchDate(
-        branchId: resolvedBranchId,
-        date: selectedAttendanceDate,
-      ),
+      future: _branchDateAttendance(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -2126,6 +2168,7 @@ class _BranchPortalState extends State<BranchPortal>
     await SupabaseService.closeBranchActivity(activityId);
 
     if (mounted) {
+      _refreshAttendanceCache();
       setState(() {});
     }
   }

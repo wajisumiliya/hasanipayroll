@@ -216,6 +216,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<List<Map<String, dynamic>>>? _adminEmployeesFuture;
   Future<List<Map<String, dynamic>>>? _employeeRequestsFuture;
   Future<List<Map<String, dynamic>>>? _otRequestsFuture;
+  Future<List<dynamic>>? _attendancePageFuture;
+  String? _attendancePageFutureKey;
   final TextEditingController _adminEmployeeSearchController =
       TextEditingController();
   final TextEditingController _attendanceEmployeeSearchController =
@@ -8801,13 +8803,32 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Widget _branchAttendanceEmployeesPage(String branchId) {
-    return FutureBuilder<List<dynamic>>(
-      future: Future.wait([
+  Future<List<dynamic>> _adminAttendancePageData(String branchId) {
+    final key =
+        '$branchId|${selectedAttendanceMonth.year}|${selectedAttendanceMonth.month}';
+    if (_attendancePageFuture == null || _attendancePageFutureKey != key) {
+      _attendancePageFutureKey = key;
+      _attendancePageFuture = Future.wait([
         SupabaseService.getBranches(),
         SupabaseService.getEmployeesByBranch(branchId, activeOnly: true),
-        SupabaseService.getAttendanceByBranch(branchId),
-      ]),
+        SupabaseService.getAttendanceByBranchMonth(
+          branchId: branchId,
+          year: selectedAttendanceMonth.year,
+          month: selectedAttendanceMonth.month,
+        ),
+      ]);
+    }
+    return _attendancePageFuture!;
+  }
+
+  void _refreshAdminAttendanceCache() {
+    _attendancePageFuture = null;
+    _attendancePageFutureKey = null;
+  }
+
+  Widget _branchAttendanceEmployeesPage(String branchId) {
+    return FutureBuilder<List<dynamic>>(
+      future: _adminAttendancePageData(branchId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -8938,8 +8959,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                   children: [
                     _monthYearSelector(
                       value: selectedAttendanceMonth,
-                      onChanged: (value) =>
-                          setState(() => selectedAttendanceMonth = value),
+                      onChanged: (value) => setState(() {
+                        selectedAttendanceMonth = value;
+                        _refreshAdminAttendanceCache();
+                      }),
                     ),
                     SizedBox(
                       width: (MediaQuery.sizeOf(context).width - 80)
@@ -9340,6 +9363,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       ),
     ).then((_) {
       if (!mounted) return;
+      _refreshAdminAttendanceCache();
       setState(() {});
     });
   }

@@ -1335,6 +1335,34 @@ class SupabaseService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getAttendanceByBranchMonth({
+    required String branchId,
+    required int year,
+    required int month,
+  }) async {
+    try {
+      final start = DateTime(year, month, 1);
+      final end = DateTime(year, month + 1, 1);
+      String dateText(DateTime value) =>
+          '${value.year.toString().padLeft(4, '0')}-'
+          '${value.month.toString().padLeft(2, '0')}-'
+          '${value.day.toString().padLeft(2, '0')}';
+
+      final response = await client
+          .from('attendance')
+          .select()
+          .eq('branch_id', branchId.trim())
+          .gte('attendance_date', dateText(start))
+          .lt('attendance_date', dateText(end))
+          .order('attendance_date', ascending: false);
+      return _mapList(response);
+    } catch (e, stackTrace) {
+      debugPrint('GET BRANCH MONTH ATTENDANCE ERROR: $e');
+      debugPrint('$stackTrace');
+      rethrow;
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getAttendanceByBranchDate({
     required String branchId,
     required DateTime date,
