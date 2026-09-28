@@ -64,9 +64,7 @@ class _EmployeePhotoState extends State<EmployeePhoto> {
   Widget build(BuildContext context) {
     final fallback = Center(
       child: Text(
-        widget.name.trim().isEmpty
-            ? '?'
-            : widget.name.trim()[0].toUpperCase(),
+        widget.name.trim().isEmpty ? '?' : widget.name.trim()[0].toUpperCase(),
         style: TextStyle(
           color: widget.foregroundColor,
           fontWeight: FontWeight.w800,
