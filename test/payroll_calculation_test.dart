@@ -34,6 +34,16 @@ void main() {
       );
     });
 
+    test('historical FW salary takes precedence when both values differ', () {
+      expect(
+        PayrollCalculationService.salaryBase(
+          basicSalary: 1800,
+          fwSalary: 1700,
+        ),
+        1700,
+      );
+    });
+
     test('keeps a genuinely blank salary blank', () {
       expect(
         PayrollCalculationService.salaryBase(
@@ -135,6 +145,23 @@ void main() {
       );
     });
 
+    test('public holiday pay is zero for invalid or non-worked inputs', () {
+      expect(
+        PayrollCalculationService.publicHolidayPay(
+          basicSalary: 1700,
+          workedDays: 0,
+        ),
+        0,
+      );
+      expect(
+        PayrollCalculationService.publicHolidayPay(
+          basicSalary: 0,
+          workedDays: 1,
+        ),
+        0,
+      );
+    });
+
     test('OT without approved minutes is not payable', () {
       expect(PayrollCalculationService.approvedOvertimeHours(null), 0);
       expect(PayrollCalculationService.approvedOvertimeHours(0), 0);
@@ -142,6 +169,11 @@ void main() {
 
     test('approved OT pays only the approved duration', () {
       expect(PayrollCalculationService.approvedOvertimeHours(75), 1.25);
+      expect(PayrollCalculationService.approvedOvertimeHours(83), closeTo(83 / 60, 1e-12));
+    });
+
+    test('negative approved OT minutes are never payable', () {
+      expect(PayrollCalculationService.approvedOvertimeHours(-15), 0);
     });
 
     test('unpaid day cannot also create shortage deduction', () {
@@ -166,6 +198,17 @@ void main() {
       );
     });
 
+    test('day without work cannot create normal shortage deduction', () {
+      expect(
+        PayrollCalculationService.shouldApplyShortageDeduction(
+          isUnpaid: false,
+          isPublicHoliday: false,
+          worked: false,
+        ),
+        isFalse,
+      );
+    });
+
     test('normal worked day can create shortage deduction', () {
       expect(
         PayrollCalculationService.shouldApplyShortageDeduction(
@@ -174,6 +217,62 @@ void main() {
           worked: true,
         ),
         isTrue,
+      );
+    });
+  });
+
+  group('Historical payroll edge cases', () {
+    test('FW salary is not double counted with allowances and PH pay', () {
+      final gross = PayrollCalculationService.grossEarnings(
+        basicSalary: 1700,
+        fwSalary: 1700,
+        elaunKedatangan: 50,
+        elaunPerkhidmatan: 100,
+        cutiUmum: 130.77,
+      );
+      expect(gross, 1980.77);
+    });
+
+    test('EPF SOCSO EIS and PCB employee amounts each deduct once', () {
+      expect(
+        PayrollCalculationService.totalDeductions(
+          epfEmployee: 34,
+          socsoEmployee: 8.25,
+          eisEmployee: 3.30,
+          pcb: 12,
+        ),
+        57.55,
+      );
+    });
+
+    test('EIS-disabled payroll can represent zero EIS without changing others', () {
+      expect(
+        PayrollCalculationService.totalDeductions(
+          epfEmployee: 34,
+          socsoEmployee: 8.25,
+          eisEmployee: 0,
+        ),
+        42.25,
+      );
+    });
+
+    test('UNPAID and late remain independent stored deduction components', () {
+      expect(
+        PayrollCalculationService.totalDeductions(
+          unpaid: 65.38,
+          late: 5,
+        ),
+        70.38,
+      );
+    });
+
+    test('net pay preserves cents for historical imported payroll', () {
+      expect(
+        PayrollCalculationService.netPay(
+          gross: 1980.77,
+          deductions: 57.55,
+        ),
+        closeTo(1923.22, 1e-9),
       );
     });
   });
