@@ -41,6 +41,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   late final AnimationController _birthdayController;
   Timer? _birthdayCelebrationTimer;
   Timer? _notificationRefreshTimer;
+  Timer? _notificationRealtimeDebounce;
   RealtimeChannel? _notificationChannel;
   bool _showBirthdayCelebration = false;
   List<Map<String, dynamic>> _notifications = const [];
@@ -67,7 +68,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     _subscribeToNotifications();
     _refreshAquarium();
     _notificationRefreshTimer = Timer.periodic(
-      const Duration(seconds: 30),
+      const Duration(minutes: 5),
       (_) => _loadEmployeeNotifications(),
     );
   }
@@ -85,7 +86,15 @@ class _EmployeePortalState extends State<EmployeePortal>
             column: 'employee_id',
             value: employeeId,
           ),
-          callback: (_) => _loadEmployeeNotifications(),
+          callback: (_) {
+            _notificationRealtimeDebounce?.cancel();
+            _notificationRealtimeDebounce = Timer(
+              const Duration(milliseconds: 500),
+              () {
+                if (mounted) _loadEmployeeNotifications();
+              },
+            );
+          },
         )
         .subscribe();
   }
@@ -244,6 +253,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   void dispose() {
     _birthdayCelebrationTimer?.cancel();
     _notificationRefreshTimer?.cancel();
+    _notificationRealtimeDebounce?.cancel();
     final notificationChannel = _notificationChannel;
     if (notificationChannel != null) {
       SupabaseService.client.removeChannel(notificationChannel);
