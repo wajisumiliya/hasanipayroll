@@ -44,6 +44,8 @@ jobs:
         run: npm ci
 
       - name: Validate Prisma client generation
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
         run: npm run db:generate
 
       - name: Run backend tests
