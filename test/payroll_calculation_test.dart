@@ -169,7 +169,7 @@ void main() {
 
     test('approved OT pays only the approved duration', () {
       expect(PayrollCalculationService.approvedOvertimeHours(75), 1.25);
-      expect(PayrollCalculationService.approvedOvertimeHours(83), closeTo(83 / 60, 1e-12));
+      expect(PayrollCalculationService.approvedOvertimeHours(83),\n          closeTo(83 / 60, 1e-12));
     });
 
     test('negative approved OT minutes are never payable', () {
@@ -245,7 +245,7 @@ void main() {
       );
     });
 
-    test('EIS-disabled payroll can represent zero EIS without changing others', () {
+    test('EIS-disabled payroll can represent zero EIS without changing others',\n        () {
       expect(
         PayrollCalculationService.totalDeductions(
           epfEmployee: 34,
