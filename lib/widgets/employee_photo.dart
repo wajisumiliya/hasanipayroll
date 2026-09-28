@@ -23,8 +23,15 @@ class EmployeePhoto extends StatefulWidget {
   State<EmployeePhoto> createState() => _EmployeePhotoState();
 }
 
+class _CachedSignedUrl {
+  const _CachedSignedUrl(this.future, this.expiresAt);
+
+  final Future<String?> future;
+  final DateTime expiresAt;
+}
+
 class _EmployeePhotoState extends State<EmployeePhoto> {
-  static final Map<String, Future<String?>> _signedUrlCache = {};
+  static final Map<String, _CachedSignedUrl> _signedUrlCache = {};
 
   String? _storagePath(String value) {
     final clean = value.trim();
@@ -57,7 +64,19 @@ class _EmployeePhotoState extends State<EmployeePhoto> {
   Future<String?> _cachedResolvedUrl() {
     final raw = widget.photoUrl?.trim() ?? '';
     if (raw.isEmpty) return Future<String?>.value(null);
-    return _signedUrlCache.putIfAbsent(raw, _resolvedUrl);
+
+    final now = DateTime.now();
+    final cached = _signedUrlCache[raw];
+    if (cached != null && now.isBefore(cached.expiresAt)) {
+      return cached.future;
+    }
+
+    final future = _resolvedUrl();
+    _signedUrlCache[raw] = _CachedSignedUrl(
+      future,
+      now.add(const Duration(minutes: 55)),
+    );
+    return future;
   }
 
   @override
