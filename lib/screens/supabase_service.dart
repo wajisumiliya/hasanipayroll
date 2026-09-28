@@ -2319,84 +2319,8 @@ class SupabaseService {
         'net_working_duration': duration(calculatedNetWorkingMinutes),
       };
 
-      // ==========================================================
-      // DEBUG
-      // ==========================================================
-
-      _debugLog(
-        '====================================================',
-      );
-
-      _debugLog(
-        'SAVING MONTHLY ATTENDANCE',
-      );
-
-      _debugLog(
-        'Employee: ${employeeId.trim()}',
-      );
-
-      _debugLog(
-        'Branch: ${branchId.trim()}',
-      );
-
-      _debugLog(
-        'Date: $dateString',
-      );
-
-      _debugLog(
-        'Working: $workingIn -> $workingOut',
-      );
-
-      _debugLog(
-        'Work minutes: $calculatedWorkMinutes',
-      );
-
-      _debugLog(
-        'Morning break: '
-        '$morningIn -> $morningOut '
-        '= $morningBreakMinutes',
-      );
-
-      _debugLog(
-        'Afternoon break: '
-        '$afternoonIn -> $afternoonOut '
-        '= $afternoonBreakMinutes',
-      );
-
-      _debugLog(
-        'Evening break: '
-        '$eveningIn -> $eveningOut '
-        '= $eveningBreakMinutes',
-      );
-
-      _debugLog(
-        'TOTAL BREAK: $calculatedBreakMinutes',
-      );
-
-      _debugLog(
-        'NET WORKING: '
-        '$calculatedNetWorkingMinutes '
-        '(${duration(calculatedNetWorkingMinutes)})',
-      );
-
-      _debugLog(
-        'NORMAL TARGET: '
-        '$normalWorkingMinutes (7:30)',
-      );
-
-      _debugLog(
-        'AUTOMATIC OT: '
-        '$calculatedOvertimeMinutes '
-        '(${duration(calculatedOvertimeMinutes)})',
-      );
-
-      _debugLog(
-        'OT AUTHORIZATION: $otAuthorized',
-      );
-
-      _debugLog(
-        '====================================================',
-      );
+      // Keep attendance diagnostics free of employee, branch, date, and time data.
+      _debugLog('SAVING MONTHLY ATTENDANCE');
 
       // ==========================================================
       // UPSERT
