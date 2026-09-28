@@ -62,6 +62,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   bool _showBreakAttendanceOnMobile = false;
   String? loadError;
   RealtimeChannel? _attendanceChannel;
+  Timer? _attendanceRealtimeDebounce;
   Timer? _liveRefreshTimer;
 
   String get _watermarkBranchName {
@@ -125,7 +126,13 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             value: employeeId,
           ),
           callback: (_) {
-            if (mounted) _loadAttendance(silent: true);
+            _attendanceRealtimeDebounce?.cancel();
+            _attendanceRealtimeDebounce = Timer(
+              const Duration(milliseconds: 500),
+              () {
+                if (mounted) _loadAttendance(silent: true);
+              },
+            );
           },
         )
         .subscribe();
@@ -134,6 +141,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   @override
   void dispose() {
     _liveRefreshTimer?.cancel();
+    _attendanceRealtimeDebounce?.cancel();
     final channel = _attendanceChannel;
     if (channel != null) {
       SupabaseService.client.removeChannel(channel);
