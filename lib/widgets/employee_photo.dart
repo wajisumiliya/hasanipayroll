@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class EmployeePhoto extends StatelessWidget {
+class EmployeePhoto extends StatefulWidget {
   const EmployeePhoto({
     super.key,
     required this.name,
@@ -19,6 +19,13 @@ class EmployeePhoto extends StatelessWidget {
   final Color foregroundColor;
   final Color? borderColor;
 
+  @override
+  State<EmployeePhoto> createState() => _EmployeePhotoState();
+}
+
+class _EmployeePhotoState extends State<EmployeePhoto> {
+  static final Map<String, Future<String?>> _signedUrlCache = {};
+
   String? _storagePath(String value) {
     final clean = value.trim();
     if (clean.isEmpty) return null;
@@ -35,7 +42,7 @@ class EmployeePhoto extends StatelessWidget {
   }
 
   Future<String?> _resolvedUrl() async {
-    final raw = photoUrl?.trim() ?? '';
+    final raw = widget.photoUrl?.trim() ?? '';
     final path = _storagePath(raw);
     if (path == null || path.isEmpty) return null;
     try {
@@ -47,28 +54,36 @@ class EmployeePhoto extends StatelessWidget {
     }
   }
 
+  Future<String?> _cachedResolvedUrl() {
+    final raw = widget.photoUrl?.trim() ?? '';
+    if (raw.isEmpty) return Future<String?>.value(null);
+    return _signedUrlCache.putIfAbsent(raw, _resolvedUrl);
+  }
+
   @override
   Widget build(BuildContext context) {
     final fallback = Center(
       child: Text(
-        name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase(),
+        widget.name.trim().isEmpty
+            ? '?'
+            : widget.name.trim()[0].toUpperCase(),
         style: TextStyle(
-          color: foregroundColor,
+          color: widget.foregroundColor,
           fontWeight: FontWeight.w800,
-          fontSize: radius * .72,
+          fontSize: widget.radius * .72,
         ),
       ),
     );
 
     return Container(
-      width: radius * 2,
-      height: radius * 2,
+      width: widget.radius * 2,
+      height: widget.radius * 2,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: backgroundColor,
+        color: widget.backgroundColor,
         border: Border.all(
-          color: borderColor ?? Colors.white.withValues(alpha: .9),
-          width: radius >= 36 ? 3 : 2,
+          color: widget.borderColor ?? Colors.white.withValues(alpha: .9),
+          width: widget.radius >= 36 ? 3 : 2,
         ),
         boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 7, offset: Offset(0, 2)),
@@ -76,7 +91,7 @@ class EmployeePhoto extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: FutureBuilder<String?>(
-        future: _resolvedUrl(),
+        future: _cachedResolvedUrl(),
         builder: (context, snapshot) {
           final url = snapshot.data?.trim() ?? '';
           if (url.isEmpty) return fallback;
