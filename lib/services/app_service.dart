@@ -628,15 +628,9 @@ class AppService extends ChangeNotifier {
         }
       }
 
-      debugPrint(
-        'Supabase app_user loaded: ${users.length}',
-      );
 
       notifyListeners();
-    } catch (e) {
-      debugPrint(
-        'ERROR loading app_user: $e',
-      );
+    } catch (_) {
 
       rethrow;
     }
@@ -662,8 +656,8 @@ class AppService extends ChangeNotifier {
             salaryDefaultAddresses[employeeId] = address;
           }
         }
-      } catch (error) {
-        debugPrint('Salary-default addresses unavailable: $error');
+      } catch (_) {
+        // Optional compatibility data may be unavailable.
       }
 
       employees.clear();
@@ -684,10 +678,8 @@ class AppService extends ChangeNotifier {
           if (employee.employeeId.trim().isNotEmpty) {
             employees.add(employee);
           }
-        } catch (e) {
-          debugPrint(
-            'Employee conversion error: $e',
-          );
+        } catch (_) {
+          // Skip malformed employee rows without exposing row details.
         }
       }
 
@@ -696,9 +688,6 @@ class AppService extends ChangeNotifier {
 
       _employeesLoaded = true;
 
-      debugPrint(
-        'Supabase employees loaded: ${employees.length}',
-      );
 
       notifyListeners();
     } catch (e) {
@@ -810,22 +799,14 @@ class AppService extends ChangeNotifier {
               ),
             ),
           );
-        } catch (e) {
-          debugPrint(
-            'Payroll conversion error: $e',
-          );
+        } catch (_) {
+          // Skip malformed payroll rows without exposing row details.
         }
       }
 
-      debugPrint(
-        'Supabase payroll loaded: ${payroll.length}',
-      );
 
       notifyListeners();
-    } catch (e) {
-      debugPrint(
-        'ERROR loading payroll: $e',
-      );
+    } catch (_) {
 
       rethrow;
     }
@@ -998,22 +979,14 @@ class AppService extends ChangeNotifier {
               ),
             ),
           );
-        } catch (e) {
-          debugPrint(
-            'Attendance conversion error: $e',
-          );
+        } catch (_) {
+          // Skip malformed attendance rows without exposing row details.
         }
       }
 
-      debugPrint(
-        'Supabase attendance loaded: ${attendance.length}',
-      );
 
       notifyListeners();
-    } catch (e) {
-      debugPrint(
-        'ERROR loading attendance: $e',
-      );
+    } catch (_) {
 
       rethrow;
     }
@@ -1164,8 +1137,8 @@ class AppService extends ChangeNotifier {
             branchId ??= localEmployee.branchId;
             displayName ??= localEmployee.name;
           }
-        } catch (e) {
-          debugPrint('Employee compatibility load error: $e');
+        } catch (_) {
+          // Compatibility lookup is best-effort.
         }
       }
 
@@ -1362,8 +1335,8 @@ class AppService extends ChangeNotifier {
             branchId ??= localEmployee.branchId;
             displayName ??= localEmployee.name;
           }
-        } catch (e) {
-          debugPrint('First login compatibility error: $e');
+        } catch (_) {
+          // Compatibility lookup is best-effort.
         }
       }
 
@@ -1426,10 +1399,7 @@ class AppService extends ChangeNotifier {
       await loadEmployeesFromSupabase();
       await loadPayrollFromSupabase();
       await loadAttendanceFromSupabase();
-    } catch (e) {
-      debugPrint(
-        'User data loading error: $e',
-      );
+    } catch (_) {
     }
 
     notifyListeners();
@@ -1774,10 +1744,7 @@ class AppService extends ChangeNotifier {
       }
       return 'Employee $cleanId added successfully with salary defaults and '
           'login access.';
-    } catch (e) {
-      debugPrint(
-        'Add employee error: $e',
-      );
+    } catch (_) {
 
       return 'Failed to add employee: $e';
     }
@@ -1826,10 +1793,7 @@ class AppService extends ChangeNotifier {
       await loadUsersFromSupabase();
 
       return 'Employee updated successfully.';
-    } catch (e) {
-      debugPrint(
-        'Update employee error: $e',
-      );
+    } catch (_) {
 
       return 'Failed to update employee: $e';
     }
@@ -1875,10 +1839,7 @@ class AppService extends ChangeNotifier {
       await loadAttendanceFromSupabase();
 
       return 'Employee deleted successfully.';
-    } catch (e) {
-      debugPrint(
-        'Delete employee error: $e',
-      );
+    } catch (_) {
 
       return 'Failed to delete employee: $e';
     }
@@ -1950,8 +1911,7 @@ class AppService extends ChangeNotifier {
       if (data['ok'] == true) return null;
       return data['message']?.toString() ??
           'Unable to create the employee login account.';
-    } catch (e) {
-      debugPrint('Employee login provisioning error: $e');
+    } catch (_) {
       return 'Unable to contact the payroll server.';
     }
   }
@@ -3066,10 +3026,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           );
 
       await loadPayrollFromSupabase();
-    } catch (e) {
-      debugPrint(
-        'Add payroll error: $e',
-      );
+    } catch (_) {
 
       rethrow;
     }
@@ -3091,10 +3048,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       await loadPayrollFromSupabase();
 
       return 'Payroll deleted successfully.';
-    } catch (e) {
-      debugPrint(
-        'Delete payroll error: $e',
-      );
+    } catch (_) {
 
       return 'Failed to delete payroll: $e';
     }
@@ -3260,10 +3214,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       await loadAttendanceFromSupabase();
 
       return newRecord;
-    } catch (e) {
-      debugPrint(
-        'Save attendance error: $e',
-      );
+    } catch (_) {
 
       rethrow;
     }
@@ -3310,10 +3261,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       await loadAttendanceFromSupabase();
 
       return 'Attendance deleted successfully.';
-    } catch (e) {
-      debugPrint(
-        'Delete attendance error: $e',
-      );
+    } catch (_) {
 
       return 'Failed to delete attendance: $e';
     }
