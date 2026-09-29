@@ -55,7 +55,54 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Could not create temporary local restore database." }
 
   Write-Host "4/5 Restoring database dump..."
-  & $PgRestore.Source "-h" $HostName "-p" $Port "-U" $User "-d" $DbName "--no-owner" "--no-acl" "--exit-on-error" $Dump.FullName
+
+  # Supabase backups can contain platform-specific extensions (for example
+  # supabase_vault) that are not shipped with stock PostgreSQL. Build a
+  # pg_restore TOC list and skip only extension objects that the local server
+  # reports as unavailable. Application tables/data remain in the restore.
+  $RestoreList = Join-Path $TempRoot "restore.list"
+  $RestoreListLines = @(& $PgRestore.Source "-l" $Dump.FullName)
+  if ($LASTEXITCODE -ne 0) { throw "Could not inspect pg_restore archive." }
+
+  $AvailableExtensionText = (& $Psql.Source "-h" $HostName "-p" $Port "-U" $User "-d" $DbName "-X" "-A" "-t" "-v" "ON_ERROR_STOP=1" "-c" "select name from pg_available_extensions;")
+  if ($LASTEXITCODE -ne 0) { throw "Could not query locally available PostgreSQL extensions." }
+  $AvailableExtensions = @{}
+  foreach ($ExtensionName in $AvailableExtensionText) {
+    $Name = ([string]$ExtensionName).Trim()
+    if ($Name) { $AvailableExtensions[$Name] = $true }
+  }
+
+  $UnavailableExtensions = @{}
+  foreach ($Line in $RestoreListLines) {
+    if ($Line -match ';[ ]+[0-9]+[ ]+[0-9]+[ ]+EXTENSION[ ]+-[ ]+([^ ]+)[ ]+') {
+      $ExtensionName = $Matches[1]
+      if (-not $AvailableExtensions.ContainsKey($ExtensionName)) {
+        $UnavailableExtensions[$ExtensionName] = $true
+      }
+    }
+  }
+
+  if ($UnavailableExtensions.Count -gt 0) {
+    $Names = ($UnavailableExtensions.Keys | Sort-Object) -join ", "
+    Write-Host "Local PostgreSQL does not provide Supabase-managed extension(s): $Names"
+    Write-Host "Skipping only those extension TOC entries for this isolated portability test."
+  }
+
+  $FilteredRestoreList = foreach ($Line in $RestoreListLines) {
+    $Skip = $false
+    foreach ($ExtensionName in $UnavailableExtensions.Keys) {
+      $EscapedName = [regex]::Escape($ExtensionName)
+      if ($Line -match "EXTENSION[ ]+-[ ]+$EscapedName([ ]|$)" -or
+          $Line -match "COMMENT[ ]+-[ ]+EXTENSION[ ]+$EscapedName([ ]|$)") {
+        $Skip = $true
+        break
+      }
+    }
+    if ($Skip -and -not $Line.StartsWith(";")) { ";$Line" } else { $Line }
+  }
+  $FilteredRestoreList | Set-Content -Path $RestoreList -Encoding UTF8
+
+  & $PgRestore.Source "-h" $HostName "-p" $Port "-U" $User "-d" $DbName "--no-owner" "--no-acl" "--exit-on-error" "-L" $RestoreList $Dump.FullName
   if ($LASTEXITCODE -ne 0) { throw "pg_restore failed." }
 
   Write-Host "5/5 Running restore sanity checks..."
