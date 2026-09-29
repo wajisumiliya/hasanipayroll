@@ -240,9 +240,8 @@ class _EaFormsPageState extends State<EaFormsPage> {
           employeeIds: rows.map((row) => '${row['employee_id']}'),
           taxYear: _year,
         );
-      } catch (error) {
-        notificationWarning = ' Employee notifications failed: $error';
-        debugPrint('EA form notification error: $error');
+      } catch (_) {
+        notificationWarning = ' Employee notifications failed.';
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

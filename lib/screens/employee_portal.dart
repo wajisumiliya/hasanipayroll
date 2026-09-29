@@ -123,8 +123,8 @@ class _EmployeePortalState extends State<EmployeePortal>
     try {
       final rows = await SupabaseService.getEmployeeNotifications(employeeId);
       if (mounted) setState(() => _notifications = rows);
-    } catch (error) {
-      debugPrint('Employee notification load error: $error');
+    } catch (_) {
+      // Notification loading is best-effort; do not expose provider details.
     } finally {
       _notificationsLoading = false;
     }

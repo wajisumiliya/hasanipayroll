@@ -147,7 +147,7 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
         employeeId: row['employee_id']?.toString(),
         type: approve ? 'approval' : 'rejection',
       ).catchError(
-        (error) => debugPrint('Leave notification error: $error'),
+        (_) {},
       );
       if (!mounted) return;
       setState(_refresh);

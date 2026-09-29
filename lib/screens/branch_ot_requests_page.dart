@@ -94,7 +94,7 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
         employeeId: request['employee_id']?.toString(),
         type: approve ? 'approval' : 'rejection',
       ).catchError(
-        (error) => debugPrint('OT branch notification error: $error'),
+        (_) {},
       );
       if (!mounted) return;
       setState(_refresh);
