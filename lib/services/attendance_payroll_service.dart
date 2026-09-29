@@ -298,12 +298,6 @@ class AttendancePayrollService {
     final socsoEnabled = _enabledByDefault(salaryDefault['socso_enabled']);
     final socsoCategory = _socsoCategory(salaryDefault['socso_category']);
 
-    debugPrint('========================================');
-    debugPrint('STATUTORY SETTINGS FOR $employeeId');
-    debugPrint('epf_category = [$epfCategory]');
-    debugPrint('eis_applicable = [$eisApplicable]');
-    debugPrint('========================================');
-
     // ------------------------------------------------------------------------
     // 2. ATTENDANCE-BASED CALCULATIONS
     // ------------------------------------------------------------------------
@@ -756,13 +750,6 @@ class AttendancePayrollService {
           )
           .eq('employee_id', wantedId);
 
-      debugPrint('========================================');
-      debugPrint('PAYROLL SALARY DEFAULT LOOKUP');
-      debugPrint('Requested employee ID: [$wantedId]');
-      debugPrint('Rows returned: ${response.length}');
-      debugPrint('Salary response: $response');
-      debugPrint('========================================');
-
       for (final row in response) {
         if (_normalizeId(row['employee_id']) == wantedId) {
           return Map<String, dynamic>.from(row);
@@ -770,12 +757,7 @@ class AttendancePayrollService {
       }
 
       return null;
-    } catch (e) {
-      debugPrint('========================================');
-      debugPrint('SALARY DEFAULT QUERY ERROR');
-      debugPrint('Employee ID: [$wantedId]');
-      debugPrint('Error: $e');
-      debugPrint('========================================');
+    } catch (_) {
       rethrow;
     }
   }
