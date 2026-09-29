@@ -11,8 +11,7 @@ class SupabaseService {
 
     final normalized = message.trim();
     final upper = normalized.toUpperCase();
-    final containsSensitivePayload =
-        normalized.startsWith('URL:') ||
+    final containsSensitivePayload = normalized.startsWith('URL:') ||
         normalized.startsWith('#') ||
         upper.contains('EXCEPTION') ||
         upper.contains('STACKTRACE') ||
