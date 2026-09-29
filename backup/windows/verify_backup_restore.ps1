@@ -63,10 +63,14 @@ try {
   $CompatibilityRoles = @("anon", "authenticated", "service_role")
   $CreatedCompatibilityRoles = @()
   foreach ($RoleName in $CompatibilityRoles) {
-    $RoleExists = (& $Psql.Source "-h" $HostName "-p" $Port "-U" $User "-d" "postgres" "-X" "-A" "-t" "-v" "ON_ERROR_STOP=1" "-v" "role_name=$RoleName" "-c" "select 1 from pg_roles where rolname = :'role_name';").Trim()
+    # RoleName comes only from the fixed allowlist above. Use SQL literals
+    # directly because psql variable interpolation is not performed reliably
+    # inside -c SQL on all supported Windows psql versions.
+    $RoleExistsText = @(& $Psql.Source "-h" $HostName "-p" $Port "-U" $User "-d" "postgres" "-X" "-A" "-t" "-v" "ON_ERROR_STOP=1" "-c" "select 1 from pg_roles where rolname = '$RoleName';")
     if ($LASTEXITCODE -ne 0) { throw "Could not inspect local PostgreSQL compatibility roles." }
+    $RoleExists = (($RoleExistsText -join "").Trim())
     if ($RoleExists -ne "1") {
-      & $Psql.Source "-h" $HostName "-p" $Port "-U" $User "-d" "postgres" "-X" "-v" "ON_ERROR_STOP=1" "-v" "role_name=$RoleName" "-c" "select format('create role %I nologin', :'role_name') \gexec"
+      & $Psql.Source "-h" $HostName "-p" $Port "-U" $User "-d" "postgres" "-X" "-v" "ON_ERROR_STOP=1" "-c" "create role $RoleName nologin;"
       if ($LASTEXITCODE -ne 0) { throw "Could not create local compatibility role '$RoleName'." }
       $CreatedCompatibilityRoles += $RoleName
     }
@@ -185,7 +189,7 @@ finally {
   if ($CreatedCompatibilityRoles) {
     foreach ($RoleName in $CreatedCompatibilityRoles) {
       try {
-        & $Psql.Source "-h" $CleanupHost "-p" $CleanupPort "-U" $CleanupUser "-d" "postgres" "-X" "-v" "ON_ERROR_STOP=1" "-v" "role_name=$RoleName" "-c" "select format('drop role if exists %I', :'role_name') \gexec" 2>$null
+        & $Psql.Source "-h" $CleanupHost "-p" $CleanupPort "-U" $CleanupUser "-d" "postgres" "-X" "-v" "ON_ERROR_STOP=1" "-c" "drop role if exists $RoleName;" 2>$null
       }
       catch {
         Write-Warning "Could not remove temporary local compatibility role '$RoleName'."
