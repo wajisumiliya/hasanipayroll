@@ -628,10 +628,8 @@ class AppService extends ChangeNotifier {
         }
       }
 
-
       notifyListeners();
     } catch (_) {
-
       rethrow;
     }
   }
@@ -687,7 +685,6 @@ class AppService extends ChangeNotifier {
           .removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
 
       _employeesLoaded = true;
-
 
       notifyListeners();
     } catch (e) {
@@ -804,10 +801,8 @@ class AppService extends ChangeNotifier {
         }
       }
 
-
       notifyListeners();
     } catch (_) {
-
       rethrow;
     }
   }
@@ -984,10 +979,8 @@ class AppService extends ChangeNotifier {
         }
       }
 
-
       notifyListeners();
     } catch (_) {
-
       rethrow;
     }
   }
@@ -1399,8 +1392,7 @@ class AppService extends ChangeNotifier {
       await loadEmployeesFromSupabase();
       await loadPayrollFromSupabase();
       await loadAttendanceFromSupabase();
-    } catch (_) {
-    }
+    } catch (_) {}
 
     notifyListeners();
   }
@@ -1745,8 +1737,7 @@ class AppService extends ChangeNotifier {
       return 'Employee $cleanId added successfully with salary defaults and '
           'login access.';
     } catch (_) {
-
-      return 'Failed to add employee: $e';
+      return 'Failed to add employee. Please try again.';
     }
   }
 
@@ -1794,8 +1785,7 @@ class AppService extends ChangeNotifier {
 
       return 'Employee updated successfully.';
     } catch (_) {
-
-      return 'Failed to update employee: $e';
+      return 'Failed to update employee. Please try again.';
     }
   }
 
@@ -1840,8 +1830,7 @@ class AppService extends ChangeNotifier {
 
       return 'Employee deleted successfully.';
     } catch (_) {
-
-      return 'Failed to delete employee: $e';
+      return 'Failed to delete employee. Please try again.';
     }
   }
 
@@ -3027,7 +3016,6 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
 
       await loadPayrollFromSupabase();
     } catch (_) {
-
       rethrow;
     }
   }
@@ -3049,8 +3037,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
 
       return 'Payroll deleted successfully.';
     } catch (_) {
-
-      return 'Failed to delete payroll: $e';
+      return 'Failed to delete payroll. Please try again.';
     }
   }
 
@@ -3215,7 +3202,6 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
 
       return newRecord;
     } catch (_) {
-
       rethrow;
     }
   }
@@ -3262,8 +3248,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
 
       return 'Attendance deleted successfully.';
     } catch (_) {
-
-      return 'Failed to delete attendance: $e';
+      return 'Failed to delete attendance. Please try again.';
     }
   }
 
