@@ -366,8 +366,7 @@ class AppService extends ChangeNotifier {
         'username': username.trim(),
         'identityNumber': identityNumber.trim(),
       });
-    } catch (e) {
-      debugPrint('Forgot password verification failed: $e');
+    } catch (_) {
       return {
         'ok': false,
         'message': 'Unable to verify your identity. Please try again.'
@@ -384,8 +383,7 @@ class AppService extends ChangeNotifier {
         'resetToken': resetToken,
         'newPassword': newPassword,
       });
-    } catch (e) {
-      debugPrint('Forgot password reset failed: $e');
+    } catch (_) {
       return {
         'ok': false,
         'message': 'Unable to reset your password. Please try again.'
@@ -426,11 +424,7 @@ class AppService extends ChangeNotifier {
         authenticated: true,
       );
       return response['ok'] == true;
-    } catch (e) {
-      debugPrint(
-        'Password update failed: $e',
-      );
-
+    } catch (_) {
       return false;
     }
   }
@@ -578,14 +572,12 @@ class AppService extends ChangeNotifier {
           isReviewer: verified['isReviewer'] == true,
         );
         await _persistCurrentUser();
-      } catch (e) {
+      } catch (_) {
         // Keep the still-present session during a temporary backend outage.
-        debugPrint('Session validation temporarily unavailable: $e');
       }
 
       await _loadDataForCurrentUser();
-    } catch (e) {
-      debugPrint('Session restore error: $e');
+    } catch (_) {
       await _clearStoredUser();
       _currentUser = null;
       _accessToken = null;
@@ -1219,18 +1211,16 @@ class AppService extends ChangeNotifier {
               .select('id')
               .single();
           _branchLoginActivityId = response['id']?.toString();
-        } catch (e) {
-          debugPrint('Branch login activity error: $e');
+        } catch (_) {
+          // Activity logging must never block a successful login.
         }
       }
 
       return null;
-    } on http.ClientException catch (e) {
-      debugPrint('AUTH CONNECTION ERROR: $e');
+    } on http.ClientException {
       return 'Cannot connect to the payroll server. Make sure the Node.js backend is running.';
-    } catch (e) {
-      debugPrint('LOGIN ERROR: $e');
-      return 'Login failed: $e';
+    } catch (_) {
+      return 'Login failed. Please try again.';
     }
   }
 
@@ -1266,9 +1256,8 @@ class AppService extends ChangeNotifier {
       notifyListeners();
 
       return null;
-    } catch (e) {
-      debugPrint('REQUEST OTP ERROR: $e');
-      return 'Unable to request OTP: $e';
+    } catch (_) {
+      return 'Unable to request OTP. Please try again.';
     }
   }
 
@@ -1313,9 +1302,8 @@ class AppService extends ChangeNotifier {
       notifyListeners();
 
       return null;
-    } catch (e) {
-      debugPrint('VERIFY OTP ERROR: $e');
-      return 'OTP verification failed: $e';
+    } catch (_) {
+      return 'OTP verification failed. Please try again.';
     }
   }
 
@@ -1406,9 +1394,8 @@ class AppService extends ChangeNotifier {
       await _loadDataForCurrentUser();
       await _recordEmployeeAquariumLogin();
       return null;
-    } catch (e) {
-      debugPrint('COMPLETE FIRST LOGIN ERROR: $e');
-      return 'Unable to complete first login: $e';
+    } catch (_) {
+      return 'Unable to complete first login. Please try again.';
     }
   }
 
@@ -1462,8 +1449,8 @@ class AppService extends ChangeNotifier {
             .from('branch_activity_logs')
             .update({'closed_at': DateTime.now().toUtc().toIso8601String()}).eq(
                 'id', activityId);
-      } catch (e) {
-        debugPrint('Branch logout activity error: $e');
+      } catch (_) {
+        // Activity logging must never block logout.
       }
     }
 
@@ -2641,9 +2628,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           await NotificationService.sendPayslipAvailable(
             employeeId: employee.employeeId,
             period: period,
-          ).catchError(
-            (error) => debugPrint('Payslip notification error: $error'),
-          );
+          ).catchError((_) {});
 
           imported++;
         }
