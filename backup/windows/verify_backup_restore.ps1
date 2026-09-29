@@ -82,10 +82,23 @@ try {
     }
   }
 
+  # Some Supabase-managed extensions own schemas whose table/data entries are
+  # separate TOC items. Stock PostgreSQL cannot restore those entries after the
+  # extension itself is skipped. Keep this mapping intentionally narrow: only
+  # known platform-owned schemas are excluded, never application schemas.
+  $UnavailableExtensionSchemas = @{}
+  if ($UnavailableExtensions.ContainsKey("supabase_vault")) {
+    $UnavailableExtensionSchemas["vault"] = $true
+  }
+
   if ($UnavailableExtensions.Count -gt 0) {
     $Names = ($UnavailableExtensions.Keys | Sort-Object) -join ", "
     Write-Host "Local PostgreSQL does not provide Supabase-managed extension(s): $Names"
-    Write-Host "Skipping only those extension TOC entries for this isolated portability test."
+    if ($UnavailableExtensionSchemas.Count -gt 0) {
+      $SchemaNames = ($UnavailableExtensionSchemas.Keys | Sort-Object) -join ", "
+      Write-Host "Skipping extension-owned schema object(s) for local verification: $SchemaNames"
+    }
+    Write-Host "Application schemas and data remain included in this isolated portability test."
   }
 
   $FilteredRestoreList = foreach ($Line in $RestoreListLines) {
@@ -98,9 +111,24 @@ try {
         break
       }
     }
+    if (-not $Skip) {
+      foreach ($SchemaName in $UnavailableExtensionSchemas.Keys) {
+        $EscapedSchema = [regex]::Escape($SchemaName)
+        # pg_restore list entries place the schema immediately after the object
+        # type for schema-qualified objects (TABLE, TABLE DATA, SEQUENCE, etc.).
+        if ($Line -match ";[ ]+[0-9]+[ ]+[0-9]+[ ]+[^;]+[ ]+$EscapedSchema[ ]+") {
+          $Skip = $true
+          break
+        }
+      }
+    }
     if ($Skip -and -not $Line.StartsWith(";")) { ";$Line" } else { $Line }
   }
-  $FilteredRestoreList | Set-Content -Path $RestoreList -Encoding UTF8
+
+  # Windows PowerShell 5.1 writes a BOM for -Encoding UTF8. pg_restore treats
+  # that BOM as text at the beginning of a TOC list, so write UTF-8 without BOM.
+  $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [IO.File]::WriteAllLines($RestoreList, [string[]]$FilteredRestoreList, $Utf8NoBom)
 
   & $PgRestore.Source "-h" $HostName "-p" $Port "-U" $User "-d" $DbName "--no-owner" "--no-acl" "--exit-on-error" "-L" $RestoreList $Dump.FullName
   if ($LASTEXITCODE -ne 0) { throw "pg_restore failed." }
