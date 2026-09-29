@@ -425,7 +425,6 @@ class AppService extends ChangeNotifier {
       );
       return response['ok'] == true;
     } catch (_) {
-
       return false;
     }
   }
