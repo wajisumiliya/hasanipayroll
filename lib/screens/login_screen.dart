@@ -466,7 +466,6 @@ class _LoginScreenState extends State<LoginScreen>
 
       _openCorrectPortal(user);
     } catch (_) {
-
       if (!mounted) return;
 
       setState(() {
