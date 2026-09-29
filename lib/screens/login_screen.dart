@@ -110,8 +110,7 @@ class _LoginScreenState extends State<LoginScreen>
         _weatherCode = (current['weather_code'] as num?)?.round();
         _weatherLoading = false;
       });
-    } catch (error) {
-      debugPrint('Login weather error: $error');
+    } catch (_) {
       if (mounted) setState(() => _weatherLoading = false);
     }
   }
@@ -154,8 +153,8 @@ class _LoginScreenState extends State<LoginScreen>
       if (user != null) {
         _openCorrectPortal(user);
       }
-    } catch (e) {
-      debugPrint('Session restore error: $e');
+    } catch (_) {
+      // Session restoration failure is handled by the normal login flow.
     }
   }
 
@@ -460,14 +459,13 @@ class _LoginScreenState extends State<LoginScreen>
             employeeId: user.employeeId,
             branchId: user.branchId,
           );
-        } catch (error) {
-          debugPrint('Device notification registration skipped: $error');
+        } catch (_) {
+          // Device notification registration is best-effort.
         }
       }
 
       _openCorrectPortal(user);
-    } catch (e) {
-      debugPrint('Login error: $e');
+    } catch (_) {
 
       if (!mounted) return;
 
