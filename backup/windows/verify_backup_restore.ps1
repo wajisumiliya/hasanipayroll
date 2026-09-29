@@ -56,6 +56,25 @@ try {
 
   Write-Host "4/5 Restoring database dump..."
 
+  # Supabase RLS policies commonly reference platform roles that do not exist
+  # in a stock PostgreSQL installation. Create only missing NOLOGIN compatibility
+  # roles on this loopback-only local server so policies can be restored and
+  # validated instead of being removed from the restore test.
+  $CompatibilityRoles = @("anon", "authenticated", "service_role")
+  $CreatedCompatibilityRoles = @()
+  foreach ($RoleName in $CompatibilityRoles) {
+    $RoleExists = (& $Psql.Source "-h" $HostName "-p" $Port "-U" $User "-d" "postgres" "-X" "-A" "-t" "-v" "ON_ERROR_STOP=1" "-v" "role_name=$RoleName" "-c" "select 1 from pg_roles where rolname = :'role_name';").Trim()
+    if ($LASTEXITCODE -ne 0) { throw "Could not inspect local PostgreSQL compatibility roles." }
+    if ($RoleExists -ne "1") {
+      & $Psql.Source "-h" $HostName "-p" $Port "-U" $User "-d" "postgres" "-X" "-v" "ON_ERROR_STOP=1" "-v" "role_name=$RoleName" "-c" "select format('create role %I nologin', :'role_name') \gexec"
+      if ($LASTEXITCODE -ne 0) { throw "Could not create local compatibility role '$RoleName'." }
+      $CreatedCompatibilityRoles += $RoleName
+    }
+  }
+  if ($CreatedCompatibilityRoles.Count -gt 0) {
+    Write-Host ("Created temporary local Supabase compatibility role(s): " + ($CreatedCompatibilityRoles -join ", "))
+  }
+
   # Supabase backups can contain platform-specific extensions (for example
   # supabase_vault) that are not shipped with stock PostgreSQL. Build a
   # pg_restore TOC list and skip only extension objects that the local server
@@ -150,11 +169,29 @@ where table_schema='public'
   Write-Host "Checksums are valid and the PostgreSQL dump restored successfully into an isolated local database."
 }
 finally {
+  $CleanupHost = if ($HostName) { $HostName } else { "localhost" }
+  $CleanupPort = if ($Port) { $Port } else { "5432" }
+  $CleanupUser = if ($User) { $User } else { "postgres" }
+
   if ($DbName) {
-    $CleanupHost = if ($HostName) { $HostName } else { "localhost" }
-    $CleanupPort = if ($Port) { $Port } else { "5432" }
-    $CleanupUser = if ($User) { $User } else { "postgres" }
-    & $Dropdb.Source "-h" $CleanupHost "-p" $CleanupPort "-U" $CleanupUser "--if-exists" $DbName 2>$null
+    try {
+      & $Dropdb.Source "-h" $CleanupHost "-p" $CleanupPort "-U" $CleanupUser "--if-exists" $DbName 2>$null
+    }
+    catch {
+      Write-Warning "Could not remove temporary restore database '$DbName'. Remove it manually if it still exists."
+    }
   }
+
+  if ($CreatedCompatibilityRoles) {
+    foreach ($RoleName in $CreatedCompatibilityRoles) {
+      try {
+        & $Psql.Source "-h" $CleanupHost "-p" $CleanupPort "-U" $CleanupUser "-d" "postgres" "-X" "-v" "ON_ERROR_STOP=1" "-v" "role_name=$RoleName" "-c" "select format('drop role if exists %I', :'role_name') \gexec" 2>$null
+      }
+      catch {
+        Write-Warning "Could not remove temporary local compatibility role '$RoleName'."
+      }
+    }
+  }
+
   if (Test-Path $TempRoot) { Remove-Item $TempRoot -Recurse -Force }
 }
