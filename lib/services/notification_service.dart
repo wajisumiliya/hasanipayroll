@@ -25,11 +25,6 @@ class NotificationService {
         sound: true,
       );
 
-      debugPrint(
-        'Notification permission: '
-        '${settings.authorizationStatus}',
-      );
-
       // ============================================================
       // GET FCM TOKEN
       // ============================================================
@@ -87,10 +82,9 @@ class NotificationService {
         // The payload is intentionally not logged because notifications may
         // contain payroll or employee information.
       }
-    } catch (error) {
-      debugPrint(
-        'Notification initialization error: $error',
-      );
+    } catch (_) {
+      // Notification setup is best-effort and must not expose provider or
+      // device details through client diagnostics.
     }
   }
 
