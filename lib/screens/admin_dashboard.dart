@@ -10390,6 +10390,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         overwriteExisting: overwriteExisting,
       );
 
+      // Batch generation writes directly through AttendancePayrollService.
+      // Refresh the shared payroll cache so Employee Payslips immediately
+      // includes the newly generated month without requiring a manual reload.
+      await service.loadPayrollFromSupabase();
+
       if (mounted) {
         Navigator.of(context).pop();
       }
