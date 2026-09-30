@@ -1381,31 +1381,34 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return _attendanceTableCard(
       title: 'WORK ATTENDANCE',
       color: blue,
-      child: Column(
-        children: [
-          _workHeader(blue),
-          Expanded(
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: daysInMonth,
-                itemBuilder: (
-                  context,
-                  index,
-                ) {
-                  final day = index + 1;
-                  final c = controllers[index];
+      child: _horizontallyScrollableAttendanceTable(
+        minWidth: 680,
+        child: Column(
+          children: [
+            _workHeader(blue),
+            Expanded(
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: daysInMonth,
+                  itemBuilder: (
+                    context,
+                    index,
+                  ) {
+                    final day = index + 1;
+                    final c = controllers[index];
 
-                  return _workRow(
-                    day,
-                    c,
-                  );
-                },
+                    return _workRow(
+                      day,
+                      c,
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1632,8 +1635,20 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     AttendanceDayControllers c,
   ) {
     const manualStatuses = {'OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'UNPAID'};
-    final manual = c.status.trim();
+    final manual = c.status.trim().toUpperCase();
     if (manualStatuses.contains(manual)) return manual;
+
+    // Employee Portal is read-only and must show the status saved by the
+    // branch/admin even when that employee's roster is no longer available.
+    if (!widget.editable) {
+      return switch (manual) {
+        'LATE' => 'Late',
+        'EARLY OUT' => 'Early Out',
+        'LATE + EARLY OUT' => 'Late + Early Out',
+        'PRESENT' => 'Present',
+        _ => manual,
+      };
+    }
 
     final actualIn = _clockMinutes(c.workingIn.text);
     if (actualIn == null) return '';
@@ -1857,34 +1872,55 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return _attendanceTableCard(
       title: 'BREAK ATTENDANCE',
       color: red,
-      child: Column(
-        children: [
-          _breakHeader(red),
-          Expanded(
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: daysInMonth,
-                itemBuilder: (
-                  context,
-                  index,
-                ) {
-                  final day = index + 1;
-                  final c = controllers[index];
+      child: _horizontallyScrollableAttendanceTable(
+        minWidth: 680,
+        child: Column(
+          children: [
+            _breakHeader(red),
+            Expanded(
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: daysInMonth,
+                  itemBuilder: (
+                    context,
+                    index,
+                  ) {
+                    final day = index + 1;
+                    final c = controllers[index];
 
-                  // FIXED:
-                  // _breakRow takes exactly 2 arguments.
-                  return _breakRow(
-                    day,
-                    c,
-                  );
-                },
+                    return _breakRow(
+                      day,
+                      c,
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _horizontallyScrollableAttendanceTable({
+    required double minWidth,
+    required Widget child,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tableWidth =
+            constraints.maxWidth < minWidth ? minWidth : constraints.maxWidth;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: tableWidth,
+            height: constraints.maxHeight,
+            child: child,
+          ),
+        );
+      },
     );
   }
 

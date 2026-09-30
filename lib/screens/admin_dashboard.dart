@@ -10039,7 +10039,24 @@ class _AdminDashboardState extends State<AdminDashboard>
     };
     List<Map<String, dynamic>> attendanceRows;
     try {
-      attendanceRows = await SupabaseService.getAttendanceByBranch(branchName);
+      final employeeIds = employees
+          .map((employee) => _normalizeBranchValue(employee['employee_id']))
+          .where((id) => id.isNotEmpty)
+          .toList();
+      final start = DateTime(month.year, month.month, 1);
+      final end = DateTime(month.year, month.month + 1, 1);
+      attendanceRows = employeeIds.isEmpty
+          ? <Map<String, dynamic>>[]
+          : List<Map<String, dynamic>>.from(
+              await SupabaseService.client
+                  .from('attendance')
+                  .select('employee_id,attendance_date,is_submitted')
+                  .inFilter('employee_id', employeeIds)
+                  .gte('attendance_date',
+                      start.toIso8601String().substring(0, 10))
+                  .lt('attendance_date',
+                      end.toIso8601String().substring(0, 10)),
+            );
     } catch (error) {
       if (mounted) {
         _message('Unable to verify attendance readiness: $error');
@@ -14643,9 +14660,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 : canonical;
         grouped.putIfAbsent(groupKey, () => []).add(payroll);
       }
-      final keys = selectedPayrollBranchId == null
-          ? List<String>.from(branchOrder)
-          : grouped.keys.toList()
+      final keys = grouped.keys.toList()
         ..sort((a, b) {
           final ai = branchOrder.indexOf(a);
           final bi = branchOrder.indexOf(b);
@@ -14798,10 +14813,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           18: pw.FlexColumnWidth(.65),
           19: pw.FlexColumnWidth(.75),
         };
-        document.addPage(pw.Page(
+        document.addPage(pw.MultiPage(
           pageFormat: PdfPageFormat.a4.landscape,
           margin: const pw.EdgeInsets.fromLTRB(7, 6, 7, 8),
-          build: (_) => pw.Column(children: [
+          header: (_) => pw.Column(children: [
             logo == null
                 ? pw.Text(
                     'hasani BOOKS',
@@ -14829,6 +14844,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             ),
             pw.SizedBox(height: 5),
+          ]),
+          build: (_) => [
             pw.TableHelper.fromTextArray(
               headers: headers,
               data: data,
@@ -14875,7 +14892,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
               ],
             ),
-          ]),
+          ],
         ));
       }
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
