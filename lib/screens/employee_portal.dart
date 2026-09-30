@@ -41,10 +41,13 @@ class _EmployeePortalState extends State<EmployeePortal>
   Timer? _birthdayCelebrationTimer;
   Timer? _notificationRefreshTimer;
   Timer? _notificationRealtimeDebounce;
+  Timer? _payrollRealtimeDebounce;
   RealtimeChannel? _notificationChannel;
+  RealtimeChannel? _payrollChannel;
   bool _showBirthdayCelebration = false;
   List<Map<String, dynamic>> _notifications = const [];
   bool _notificationsLoading = false;
+  bool _payrollLoading = false;
   bool _aquariumLoading = false;
 
   @override
@@ -65,6 +68,8 @@ class _EmployeePortalState extends State<EmployeePortal>
     }
     _loadEmployeeNotifications();
     _subscribeToNotifications();
+    _subscribeToPayroll();
+    unawaited(_refreshPayroll());
     _refreshAquarium();
     _notificationRefreshTimer = Timer.periodic(
       const Duration(minutes: 5),
@@ -96,6 +101,63 @@ class _EmployeePortalState extends State<EmployeePortal>
           },
         )
         .subscribe();
+  }
+
+  void _subscribeToPayroll() {
+    if (employeeId.isEmpty) return;
+
+    void scheduleRefresh() {
+      _payrollRealtimeDebounce?.cancel();
+      _payrollRealtimeDebounce = Timer(
+        const Duration(milliseconds: 500),
+        () {
+          if (mounted) unawaited(_refreshPayroll());
+        },
+      );
+    }
+
+    _payrollChannel = SupabaseService.client
+        .channel('employee-payroll-$employeeId-$hashCode')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'payroll',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'employee_id',
+            value: employeeId,
+          ),
+          callback: (_) => scheduleRefresh(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'payroll',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'employee_id',
+            value: employeeId,
+          ),
+          callback: (_) => scheduleRefresh(),
+        )
+        .subscribe();
+  }
+
+  Future<void> _refreshPayroll() async {
+    if (_payrollLoading || employeeId.isEmpty) return;
+    if (mounted) setState(() => _payrollLoading = true);
+    try {
+      await service.loadPayrollFromSupabase();
+    } catch (error) {
+      debugPrint('Unable to refresh employee payroll: $error');
+    } finally {
+      if (mounted) setState(() => _payrollLoading = false);
+    }
+  }
+
+  void _selectTab(int value) {
+    setState(() => tab = value);
+    if (value == 1) unawaited(_refreshPayroll());
   }
 
   Future<void> _refreshAquarium() async {
@@ -202,7 +264,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                               backgroundColor: const Color(0xFF1976E9)
                                   .withValues(alpha: .10),
                               child: Icon(
-                                type == 'payslip'
+                                type == 'payslip' || type == 'payroll'
                                     ? Icons.receipt_long_outlined
                                     : title.toLowerCase().contains('leave')
                                         ? Icons.flight_takeoff_outlined
@@ -228,14 +290,14 @@ class _EmployeePortalState extends State<EmployeePortal>
                               );
                               if (!mounted || !sheetContext.mounted) return;
                               Navigator.pop(sheetContext);
-                              setState(() {
-                                item['is_read'] = true;
-                                tab = type == 'payslip'
-                                    ? 1
-                                    : title.toLowerCase().contains('leave')
-                                        ? 3
-                                        : 6;
-                              });
+                              item['is_read'] = true;
+                              final destination =
+                                  type == 'payslip' || type == 'payroll'
+                                      ? 1
+                                      : title.toLowerCase().contains('leave')
+                                          ? 3
+                                          : 6;
+                              _selectTab(destination);
                             },
                           );
                         },
@@ -253,9 +315,14 @@ class _EmployeePortalState extends State<EmployeePortal>
     _birthdayCelebrationTimer?.cancel();
     _notificationRefreshTimer?.cancel();
     _notificationRealtimeDebounce?.cancel();
+    _payrollRealtimeDebounce?.cancel();
     final notificationChannel = _notificationChannel;
     if (notificationChannel != null) {
       SupabaseService.client.removeChannel(notificationChannel);
+    }
+    final payrollChannel = _payrollChannel;
+    if (payrollChannel != null) {
+      SupabaseService.client.removeChannel(payrollChannel);
     }
     _birthdayController.dispose();
     super.dispose();
@@ -569,7 +636,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           label: label,
           icon: icon,
           selected: tab == index,
-          onTap: () => setState(() => tab = index),
+          onTap: () => _selectTab(index),
         );
     return PremiumPortalSidebar(
       portalLabel: 'Employee Portal',
@@ -707,9 +774,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             return;
           }
 
-          setState(() {
-            tab = index;
-          });
+          _selectTab(index);
         },
       ),
     );
@@ -863,10 +928,12 @@ class _EmployeePortalState extends State<EmployeePortal>
           indicatorColor: Colors.transparent,
           selectedIndex: selectedMobileIndex,
           onDestinationSelected: (index) {
+            final destination = mobilePages[index];
             setState(() {
-              tab = mobilePages[index];
+              tab = destination;
               if (tab == 1) _mobileShowsEaForms = false;
             });
+            if (destination == 1) unawaited(_refreshPayroll());
           },
           destinations: [
             NavigationDestination(
@@ -1883,7 +1950,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   return _quick(
                     action.title,
                     action.icon,
-                    () => setState(() => tab = action.page),
+                    () => _selectTab(action.page),
                   );
                 },
               );
@@ -2443,12 +2510,28 @@ class _EmployeePortalState extends State<EmployeePortal>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'My Payslips',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'My Payslips',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Refresh payslips',
+                onPressed: _payrollLoading ? null : _refreshPayroll,
+                icon: _payrollLoading
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           const Text(

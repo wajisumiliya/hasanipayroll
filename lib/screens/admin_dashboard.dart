@@ -1320,7 +1320,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       SnackBar(
         content: Text(
           '${employee['name'] ?? 'Employee'} is now '
-          '${isActive ? 'Active' : 'Inactive'}',
+          '${isActive ? 'Active' : 'Resigned. Automatic deletion is scheduled after 90 days.'}',
         ),
       ),
     );
@@ -1459,7 +1459,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                           }
                                         },
                                       ),
-                                      Text(active ? 'Active' : 'Inactive'),
+                                      Text(active ? 'Active' : 'Resigned'),
                                     ]),
                               ),
                             );
@@ -6784,7 +6784,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                   CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: active,
-                      title: const Text('Active employee'),
+                      title:
+                          Text(active ? 'Status: Active' : 'Status: Resigned'),
+                      subtitle: Text(
+                        active
+                            ? 'Employee access and records remain active.'
+                            : 'All employee data will be permanently deleted 90 days after saving.',
+                      ),
                       onChanged: saving
                           ? null
                           : (value) =>
@@ -10770,7 +10776,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     body:
                         'Your payroll for ${DateFormat('MMMM yyyy').format(month)} has been generated.',
                     audience: 'employee',
-                    type: 'payroll',
+                    type: 'payslip',
                     employeeId: employeeId,
                   );
                 } catch (notificationError) {
@@ -14183,6 +14189,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             .toLowerCase()
             .replaceAll(RegExp(r'[^a-z0-9]'), '');
         const aliases = <String, String>{
+          'spedar': 'sungaipetani',
           'hbsp': 'sungaipetani',
           'hpspfrn': 'sungaipetani',
           'hbspfrn': 'sungaipetani',
@@ -14563,6 +14570,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             .toLowerCase()
             .replaceAll(RegExp(r'[^a-z0-9]'), '');
         const aliases = <String, String>{
+          'spedar': 'sungaipetani',
           'hbsp': 'sungaipetani',
           'hpspfrn': 'sungaipetani',
           'hbspfrn': 'sungaipetani',
