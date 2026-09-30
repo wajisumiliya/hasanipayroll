@@ -1381,8 +1381,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return _attendanceTableCard(
       title: 'WORK ATTENDANCE',
       color: blue,
-      child: _horizontallyScrollableAttendanceTable(
-        minWidth: 680,
+      child: _responsiveAttendanceTable(
         child: Column(
           children: [
             _workHeader(blue),
@@ -1417,62 +1416,48 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return Container(
       height: 42,
       color: const Color(0xFFE8EEFF),
-      child: Row(
-        children: [
-          _headerCell(
-            'DATE',
-            55,
-            color,
-          ),
-          _headerCell(
-            'CHECK IN',
-            95,
-            color,
-          ),
-          _headerCell(
-            'CHECK OUT',
-            95,
-            color,
-          ),
-          _headerCell(
-            'TOTAL',
-            75,
-            color,
-          ),
-          _headerCell(
-            'NET WORKING HOURS',
-            105,
-            color,
-          ),
-          _headerCell(
-            'OVERTIME',
-            75,
-            color,
-          ),
-          Expanded(
-            child: Container(
-              height: double.infinity,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: color,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final widths = _workColumnWidths(constraints.maxWidth);
+          return Row(
+            children: [
+              _headerCell('DATE', widths[0], color),
+              _headerCell('CHECK IN', widths[1], color),
+              _headerCell('CHECK OUT', widths[2], color),
+              _headerCell('TOTAL', widths[3], color),
+              _headerCell('NET WORKING HOURS', widths[4], color),
+              _headerCell('OVERTIME', widths[5], color),
+              Expanded(
+                child: Container(
+                  height: double.infinity,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: color)),
+                  ),
+                  child: Text(
+                    'STATUS',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: constraints.maxWidth < 430 ? 9 : 11,
+                    ),
                   ),
                 ),
               ),
-              child: const Text(
-                'STATUS',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
+
+  List<double> _workColumnWidths(double availableWidth) => [
+        availableWidth * .07,
+        availableWidth * .12,
+        availableWidth * .12,
+        availableWidth * .09,
+        availableWidth * .15,
+        availableWidth * .10,
+      ];
 
   Widget _workRow(
     int day,
@@ -1489,61 +1474,68 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
     return SizedBox(
       height: 42,
-      child: Row(
-        children: [
-          _tableCell(day.toString(), 55, bold: true),
-          _timeInput(
-            c.workingIn,
-            95,
-            day: day,
-            focusNode: c.workingInFocus,
-            prevFocus: day > 1 ? controllers[day - 2].workingOutFocus : null,
-            nextFocus: c.workingOutFocus,
-          ),
-          _timeInput(
-            c.workingOut,
-            95,
-            day: day,
-            focusNode: c.workingOutFocus,
-            prevFocus: c.workingInFocus,
-            nextFocus:
-                day < daysInMonth ? controllers[day].workingInFocus : null,
-          ),
-          _tableCell(
-            formatMinutes(total),
-            75,
-            bold: true,
-            color: total > 0 ? const Color(0xFF315AD9) : Colors.black54,
-          ),
-          _tableCell(
-            formatMinutes(netWorkingMinutes),
-            105,
-            bold: true,
-            color: netWorkingMinutes > 0
-                ? const Color(0xFF315AD9)
-                : Colors.black54,
-          ),
-          _tableCell(
-            formatMinutes(overtimeMinutes),
-            75,
-            bold: true,
-            color:
-                overtimeMinutes > 0 ? Colors.orange.shade800 : Colors.black38,
-          ),
-          Expanded(
-            child: Container(
-              height: double.infinity,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                border: Border(
-                  right: BorderSide(color: Color(0xFF15965D)),
-                  bottom: BorderSide(color: Color(0xFF15965D)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final widths = _workColumnWidths(constraints.maxWidth);
+          return Row(
+            children: [
+              _tableCell(day.toString(), widths[0], bold: true),
+              _timeInput(
+                c.workingIn,
+                widths[1],
+                day: day,
+                focusNode: c.workingInFocus,
+                prevFocus:
+                    day > 1 ? controllers[day - 2].workingOutFocus : null,
+                nextFocus: c.workingOutFocus,
+              ),
+              _timeInput(
+                c.workingOut,
+                widths[2],
+                day: day,
+                focusNode: c.workingOutFocus,
+                prevFocus: c.workingInFocus,
+                nextFocus:
+                    day < daysInMonth ? controllers[day].workingInFocus : null,
+              ),
+              _tableCell(
+                formatMinutes(total),
+                widths[3],
+                bold: true,
+                color: total > 0 ? const Color(0xFF315AD9) : Colors.black54,
+              ),
+              _tableCell(
+                formatMinutes(netWorkingMinutes),
+                widths[4],
+                bold: true,
+                color: netWorkingMinutes > 0
+                    ? const Color(0xFF315AD9)
+                    : Colors.black54,
+              ),
+              _tableCell(
+                formatMinutes(overtimeMinutes),
+                widths[5],
+                bold: true,
+                color: overtimeMinutes > 0
+                    ? Colors.orange.shade800
+                    : Colors.black38,
+              ),
+              Expanded(
+                child: Container(
+                  height: double.infinity,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      right: BorderSide(color: Color(0xFF15965D)),
+                      bottom: BorderSide(color: Color(0xFF15965D)),
+                    ),
+                  ),
+                  child: _statusCell(day, c, netWorkingMinutes),
                 ),
               ),
-              child: _statusCell(day, c, netWorkingMinutes),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -1737,6 +1729,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       child: Text(
         displayStatus,
         textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
             fontSize: 8.5, fontWeight: FontWeight.w800, color: foreground),
       ),
@@ -1872,8 +1866,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     return _attendanceTableCard(
       title: 'BREAK ATTENDANCE',
       color: red,
-      child: _horizontallyScrollableAttendanceTable(
-        minWidth: 680,
+      child: _responsiveAttendanceTable(
         child: Column(
           children: [
             _breakHeader(red),
@@ -1904,21 +1897,15 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Widget _horizontallyScrollableAttendanceTable({
-    required double minWidth,
+  Widget _responsiveAttendanceTable({
     required Widget child,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final tableWidth =
-            constraints.maxWidth < minWidth ? minWidth : constraints.maxWidth;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: tableWidth,
-            height: constraints.maxHeight,
-            child: child,
-          ),
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: child,
         );
       },
     );
