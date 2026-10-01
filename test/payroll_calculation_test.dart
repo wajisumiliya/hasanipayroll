@@ -125,13 +125,13 @@ void main() {
   );
 
   group('Attendance payroll regression rules', () {
-    test('public holiday pay is basic / 26 x 2 per worked day', () {
+    test('public holiday pay is basic / 26 x 1 per worked day', () {
       expect(
         PayrollCalculationService.publicHolidayPay(
           basicSalary: 1700,
           workedDays: 1,
         ),
-        130.77,
+        65.38,
       );
     });
 
@@ -141,7 +141,7 @@ void main() {
           basicSalary: 2600,
           workedDays: 2,
         ),
-        400,
+        200,
       );
     });
 
@@ -162,36 +162,61 @@ void main() {
       );
     });
 
-    test('PH worked pays basic / 26 x 2', () {
+    test('PH worked pays basic / 26 x 1', () {
       expect(
         PayrollCalculationService.publicHolidayPayForStatus(
           basicSalary: 2600,
           status: 'PH',
           worked: true,
         ),
-        200,
+        100,
       );
     });
 
-    test('PH-OFF without working time pays basic / 26 x 1', () {
+    test('PH-OFF has no additional pay', () {
       expect(
         PayrollCalculationService.publicHolidayPayForStatus(
           basicSalary: 2600,
           status: 'PH-OFF',
           worked: false,
         ),
-        100,
+        0,
       );
     });
 
-    test('PH-SPL worked pays basic / 26 x 3', () {
+    test('PH-SPL worked pays basic / 26 x 2', () {
       expect(
         PayrollCalculationService.publicHolidayPayForStatus(
           basicSalary: 2600,
           status: 'PH-SPL',
           worked: true,
         ),
-        300,
+        200,
+      );
+    });
+
+    test('PH-GUNTI worked gives replacement OFF and no additional pay', () {
+      expect(
+        PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: 2600,
+          status: 'PH-GUNTI',
+          worked: true,
+        ),
+        0,
+      );
+      expect(
+        PayrollCalculationService.replacementOffDaysForStatus(
+          status: 'PH-GUNTI',
+          worked: true,
+        ),
+        1,
+      );
+      expect(
+        PayrollCalculationService.replacementOffDaysForStatus(
+          status: 'PH-GUNTI',
+          worked: false,
+        ),
+        0,
       );
     });
 

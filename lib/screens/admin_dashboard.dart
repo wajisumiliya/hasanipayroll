@@ -9234,6 +9234,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'PH' => const Color(0xFFE53935),
         'PH-OFF' => const Color(0xFFF57C00),
         'PH-SPL' => const Color(0xFF8E24AA),
+        'PH-GUNTI' => const Color(0xFF00897B),
         _ => _midnight,
       };
 
@@ -9248,12 +9249,31 @@ class _AdminDashboardState extends State<AdminDashboard>
         : '$employeeId|${_attendanceDateText(_attendanceStatusDate)}';
     if (_attendanceStatusUpdatingIds.contains(updateKey)) return;
 
+    if (newStatus == 'PH-GUNTI') {
+      final netMinutes = num.tryParse(
+            (record['net_working_minutes'] ?? record['work_minutes'] ?? '0')
+                .toString(),
+          ) ??
+          0;
+      final workingIn = (record['working_in'] ?? '').toString().trim();
+      final workingOut = (record['working_out'] ?? '').toString().trim();
+      final hasWorkingTime = netMinutes > 0 ||
+          (workingIn.isNotEmpty &&
+              workingIn != '-' &&
+              workingOut.isNotEmpty &&
+              workingOut != '-');
+      if (!hasWorkingTime) {
+        _message('PH-GUNTI requires working-in and working-out time.');
+        return;
+      }
+    }
+
     setState(() => _attendanceStatusUpdatingIds.add(updateKey));
     try {
       final values = <String, dynamic>{
         'status': newStatus,
         'is_public_holiday':
-            const {'PH', 'PH-OFF', 'PH-SPL'}.contains(newStatus),
+            const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GUNTI'}.contains(newStatus),
         'is_unpaid': newStatus == 'UNPAID',
       };
       if (recordId.isNotEmpty) {
@@ -9401,6 +9421,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'PH',
       'PH-OFF',
       'PH-SPL',
+      'PH-GUNTI',
       'UNPAID',
     ];
     return FutureBuilder<List<dynamic>>(
@@ -10576,19 +10597,11 @@ class _AdminDashboardState extends State<AdminDashboard>
           .map((employee) => _normalizeBranchValue(employee['employee_id']))
           .where((id) => id.isNotEmpty)
           .toList();
-      final start = DateTime(month.year, month.month, 1);
-      final end = DateTime(month.year, month.month + 1, 1);
       attendanceRows = employeeIds.isEmpty
           ? <Map<String, dynamic>>[]
-          : List<Map<String, dynamic>>.from(
-              await SupabaseService.client
-                  .from('attendance')
-                  .select('employee_id,attendance_date,is_submitted')
-                  .inFilter('employee_id', employeeIds)
-                  .gte('attendance_date',
-                      start.toIso8601String().substring(0, 10))
-                  .lt('attendance_date',
-                      end.toIso8601String().substring(0, 10)),
+          : await SupabaseService.getAttendanceSubmissionsForEmployeesMonth(
+              employeeIds: employeeIds,
+              month: month,
             );
     } catch (error) {
       if (mounted) {

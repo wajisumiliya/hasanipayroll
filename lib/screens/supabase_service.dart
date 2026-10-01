@@ -1338,6 +1338,50 @@ class SupabaseService {
     }
   }
 
+  /// Returns every attendance submission row for the selected employees/month.
+  ///
+  /// Payroll readiness can exceed the Data API's per-request row limit, so the
+  /// result is fetched in stable pages instead of relying on one truncated
+  /// response.
+  static Future<List<Map<String, dynamic>>>
+      getAttendanceSubmissionsForEmployeesMonth({
+    required Iterable<String> employeeIds,
+    required DateTime month,
+  }) async {
+    final ids = employeeIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    if (ids.isEmpty) return <Map<String, dynamic>>[];
+
+    const pageSize = 1000;
+    final start = DateTime(month.year, month.month, 1);
+    final end = DateTime(month.year, month.month + 1, 1);
+    final rows = <Map<String, dynamic>>[];
+    var offset = 0;
+
+    while (true) {
+      final response = await client
+          .from('attendance')
+          .select('employee_id,attendance_date,is_submitted')
+          .inFilter('employee_id', ids)
+          .gte('attendance_date', _dateOnlyText(start))
+          .lt('attendance_date', _dateOnlyText(end))
+          .order('employee_id')
+          .order('attendance_date')
+          .range(offset, offset + pageSize - 1);
+      final page = _mapList(response);
+      rows.addAll(page);
+
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    return rows;
+  }
+
   static Future<List<Map<String, dynamic>>> getAttendanceByBranchDate({
     required String branchId,
     required DateTime date,
@@ -2137,7 +2181,7 @@ class SupabaseService {
 
       // Never send an empty/unsupported status. The attendance table uses
       // these business statuses: Present, Late, OFF, MC, PL, AL, EL, PH,
-      // PH-OFF, PH-SPL, UNPAID.
+      // PH-OFF, PH-SPL, PH-GUNTI, UNPAID.
       String attendanceStatus = status.trim();
 
       if (attendanceStatus.isEmpty) {
@@ -2164,6 +2208,7 @@ class SupabaseService {
         'PH',
         'PH-OFF',
         'PH-SPL',
+        'PH-GUNTI',
         'UNPAID',
       };
 

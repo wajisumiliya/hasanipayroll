@@ -1776,6 +1776,7 @@ class _BranchPortalState extends State<BranchPortal>
                               'PH',
                               'PH-OFF',
                               'PH-SPL',
+                              'PH-GUNTI',
                               'U'
                             }.contains(c))
                         .length;

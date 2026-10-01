@@ -1637,6 +1637,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       'PH',
       'PH-OFF',
       'PH-SPL',
+      'PH-GUNTI',
       'UNPAID',
     };
     final manual = c.status.trim().toUpperCase();
@@ -1715,6 +1716,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         background = const Color(0xFFCE93D8);
         foreground = const Color(0xFF4A1458);
         break;
+      case 'PH-GUNTI':
+        background = const Color(0xFF80CBC4);
+        foreground = const Color(0xFF004D40);
+        break;
       case 'PL':
       case 'AL':
       case 'UNPAID':
@@ -1777,10 +1782,13 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             case 'PH':
             case 'PH-OFF':
             case 'PH-SPL':
+            case 'PH-GUNTI':
             case 'UNPAID':
               c.status = value;
-              c.isPublicHoliday =
-                  value == 'PH' || value == 'PH-OFF' || value == 'PH-SPL';
+              c.isPublicHoliday = value == 'PH' ||
+                  value == 'PH-OFF' ||
+                  value == 'PH-SPL' ||
+                  value == 'PH-GUNTI';
               c.isUnpaid = value == 'UNPAID';
               if (!hasWorkingTime) {
                 c.otRequested = false;
@@ -1834,6 +1842,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           const PopupMenuItem(
             value: 'PH-SPL',
             child: Text('PH-SPL - SPECIAL PUBLIC HOLIDAY'),
+          ),
+          const PopupMenuItem(
+            value: 'PH-GUNTI',
+            child: Text('PH-GUNTI - WORK FOR REPLACEMENT OFF'),
           ),
           const PopupMenuItem(
             value: 'UNPAID',

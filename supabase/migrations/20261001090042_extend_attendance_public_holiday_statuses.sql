@@ -46,6 +46,12 @@ begin
       status_type_name,
       'PH-SPL'
     );
+    execute format(
+      'alter type %I.%I add value if not exists %L',
+      status_type_schema,
+      status_type_name,
+      'PH-GUNTI'
+    );
   else
     -- Remove the prior status allow-list regardless of its generated name.
     for constraint_record in
@@ -79,6 +85,7 @@ begin
           'PH',
           'PH-OFF',
           'PH-SPL',
+          'PH-GUNTI',
           'UNPAID'
         )
       ) not valid;

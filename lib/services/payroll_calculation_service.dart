@@ -16,20 +16,21 @@ class PayrollCalculationService {
 
   /// Public-holiday pay for days actually worked.
   ///
-  /// The payroll rule is basic salary / 26 x 2 for each approved PH day.
+  /// The payroll rule is basic salary / 26 for each approved PH day.
   static double publicHolidayPay({
     required double basicSalary,
     required int workedDays,
   }) {
     if (basicSalary <= 0 || workedDays <= 0) return 0;
-    return _roundMoney((basicSalary / 26) * 2 * workedDays);
+    return _roundMoney((basicSalary / 26) * workedDays);
   }
 
   /// Public-holiday addition for one attendance day.
   ///
-  /// PH     + worked time = daily rate x 2
-  /// PH-OFF + no time     = daily rate x 1
-  /// PH-SPL + worked time = daily rate x 3
+  /// PH     + worked time = daily rate x 1
+  /// PH-OFF               = no additional pay
+  /// PH-SPL + worked time = daily rate x 2
+  /// PH-GUNTI + worked    = replacement OFF only; no additional PH pay
   static double publicHolidayPayForStatus({
     required double basicSalary,
     required String status,
@@ -38,13 +39,19 @@ class PayrollCalculationService {
     if (basicSalary <= 0) return 0;
 
     final multiplier = switch (status.trim().toUpperCase()) {
-      'PH' when worked => 2.0,
-      'PH-OFF' when !worked => 1.0,
-      'PH-SPL' when worked => 3.0,
+      'PH' when worked => 1.0,
+      'PH-SPL' when worked => 2.0,
       _ => 0.0,
     };
     return _roundMoney((basicSalary / 26) * multiplier);
   }
+
+  /// Replacement OFF entitlement granted by one attendance day.
+  static int replacementOffDaysForStatus({
+    required String status,
+    required bool worked,
+  }) =>
+      status.trim().toUpperCase() == 'PH-GUNTI' && worked ? 1 : 0;
 
   /// Payable overtime comes only from Admin-approved minutes.
   static double approvedOvertimeHours(int? approvedMinutes) {

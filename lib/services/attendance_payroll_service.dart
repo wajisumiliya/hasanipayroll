@@ -12,8 +12,9 @@ import 'payroll_calculation_service.dart';
 ///
 /// 1. Employee is selected by Admin.
 /// 2. Salary defaults come from employee_salary_defaults.
-/// 3. cuti_umum uses the selected PH category: PH x2 when worked, PH-OFF x1
-///    when not worked, and PH-SPL x3 when worked.
+/// 3. cuti_umum uses the selected PH category: PH x1 when worked, PH-OFF has
+///    no additional pay, PH-SPL x2 when worked, and PH-GUNTI gives a replacement
+///    OFF instead of additional public-holiday pay.
 /// 4. Statutory wage = basic_salary - cuti_umum.
 /// 5. If employee_salary_defaults.epf_category = "normal":
 ///      EPF employee = statutory wage x 2%
@@ -354,6 +355,7 @@ class AttendancePayrollService {
     int publicHolidayWorkedDays = 0;
     int publicHolidayOffDays = 0;
     int publicHolidaySpecialDays = 0;
+    int publicHolidayReplacementDays = 0;
     int approvedOtDays = 0;
 
     for (final row in attendance) {
@@ -370,7 +372,8 @@ class AttendancePayrollService {
       final isUnpaid = _toBool(row['is_unpaid']);
       final attendanceStatus = _text(row['status']).trim().toUpperCase();
       final isPublicHoliday = _toBool(row['is_public_holiday']) ||
-          const {'PH', 'PH-OFF', 'PH-SPL'}.contains(attendanceStatus);
+          const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GUNTI'}
+              .contains(attendanceStatus);
       final worked = workMinutes > 0;
 
       // --------------------------------------------------------------
@@ -397,6 +400,11 @@ class AttendancePayrollService {
         if (holidayStatus == 'PH' && worked) publicHolidayWorkedDays++;
         if (holidayStatus == 'PH-OFF' && !worked) publicHolidayOffDays++;
         if (holidayStatus == 'PH-SPL' && worked) publicHolidaySpecialDays++;
+        publicHolidayReplacementDays +=
+            PayrollCalculationService.replacementOffDaysForStatus(
+          status: holidayStatus,
+          worked: worked,
+        );
       }
 
       // --------------------------------------------------------------
@@ -610,6 +618,7 @@ class AttendancePayrollService {
               'Public holidays worked: $publicHolidayWorkedDays. '
               'Public holiday off days: $publicHolidayOffDays. '
               'Public holiday special worked days: $publicHolidaySpecialDays. '
+              'Public holiday replacement-off days: $publicHolidayReplacementDays. '
               'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
               'Roster weeks used: ${rosterByWeek.length}. '
               'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
@@ -647,6 +656,7 @@ class AttendancePayrollService {
           lateDeduction: totalLateDeduction,
           unpaidDeduction: unpaidDeduction,
           unpaidDays: unpaidDays,
+          publicHolidayReplacementDays: publicHolidayReplacementDays,
           //publicHolidayWorkedDays: publicHolidayWorkedDays,
           shortageMinutes: totalShortageMinutes,
           epfEmployee: epf.employee,
@@ -699,6 +709,7 @@ class AttendancePayrollService {
       lateDeduction: totalLateDeduction,
       unpaidDeduction: unpaidDeduction,
       unpaidDays: unpaidDays,
+      publicHolidayReplacementDays: publicHolidayReplacementDays,
       //publicHolidayWorkedDays: publicHolidayWorkedDays,
       shortageMinutes: totalShortageMinutes,
       epfEmployee: epf.employee,
@@ -1760,6 +1771,7 @@ class PayrollGenerationItem {
   final double lateDeduction;
   final double unpaidDeduction;
   final int unpaidDays;
+  final int publicHolidayReplacementDays;
   //final int publicHolidayWorkedDays;
   final double shortageMinutes;
 
@@ -1792,6 +1804,7 @@ class PayrollGenerationItem {
     this.lateDeduction = 0.0,
     this.unpaidDeduction = 0.0,
     this.unpaidDays = 0,
+    this.publicHolidayReplacementDays = 0,
     //this.publicHolidayWorkedDays = 0,
     this.shortageMinutes = 0.0,
     this.statutoryWage = 0.0,
