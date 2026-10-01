@@ -1530,10 +1530,10 @@ class AttendancePayrollService {
   // ==========================================================================
   // Source: SOCSO Schedule Amendment(1).xlsx
   //
-  // The imported source rows contain total employer contribution followed by
-  // the employer-only portion. Build the First Category employee share as the
-  // difference between those two values. For example, 27.15 - 19.40 = 7.75.
-  // The source also carries the employer-only amount used by Type 2.
+  // The imported source rows preserve the payroll mapping used by historical
+  // records: employer contribution followed by employee deduction. For
+  // example, a wage from RM1,900.01 to RM2,000 maps to RM34.15 employer and
+  // RM24.40 employee. Do not derive a difference between these columns.
   // ==========================================================================
 
   static final List<_ContributionRow> _socsoFirstCategorySourceSchedule =
@@ -1606,16 +1606,7 @@ class AttendancePayrollService {
   ];
 
   static final List<_ContributionRow> _socsoFirstCategorySchedule =
-      _socsoFirstCategorySourceSchedule
-          .map(
-            (row) => _ContributionRow(
-              row.start,
-              row.end,
-              row.employee,
-              _roundMoney(row.employer - row.employee),
-            ),
-          )
-          .toList(growable: false);
+      _socsoFirstCategorySourceSchedule;
 
   // Second Category is paid by the employer only. The source schedule's
   // employee field contains that employer-only amount.

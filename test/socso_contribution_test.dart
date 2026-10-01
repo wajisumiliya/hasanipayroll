@@ -3,13 +3,13 @@ import 'package:hasani_payroll_portal/services/attendance_payroll_service.dart';
 
 void main() {
   group('SOCSO First Category employer contribution lookup', () {
-    test('pairs RM7.75 employee share with RM19.40 employer share', () {
+    test('preserves the historical RM2000 payroll mapping', () {
       expect(
         AttendancePayrollService.employerShareForEmployeeContribution(
           contribution: 'socso',
-          employeeShare: 7.75,
+          employeeShare: 24.40,
         ),
-        19.40,
+        34.15,
       );
     });
 
@@ -17,16 +17,16 @@ void main() {
       expect(
         AttendancePayrollService.employerShareForEmployeeContribution(
           contribution: 'socso',
-          employeeShare: 7.25,
+          employeeShare: 23.10,
         ),
-        18.10,
+        32.35,
       );
       expect(
         AttendancePayrollService.employerShareForEmployeeContribution(
           contribution: 'socso',
-          employeeShare: 8.25,
+          employeeShare: 25.60,
         ),
-        20.60,
+        35.85,
       );
     });
   });
