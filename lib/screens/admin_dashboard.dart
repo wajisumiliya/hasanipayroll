@@ -241,6 +241,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   String _attendanceStatusFilter = 'OFF';
   Future<List<dynamic>>? _attendanceStatusFuture;
   String? _attendanceStatusFutureKey;
+  final Set<String> _attendanceStatusUpdatingIds = <String>{};
   final Map<String, String> _approvedOtInputs = {};
   late final AnimationController _flagAnimationController;
 
@@ -9236,8 +9237,172 @@ class _AdminDashboardState extends State<AdminDashboard>
         _ => _midnight,
       };
 
+  Future<void> _changeAttendanceStatus(
+    Map<String, dynamic> record,
+    String newStatus,
+  ) async {
+    final recordId = (record['id'] ?? '').toString().trim();
+    final employeeId = (record['employee_id'] ?? '').toString().trim();
+    final updateKey = recordId.isNotEmpty
+        ? recordId
+        : '$employeeId|${_attendanceDateText(_attendanceStatusDate)}';
+    if (_attendanceStatusUpdatingIds.contains(updateKey)) return;
+
+    setState(() => _attendanceStatusUpdatingIds.add(updateKey));
+    try {
+      final values = <String, dynamic>{
+        'status': newStatus,
+        'is_public_holiday':
+            const {'PH', 'PH-OFF', 'PH-SPL'}.contains(newStatus),
+        'is_unpaid': newStatus == 'UNPAID',
+      };
+      if (recordId.isNotEmpty) {
+        await SupabaseService.updateAttendance(recordId, values);
+      } else {
+        await SupabaseService.client
+            .from('attendance')
+            .update(values)
+            .eq('employee_id', employeeId)
+            .eq('attendance_date', _attendanceDateText(_attendanceStatusDate))
+            .select('employee_id,status')
+            .single();
+      }
+      if (!mounted) return;
+      _refreshAttendanceStatusView();
+      setState(() => _attendanceStatusUpdatingIds.remove(updateKey));
+      _message('Attendance status changed to $newStatus.');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _attendanceStatusUpdatingIds.remove(updateKey));
+      _message('Unable to change attendance status: $error');
+    }
+  }
+
+  Future<void> _printAttendanceStatusA4({
+    required List<String> branchIds,
+    required Map<String, String> branchNames,
+    required Map<String, List<Map<String, dynamic>>> grouped,
+  }) async {
+    try {
+      final document = pw.Document();
+      final dateLabel =
+          DateFormat('dd MMMM yyyy').format(_attendanceStatusDate);
+      final status = _attendanceStatusFilter;
+      final total =
+          grouped.values.fold<int>(0, (sum, rows) => sum + rows.length);
+
+      document.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(28),
+          header: (_) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'HASANI BOOKS',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'DAILY ATTENDANCE STATUS REPORT',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.Text('Date: $dateLabel   Status: $status   Total: $total'),
+              pw.SizedBox(height: 10),
+            ],
+          ),
+          footer: (context) => pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: const pw.TextStyle(fontSize: 8),
+            ),
+          ),
+          build: (_) => [
+            for (final branchId in branchIds) ...[
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                color: PdfColors.grey300,
+                child: pw.Text(
+                  '${(branchNames[branchId] ?? branchId).toUpperCase()} '
+                  '(${grouped[branchId]!.length})',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              pw.TableHelper.fromTextArray(
+                headers: const [
+                  'No.',
+                  'Employee ID',
+                  'Employee Name',
+                  'Status'
+                ],
+                data: [
+                  for (var index = 0;
+                      index < grouped[branchId]!.length;
+                      index++)
+                    [
+                      '${index + 1}',
+                      (grouped[branchId]![index]['employee_id'] ?? '-')
+                          .toString(),
+                      (grouped[branchId]![index]['employee_name'] ?? '-')
+                          .toString(),
+                      status,
+                    ],
+                ],
+                headerStyle: pw.TextStyle(
+                  fontSize: 9,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+                cellStyle: const pw.TextStyle(fontSize: 9),
+                headerDecoration: const pw.BoxDecoration(
+                  color: PdfColors.grey200,
+                ),
+                columnWidths: const {
+                  0: pw.FixedColumnWidth(30),
+                  1: pw.FixedColumnWidth(85),
+                  2: pw.FlexColumnWidth(),
+                  3: pw.FixedColumnWidth(65),
+                },
+              ),
+              pw.SizedBox(height: 12),
+            ],
+          ],
+        ),
+      );
+
+      await Printing.layoutPdf(
+        name:
+            'attendance-${_attendanceDateText(_attendanceStatusDate)}-$status.pdf',
+        format: PdfPageFormat.a4,
+        onLayout: (_) => document.save(),
+      );
+    } catch (error) {
+      if (mounted) _message('Unable to print A4 report: $error');
+    }
+  }
+
   Widget _attendanceStatusPage() {
-    const statuses = ['OFF', 'AL', 'MC', 'PH', 'PH-OFF', 'PH-SPL', 'UNPAID'];
+    const statuses = [
+      'OFF',
+      'MC',
+      'PL',
+      'AL',
+      'EL',
+      'PH',
+      'PH-OFF',
+      'PH-SPL',
+      'UNPAID',
+    ];
     return FutureBuilder<List<dynamic>>(
       future: _attendanceStatusPageData(),
       builder: (context, snapshot) {
@@ -9387,6 +9552,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                       ),
                     ),
+                    FilledButton.icon(
+                      onPressed: records.isEmpty
+                          ? null
+                          : () => _printAttendanceStatusA4(
+                                branchIds: branchIds,
+                                branchNames: branchNames,
+                                grouped: grouped,
+                              ),
+                      icon: const Icon(Icons.print_outlined),
+                      label: const Text('Print A4'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -9435,39 +9611,79 @@ class _AdminDashboardState extends State<AdminDashboard>
                           ),
                           children: [
                             const Divider(height: 1),
-                            ...branchRecords.map((record) => ListTile(
-                                  leading: CircleAvatar(
-                                    child: Text(
-                                      record['employee_name']
-                                          .toString()
-                                          .trim()
-                                          .characters
-                                          .first
-                                          .toUpperCase(),
-                                    ),
+                            ...branchRecords.map((record) {
+                              final recordId =
+                                  (record['id'] ?? '').toString().trim();
+                              final employeeId =
+                                  (record['employee_id'] ?? '').toString();
+                              final updateKey = recordId.isNotEmpty
+                                  ? recordId
+                                  : '$employeeId|${_attendanceDateText(_attendanceStatusDate)}';
+                              final updating = _attendanceStatusUpdatingIds
+                                  .contains(updateKey);
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  child: Text(
+                                    record['employee_name']
+                                        .toString()
+                                        .trim()
+                                        .characters
+                                        .first
+                                        .toUpperCase(),
                                   ),
-                                  title: Text(
-                                    record['employee_name'].toString(),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                ),
+                                title: Text(
+                                  record['employee_name'].toString(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                  subtitle: Text(
-                                    'Employee ID: ${record['employee_id'] ?? '-'}',
-                                  ),
-                                  trailing: Chip(
-                                    backgroundColor:
-                                        statusHighlight.withValues(alpha: .18),
-                                    side: BorderSide(color: statusHighlight),
-                                    label: Text(
-                                      _attendanceStatusFilter,
-                                      style: TextStyle(
-                                        color: statusHighlight,
-                                        fontWeight: FontWeight.w900,
+                                ),
+                                subtitle: Text(
+                                  'Employee ID: ${record['employee_id'] ?? '-'}',
+                                ),
+                                trailing: updating
+                                    ? const SizedBox.square(
+                                        dimension: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : PopupMenuButton<String>(
+                                        tooltip: 'Change attendance status',
+                                        onSelected: (value) =>
+                                            _changeAttendanceStatus(
+                                          record,
+                                          value,
+                                        ),
+                                        itemBuilder: (_) => statuses
+                                            .map(
+                                              (value) => PopupMenuItem(
+                                                value: value,
+                                                child: Text(value),
+                                              ),
+                                            )
+                                            .toList(),
+                                        child: Chip(
+                                          backgroundColor: statusHighlight
+                                              .withValues(alpha: .18),
+                                          side: BorderSide(
+                                            color: statusHighlight,
+                                          ),
+                                          avatar: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 16,
+                                          ),
+                                          label: Text(
+                                            _attendanceStatusFilter,
+                                            style: TextStyle(
+                                              color: statusHighlight,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                )),
+                              );
+                            }),
                           ],
                         ),
                       ),
