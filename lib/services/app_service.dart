@@ -34,19 +34,34 @@ class app_user {
     this.isReviewer = false,
   });
 
-  bool get isAdmin => role.trim().toLowerCase() == 'admin';
+  String get _normalizedRole => role.trim().toLowerCase();
 
-  bool get isBranch => role.trim().toLowerCase() == 'branch';
+  String get _normalizedUsername => username.trim().toLowerCase();
 
-  bool get isEmployee => role.trim().toLowerCase() == 'employee';
+  String? get _normalizedStaffScope {
+    final normalized = staffScope?.trim().toLowerCase();
+    return normalized == null || normalized.isEmpty ? null : normalized;
+  }
 
-  bool get isLocalAdmin => isAdmin && staffScope == 'local';
+  bool get isAdmin => _normalizedRole == 'admin';
 
-  bool get isForeignAdmin => isAdmin && staffScope == 'foreign';
+  bool get isBranch => _normalizedRole == 'branch';
 
-  bool get isRequestAdmin => isAdmin && staffScope == 'requests';
+  bool get isEmployee => _normalizedRole == 'employee';
 
-  bool get isAttendanceAdmin => isAdmin && staffScope == 'attendance';
+  bool get isLocalAdmin => isAdmin && _normalizedStaffScope == 'local';
+
+  bool get isForeignAdmin => isAdmin && _normalizedStaffScope == 'foreign';
+
+  bool get isRequestAdmin => isAdmin && _normalizedStaffScope == 'requests';
+
+  /// The username fallback keeps an already-persisted `account` session
+  /// restricted after upgrading from a build that did not save staffScope.
+  bool get isAttendanceAdmin =>
+      isAdmin &&
+      (_normalizedStaffScope == 'attendance' ||
+          _normalizedUsername == 'account' ||
+          _normalizedUsername == 'account@attendance.local');
 
   Map<String, dynamic> toJson() {
     return {
