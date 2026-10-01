@@ -173,13 +173,19 @@ class _AdminDashboardState extends State<AdminDashboard>
       ? 'Local Admin'
       : service.currentUser?.isForeignAdmin == true
           ? 'Foreign Admin'
-          : 'Admin User';
+          : service.currentUser?.isAttendanceAdmin == true
+              ? 'Attendance Admin'
+              : 'Admin User';
 
   String get _adminScopeLabel => service.currentUser?.isLocalAdmin == true
       ? 'Local staff only'
       : service.currentUser?.isForeignAdmin == true
           ? 'Foreign staff only'
-          : 'Administrator';
+          : service.currentUser?.isAttendanceAdmin == true
+              ? 'Attendance only'
+              : 'Administrator';
+
+  bool get _attendanceOnly => service.currentUser?.isAttendanceAdmin == true;
 
   DailyPortalTheme get _portalTheme => DailyPortalTheme.today();
 
@@ -252,6 +258,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   @override
   void initState() {
     super.initState();
+    if (_attendanceOnly) selectedPage = 3;
     _flagAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
@@ -283,6 +290,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   void changePage(int page) {
+    if (_attendanceOnly && page != 3) return;
+
     // RHB Layout is an export action, not a normal page.
     if (page == 8) {
       _showRhbPeriodDialog();
@@ -493,6 +502,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _currentPage() {
+    if (_attendanceOnly) return _attendancePage();
+
     switch (selectedPage) {
       case 0:
         return _dashboardPage();
@@ -683,116 +694,118 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         ],
       ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: Column(
-            children: [
-              _drawerHeader(),
-              const Divider(),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+      drawer: _attendanceOnly
+          ? null
+          : Drawer(
+              child: SafeArea(
+                child: Column(
                   children: [
-                    _drawerItem(
-                      'Dashboard',
-                      Icons.dashboard_outlined,
-                      0,
+                    _drawerHeader(),
+                    const Divider(),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        children: [
+                          _drawerItem(
+                            'Dashboard',
+                            Icons.dashboard_outlined,
+                            0,
+                          ),
+                          _drawerItem(
+                            'Employees',
+                            Icons.people_outline,
+                            1,
+                          ),
+                          _drawerItem(
+                            'Payroll',
+                            Icons.payments_outlined,
+                            2,
+                          ),
+                          _drawerItem(
+                            'Employee Payslips',
+                            Icons.receipt_long_outlined,
+                            12,
+                          ),
+                          _drawerItem(
+                            'EA Forms',
+                            Icons.description_outlined,
+                            15,
+                          ),
+                          _drawerActionItem(
+                            'Edit Payroll',
+                            Icons.edit_note_rounded,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _showEditPayrollDialog();
+                            },
+                          ),
+                          _drawerItem(
+                            'RHB Layout',
+                            Icons.account_balance_outlined,
+                            8,
+                          ),
+                          _drawerItem(
+                            'Attendance',
+                            Icons.access_time,
+                            3,
+                          ),
+                          _drawerItem(
+                            'Branch Logs',
+                            Icons.manage_history_outlined,
+                            9,
+                          ),
+                          _drawerItem(
+                            'Employee Requests',
+                            Icons.how_to_reg_outlined,
+                            10,
+                          ),
+                          _drawerItem(
+                            'OT Requests',
+                            Icons.more_time_outlined,
+                            11,
+                          ),
+                          _drawerItem(
+                            'Leave Requests',
+                            Icons.flight_takeoff_outlined,
+                            13,
+                          ),
+                          _drawerItem(
+                            'Daily Reports',
+                            Icons.assignment_outlined,
+                            14,
+                          ),
+                          _drawerItem(
+                            'Reports',
+                            Icons.bar_chart_outlined,
+                            6,
+                          ),
+                          _drawerItem(
+                            'Settings',
+                            Icons.settings_outlined,
+                            7,
+                          ),
+                        ],
+                      ),
                     ),
-                    _drawerItem(
-                      'Employees',
-                      Icons.people_outline,
-                      1,
-                    ),
-                    _drawerItem(
-                      'Payroll',
-                      Icons.payments_outlined,
-                      2,
-                    ),
-                    _drawerItem(
-                      'Employee Payslips',
-                      Icons.receipt_long_outlined,
-                      12,
-                    ),
-                    _drawerItem(
-                      'EA Forms',
-                      Icons.description_outlined,
-                      15,
-                    ),
-                    _drawerActionItem(
-                      'Edit Payroll',
-                      Icons.edit_note_rounded,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showEditPayrollDialog();
-                      },
-                    ),
-                    _drawerItem(
-                      'RHB Layout',
-                      Icons.account_balance_outlined,
-                      8,
-                    ),
-                    _drawerItem(
-                      'Attendance',
-                      Icons.access_time,
-                      3,
-                    ),
-                    _drawerItem(
-                      'Branch Logs',
-                      Icons.manage_history_outlined,
-                      9,
-                    ),
-                    _drawerItem(
-                      'Employee Requests',
-                      Icons.how_to_reg_outlined,
-                      10,
-                    ),
-                    _drawerItem(
-                      'OT Requests',
-                      Icons.more_time_outlined,
-                      11,
-                    ),
-                    _drawerItem(
-                      'Leave Requests',
-                      Icons.flight_takeoff_outlined,
-                      13,
-                    ),
-                    _drawerItem(
-                      'Daily Reports',
-                      Icons.assignment_outlined,
-                      14,
-                    ),
-                    _drawerItem(
-                      'Reports',
-                      Icons.bar_chart_outlined,
-                      6,
-                    ),
-                    _drawerItem(
-                      'Settings',
-                      Icons.settings_outlined,
-                      7,
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.logout,
+                        color: Colors.red,
+                      ),
+                      title: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onTap: logout,
                     ),
                   ],
                 ),
               ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(
-                  Icons.logout,
-                  color: Colors.red,
-                ),
-                title: const Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onTap: logout,
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
       body: _portalPage(_currentPage()),
     );
   }
@@ -814,28 +827,30 @@ class _AdminDashboardState extends State<AdminDashboard>
       profileName: _adminScopeName,
       profileDetail: _adminScopeLabel,
       profileIcon: Icons.admin_panel_settings_outlined,
-      items: [
-        item('Dashboard', Icons.grid_view_rounded, 0),
-        item('Employees', Icons.groups_rounded, 1),
-        item('Payroll', Icons.account_balance_wallet_rounded, 2),
-        item('Employee Payslips', Icons.badge_rounded, 12),
-        item('EA Forms', Icons.description_rounded, 15),
-        PremiumPortalSidebarItem(
-          label: 'Edit Payroll',
-          icon: Icons.edit_document,
-          selected: false,
-          onTap: _showEditPayrollDialog,
-        ),
-        item('RHB Layout', Icons.account_balance_rounded, 8),
-        item('Attendance', Icons.event_available_rounded, 3),
-        item('Branch Logs', Icons.store_rounded, 9),
-        item('Employee Requests', Icons.approval_rounded, 10),
-        item('OT Requests', Icons.more_time_rounded, 11),
-        item('Leave Requests', Icons.flight_rounded, 13),
-        item('Daily Reports', Icons.article_rounded, 14),
-        item('Reports', Icons.bar_chart_rounded, 6),
-        item('Settings', Icons.settings_rounded, 7),
-      ],
+      items: _attendanceOnly
+          ? [item('Attendance', Icons.event_available_rounded, 3)]
+          : [
+              item('Dashboard', Icons.grid_view_rounded, 0),
+              item('Employees', Icons.groups_rounded, 1),
+              item('Payroll', Icons.account_balance_wallet_rounded, 2),
+              item('Employee Payslips', Icons.badge_rounded, 12),
+              item('EA Forms', Icons.description_rounded, 15),
+              PremiumPortalSidebarItem(
+                label: 'Edit Payroll',
+                icon: Icons.edit_document,
+                selected: false,
+                onTap: _showEditPayrollDialog,
+              ),
+              item('RHB Layout', Icons.account_balance_rounded, 8),
+              item('Attendance', Icons.event_available_rounded, 3),
+              item('Branch Logs', Icons.store_rounded, 9),
+              item('Employee Requests', Icons.approval_rounded, 10),
+              item('OT Requests', Icons.more_time_rounded, 11),
+              item('Leave Requests', Icons.flight_rounded, 13),
+              item('Daily Reports', Icons.article_rounded, 14),
+              item('Reports', Icons.bar_chart_rounded, 6),
+              item('Settings', Icons.settings_rounded, 7),
+            ],
       onLogout: logout,
     );
 

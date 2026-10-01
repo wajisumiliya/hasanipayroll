@@ -1055,13 +1055,16 @@ app.post(
       const normalizedUsername = username.toLowerCase();
       const scopedAdminLogin = normalizedUsername === "adminloc" || normalizedUsername === "adminfrn";
       const requestAdminLogin = normalizedUsername === "hbreq";
+      const attendanceAdminLogin = normalizedUsername === "account";
       const staffScope = normalizedUsername === "adminloc"
         ? "local"
         : normalizedUsername === "adminfrn"
           ? "foreign"
           : requestAdminLogin
             ? "requests"
-            : null;
+            : attendanceAdminLogin
+              ? "attendance"
+              : null;
 
       const password =
         String(

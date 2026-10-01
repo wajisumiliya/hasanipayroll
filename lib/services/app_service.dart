@@ -46,6 +46,8 @@ class app_user {
 
   bool get isRequestAdmin => isAdmin && staffScope == 'requests';
 
+  bool get isAttendanceAdmin => isAdmin && staffScope == 'attendance';
+
   Map<String, dynamic> toJson() {
     return {
       'username': username,
