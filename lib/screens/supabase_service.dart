@@ -2136,7 +2136,8 @@ class SupabaseService {
           workingOut.trim() != '-';
 
       // Never send an empty/unsupported status. The attendance table uses
-      // these business statuses: Present, Late, OFF, MC, PL, AL, EL, PH, UNPAID.
+      // these business statuses: Present, Late, OFF, MC, PL, AL, EL, PH,
+      // PH-OFF, PH-SPL, UNPAID.
       String attendanceStatus = status.trim();
 
       if (attendanceStatus.isEmpty) {
@@ -2161,6 +2162,8 @@ class SupabaseService {
         'AL',
         'EL',
         'PH',
+        'PH-OFF',
+        'PH-SPL',
         'UNPAID',
       };
 

@@ -237,6 +237,10 @@ class _AdminDashboardState extends State<AdminDashboard>
   String _payslipEmployeeSearch = '';
   bool _payslipShowActiveEmployees = true;
   String _attendanceSubmissionFilter = 'submitted';
+  DateTime _attendanceStatusDate = DateTime.now();
+  String _attendanceStatusFilter = 'OFF';
+  Future<List<dynamic>>? _attendanceStatusFuture;
+  String? _attendanceStatusFutureKey;
   final Map<String, String> _approvedOtInputs = {};
   late final AnimationController _flagAnimationController;
 
@@ -290,7 +294,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   void changePage(int page) {
-    if (_attendanceOnly && page != 3) return;
+    if (_attendanceOnly && page != 3 && page != 16) return;
 
     // RHB Layout is an export action, not a normal page.
     if (page == 8) {
@@ -444,6 +448,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Daily Reports';
       case 15:
         return 'EA Forms';
+      case 16:
+        return 'Status View';
       default:
         return 'Dashboard';
     }
@@ -502,7 +508,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _currentPage() {
-    if (_attendanceOnly) return _attendancePage();
+    if (_attendanceOnly) {
+      return selectedPage == 16 ? _attendanceStatusPage() : _attendancePage();
+    }
 
     switch (selectedPage) {
       case 0:
@@ -694,18 +702,29 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         ],
       ),
-      drawer: _attendanceOnly
-          ? null
-          : Drawer(
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    _drawerHeader(),
-                    const Divider(),
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        children: [
+      drawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _drawerHeader(),
+              const Divider(),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: _attendanceOnly
+                      ? [
+                          _drawerItem(
+                            'Attendance',
+                            Icons.event_available_rounded,
+                            3,
+                          ),
+                          _drawerItem(
+                            'Status View',
+                            Icons.view_sidebar_rounded,
+                            16,
+                          ),
+                        ]
+                      : [
                           _drawerItem(
                             'Dashboard',
                             Icons.dashboard_outlined,
@@ -785,27 +804,27 @@ class _AdminDashboardState extends State<AdminDashboard>
                             7,
                           ),
                         ],
-                      ),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(
-                        Icons.logout,
-                        color: Colors.red,
-                      ),
-                      title: const Text(
-                        'Logout',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onTap: logout,
-                    ),
-                  ],
                 ),
               ),
-            ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(
+                  Icons.logout,
+                  color: Colors.red,
+                ),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: logout,
+              ),
+            ],
+          ),
+        ),
+      ),
       body: _portalPage(_currentPage()),
     );
   }
@@ -828,7 +847,10 @@ class _AdminDashboardState extends State<AdminDashboard>
       profileDetail: _adminScopeLabel,
       profileIcon: Icons.admin_panel_settings_outlined,
       items: _attendanceOnly
-          ? [item('Attendance', Icons.event_available_rounded, 3)]
+          ? [
+              item('Attendance', Icons.event_available_rounded, 3),
+              item('Status View', Icons.view_sidebar_rounded, 16),
+            ]
           : [
               item('Dashboard', Icons.grid_view_rounded, 0),
               item('Employees', Icons.groups_rounded, 1),
@@ -9171,6 +9193,286 @@ class _AdminDashboardState extends State<AdminDashboard>
                       );
                     },
                   ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _attendanceDateText(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+
+  Future<List<dynamic>> _attendanceStatusPageData() {
+    final key =
+        '${_attendanceDateText(_attendanceStatusDate)}|$_attendanceStatusFilter';
+    if (_attendanceStatusFuture == null || _attendanceStatusFutureKey != key) {
+      _attendanceStatusFutureKey = key;
+      _attendanceStatusFuture = Future.wait([
+        SupabaseService.getBranches(),
+        SupabaseService.getActiveEmployees(),
+        SupabaseService.getAttendanceByDate(
+          _attendanceDateText(_attendanceStatusDate),
+        ),
+      ]);
+    }
+    return _attendanceStatusFuture!;
+  }
+
+  void _refreshAttendanceStatusView() {
+    _attendanceStatusFuture = null;
+    _attendanceStatusFutureKey = null;
+  }
+
+  Color _attendanceStatusHighlight(String status) =>
+      switch (status.trim().toUpperCase()) {
+        'OFF' => const Color(0xFFFFC107),
+        'PH' => const Color(0xFFE53935),
+        'PH-OFF' => const Color(0xFFF57C00),
+        'PH-SPL' => const Color(0xFF8E24AA),
+        _ => _midnight,
+      };
+
+  Widget _attendanceStatusPage() {
+    const statuses = ['OFF', 'AL', 'MC', 'PH', 'PH-OFF', 'PH-SPL', 'UNPAID'];
+    return FutureBuilder<List<dynamic>>(
+      future: _attendanceStatusPageData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'Unable to load the status view:\n${snapshot.error}',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        final data = snapshot.data ?? const [[], [], []];
+        final branches = List<Map<String, dynamic>>.from(data[0] as List);
+        final employees = List<Map<String, dynamic>>.from(data[1] as List);
+        final records = List<Map<String, dynamic>>.from(data[2] as List)
+            .where((record) =>
+                (record['status'] ?? '').toString().trim().toUpperCase() ==
+                _attendanceStatusFilter)
+            .toList();
+
+        final employeesById = <String, Map<String, dynamic>>{
+          for (final employee in employees)
+            (employee['employee_id'] ?? employee['id'] ?? '').toString():
+                employee,
+        }..remove('');
+        final branchNames = <String, String>{
+          for (final branch in branches)
+            (branch['id'] ?? branch['branch_id'] ?? '').toString():
+                (branch['name'] ?? branch['branch_name'] ?? '').toString(),
+        }..remove('');
+
+        final grouped = <String, List<Map<String, dynamic>>>{};
+        for (final record in records) {
+          final employeeId = (record['employee_id'] ?? '').toString();
+          final employee =
+              employeesById[employeeId] ?? const <String, dynamic>{};
+          final branchId = (record['branch_id'] ??
+                  employee['branch_id'] ??
+                  employee['branch'] ??
+                  'Unassigned')
+              .toString();
+          grouped.putIfAbsent(branchId, () => []).add({
+            ...record,
+            'employee_name': employee['name'] ??
+                employee['full_name'] ??
+                record['employee_name'] ??
+                employeeId,
+          });
+        }
+        final branchIds = grouped.keys.toList()
+          ..sort(
+              (a, b) => (branchNames[a] ?? a).compareTo(branchNames[b] ?? b));
+        final statusHighlight =
+            _attendanceStatusHighlight(_attendanceStatusFilter);
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            _refreshAttendanceStatusView();
+            setState(() {});
+            await _attendanceStatusPageData();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Daily Status View',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Choose a date and status to see matching employees grouped by branch.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      label: Text(
+                        DateFormat('dd MMM yyyy').format(_attendanceStatusDate),
+                      ),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _attendanceStatusDate,
+                          firstDate: DateTime(2020),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 366)),
+                        );
+                        if (picked == null || !mounted) return;
+                        setState(() {
+                          _attendanceStatusDate = picked;
+                          _refreshAttendanceStatusView();
+                        });
+                      },
+                    ),
+                    SizedBox(
+                      width: 190,
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _attendanceStatusFilter,
+                        decoration: const InputDecoration(
+                          labelText: 'Status',
+                          prefixIcon: Icon(Icons.filter_alt_outlined),
+                          isDense: true,
+                        ),
+                        items: statuses
+                            .map((status) => DropdownMenuItem(
+                                  value: status,
+                                  child: Text(status),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _attendanceStatusFilter = value;
+                            _refreshAttendanceStatusView();
+                          });
+                        },
+                      ),
+                    ),
+                    Chip(
+                      backgroundColor: statusHighlight.withValues(alpha: .16),
+                      side: BorderSide(color: statusHighlight, width: 1.5),
+                      avatar: Icon(
+                        Icons.people_alt_outlined,
+                        size: 18,
+                        color: statusHighlight,
+                      ),
+                      label: Text(
+                        '${records.length} employee${records.length == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          color: statusHighlight,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (records.isEmpty)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Center(
+                        child: Text(
+                          'No $_attendanceStatusFilter employees found on '
+                          '${DateFormat('dd MMM yyyy').format(_attendanceStatusDate)}.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  ...branchIds.map((branchId) {
+                    final branchRecords = grouped[branchId]!;
+                    branchRecords
+                        .sort((a, b) => a['employee_name'].toString().compareTo(
+                              b['employee_name'].toString(),
+                            ));
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: statusHighlight.withValues(alpha: .65),
+                            width: 2,
+                          ),
+                        ),
+                        child: ExpansionTile(
+                          initiallyExpanded: true,
+                          leading: const Icon(Icons.storefront_outlined),
+                          title: Text(
+                            branchNames[branchId]?.trim().isNotEmpty == true
+                                ? branchNames[branchId]!
+                                : branchId,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          subtitle: Text(
+                            '${branchRecords.length} $_attendanceStatusFilter',
+                          ),
+                          children: [
+                            const Divider(height: 1),
+                            ...branchRecords.map((record) => ListTile(
+                                  leading: CircleAvatar(
+                                    child: Text(
+                                      record['employee_name']
+                                          .toString()
+                                          .trim()
+                                          .characters
+                                          .first
+                                          .toUpperCase(),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    record['employee_name'].toString(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    'Employee ID: ${record['employee_id'] ?? '-'}',
+                                  ),
+                                  trailing: Chip(
+                                    backgroundColor:
+                                        statusHighlight.withValues(alpha: .18),
+                                    side: BorderSide(color: statusHighlight),
+                                    label: Text(
+                                      _attendanceStatusFilter,
+                                      style: TextStyle(
+                                        color: statusHighlight,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                )),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
               ],
             ),
           ),

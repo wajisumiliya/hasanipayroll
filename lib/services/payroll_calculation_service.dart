@@ -25,6 +25,27 @@ class PayrollCalculationService {
     return _roundMoney((basicSalary / 26) * 2 * workedDays);
   }
 
+  /// Public-holiday addition for one attendance day.
+  ///
+  /// PH     + worked time = daily rate x 2
+  /// PH-OFF + no time     = daily rate x 1
+  /// PH-SPL + worked time = daily rate x 3
+  static double publicHolidayPayForStatus({
+    required double basicSalary,
+    required String status,
+    required bool worked,
+  }) {
+    if (basicSalary <= 0) return 0;
+
+    final multiplier = switch (status.trim().toUpperCase()) {
+      'PH' when worked => 2.0,
+      'PH-OFF' when !worked => 1.0,
+      'PH-SPL' when worked => 3.0,
+      _ => 0.0,
+    };
+    return _roundMoney((basicSalary / 26) * multiplier);
+  }
+
   /// Payable overtime comes only from Admin-approved minutes.
   static double approvedOvertimeHours(int? approvedMinutes) {
     if (approvedMinutes == null || approvedMinutes <= 0) return 0;

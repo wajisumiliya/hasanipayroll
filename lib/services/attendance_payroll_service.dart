@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../screens/supabase_service.dart';
 import 'notification_service.dart';
+import 'payroll_calculation_service.dart';
 
 /// ============================================================================
 /// ATTENDANCE PAYROLL SERVICE
@@ -11,7 +12,8 @@ import 'notification_service.dart';
 ///
 /// 1. Employee is selected by Admin.
 /// 2. Salary defaults come from employee_salary_defaults.
-/// 3. cuti_umum = Basic Salary / 26 x 2 for each worked public holiday.
+/// 3. cuti_umum uses the selected PH category: PH x2 when worked, PH-OFF x1
+///    when not worked, and PH-SPL x3 when worked.
 /// 4. Statutory wage = basic_salary - cuti_umum.
 /// 5. If employee_salary_defaults.epf_category = "normal":
 ///      EPF employee = statutory wage x 2%
@@ -350,6 +352,8 @@ class AttendancePayrollService {
     double cutiUmum = 0.0;
     int unpaidDays = 0;
     int publicHolidayWorkedDays = 0;
+    int publicHolidayOffDays = 0;
+    int publicHolidaySpecialDays = 0;
     int approvedOtDays = 0;
 
     for (final row in attendance) {
@@ -364,7 +368,9 @@ class AttendancePayrollService {
       final dailyShortageRate =
           dailyRequiredHours > 0 ? dailySalary / dailyRequiredHours : 0.0;
       final isUnpaid = _toBool(row['is_unpaid']);
-      final isPublicHoliday = _toBool(row['is_public_holiday']);
+      final attendanceStatus = _text(row['status']).trim().toUpperCase();
+      final isPublicHoliday = _toBool(row['is_public_holiday']) ||
+          const {'PH', 'PH-OFF', 'PH-SPL'}.contains(attendanceStatus);
       final worked = workMinutes > 0;
 
       // --------------------------------------------------------------
@@ -379,11 +385,18 @@ class AttendancePayrollService {
       // --------------------------------------------------------------
       // PUBLIC HOLIDAY
       // --------------------------------------------------------------
-      // Only pay public holiday when the employee actually worked.
-      if (isPublicHoliday && worked) {
-        publicHolidayWorkedDays++;
-        // Public holiday payment is exactly Basic Salary / 26 x 2 per day.
-        cutiUmum += (basicSalary / 26.0) * 2.0;
+      if (isPublicHoliday) {
+        // Legacy rows with the PH flag but no status keep the original PH rule.
+        final holidayStatus =
+            attendanceStatus.isEmpty ? 'PH' : attendanceStatus;
+        cutiUmum += PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: basicSalary,
+          status: holidayStatus,
+          worked: worked,
+        );
+        if (holidayStatus == 'PH' && worked) publicHolidayWorkedDays++;
+        if (holidayStatus == 'PH-OFF' && !worked) publicHolidayOffDays++;
+        if (holidayStatus == 'PH-SPL' && worked) publicHolidaySpecialDays++;
       }
 
       // --------------------------------------------------------------
@@ -595,6 +608,8 @@ class AttendancePayrollService {
               'Approved OT days: $approvedOtDays. '
               'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
               'Public holidays worked: $publicHolidayWorkedDays. '
+              'Public holiday off days: $publicHolidayOffDays. '
+              'Public holiday special worked days: $publicHolidaySpecialDays. '
               'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
               'Roster weeks used: ${rosterByWeek.length}. '
               'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '

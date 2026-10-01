@@ -1768,8 +1768,16 @@ class _BranchPortalState extends State<BranchPortal>
                     final l = codes.where((c) => c == 'L' || c == 'L/E').length;
                     final o = codes.where((c) => c == 'O').length;
                     final lv = codes
-                        .where((c) => const {'MC', 'AL', 'PL', 'EL', 'PH', 'U'}
-                            .contains(c))
+                        .where((c) => const {
+                              'MC',
+                              'AL',
+                              'PL',
+                              'EL',
+                              'PH',
+                              'PH-OFF',
+                              'PH-SPL',
+                              'U'
+                            }.contains(c))
                         .length;
                     return InkWell(
                         onTap: () => setState(() => selectedPage = 1),

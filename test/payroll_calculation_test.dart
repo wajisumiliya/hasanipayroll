@@ -162,6 +162,66 @@ void main() {
       );
     });
 
+    test('PH worked pays basic / 26 x 2', () {
+      expect(
+        PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: 2600,
+          status: 'PH',
+          worked: true,
+        ),
+        200,
+      );
+    });
+
+    test('PH-OFF without working time pays basic / 26 x 1', () {
+      expect(
+        PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: 2600,
+          status: 'PH-OFF',
+          worked: false,
+        ),
+        100,
+      );
+    });
+
+    test('PH-SPL worked pays basic / 26 x 3', () {
+      expect(
+        PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: 2600,
+          status: 'PH-SPL',
+          worked: true,
+        ),
+        300,
+      );
+    });
+
+    test('PH categories require the matching working-time condition', () {
+      expect(
+        PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: 2600,
+          status: 'PH',
+          worked: false,
+        ),
+        0,
+      );
+      expect(
+        PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: 2600,
+          status: 'PH-OFF',
+          worked: true,
+        ),
+        0,
+      );
+      expect(
+        PayrollCalculationService.publicHolidayPayForStatus(
+          basicSalary: 2600,
+          status: 'PH-SPL',
+          worked: false,
+        ),
+        0,
+      );
+    });
+
     test('OT without approved minutes is not payable', () {
       expect(PayrollCalculationService.approvedOvertimeHours(null), 0);
       expect(PayrollCalculationService.approvedOvertimeHours(0), 0);

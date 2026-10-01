@@ -1587,6 +1587,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       'AL',
       'EL',
       'PH',
+      'PH-OFF',
+      'PH-SPL',
       'UNPAID',
     };
     final status = c.status.trim().toUpperCase();
@@ -1626,7 +1628,17 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     int day,
     AttendanceDayControllers c,
   ) {
-    const manualStatuses = {'OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'UNPAID'};
+    const manualStatuses = {
+      'OFF',
+      'MC',
+      'PL',
+      'AL',
+      'EL',
+      'PH',
+      'PH-OFF',
+      'PH-SPL',
+      'UNPAID',
+    };
     final manual = c.status.trim().toUpperCase();
     if (manualStatuses.contains(manual)) return manual;
 
@@ -1688,9 +1700,20 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         foreground = const Color(0xFFC62828);
         break;
       case 'MC':
-      case 'PH':
         background = const Color(0xFFFFCDD2);
         foreground = const Color(0xFFB71C1C);
+        break;
+      case 'PH':
+        background = const Color(0xFFFF8A80);
+        foreground = const Color(0xFF7F0000);
+        break;
+      case 'PH-OFF':
+        background = const Color(0xFFFFCC80);
+        foreground = const Color(0xFF8A3B00);
+        break;
+      case 'PH-SPL':
+        background = const Color(0xFFCE93D8);
+        foreground = const Color(0xFF4A1458);
         break;
       case 'PL':
       case 'AL':
@@ -1703,6 +1726,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         foreground = const Color(0xFF1565C0);
         break;
       case 'OFF':
+        background = const Color(0xFFFFE082);
+        foreground = const Color(0xFF6D4C00);
+        break;
       case '':
         background = const Color(0xFFECEFF1);
         foreground = const Color(0xFF455A64);
@@ -1749,9 +1775,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             case 'AL':
             case 'EL':
             case 'PH':
+            case 'PH-OFF':
+            case 'PH-SPL':
             case 'UNPAID':
               c.status = value;
-              c.isPublicHoliday = value == 'PH';
+              c.isPublicHoliday =
+                  value == 'PH' || value == 'PH-OFF' || value == 'PH-SPL';
               c.isUnpaid = value == 'UNPAID';
               if (!hasWorkingTime) {
                 c.otRequested = false;
@@ -1797,6 +1826,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           const PopupMenuItem(
             value: 'PH',
             child: Text('PH - PUBLIC HOLIDAY'),
+          ),
+          const PopupMenuItem(
+            value: 'PH-OFF',
+            child: Text('PH-OFF - PUBLIC HOLIDAY OFF'),
+          ),
+          const PopupMenuItem(
+            value: 'PH-SPL',
+            child: Text('PH-SPL - SPECIAL PUBLIC HOLIDAY'),
           ),
           const PopupMenuItem(
             value: 'UNPAID',
