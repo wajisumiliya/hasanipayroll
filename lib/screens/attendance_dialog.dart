@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
 import '../services/app_service.dart';
+import '../services/payroll_calculation_service.dart';
 import '../widgets/employee_photo.dart';
 
 // ============================================================================
@@ -364,6 +365,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         c.savedNetWorkingMinutes = _intValue(row['net_working_minutes']);
         c.savedOvertimeMinutes = _intValue(row['overtime_minutes']);
         c.approvedOtMinutes = _intValue(row['approved_ot_minutes']);
+        c.approvedOtHours.text = c.approvedOtMinutes <= 0
+            ? ''
+            : _directOtHoursText(c.approvedOtMinutes);
       }
     } catch (e) {
       loadError = e.toString();
@@ -1062,6 +1066,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         }
         final row = controllers[day - 1];
 
+        if (_isAdminView()) {
+          final directOtMinutes =
+              PayrollCalculationService.directOvertimeMinutes(
+                  row.approvedOtHours.text);
+          if (directOtMinutes == null) {
+            throw Exception(
+              'Invalid OT hours on day $day. Enter a number from 0 to 24.',
+            );
+          }
+          row.approvedOtMinutes = directOtMinutes;
+          row.otAuthorized = directOtMinutes > 0;
+        }
+
         if (!row.hasData &&
             !(widget.adminOnlyAfterSubmit &&
                 (row.otAuthorized || row.isUnpaid || row.isPublicHoliday))) {
@@ -1181,7 +1198,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
           status: _calculatedAttendanceStatus(day, row),
           otRequested: row.otRequested,
-          otAuthorized: widget.adminOnlyAfterSubmit ? row.otAuthorized : false,
+          otAuthorized: _isAdminView() ? row.otAuthorized : false,
 
           // CALCULATED
           workMinutes: workMinutes,
@@ -1200,8 +1217,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               'overtime_minutes': dailyOtMinutes,
               'overtime_duration': formatMinutes(dailyOtMinutes),
               'ot_requested': row.otRequested,
-              'ot_authorized':
-                  widget.adminOnlyAfterSubmit ? row.otAuthorized : false,
+              'ot_authorized': _isAdminView() && dailyOtMinutes > 0,
+              if (_isAdminView())
+                'approved_ot_minutes':
+                    dailyOtMinutes > 0 ? dailyOtMinutes : null,
               'is_unpaid': row.isUnpaid,
               'is_public_holiday': row.isPublicHoliday,
             })
@@ -1426,7 +1445,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               _headerCell('CHECK OUT', widths[2], color),
               _headerCell('TOTAL', widths[3], color),
               _headerCell('NET WORKING HOURS', widths[4], color),
-              _headerCell('OVERTIME', widths[5], color),
+              _headerCell(
+                _isAdminView() ? 'OT HOURS' : 'OVERTIME',
+                widths[5],
+                color,
+              ),
               Expanded(
                 child: Container(
                   height: double.infinity,
@@ -1512,14 +1535,16 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     ? const Color(0xFF315AD9)
                     : Colors.black54,
               ),
-              _tableCell(
-                formatMinutes(overtimeMinutes),
-                widths[5],
-                bold: true,
-                color: overtimeMinutes > 0
-                    ? Colors.orange.shade800
-                    : Colors.black38,
-              ),
+              _isAdminView()
+                  ? _directOtInput(c, widths[5], day: day)
+                  : _tableCell(
+                      formatMinutes(overtimeMinutes),
+                      widths[5],
+                      bold: true,
+                      color: overtimeMinutes > 0
+                          ? Colors.orange.shade800
+                          : Colors.black38,
+                    ),
               Expanded(
                 child: Container(
                   height: double.infinity,
@@ -1545,6 +1570,60 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   // ==========================================================================
 
   bool _isAdminView() => widget.adminOnlyAfterSubmit;
+
+  String _directOtHoursText(int minutes) {
+    final hours = minutes / 60;
+    return hours == hours.roundToDouble()
+        ? hours.toStringAsFixed(0)
+        : hours.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+  }
+
+  Widget _directOtInput(
+    AttendanceDayControllers c,
+    double width, {
+    required int day,
+  }) {
+    return Container(
+      width: width,
+      height: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+      decoration: const BoxDecoration(
+        border: Border(
+          right: BorderSide(color: Color(0xFF15965D)),
+          bottom: BorderSide(color: Color(0xFF15965D)),
+        ),
+      ),
+      child: TextField(
+        controller: c.approvedOtHours,
+        enabled: _canEditDay(day),
+        textAlign: TextAlign.center,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,2}(\.\d{0,2})?')),
+        ],
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.orange.shade900,
+        ),
+        decoration: const InputDecoration(
+          hintText: 'Hours',
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 7),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (value) {
+          final minutes =
+              PayrollCalculationService.directOvertimeMinutes(value);
+          if (minutes == null) return;
+          setState(() {
+            c.approvedOtMinutes = minutes;
+            c.otAuthorized = minutes > 0;
+          });
+        },
+      ),
+    );
+  }
 
   int _calculateBreakMinutes(AttendanceDayControllers c) {
     return calculateMinutes(c.morningIn.text, c.morningOut.text) +
@@ -2872,6 +2951,7 @@ class AttendanceDayControllers {
   int savedNetWorkingMinutes = 0;
   int savedOvertimeMinutes = 0;
   int approvedOtMinutes = 0;
+  final TextEditingController approvedOtHours = TextEditingController();
 
   bool get hasData {
     return workingIn.text.trim().isNotEmpty ||
@@ -2882,6 +2962,7 @@ class AttendanceDayControllers {
         afternoonOut.text.trim().isNotEmpty ||
         overtimeIn.text.trim().isNotEmpty ||
         overtimeOut.text.trim().isNotEmpty ||
+        approvedOtHours.text.trim().isNotEmpty ||
         status.trim().isNotEmpty ||
         otRequested ||
         otAuthorized ||
@@ -2907,6 +2988,7 @@ class AttendanceDayControllers {
 
     overtimeIn.dispose();
     overtimeOut.dispose();
+    approvedOtHours.dispose();
     overtimeInFocus.dispose();
     overtimeOutFocus.dispose();
   }

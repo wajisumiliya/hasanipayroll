@@ -258,6 +258,15 @@ void main() {
           closeTo(83 / 60, 1e-12));
     });
 
+    test('Admin direct OT hours convert to approved minutes', () {
+      expect(PayrollCalculationService.directOvertimeMinutes('1.5'), 90);
+      expect(PayrollCalculationService.directOvertimeMinutes('2.25'), 135);
+      expect(PayrollCalculationService.directOvertimeMinutes(''), 0);
+      expect(PayrollCalculationService.directOvertimeMinutes('-1'), isNull);
+      expect(PayrollCalculationService.directOvertimeMinutes('24.1'), isNull);
+      expect(PayrollCalculationService.directOvertimeMinutes('abc'), isNull);
+    });
+
     test('negative approved OT minutes are never payable', () {
       expect(PayrollCalculationService.approvedOvertimeHours(-15), 0);
     });

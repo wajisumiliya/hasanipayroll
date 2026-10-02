@@ -59,6 +59,18 @@ class PayrollCalculationService {
     return approvedMinutes / 60.0;
   }
 
+  /// Converts a direct Admin OT-hours entry to payable approved minutes.
+  /// Blank input clears OT; valid values range from 0 through 24 hours.
+  static int? directOvertimeMinutes(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return 0;
+    final hours = double.tryParse(text);
+    if (hours == null || !hours.isFinite || hours < 0 || hours > 24) {
+      return null;
+    }
+    return (hours * 60).round();
+  }
+
   /// Prevents a normal late/shortage deduction on UNPAID or PH rows.
   static bool shouldApplyShortageDeduction({
     required bool isUnpaid,

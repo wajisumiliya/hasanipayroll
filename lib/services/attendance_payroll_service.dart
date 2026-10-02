@@ -121,7 +121,7 @@ class AttendancePayrollService {
       );
     }
 
-    final socso = contributionsApplicable && socsoEnabled
+    final calculatedSocso = contributionsApplicable && socsoEnabled
         ? _findContribution(
             schedule: socsoCategory == 'type2'
                 ? _socsoSecondCategorySchedule
@@ -132,6 +132,10 @@ class AttendancePayrollService {
                 : 'SOCSO First Category',
           )
         : const _ContributionRow(0, 0, 0, 0);
+    final socso = _withFixedSocsoEmployee(
+      employeeId: employeeId,
+      calculated: calculatedSocso,
+    );
     final eis = contributionsApplicable && eisApplicable && eisEnabled
         ? _findContribution(
             schedule: _eisSchedule,
@@ -515,7 +519,7 @@ class AttendancePayrollService {
     // 5. SOCSO - FIRST CATEGORY
     // ------------------------------------------------------------------------
 
-    final socso = contributionsApplicable && socsoEnabled
+    final calculatedSocso = contributionsApplicable && socsoEnabled
         ? _findContribution(
             schedule: socsoCategory == 'type2'
                 ? _socsoSecondCategorySchedule
@@ -526,6 +530,10 @@ class AttendancePayrollService {
                 : 'SOCSO First Category',
           )
         : const _ContributionRow(0, 0, 0, 0);
+    final socso = _withFixedSocsoEmployee(
+      employeeId: employeeId,
+      calculated: calculatedSocso,
+    );
 
     // ------------------------------------------------------------------------
     // 6. EIS
@@ -879,6 +887,25 @@ class AttendancePayrollService {
     return null;
   }
 
+  /// Employee-specific SOCSO deductions carried forward from August 2026.
+  /// Employer contributions continue to follow the configured SOCSO schedule.
+  static double? fixedSocsoEmployeeFor(String employeeId) =>
+      _fixedSocsoEmployeeById[_normalizeId(employeeId)];
+
+  static _ContributionRow _withFixedSocsoEmployee({
+    required String employeeId,
+    required _ContributionRow calculated,
+  }) {
+    final fixedEmployee = fixedSocsoEmployeeFor(employeeId);
+    if (fixedEmployee == null) return calculated;
+    return _ContributionRow(
+      calculated.start,
+      calculated.end,
+      calculated.employer,
+      fixedEmployee,
+    );
+  }
+
   static _ContributionRow _findContribution({
     required List<_ContributionRow> schedule,
     required double wage,
@@ -903,6 +930,41 @@ class AttendancePayrollService {
   static String _normalizeId(dynamic value) {
     return _text(value).trim().toUpperCase();
   }
+
+  static const Map<String, double> _fixedSocsoEmployeeById = {
+    'BAS028': 0.00,
+    'BAS041': 0.00,
+    'BGR015': 0.00,
+    'BJL023': 0.00,
+    'BJT029': 0.00,
+    'BLK011': 0.00,
+    'BLK028': 0.00,
+    'BLK062': 0.00,
+    'BLK065': 0.00,
+    'BPR030': 0.00,
+    'BPR088': 0.00,
+    'HED1001': 0.00,
+    'HED1002': 0.00,
+    'HED1013': 0.00,
+    'HED2016': 0.00,
+    'HED2070': 0.00,
+    'HED2074': 0.00,
+    'HED2075': 0.00,
+    'HED-TEMP-019': 6.75,
+    'HED-TEMP-020': 7.25,
+    'HED-TEMP-018': 7.75,
+    'LKW012': 7.75,
+    'BAJ018': 8.25,
+    'LKW016': 8.25,
+    'LKW024': 8.25,
+    'LKW031': 8.25,
+    'LKW033': 8.25,
+    'LKW035': 8.25,
+    'LKW036': 8.25,
+    'LKW037': 8.25,
+    'LKW038': 8.25,
+    'BAJ010': 9.75,
+  };
 
   static String _text(dynamic value) {
     return value?.toString() ?? '';

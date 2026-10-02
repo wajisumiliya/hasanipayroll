@@ -30,4 +30,21 @@ void main() {
       );
     });
   });
+
+  group('Fixed SOCSO employee deductions', () {
+    test('carries August values forward for configured employees', () {
+      expect(AttendancePayrollService.fixedSocsoEmployeeFor('BAS028'), 0);
+      expect(
+        AttendancePayrollService.fixedSocsoEmployeeFor('hed-temp-019'),
+        6.75,
+      );
+      expect(AttendancePayrollService.fixedSocsoEmployeeFor('LKW012'), 7.75);
+      expect(AttendancePayrollService.fixedSocsoEmployeeFor('LKW038'), 8.25);
+      expect(AttendancePayrollService.fixedSocsoEmployeeFor('BAJ010'), 9.75);
+    });
+
+    test('does not override employees outside the configured list', () {
+      expect(AttendancePayrollService.fixedSocsoEmployeeFor('HED2073'), isNull);
+    });
+  });
 }
