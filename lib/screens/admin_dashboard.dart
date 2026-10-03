@@ -15317,7 +15317,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           // branch sheets need extra height so employee data is easier to read.
           sheet.setRowHeight(
             rowNumber - 1,
-            sheetName == 'Edar (L)' ? 18 : 32,
+            sheetName == 'Edar (L)' ? 18 : 40,
           );
 
           final payroll = branchRecords[rowOffset];
@@ -15473,6 +15473,15 @@ class _AdminDashboardState extends State<AdminDashboard>
             ];
           }
 
+          final isEdarLocal = sheetName == 'Edar (L)';
+          final nameColumn = layout == 'foreign21' ? 6 : 5;
+          final grossColumn = layout == 'local20'
+              ? 13
+              : layout == 'foreign21'
+                  ? 15
+                  : 14;
+          final netColumn = layout == 'local20' ? 19 : 20;
+
           for (var column = 0; column < values.length; column++) {
             final value = values[column];
             writeCell(sheet, rowNumber, column, value);
@@ -15483,6 +15492,10 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             );
             final style = cell.cellStyle ?? xls.CellStyle();
+            final emphasizeEmployeeColumn = !isEdarLocal &&
+                (column == nameColumn ||
+                    column == grossColumn ||
+                    column == netColumn);
             var updatedStyle = style.copyWith(
               // The first column is a serial number, never currency/decimal.
               numberFormat: column == 0
@@ -15490,10 +15503,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                   : value is num
                       ? moneyNumberFormat
                       : style.numberFormat,
-              fontSizeVal: (style.fontSize ?? 9) <
-                      (sheetName == 'Edar (L)' ? exportBodyFontSize : 13)
-                  ? (sheetName == 'Edar (L)' ? exportBodyFontSize : 13)
-                  : style.fontSize,
+              // EDAR (L) keeps its proven template typography. Every other
+              // employee row uses one consistent 13-point size, including
+              // JUMLAH and JUMLAH BERSIH.
+              fontSizeVal: isEdarLocal
+                  ? ((style.fontSize ?? 9) < exportBodyFontSize
+                      ? exportBodyFontSize
+                      : style.fontSize)
+                  : 13,
+              boldVal: emphasizeEmployeeColumn ? true : null,
               leftBorderVal: tableBorder,
               rightBorderVal: tableBorder,
               topBorderVal: tableBorder,
@@ -15560,6 +15578,17 @@ class _AdminDashboardState extends State<AdminDashboard>
           // always remains visibly inside the employee table.
           for (var column = 0; column < columnCount; column++) {
             applyTableBorderAndAlignment(rowNumber, column);
+          }
+          if (!isEdarLocal) {
+            for (final column in [nameColumn, grossColumn, netColumn]) {
+              applyTableBorderAndAlignment(
+                rowNumber,
+                column,
+                bold: true,
+                fontSize: 13,
+                center: column != nameColumn,
+              );
+            }
           }
 
           final bankAccount = textValue(
@@ -15640,10 +15669,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         final displayedPayments = Map<String, double>.from(paymentTotals);
         displayedPayments['payroll'] = netTotal - representedNonPayroll;
 
-        final paymentLabelColumn =
-            (config['footerLabelColumn'] as int?) ?? footerValueColumn - 1;
-        final footerEndColumn =
-            (config['footerEndColumn'] as int?) ?? footerValueColumn;
+        final paymentLabelColumn = (config['footerLabelColumn'] as int?) ??
+            (layout == 'local20'
+                ? footerValueColumn - 1
+                : layout == 'foreign21'
+                    ? 15
+                    : footerValueColumn - 2);
+        final footerEndColumn = (config['footerEndColumn'] as int?) ??
+            (layout == 'local20' ? footerValueColumn : 20);
         void writePaymentSummaryRow(
           int rowNumber,
           String label,
