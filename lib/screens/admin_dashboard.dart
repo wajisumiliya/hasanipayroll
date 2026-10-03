@@ -15621,7 +15621,6 @@ class _AdminDashboardState extends State<AdminDashboard>
         final displayedPayments = Map<String, double>.from(paymentTotals);
         displayedPayments['payroll'] = netTotal - representedNonPayroll;
 
-<<<<<<< HEAD
         final paymentLabelColumn = footerValueColumn - 1;
         void writePaymentSummaryRow(
           int rowNumber,
@@ -15666,71 +15665,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           'TOTAL',
           netTotal,
           isTotal: true,
-=======
-        // Make the complete TOTAL AMOUNT row one strong, centered table row.
-        // This also explicitly closes the border around JUMLAH and every other
-        // amount column, including cells overwritten by formulas above.
-        for (var column = 0; column < columnCount; column++) {
-          applyTableBorderAndAlignment(
-            totalRow,
-            column,
-            bold: true,
-            fontSize: 13,
-            center: true,
-          );
-        }
-
-        // Rebuild the payment summary as one contiguous two-column table.
-        final footerLabelColumn = footerValueColumn - 1;
-        String paymentLabel(String key) {
-          switch (key) {
-            case 'payroll':
-              return 'PAYROLL';
-            case 'paid':
-              return 'PAID';
-            case 'instant':
-              return 'INSTANT';
-            case 'cash':
-              return 'CASH';
-            default:
-              return key.toUpperCase();
-          }
-        }
-
-        for (final paymentRow in paymentRows.entries) {
-          final footerRow = totalRow + paymentRow.value;
-          final amount = displayedPayments[paymentRow.key] ?? 0;
-          writeCell(sheet, footerRow, footerLabelColumn,
-              paymentLabel(paymentRow.key));
-          writeCell(sheet, footerRow, footerValueColumn, amount);
-          applyTableBorderAndAlignment(
-            footerRow,
-            footerLabelColumn,
-            bold: true,
-            center: true,
-          );
-          applyTableBorderAndAlignment(
-            footerRow,
-            footerValueColumn,
-            center: true,
-          );
-        }
-
-        final footerTotalRow = totalRow + (config['footerTotalOffset'] as int);
-        writeCell(sheet, footerTotalRow, footerLabelColumn, 'TOTAL');
-        writeCell(sheet, footerTotalRow, footerValueColumn, netTotal);
-        applyTableBorderAndAlignment(
-          footerTotalRow,
-          footerLabelColumn,
-          bold: true,
-          center: true,
-        );
-        applyTableBorderAndAlignment(
-          footerTotalRow,
-          footerValueColumn,
-          bold: true,
-          center: true,
->>>>>>> 405ace416e984105addfc5b172790a7021039adc
         );
       }
 
