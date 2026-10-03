@@ -349,8 +349,10 @@ class AttendancePayrollService {
     );
 
     final requiredWorkHours = requiredWorkMinutes / 60.0;
-    final calendarDays = DateTime(month.year, month.month + 1, 0).day;
-    final dailySalary = calendarDays > 0 ? basicSalary / calendarDays : 0.0;
+    final dailySalary = PayrollCalculationService.unpaidDailyRate(
+      basicSalary: basicSalary,
+      isForeignEmployee: isForeignEmployee,
+    );
     double totalShortageMinutes = 0.0;
     double totalLateDeduction = 0.0;
     double totalOvertimeHours = 0.0;
@@ -419,7 +421,7 @@ class AttendancePayrollService {
       // --------------------------------------------------------------
       // Unpaid and public-holiday rows are excluded from the normal-day
       // shortage calculation. A normal worked day below the target creates
-      // a deduction based on basic salary / calendar days / target hours.
+      // a deduction based on the configured unpaid daily rate / target hours.
       if (PayrollCalculationService.shouldApplyShortageDeduction(
         isUnpaid: isUnpaid,
         isPublicHoliday: isPublicHoliday,

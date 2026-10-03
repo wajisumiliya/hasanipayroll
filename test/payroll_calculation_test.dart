@@ -329,6 +329,28 @@ void main() {
   });
 
   group('Historical payroll edge cases', () {
+    test('local employee unpaid daily rate uses basic salary divided by 26',
+        () {
+      expect(
+        PayrollCalculationService.unpaidDailyRate(
+          basicSalary: 2600,
+          isForeignEmployee: false,
+        ),
+        100,
+      );
+    });
+
+    test('foreign employee unpaid daily rate uses basic salary divided by 28',
+        () {
+      expect(
+        PayrollCalculationService.unpaidDailyRate(
+          basicSalary: 2800,
+          isForeignEmployee: true,
+        ),
+        100,
+      );
+    });
+
     test('FW salary is not double counted with allowances and PH pay', () {
       final gross = PayrollCalculationService.grossEarnings(
         basicSalary: 1700,

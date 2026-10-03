@@ -14,6 +14,16 @@ class PayrollCalculationService {
     return basicSalary;
   }
 
+  /// Daily rate used only for explicit UNPAID attendance days.
+  /// Local employees use 26 days; foreign employees use 28 days.
+  static double unpaidDailyRate({
+    required double basicSalary,
+    required bool isForeignEmployee,
+  }) {
+    if (basicSalary <= 0) return 0;
+    return basicSalary / (isForeignEmployee ? 28.0 : 26.0);
+  }
+
   /// Public-holiday pay for days actually worked.
   ///
   /// The payroll rule is basic salary / 26 for each approved PH day.
