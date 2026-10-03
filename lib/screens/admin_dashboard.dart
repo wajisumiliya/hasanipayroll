@@ -14654,6 +14654,16 @@ class _AdminDashboardState extends State<AdminDashboard>
           } else {
             cell.value = xls.TextCellValue(value?.toString() ?? '');
           }
+
+          final style = cell.cellStyle ?? xls.CellStyle();
+          cell.cellStyle = style.copyWith(
+            // Keep the serial-number column as 1, 2, 3... rather than 1.00.
+            numberFormat:
+                column == 0 ? xls.NumFormat.standard_1 : style.numberFormat,
+            // The supplied template is very small on screen; use a readable
+            // minimum while retaining its borders, alignment and colours.
+            fontSizeVal: (style.fontSize ?? 9) < 10 ? 10 : style.fontSize,
+          );
         }
       }
 
@@ -14699,6 +14709,12 @@ class _AdminDashboardState extends State<AdminDashboard>
       final footerTotalRow = totalRow + 5;
       sheet.cell(xls.CellIndex.indexByString('R$footerTotalRow')).value =
           xls.DoubleCellValue(columnTotals[19]);
+
+      // Let Excel size every payroll column from its header and populated data.
+      for (var column = 0; column < 20; column++) {
+        sheet.getColumnWidths.remove(column);
+        sheet.setColumnAutoFit(column);
+      }
 
       // --------------------------------------------------------------------------
       // 9. Filename: branch + selected month.
@@ -15280,6 +15296,19 @@ class _AdminDashboardState extends State<AdminDashboard>
           for (var column = 0; column < values.length; column++) {
             final value = values[column];
             writeCell(sheet, rowNumber, column, value);
+            final cell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: rowNumber - 1,
+              ),
+            );
+            final style = cell.cellStyle ?? xls.CellStyle();
+            cell.cellStyle = style.copyWith(
+              // The first column is a serial number, never currency/decimal.
+              numberFormat:
+                  column == 0 ? xls.NumFormat.standard_1 : style.numberFormat,
+              fontSizeVal: (style.fontSize ?? 9) < 10 ? 10 : style.fontSize,
+            );
             if (value is num) columnTotals[column] += value.toDouble();
           }
 
@@ -15395,6 +15424,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           footerValueColumn,
           netTotal,
         );
+
+        // Existing template widths are intentionally replaced so the output
+        // adapts to the real employee IDs, names, dates and money values.
+        for (var column = 0; column < columnCount; column++) {
+          sheet.getColumnWidths.remove(column);
+          sheet.setColumnAutoFit(column);
+        }
       }
 
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
