@@ -19,7 +19,7 @@ import 'login_screen.dart';
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:flutter/services.dart' show ByteData, rootBundle;
-import 'package:excel/excel.dart' as xls;
+import 'package:excel_plus/excel_plus.dart' as xls;
 import 'package:archive/archive.dart';
 import 'package:file_saver/file_saver.dart';
 import 'dart:typed_data';
@@ -14721,6 +14721,668 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
 
     try {
+      _message('Preparing the formatted payroll workbook...');
+
+      final employeeIds = records
+          .map((row) => _normalizeBranchValue(row['employee_id']))
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+      final employeeResponse = await SupabaseService.client
+          .from('employees')
+          .select()
+          .inFilter('employee_id', employeeIds);
+      final salaryResponse = await SupabaseService.client
+          .from('employee_salary_defaults')
+          .select()
+          .inFilter('employee_id', employeeIds);
+
+      final employeeMap = <String, Map<String, dynamic>>{};
+      for (final row in List<Map<String, dynamic>>.from(employeeResponse)) {
+        final id = _normalizeBranchValue(row['employee_id']);
+        if (id.isNotEmpty) employeeMap[id] = Map<String, dynamic>.from(row);
+      }
+      final salaryMap = <String, Map<String, dynamic>>{};
+      for (final row in List<Map<String, dynamic>>.from(salaryResponse)) {
+        final id = _normalizeBranchValue(row['employee_id']);
+        if (id.isNotEmpty) salaryMap[id] = Map<String, dynamic>.from(row);
+      }
+
+      const sungaiPetaniForeignerGroup = '__SUNGAI_PETANI_FOREIGNER__';
+      const temporaryStaffGroup = '__TEMPORARY_STAFF__';
+
+      String canonicalBranchKey(String branchId) {
+        final raw = (branchNames[branchId] ?? branchId)
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]'), '');
+        const aliases = <String, String>{
+          'spedar': 'sungaipetani',
+          'hbsp': 'sungaipetani',
+          'hpspfrn': 'sungaipetani',
+          'hbspfrn': 'sungaipetani',
+          'hbperai': 'prai',
+          'hbperaifrn': 'prai',
+          'hbas': 'alorsetar',
+          'hbasfrn': 'alorsetar',
+          'hbjitra': 'jitra',
+          'hbjitrafrn': 'jitra',
+          'hbkulim': 'kulim',
+          'hbkulimfrn': 'kulim',
+          'hbastana': 'astana',
+          'hbastanafrn': 'astana',
+          'hbamj': 'amanjaya',
+          'hbamjfrn': 'amanjaya',
+          'hbgurun': 'gurun',
+          'hbgurunfrn': 'gurun',
+          'hblkw': 'langkawi',
+          'hblkwfrn': 'langkawi',
+        };
+        return aliases[raw] ?? raw;
+      }
+
+      bool isTrue(dynamic value) {
+        if (value is bool) return value;
+        final text = value?.toString().trim().toLowerCase() ?? '';
+        return text == 'true' || text == '1' || text == 'yes';
+      }
+
+      bool isForeignEmployee(
+        Map<String, dynamic> employee,
+        Map<String, dynamic> salary,
+      ) {
+        final marker = '${employee['address'] ?? ''} ${salary['address'] ?? ''}'
+            .toUpperCase();
+        return marker.contains('FRN');
+      }
+
+      final grouped = <String, List<Map<String, dynamic>>>{};
+      for (final payroll in records) {
+        final employeeId = _normalizeBranchValue(payroll['employee_id']);
+        final employee = employeeMap[employeeId] ?? <String, dynamic>{};
+        final salary = salaryMap[employeeId] ?? <String, dynamic>{};
+        final branchId = employee.isEmpty
+            ? _normalizeBranchValue(payroll['branch_id'])
+            : _payrollBranchIdFromEmployee(employee);
+        if (branchId.isEmpty) continue;
+
+        final isTemporary = isTrue(employee['is_temp_staff']) ||
+            employeeId.toUpperCase().contains('TEMP');
+        final canonicalBranch = canonicalBranchKey(branchId);
+        final groupKey = isTemporary
+            ? temporaryStaffGroup
+            : canonicalBranch == 'sungaipetani' &&
+                    isForeignEmployee(employee, salary)
+                ? sungaiPetaniForeignerGroup
+                : canonicalBranch;
+        grouped.putIfAbsent(groupKey, () => []).add(payroll);
+      }
+
+      final templateData = await rootBundle.load(
+        'assets/payroll_salary_template.xlsx',
+      );
+      final templateBytes = templateData.buffer.asUint8List(
+        templateData.offsetInBytes,
+        templateData.lengthInBytes,
+      );
+      final excel = xls.Excel.decodeBytes(templateBytes);
+
+      final sheetConfigs = <Map<String, dynamic>>[
+        {
+          'sheet': 'Edar (L)',
+          'group': 'sungaipetani',
+          'totalRow': 54,
+          'layout': 'local20',
+          'footerValueColumn': 17,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'instant': 3,
+            'cash': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+        {
+          'sheet': 'Edar (Temp)',
+          'group': temporaryStaffGroup,
+          'totalRow': 22,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'cash': 3,
+            'instant': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+        {
+          'sheet': 'Edar (F)',
+          'group': sungaiPetaniForeignerGroup,
+          'totalRow': 21,
+          'layout': 'foreign21',
+          'footerValueColumn': 19,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'cash': 4,
+            'paid': 5,
+          },
+          'footerTotalOffset': 6,
+        },
+        {
+          'sheet': 'AMJ',
+          'group': 'amanjaya',
+          'totalRow': 17,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'paid': 3,
+            'instant': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+        {
+          'sheet': 'Gurun',
+          'group': 'gurun',
+          'totalRow': 11,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'instant': 3,
+          },
+          'footerTotalOffset': 4,
+        },
+        {
+          'sheet': 'Hasani Books Prai',
+          'group': 'prai',
+          'totalRow': 29,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'instant': 3,
+            'cash': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+        {
+          'sheet': 'Buku A.Setar',
+          'group': 'alorsetar',
+          'totalRow': 25,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'paid': 3,
+            'instant': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+        {
+          'sheet': 'Jitra',
+          'group': 'jitra',
+          'totalRow': 24,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 3,
+            'cash': 4,
+            'instant': 5,
+          },
+          'footerTotalOffset': 6,
+        },
+        {
+          'sheet': 'Kulim',
+          'group': 'kulim',
+          'totalRow': 27,
+          'layout': 'standard21',
+          'footerValueColumn': 19,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'paid': 3,
+            'instant': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+        {
+          'sheet': 'Astana',
+          'group': 'astana',
+          'totalRow': 18,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'cash': 3,
+            'instant': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+        {
+          'sheet': 'Langkawi',
+          'group': 'langkawi',
+          'totalRow': 17,
+          'layout': 'standard21',
+          'footerValueColumn': 18,
+          'paymentRows': <String, int>{
+            'payroll': 2,
+            'cash': 3,
+            'instant': 4,
+          },
+          'footerTotalOffset': 5,
+        },
+      ];
+
+      dynamic firstValue(Map<String, dynamic> row, List<String> keys) {
+        for (final key in keys) {
+          final value = row[key];
+          if (value != null && value.toString().trim().isNotEmpty) return value;
+        }
+        return null;
+      }
+
+      String textValue(dynamic value) => value?.toString().trim() ?? '';
+
+      String dateText(dynamic value) {
+        if (value == null) return '';
+        if (value is DateTime) return DateFormat('dd/MM/yyyy').format(value);
+        final text = value.toString().trim();
+        final parsed = DateTime.tryParse(text);
+        return parsed == null ? text : DateFormat('dd/MM/yyyy').format(parsed);
+      }
+
+      double money(dynamic value) => _payrollNumber(value);
+
+      void writeCell(
+        xls.Sheet sheet,
+        int rowNumber,
+        int columnIndex,
+        dynamic value,
+      ) {
+        final cell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(
+            columnIndex: columnIndex,
+            rowIndex: rowNumber - 1,
+          ),
+        );
+        if (value == null || value.toString().isEmpty) {
+          cell.value = null;
+        } else if (value is num) {
+          cell.value = xls.DoubleCellValue(value.toDouble());
+        } else {
+          cell.value = xls.TextCellValue(value.toString());
+        }
+      }
+
+      void writeFormula(
+        xls.Sheet sheet,
+        int rowNumber,
+        int columnIndex,
+        String formula,
+        double cachedValue,
+      ) {
+        sheet
+            .cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: columnIndex,
+                rowIndex: rowNumber - 1,
+              ),
+            )
+            .value = xls.FormulaCellValue(
+          formula,
+          cachedValue: cachedValue.toString(),
+        );
+      }
+
+      for (final config in sheetConfigs) {
+        final sheetName = config['sheet'] as String;
+        if (!excel.tables.containsKey(sheetName)) {
+          throw Exception('Payroll template sheet "$sheetName" is missing.');
+        }
+        final sheet = excel[sheetName];
+        final layout = config['layout'] as String;
+        final templateTotalRow = config['totalRow'] as int;
+        final branchRecords = List<Map<String, dynamic>>.from(
+          grouped[config['group']] ?? const <Map<String, dynamic>>[],
+        )..sort((a, b) => _normalizeBranchValue(a['employee_id'])
+            .compareTo(_normalizeBranchValue(b['employee_id'])));
+
+        const firstDataRow = 5;
+        final dataCapacity = templateTotalRow - firstDataRow;
+        if (branchRecords.length > dataCapacity) {
+          throw Exception(
+            '$sheetName has ${branchRecords.length} employees but the exact '
+            'manual layout supports $dataCapacity rows.',
+          );
+        }
+
+        final totalRow = templateTotalRow;
+        final columnCount = layout == 'local20' ? 20 : 21;
+        final columnTotals = List<double>.filled(columnCount, 0);
+        final paymentTotals = <String, double>{
+          'payroll': 0,
+          'cash': 0,
+          'instant': 0,
+          'paid': 0,
+        };
+
+        writeCell(
+          sheet,
+          3,
+          0,
+          DateFormat('MMM-yyyy').format(selectedPayrollMonth),
+        );
+
+        for (var rowOffset = 0; rowOffset < dataCapacity; rowOffset++) {
+          final rowNumber = firstDataRow + rowOffset;
+          for (var column = 0; column < 21; column++) {
+            writeCell(sheet, rowNumber, column, null);
+          }
+          if (rowOffset >= branchRecords.length) continue;
+
+          final payroll = branchRecords[rowOffset];
+          final employeeId = _normalizeBranchValue(payroll['employee_id']);
+          final employee = employeeMap[employeeId] ?? <String, dynamic>{};
+          final salary = salaryMap[employeeId] ?? <String, dynamic>{};
+          final isForeign = isForeignEmployee(employee, salary);
+
+          final basic = money(payroll['basic_salary']);
+          final foreignSalary = money(payroll['fw_salary']);
+          final salaryBase = foreignSalary != 0 ? foreignSalary : basic;
+          final attendanceAllowance = money(payroll['elaun_kedatangan']);
+          final serviceAllowance = money(payroll['elaun_perkhidmatan']);
+          final diligenceOrFood = money(payroll['elaun_kerajinan']);
+          final diligenceAllowance = isForeign ? 0.0 : diligenceOrFood;
+          final foodAllowance = isForeign ? diligenceOrFood : 0.0;
+          final overtime = money(payroll['overtime']);
+          final publicHoliday = money(payroll['cuti_umum']);
+          final gross = salaryBase +
+              attendanceAllowance +
+              serviceAllowance +
+              diligenceAllowance +
+              foodAllowance +
+              overtime +
+              publicHoliday;
+          final unpaid = money(firstValue(payroll, const [
+                'unpaid_deduction',
+                'unpaid_leave',
+                'cuti_tanpa_gaji',
+              ])) +
+              money(payroll['late_deduction']);
+          final epf = money(payroll['epf_employee']);
+          final socso = money(payroll['socso_employee']);
+          final eis = money(payroll['eis_employee']);
+          final otherDeductions = money(payroll['pcb']) +
+              money(payroll['zakat']) +
+              money(firstValue(payroll, const [
+                'advance',
+                'advance_deduction',
+                'advanceDeduction',
+              ])) +
+              money(firstValue(payroll, const [
+                'loan',
+                'loan_deduction',
+                'loanDeduction',
+              ])) +
+              money(firstValue(payroll, const [
+                'other_deduction_amount',
+                'otherDeductionAmount',
+              ]));
+          final net = gross - unpaid - epf - socso - eis - otherDeductions;
+
+          final lastIncrement = firstValue(salary, const ['inc_details']) ??
+              firstValue(employee, const [
+                'last_increment',
+                'last_increament',
+                'last_increment_date',
+                'last_increament_date',
+              ]);
+          final nextIncrement = firstValue(salary, const [
+                'next_increment',
+                'next_increament',
+                'next_increment_date',
+                'next_increament_date',
+              ]) ??
+              firstValue(employee, const [
+                'next_increment',
+                'next_increament',
+                'next_increment_date',
+                'next_increament_date',
+                'month',
+              ]);
+          final employeeName = textValue(
+            firstValue(employee, const ['name']) ?? payroll['name'],
+          );
+          final identityNumber = textValue(
+            firstValue(employee, const ['new_ic_no', 'newIcNo']) ??
+                payroll['new_ic_no'],
+          );
+
+          late final List<dynamic> values;
+          if (layout == 'foreign21') {
+            values = <dynamic>[
+              rowOffset + 1,
+              employeeId,
+              dateText(firstValue(employee, const ['joining_date'])),
+              dateText(lastIncrement),
+              dateText(nextIncrement),
+              textValue(firstValue(employee, const [
+                'permit',
+                'permit_type',
+                'work_permit',
+              ])),
+              employeeName,
+              identityNumber,
+              salaryBase,
+              attendanceAllowance,
+              serviceAllowance,
+              diligenceAllowance,
+              foodAllowance,
+              overtime,
+              publicHoliday,
+              gross,
+              unpaid,
+              epf,
+              socso,
+              otherDeductions + eis,
+              net,
+            ];
+          } else if (layout == 'local20') {
+            values = <dynamic>[
+              rowOffset + 1,
+              employeeId,
+              dateText(firstValue(employee, const ['joining_date'])),
+              dateText(lastIncrement),
+              dateText(nextIncrement),
+              employeeName,
+              identityNumber,
+              salaryBase,
+              attendanceAllowance,
+              serviceAllowance,
+              diligenceAllowance,
+              overtime,
+              publicHoliday,
+              gross,
+              unpaid,
+              epf,
+              socso,
+              eis,
+              otherDeductions,
+              net,
+            ];
+          } else {
+            values = <dynamic>[
+              rowOffset + 1,
+              employeeId,
+              dateText(firstValue(employee, const ['joining_date'])),
+              dateText(lastIncrement),
+              dateText(nextIncrement),
+              employeeName,
+              identityNumber,
+              salaryBase,
+              attendanceAllowance,
+              serviceAllowance,
+              diligenceAllowance,
+              foodAllowance,
+              overtime,
+              publicHoliday,
+              gross,
+              unpaid,
+              epf,
+              socso,
+              eis,
+              otherDeductions,
+              net,
+            ];
+          }
+
+          for (var column = 0; column < values.length; column++) {
+            final value = values[column];
+            writeCell(sheet, rowNumber, column, value);
+            if (value is num) columnTotals[column] += value.toDouble();
+          }
+
+          if (layout == 'local20') {
+            writeFormula(
+              sheet,
+              rowNumber,
+              13,
+              'SUM(H$rowNumber:M$rowNumber)',
+              gross,
+            );
+            writeFormula(
+              sheet,
+              rowNumber,
+              19,
+              'N$rowNumber-O$rowNumber-P$rowNumber-Q$rowNumber-R$rowNumber-S$rowNumber',
+              net,
+            );
+          } else if (layout == 'foreign21') {
+            writeFormula(
+              sheet,
+              rowNumber,
+              15,
+              'SUM(I$rowNumber:O$rowNumber)',
+              gross,
+            );
+            writeFormula(
+              sheet,
+              rowNumber,
+              20,
+              'P$rowNumber-Q$rowNumber-R$rowNumber-S$rowNumber-T$rowNumber',
+              net,
+            );
+          } else {
+            writeFormula(
+              sheet,
+              rowNumber,
+              14,
+              'SUM(H$rowNumber:N$rowNumber)',
+              gross,
+            );
+            writeFormula(
+              sheet,
+              rowNumber,
+              20,
+              'O$rowNumber-P$rowNumber-Q$rowNumber-R$rowNumber-S$rowNumber-T$rowNumber',
+              net,
+            );
+          }
+
+          final bankAccount = textValue(
+            firstValue(payroll, const ['bank_account', 'bankAccount']) ??
+                firstValue(employee, const ['bank_account', 'bankAccount']),
+          );
+          final bankCode = textValue(
+            firstValue(payroll, const ['bank_code', 'bankCode']) ??
+                firstValue(employee, const ['bank_code', 'bankCode']),
+          ).toUpperCase();
+          final compactBankCode = bankCode.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+          final paymentKey = isTrue(
+            firstValue(payroll, const ['is_paid', 'isPaid']),
+          )
+              ? 'paid'
+              : bankAccount.isEmpty
+                  ? 'cash'
+                  : compactBankCode.contains('RHB') ||
+                          compactBankCode == '18' ||
+                          compactBankCode == '018'
+                      ? 'payroll'
+                      : 'instant';
+          paymentTotals[paymentKey] = paymentTotals[paymentKey]! + net;
+        }
+
+        final firstMoneyColumn = layout == 'foreign21' ? 8 : 7;
+        for (var column = firstMoneyColumn;
+            column < columnTotals.length;
+            column++) {
+          final columnName = xls.CellIndex.indexByColumnRow(
+            columnIndex: column,
+            rowIndex: 0,
+          ).cellId.replaceAll(RegExp(r'\d'), '');
+          writeFormula(
+            sheet,
+            totalRow,
+            column,
+            'SUM($columnName$firstDataRow:$columnName${totalRow - 1})',
+            columnTotals[column],
+          );
+        }
+
+        final paymentRows = config['paymentRows'] as Map<String, int>;
+        final footerValueColumn = config['footerValueColumn'] as int;
+        final netColumn = layout == 'local20' ? 19 : 20;
+        final netTotal = columnTotals[netColumn];
+        final representedNonPayroll = paymentRows.keys
+            .where((key) => key != 'payroll')
+            .fold<double>(0, (sum, key) => sum + (paymentTotals[key] ?? 0));
+        final displayedPayments = Map<String, double>.from(paymentTotals);
+        displayedPayments['payroll'] = netTotal - representedNonPayroll;
+
+        for (final paymentRow in paymentRows.entries) {
+          final amount = displayedPayments[paymentRow.key] ?? 0;
+          writeCell(
+            sheet,
+            totalRow + paymentRow.value,
+            footerValueColumn,
+            amount.abs() < 0.005 ? null : amount,
+          );
+        }
+        writeCell(
+          sheet,
+          totalRow + (config['footerTotalOffset'] as int),
+          footerValueColumn,
+          netTotal,
+        );
+      }
+
+      final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
+      final fileName = 'Penyata_Gaji_All_Branches_$monthFile.xlsx';
+      final output = excel.encode();
+      if (output == null || output.isEmpty) {
+        throw Exception('Excel file could not be generated.');
+      }
+      await FileSaver.instance.saveFile(
+        name: fileName.replaceFirst(RegExp(r'\.xlsx$'), ''),
+        bytes: Uint8List.fromList(output),
+        ext: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      _message('$fileName exported successfully with 11 formatted sheets.');
+    } catch (e) {
+      _message('Formatted workbook failed; preparing the basic export: $e');
+      await _exportPayrollAllBranchesExcelLegacy(records, branchNames);
+    }
+  }
+
+  Future<void> _exportPayrollAllBranchesExcelLegacy(
+    List<Map<String, dynamic>> records,
+    Map<String, String> branchNames,
+  ) async {
+    if (records.isEmpty) {
+      _message('No payroll records for the selected month.');
+      return;
+    }
+
+    try {
       _message('Preparing one Excel file for all branches...');
 
       final employeeIds = records
@@ -15472,19 +16134,41 @@ class _AdminDashboardState extends State<AdminDashboard>
       }
 
       final styles = String.fromCharCodes(file.content as List<int>);
-      final updatedStyles = styles.replaceAll(
-        'numFmtId="43"',
-        'numFmtId="167"',
-      );
+      final definitions = RegExp(
+        r'<numFmt\b[^>]*\bnumFmtId="(\d+)"[^>]*/>',
+      ).allMatches(styles).toList();
+      final usedIds = definitions
+          .map((match) => int.parse(match.group(1)!))
+          .where((id) => id >= 164)
+          .toSet();
+      final replacements = <int, int>{};
+      var nextId = 164;
+
+      for (final definition in definitions) {
+        final id = int.parse(definition.group(1)!);
+        if (id >= 164 || replacements.containsKey(id)) continue;
+        while (usedIds.contains(nextId)) {
+          nextId++;
+        }
+        replacements[id] = nextId;
+        usedIds.add(nextId);
+        nextId++;
+      }
+
+      var updatedStyles = styles;
+      for (final replacement in replacements.entries) {
+        updatedStyles = updatedStyles.replaceAll(
+          'numFmtId="${replacement.key}"',
+          'numFmtId="${replacement.value}"',
+        );
+      }
+      final styleBytes = utf8.encode(updatedStyles);
       normalized.addFile(
-        ArchiveFile(file.name, updatedStyles.length, updatedStyles),
+        ArchiveFile(file.name, styleBytes.length, styleBytes),
       );
     }
 
     final encoded = ZipEncoder().encode(normalized);
-    if (encoded == null) {
-      throw Exception('Excel template could not be prepared.');
-    }
     return Uint8List.fromList(encoded);
   }
 
