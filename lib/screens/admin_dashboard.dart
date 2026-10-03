@@ -15216,7 +15216,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
           if (rowOffset >= branchRecords.length) continue;
 
-          sheet.setRowHeight(rowNumber - 1, 15);
+          sheet.setRowHeight(rowNumber - 1, 18);
 
           final payroll = branchRecords[rowOffset];
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
