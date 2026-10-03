@@ -15306,7 +15306,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
           if (rowOffset >= branchRecords.length) continue;
 
-          sheet.setRowHeight(rowNumber - 1, 18);
+          // Keep the original compact EDAR (L) employee rows. All other
+          // branch sheets need extra height so employee data is easier to read.
+          sheet.setRowHeight(
+            rowNumber - 1,
+            sheetName == 'Edar (L)' ? 18 : 25,
+          );
 
           final payroll = branchRecords[rowOffset];
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
