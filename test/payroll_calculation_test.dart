@@ -314,6 +314,18 @@ void main() {
         isTrue,
       );
     });
+
+    test('foreign employee late arrival cannot create shortage deduction', () {
+      expect(
+        PayrollCalculationService.shouldApplyShortageDeduction(
+          isUnpaid: false,
+          isPublicHoliday: false,
+          worked: true,
+          isForeignEmployee: true,
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('Historical payroll edge cases', () {

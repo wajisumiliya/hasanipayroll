@@ -10643,6 +10643,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       final attendanceExempt =
           _attendanceBool(employee['is_management_staff']) ||
               _attendanceBool(employee['is_temp_staff']) ||
+              _attendanceBool(employee['is_support_staff']) ||
               _attendanceBool(employee['is_other_staff']);
       if (attendanceExempt) {
         attendanceExemptIds.add(id);
@@ -10773,6 +10774,20 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 final attendanceReady = missing.isEmpty;
                                 final attendanceExempt =
                                     attendanceExemptIds.contains(employeeId);
+                                final attendanceExemptLabel =
+                                    _attendanceBool(
+                                      employee['is_management_staff'],
+                                    )
+                                        ? 'Management Staff'
+                                        : _attendanceBool(
+                                            employee['is_temp_staff'],
+                                          )
+                                            ? 'Temporary Staff'
+                                            : _attendanceBool(
+                                                employee['is_support_staff'],
+                                              )
+                                                ? 'Support Staff'
+                                                : 'Other Staff';
 
                                 return CheckboxListTile(
                                   value: checked,
@@ -10803,7 +10818,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   subtitle: Text(
                                     attendanceExempt
                                         ? '$employeeId • Attendance not required '
-                                            '(${_attendanceBool(employee['is_management_staff']) ? 'Management Staff' : _attendanceBool(employee['is_temp_staff']) ? 'Temporary Staff' : 'Other Staff'})'
+                                            '($attendanceExemptLabel)'
                                         : attendanceReady
                                             ? '$employeeId • Attendance complete ($daysInMonth/$daysInMonth)'
                                             : '$employeeId • Missing ${missing.length} day(s): '
@@ -15201,6 +15216,60 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
       }
 
+      List<String> cleanPayrollHeaders(String layout) {
+        if (layout == 'foreign21') {
+          return const [
+            'NO',
+            'ID STAFF',
+            'TARIKH MASUK KERJA',
+            'KENAIKAN TERAKHIR',
+            'KENAIKAN SETERUSNYA',
+            'PERMIT',
+            'NAMA',
+            'PASSPORT',
+            'GAJI',
+            'ELAUN KEDATANGAN',
+            'ELAUN PERKHIDMATAN',
+            'ELAUN KERAJINAN',
+            'ELAUN MAKAN',
+            'OT',
+            'CUTI UMUM',
+            'JUMLAH',
+            'CUTI TANPA GAJI',
+            'KWSP',
+            'SOCSO',
+            'POTONGAN',
+            'JUMLAH BERSIH',
+          ];
+        }
+        final common = <String>[
+          'NO',
+          'ID STAFF',
+          'TARIKH MASUK KERJA',
+          'KENAIKAN TERAKHIR',
+          'KENAIKAN SETERUSNYA',
+          'NAMA',
+          'NO. K/P',
+          'GAJI',
+          'ELAUN KEDATANGAN',
+          'ELAUN PERKHIDMATAN',
+          'ELAUN KERAJINAN',
+        ];
+        if (layout != 'local20') common.add('ELAUN MAKAN');
+        common.addAll(const [
+          'OT',
+          'CUTI UMUM',
+          'JUMLAH',
+          'CUTI TANPA GAJI',
+          'KWSP',
+          'SOCSO',
+          'EIS',
+          'POTONGAN',
+          'JUMLAH BERSIH',
+        ]);
+        return common;
+      }
+
       for (final config in sheetConfigs) {
         final sheetName = config['sheet'] as String;
         if (!excel.tables.containsKey(sheetName)) {
@@ -15265,6 +15334,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         };
 
         writeMonthHeader(sheet, layout == 'local20' ? 19 : 20);
+        final cleanHeaders = cleanPayrollHeaders(layout);
         for (var column = 0; column < columnCount; column++) {
           final headerCell = sheet.cell(
             xls.CellIndex.indexByColumnRow(
@@ -15272,6 +15342,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowIndex: firstDataRow - 2,
             ),
           );
+          headerCell.value = xls.TextCellValue(cleanHeaders[column]);
           final style = headerCell.cellStyle ?? xls.CellStyle();
           headerCell.cellStyle = style.copyWith(
             fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
@@ -15317,7 +15388,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           // branch sheets need extra height so employee data is easier to read.
           sheet.setRowHeight(
             rowNumber - 1,
-            sheetName == 'Edar (L)' ? 18 : 40,
+            sheetName == 'Edar (L)' ? 18 : 41.25,
           );
 
           final payroll = branchRecords[rowOffset];
@@ -15504,20 +15575,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ? moneyNumberFormat
                       : style.numberFormat,
               // EDAR (L) keeps its proven template typography. Every other
-              // employee row uses one consistent 13-point size, including
+              // employee row uses one consistent 14-point size, including
               // JUMLAH and JUMLAH BERSIH.
               fontSizeVal: isEdarLocal
                   ? ((style.fontSize ?? 9) < exportBodyFontSize
                       ? exportBodyFontSize
                       : style.fontSize)
-                  : 13,
+                  : 14,
               boldVal: emphasizeEmployeeColumn ? true : null,
+              horizontalAlignVal:
+                  isEdarLocal ? null : xls.HorizontalAlign.Left,
+              verticalAlignVal:
+                  isEdarLocal ? null : xls.VerticalAlign.Center,
               leftBorderVal: tableBorder,
               rightBorderVal: tableBorder,
               topBorderVal: tableBorder,
               bottomBorderVal: tableBorder,
             );
-            if (value is num) {
+            if (value is num && isEdarLocal) {
               updatedStyle = updatedStyle.copyWith(
                 horizontalAlignVal: xls.HorizontalAlign.Center,
               );
@@ -15585,8 +15660,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 rowNumber,
                 column,
                 bold: true,
-                fontSize: 13,
-                center: column != nameColumn,
+                fontSize: 14,
               );
             }
           }

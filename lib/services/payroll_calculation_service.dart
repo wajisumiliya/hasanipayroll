@@ -76,8 +76,9 @@ class PayrollCalculationService {
     required bool isUnpaid,
     required bool isPublicHoliday,
     required bool worked,
+    bool isForeignEmployee = false,
   }) =>
-      !isUnpaid && !isPublicHoliday && worked;
+      !isForeignEmployee && !isUnpaid && !isPublicHoliday && worked;
 
   static double grossEarnings({
     required double basicSalary,

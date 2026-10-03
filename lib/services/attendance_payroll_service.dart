@@ -252,6 +252,9 @@ class AttendancePayrollService {
     final isManagementStaff = _toBool(employee['is_management_staff']);
     final isTempStaff = _toBool(employee['is_temp_staff']);
     final isSupportStaff = _toBool(employee['is_support_staff']);
+    final employeeAddress = _text(employee['address']).trim().toUpperCase();
+    final isForeignEmployee = employeeAddress.contains('FRN') ||
+        employeeAddress.contains('FOREIGN');
     final isPayrollOnlyStaff =
         isManagementStaff || isTempStaff || isSupportStaff;
 
@@ -374,8 +377,10 @@ class AttendancePayrollService {
       final dailyRequiredHours = dailyRequiredMinutes / 60.0;
       final dailyShortageRate =
           dailyRequiredHours > 0 ? dailySalary / dailyRequiredHours : 0.0;
-      final isUnpaid = _toBool(row['is_unpaid']);
       final attendanceStatus = _text(row['status']).trim().toUpperCase();
+      final isUnpaid = _toBool(row['is_unpaid']) ||
+          attendanceStatus == 'UNPAID' ||
+          attendanceStatus == 'UNPAID LEAVE';
       final isPublicHoliday = _toBool(row['is_public_holiday']) ||
           const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GUNTI'}
               .contains(attendanceStatus);
@@ -418,7 +423,12 @@ class AttendancePayrollService {
       // Unpaid and public-holiday rows are excluded from the normal-day
       // shortage calculation. A normal worked day below the target creates
       // a deduction based on basic salary / calendar days / target hours.
-      if (!isUnpaid && !isPublicHoliday && worked) {
+      if (PayrollCalculationService.shouldApplyShortageDeduction(
+        isUnpaid: isUnpaid,
+        isPublicHoliday: isPublicHoliday,
+        worked: worked,
+        isForeignEmployee: isForeignEmployee,
+      )) {
         // Checkout has a 15-minute grace window. This grace is applied only
         // to an early checkout and never offsets late check-in time.
         final checkoutGrace = _checkoutGraceMinutes(row, roster);
@@ -451,7 +461,8 @@ class AttendancePayrollService {
       }
     }
 
-    // Every normal-day net-working shortfall is deductible.
+    // Every local employee's normal-day net-working shortfall is deductible.
+    // Foreign employees are deducted only for explicit UNPAID days.
     totalLateDeduction = _roundMoney(totalLateDeduction);
 
     final unpaidDeduction = _roundMoney(
