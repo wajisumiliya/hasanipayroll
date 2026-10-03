@@ -79,6 +79,9 @@ class PayrollRecord {
   final bool isPaid;
   final DateTime? paidAt;
   final String paymentReference;
+  final bool isPublished;
+  final DateTime? publishedAt;
+  final String publishedBy;
 
   final String? remarks;
   final DateTime? createdAt;
@@ -132,6 +135,9 @@ class PayrollRecord {
     this.isPaid = false,
     this.paidAt,
     this.paymentReference = '',
+    this.isPublished = false,
+    this.publishedAt,
+    this.publishedBy = '',
     this.remarks,
     this.createdAt,
     this.updatedAt,
@@ -268,6 +274,9 @@ class PayrollRecord {
     String? newIcNo,
     String? bankCode,
     String? bankAccount,
+    bool? isPublished,
+    DateTime? publishedAt,
+    String? publishedBy,
     String? remarks,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -299,6 +308,9 @@ class PayrollRecord {
       newIcNo: newIcNo ?? this.newIcNo,
       bankCode: bankCode ?? this.bankCode,
       bankAccount: bankAccount ?? this.bankAccount,
+      isPublished: isPublished ?? this.isPublished,
+      publishedAt: publishedAt ?? this.publishedAt,
+      publishedBy: publishedBy ?? this.publishedBy,
       remarks: remarks ?? this.remarks,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -338,6 +350,9 @@ class PayrollRecord {
       'newIcNo': newIcNo,
       'bankCode': bankCode,
       'bankAccount': bankAccount,
+      'isPublished': isPublished,
+      'publishedAt': publishedAt?.toIso8601String(),
+      'publishedBy': publishedBy,
       'remarks': remarks,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -432,6 +447,15 @@ class PayrollRecord {
       paidAt: _parseNullableDate(json['paidAt'] ?? json['paid_at']),
       paymentReference: _stringValue(
         json['paymentReference'] ?? json['payment_reference'],
+      ),
+      isPublished: _boolValue(
+        json['isPublished'] ?? json['is_published'],
+      ),
+      publishedAt: _parseNullableDate(
+        json['publishedAt'] ?? json['published_at'],
+      ),
+      publishedBy: _stringValue(
+        json['publishedBy'] ?? json['published_by'],
       ),
       remarks: _nullableString(json['remarks']),
       createdAt: _parseNullableDate(json['createdAt']),

@@ -616,6 +616,9 @@ class AttendancePayrollService {
       'new_ic_no': _text(employee['new_ic_no']),
       'bank_code': _text(employee['bank_code']),
       'bank_account': _text(employee['bank_account']),
+      'is_published': false,
+      'published_at': null,
+      'published_by': null,
 
       // Debug / audit information
       'remarks': isPayrollOnlyStaff

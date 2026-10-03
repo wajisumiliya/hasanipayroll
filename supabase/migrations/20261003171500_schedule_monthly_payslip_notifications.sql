@@ -39,6 +39,7 @@ begin
     trim(p.employee_id::text)
   from public.payroll p
   where date_trunc('month', p.period::timestamp)::date = payslip_month
+    and p.is_published = true
     and nullif(trim(p.employee_id::text), '') is not null
     and not exists (
       select 1

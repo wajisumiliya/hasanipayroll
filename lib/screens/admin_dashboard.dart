@@ -11407,6 +11407,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                       : remarksController.text.trim(),
                   'created_at': storedRecord?['created_at'] ?? now,
                   'updated_at': now,
+                  'is_published': false,
+                  'published_at': null,
+                  'published_by': null,
                 };
                 record.remove('branch_id');
                 record.remove('branch_name');
@@ -11897,6 +11900,26 @@ class _AdminDashboardState extends State<AdminDashboard>
 // EMPLOYEE PAYSLIPS
 // ============================================================================
 
+  Future<void> _publishEmployeePayslip(PayrollRecord record) async {
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      await SupabaseService.client.from('payroll').update({
+        'is_published': true,
+        'published_at': now,
+        'published_by': service.currentUser?.username,
+        'updated_at': now,
+      }).eq('id', record.id);
+      await service.loadPayrollFromSupabase();
+      if (!mounted) return;
+      setState(() {});
+      _message(
+        '${DateFormat('MMMM yyyy').format(record.period)} payslip published for employees.',
+      );
+    } catch (error) {
+      if (mounted) _message('Unable to publish payslip: $error');
+    }
+  }
+
   Widget _employeePayslipsPage() {
     final employees = service.allEmployees.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -12363,9 +12386,38 @@ class _AdminDashboardState extends State<AdminDashboard>
                             ),
                           ),
                           if (available)
-                            const Align(
-                              alignment: Alignment.centerRight,
-                              child: Icon(Icons.download_outlined, size: 17),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  record.isPublished ? 'Published' : 'Draft',
+                                  style: TextStyle(
+                                    color: record.isPublished
+                                        ? const Color(0xFF07833D)
+                                        : const Color(0xFFB26700),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const Spacer(),
+                                if (!record.isPublished)
+                                  IconButton(
+                                    tooltip: 'Publish payslip to employee',
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 28,
+                                      minHeight: 28,
+                                    ),
+                                    onPressed: () =>
+                                        _publishEmployeePayslip(record),
+                                    icon: const Icon(
+                                      Icons.publish_outlined,
+                                      size: 18,
+                                    ),
+                                  ),
+                                const Icon(Icons.download_outlined, size: 17),
+                              ],
                             ),
                         ],
                       ),
@@ -13430,6 +13482,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         record['id'] = payrollId;
         record['employee_id'] = employeeId;
         record['period'] = period;
+        record['is_published'] = false;
+        record['published_at'] = null;
+        record['published_by'] = null;
 
         payrollRows.add(record);
       }

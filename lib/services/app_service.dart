@@ -797,6 +797,10 @@ class AppService extends ChangeNotifier {
 
       for (final row in response) {
         try {
+          if (_currentUser?.isEmployee == true &&
+              !_supabaseBool(row['is_published'] ?? row['isPublished'])) {
+            continue;
+          }
           final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
               .toString()
               .trim()
@@ -954,6 +958,15 @@ class AppService extends ChangeNotifier {
       paidAt: _supabaseDate(data['paid_at'] ?? data['paidAt']),
       paymentReference: data['payment_reference']?.toString() ??
           data['paymentReference']?.toString() ??
+          '',
+      isPublished: _supabaseBool(
+        data['is_published'] ?? data['isPublished'],
+      ),
+      publishedAt: _supabaseDate(
+        data['published_at'] ?? data['publishedAt'],
+      ),
+      publishedBy: data['published_by']?.toString() ??
+          data['publishedBy']?.toString() ??
           '',
       remarks: data['remarks']?.toString(),
       createdAt: _supabaseDate(
@@ -3870,6 +3883,9 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'new_ic_no': record.newIcNo,
       'bank_code': record.bankCode,
       'bank_account': record.bankAccount,
+      'is_published': record.isPublished,
+      'published_at': record.publishedAt?.toIso8601String(),
+      'published_by': record.publishedBy.isEmpty ? null : record.publishedBy,
       'remarks': record.remarks,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
