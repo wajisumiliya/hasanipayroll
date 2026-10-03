@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/payroll.dart';
-import 'notification_service.dart';
 
 // ============================================================================
 // APP USER
@@ -2603,11 +2602,6 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           updated++;
         } else {
           await _supabase.from('payroll').upsert(data);
-
-          await NotificationService.sendPayslipAvailable(
-            employeeId: employee.employeeId,
-            period: period,
-          ).catchError((_) {});
 
           imported++;
         }

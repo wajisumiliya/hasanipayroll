@@ -11415,19 +11415,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                       record,
                       onConflict: 'employee_id,period',
                     );
-                try {
-                  await NotificationService.send(
-                    title: 'Payslip ready',
-                    body:
-                        'Your payroll for ${DateFormat('MMMM yyyy').format(month)} has been generated.',
-                    audience: 'employee',
-                    type: 'payslip',
-                    employeeId: employeeId,
-                  );
-                } catch (notificationError) {
-                  debugPrint(
-                      'Payroll saved, but notification failed: $notificationError');
-                }
                 await service.loadPayrollFromSupabase();
                 selectedPayrollMonth = month;
                 if (!dialogContext.mounted) return;
@@ -15358,6 +15345,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           bool bold = false,
           double? fontSize,
           bool center = false,
+          bool left = false,
+          bool middle = false,
         }) {
           final cell = sheet.cell(
             xls.CellIndex.indexByColumnRow(
@@ -15369,7 +15358,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           cell.cellStyle = style.copyWith(
             boldVal: bold ? true : null,
             fontSizeVal: fontSize?.toInt(),
-            horizontalAlignVal: center ? xls.HorizontalAlign.Center : null,
+            horizontalAlignVal: left
+                ? xls.HorizontalAlign.Left
+                : center
+                    ? xls.HorizontalAlign.Center
+                    : null,
+            verticalAlignVal: middle ? xls.VerticalAlign.Center : null,
             leftBorderVal: tableBorder,
             rightBorderVal: tableBorder,
             topBorderVal: tableBorder,
@@ -15655,12 +15649,20 @@ class _AdminDashboardState extends State<AdminDashboard>
             applyTableBorderAndAlignment(rowNumber, column);
           }
           if (!isEdarLocal) {
-            for (final column in [nameColumn, grossColumn, netColumn]) {
+            applyTableBorderAndAlignment(
+              rowNumber,
+              nameColumn,
+              bold: true,
+              fontSize: 14,
+            );
+            for (final column in [grossColumn, netColumn]) {
               applyTableBorderAndAlignment(
                 rowNumber,
                 column,
                 bold: true,
                 fontSize: 14,
+                left: true,
+                middle: true,
               );
             }
           }

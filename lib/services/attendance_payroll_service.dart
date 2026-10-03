@@ -1,7 +1,4 @@
-import 'package:flutter/foundation.dart';
-
 import '../screens/supabase_service.dart';
-import 'notification_service.dart';
 import 'payroll_calculation_service.dart';
 
 /// ============================================================================
@@ -707,12 +704,6 @@ class AttendancePayrollService {
       // Do not send payroll.id.
       // The database is expected to generate it.
       await SupabaseService.client.from('payroll').insert(data);
-      await NotificationService.sendPayslipAvailable(
-        employeeId: employeeId,
-        period: month,
-      ).catchError(
-        (error) => debugPrint('Payslip notification error: $error'),
-      );
     }
 
     return PayrollGenerationItem(
