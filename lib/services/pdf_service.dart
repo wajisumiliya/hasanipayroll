@@ -42,6 +42,9 @@ class PdfService {
     final requiredWorkMinutes = isForeignEmployee ? 630 : 450;
     final unpaidMinutes = monthlyAttendance.fold<int>(0, (sum, record) {
       if (_unpaid(record)) return sum + requiredWorkMinutes;
+      // Foreign employees are not governed by the working-hours shortage
+      // rule. Only attendance explicitly marked UNPAID is shown here.
+      if (isForeignEmployee) return sum;
       if (!_worked(record)) return sum;
       final shortage = requiredWorkMinutes - _workMinutes(record);
       return sum + (shortage > 0 ? shortage : 0);

@@ -14640,13 +14640,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             rowIndex: firstDataRow - 2,
           ),
         );
-        final style = headerCell.cellStyle ?? xls.CellStyle();
-        headerCell.cellStyle = style.copyWith(
-          fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
-              ? exportBodyFontSize
-              : style.fontSize,
-          horizontalAlignVal: xls.HorizontalAlign.Center,
-        );
+        headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
       }
       for (var index = 0; index < sortedRecords.length; index++) {
         final payroll = sortedRecords[index];
@@ -15385,16 +15379,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             ),
           );
           headerCell.value = xls.TextCellValue(cleanHeaders[column]);
-          final style = headerCell.cellStyle ?? xls.CellStyle();
-          if (sheetName != 'Edar (L)') {
-            headerCell.cellStyle = style.copyWith(
-              boldVal: true,
-              fontSizeVal: 14,
-              horizontalAlignVal: xls.HorizontalAlign.Center,
-              verticalAlignVal: xls.VerticalAlign.Center,
-              textWrappingVal: xls.TextWrapping.WrapText,
-            );
-          }
+          headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
         }
 
         void applyTableBorderAndAlignment(
@@ -17314,6 +17299,25 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  xls.CellStyle _excelHeaderStyle([xls.CellStyle? current]) {
+    final border = xls.Border(
+      borderStyle: xls.BorderStyle.Thin,
+      borderColorHex: xls.ExcelColor.fromHexString('FF6B86A5'),
+    );
+    return (current ?? xls.CellStyle()).copyWith(
+      boldVal: true,
+      fontSizeVal: 14,
+      horizontalAlignVal: xls.HorizontalAlign.Center,
+      verticalAlignVal: xls.VerticalAlign.Center,
+      textWrappingVal: xls.TextWrapping.WrapText,
+      backgroundColorHexVal: xls.ExcelColor.fromHexString('FFD9EAF7'),
+      leftBorderVal: border,
+      rightBorderVal: border,
+      topBorderVal: border,
+      bottomBorderVal: border,
+    );
+  }
+
   Future<void> _exportStatutoryReportExcel(String report, DateTime month,
       List<String> headers, List<List<dynamic>> rows) async {
     final printedAt = DateTime.now();
@@ -17337,7 +17341,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       final cell = sheet.cell(
           xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 2));
       cell.value = xls.TextCellValue(headers[column]);
-      cell.cellStyle = xls.CellStyle(bold: true);
+      cell.cellStyle = _excelHeaderStyle(cell.cellStyle);
     }
     for (var row = 0; row < rows.length; row++) {
       for (var column = 0; column < rows[row].length; column++) {
@@ -17661,7 +17665,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       final cell = sheet.cell(
           xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 2));
       cell.value = xls.TextCellValue(headers[column]);
-      cell.cellStyle = xls.CellStyle(bold: true);
+      cell.cellStyle = _excelHeaderStyle(cell.cellStyle);
     }
     const payrollTotalColumns = {8, 11, 14};
     for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
@@ -18228,6 +18232,15 @@ class _AdminDashboardState extends State<AdminDashboard>
           0,
           headers,
         );
+        for (var column = 0; column < headers.length; column++) {
+          final headerCell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(
+              columnIndex: column,
+              rowIndex: 0,
+            ),
+          );
+          headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
+        }
 
         for (var r = 0; r < rows.length; r++) {
           writeRow(

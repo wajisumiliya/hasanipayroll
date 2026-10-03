@@ -378,15 +378,20 @@ class PayrollRecord {
             json['FW SALARY'],
       ),
       elaunKedatangan: _doubleValue(
-        json['elaunKedatangan'] ?? json['ELAUN KEDATANGAN'],
+        json['elaunKedatangan'] ??
+            json['elaun_kedatangan'] ??
+            json['ELAUN KEDATANGAN'],
       ),
       elaunPerkhidmatan: _doubleValue(
         json['elaunPerkhidmatan'] ??
+            json['elaun_perkhidmatan'] ??
             json['ELAUAN PERKHIDMATAN'] ??
             json['ELAUN PERKHIDMATAN'],
       ),
       elaunKerajinan: _doubleValue(
-        json['elaunKerajinan'] ?? json['ELAUN KERAJINAN'],
+        json['elaunKerajinan'] ??
+            json['elaun_kerajinan'] ??
+            json['ELAUN KERAJINAN'],
       ),
       elaunMakanan: _doubleValue(
         json['elaunMakanan'] ?? json['elaun_makanan'] ?? json['ELAUN MAKANAN'],

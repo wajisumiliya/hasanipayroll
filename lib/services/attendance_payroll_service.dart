@@ -249,9 +249,6 @@ class AttendancePayrollService {
     final isManagementStaff = _toBool(employee['is_management_staff']);
     final isTempStaff = _toBool(employee['is_temp_staff']);
     final isSupportStaff = _toBool(employee['is_support_staff']);
-    final employeeAddress = _text(employee['address']).trim().toUpperCase();
-    final isForeignEmployee = employeeAddress.contains('FRN') ||
-        employeeAddress.contains('FOREIGN');
     final isPayrollOnlyStaff =
         isManagementStaff || isTempStaff || isSupportStaff;
 
@@ -279,6 +276,17 @@ class AttendancePayrollService {
             'No salary default found in employee_salary_defaults for $employeeId.',
       );
     }
+
+    // The FRN marker exists in either employees.address or, for some legacy
+    // records, employee_salary_defaults.address. Check both so foreign workers
+    // never receive a working-hours/late deduction merely because one copy of
+    // the marker is missing.
+    final foreignMarker = [
+      _text(employee['address']),
+      _text(salaryDefault['address']),
+    ].join(' ').trim().toUpperCase();
+    final isForeignEmployee =
+        foreignMarker.contains('FRN') || foreignMarker.contains('FOREIGN');
 
     final basicSalary = _number(salaryDefault['basic_salary']);
     final fwSalary = _number(salaryDefault['fw_salary']);
@@ -780,6 +788,7 @@ class AttendancePayrollService {
           .from('employee_salary_defaults')
           .select(
             'employee_id,'
+            'address,'
             'basic_salary,'
             'fw_salary,'
             'elaun_kedatangan,'

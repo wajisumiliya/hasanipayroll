@@ -850,6 +850,9 @@ class AppService extends ChangeNotifier {
       basicSalary: _doubleValue(
         data['basic_salary'] ?? data['basicSalary'],
       ),
+      fwSalary: _doubleValue(
+        data['fw_salary'] ?? data['fwSalary'],
+      ),
       elaunKedatangan: _doubleValue(
         data['elaun_kedatangan'] ??
             data['elaunKedatangan'] ??
