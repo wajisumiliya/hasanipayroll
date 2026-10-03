@@ -15102,7 +15102,12 @@ class _AdminDashboardState extends State<AdminDashboard>
         if (value == null || value.toString().isEmpty) {
           cell.value = null;
         } else if (value is num) {
-          cell.value = xls.DoubleCellValue(value.toDouble());
+          // Payroll statement display rule: show zero amounts as "-" while
+          // keeping non-zero amounts numeric for Excel totals/calculations.
+          final number = value.toDouble();
+          cell.value = number.abs() < 0.005
+              ? xls.TextCellValue('-')
+              : xls.DoubleCellValue(number);
         } else {
           cell.value = xls.TextCellValue(value.toString());
         }
@@ -15115,17 +15120,20 @@ class _AdminDashboardState extends State<AdminDashboard>
         String formula,
         double cachedValue,
       ) {
-        sheet
-            .cell(
-              xls.CellIndex.indexByColumnRow(
-                columnIndex: columnIndex,
-                rowIndex: rowNumber - 1,
-              ),
-            )
-            .value = xls.FormulaCellValue(
-          formula,
-          cachedValue: cachedValue.toString(),
+        final cell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(
+            columnIndex: columnIndex,
+            rowIndex: rowNumber - 1,
+          ),
         );
+        // A zero formula result is displayed as "-" to match the printed
+        // payroll statement. Non-zero cells keep their live Excel formula.
+        cell.value = cachedValue.abs() < 0.005
+            ? xls.TextCellValue('-')
+            : xls.FormulaCellValue(
+                formula,
+                cachedValue: cachedValue.toString(),
+              );
       }
 
       void writeMonthHeader(xls.Sheet sheet, int lastColumnIndex) {
@@ -15208,6 +15216,32 @@ class _AdminDashboardState extends State<AdminDashboard>
         };
 
         writeMonthHeader(sheet, layout == 'local20' ? 19 : 20);
+
+        void applyTableBorderAndAlignment(
+          int rowNumber,
+          int columnIndex, {
+          bool bold = false,
+          double? fontSize,
+          bool center = false,
+        }) {
+          final cell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(
+              columnIndex: columnIndex,
+              rowIndex: rowNumber - 1,
+            ),
+          );
+          final style = cell.cellStyle ?? xls.CellStyle();
+          cell.cellStyle = style.copyWith(
+            boldVal: bold ? true : style.bold,
+            fontSizeVal: fontSize ?? style.fontSize,
+            horizontalAlignVal:
+                center ? xls.HorizontalAlign.Center : style.horizontalAlign,
+            leftBorderVal: tableBorder,
+            rightBorderVal: tableBorder,
+            topBorderVal: tableBorder,
+            bottomBorderVal: tableBorder,
+          );
+        }
 
         for (var rowOffset = 0; rowOffset < dataCapacity; rowOffset++) {
           final rowNumber = firstDataRow + rowOffset;
@@ -15441,6 +15475,13 @@ class _AdminDashboardState extends State<AdminDashboard>
             );
           }
 
+          // Formula writes can replace the JUMLAH/NET cell value after the
+          // normal row styling. Re-assert the complete table border so JUMLAH
+          // always remains visibly inside the employee table.
+          for (var column = 0; column < columnCount; column++) {
+            applyTableBorderAndAlignment(rowNumber, column);
+          }
+
           final bankAccount = textValue(
             firstValue(payroll, const ['bank_account', 'bankAccount']) ??
                 firstValue(employee, const ['bank_account', 'bankAccount']),
@@ -15491,20 +15532,69 @@ class _AdminDashboardState extends State<AdminDashboard>
         final displayedPayments = Map<String, double>.from(paymentTotals);
         displayedPayments['payroll'] = netTotal - representedNonPayroll;
 
-        for (final paymentRow in paymentRows.entries) {
-          final amount = displayedPayments[paymentRow.key] ?? 0;
-          writeCell(
-            sheet,
-            totalRow + paymentRow.value,
-            footerValueColumn,
-            amount.abs() < 0.005 ? null : amount,
+        // Make the complete TOTAL AMOUNT row one strong, centered table row.
+        // This also explicitly closes the border around JUMLAH and every other
+        // amount column, including cells overwritten by formulas above.
+        for (var column = 0; column < columnCount; column++) {
+          applyTableBorderAndAlignment(
+            totalRow,
+            column,
+            bold: true,
+            fontSize: 13,
+            center: true,
           );
         }
-        writeCell(
-          sheet,
-          totalRow + (config['footerTotalOffset'] as int),
+
+        // Rebuild the payment summary as one contiguous two-column table.
+        final footerLabelColumn = footerValueColumn - 1;
+        String paymentLabel(String key) {
+          switch (key) {
+            case 'payroll':
+              return 'PAYROLL';
+            case 'paid':
+              return 'PAID';
+            case 'instant':
+              return 'INSTANT';
+            case 'cash':
+              return 'CASH';
+            default:
+              return key.toUpperCase();
+          }
+        }
+
+        for (final paymentRow in paymentRows.entries) {
+          final footerRow = totalRow + paymentRow.value;
+          final amount = displayedPayments[paymentRow.key] ?? 0;
+          writeCell(sheet, footerRow, footerLabelColumn, paymentLabel(paymentRow.key));
+          writeCell(sheet, footerRow, footerValueColumn, amount);
+          applyTableBorderAndAlignment(
+            footerRow,
+            footerLabelColumn,
+            bold: true,
+            center: true,
+          );
+          applyTableBorderAndAlignment(
+            footerRow,
+            footerValueColumn,
+            center: true,
+          );
+        }
+
+        final footerTotalRow =
+            totalRow + (config['footerTotalOffset'] as int);
+        writeCell(sheet, footerTotalRow, footerLabelColumn, 'TOTAL');
+        writeCell(sheet, footerTotalRow, footerValueColumn, netTotal);
+        applyTableBorderAndAlignment(
+          footerTotalRow,
+          footerLabelColumn,
+          bold: true,
+          center: true,
+        );
+        applyTableBorderAndAlignment(
+          footerTotalRow,
           footerValueColumn,
-          netTotal,
+          bold: true,
+          center: true,
         );
       }
 
