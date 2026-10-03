@@ -15207,13 +15207,13 @@ class _AdminDashboardState extends State<AdminDashboard>
         if (layout == 'foreign21') {
           return const [
             'NO',
-            'ID STAFF',
+            'ID STAF',
             'TARIKH MASUK KERJA',
             'KENAIKAN TERAKHIR',
             'KENAIKAN SETERUSNYA',
             'PERMIT',
             'NAMA',
-            'PASSPORT',
+            'NO IC / PASSPORT',
             'GAJI',
             'ELAUN KEDATANGAN',
             'ELAUN PERKHIDMATAN',
@@ -15224,19 +15224,19 @@ class _AdminDashboardState extends State<AdminDashboard>
             'JUMLAH',
             'CUTI TANPA GAJI',
             'KWSP',
-            'SOCSO',
+            'PERKESO',
             'POTONGAN',
             'JUMLAH BERSIH',
           ];
         }
         final common = <String>[
           'NO',
-          'ID STAFF',
+          'ID STAF',
           'TARIKH MASUK KERJA',
           'KENAIKAN TERAKHIR',
           'KENAIKAN SETERUSNYA',
           'NAMA',
-          'NO. K/P',
+          'NO IC / PASSPORT',
           'GAJI',
           'ELAUN KEDATANGAN',
           'ELAUN PERKHIDMATAN',
@@ -15249,8 +15249,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           'JUMLAH',
           'CUTI TANPA GAJI',
           'KWSP',
-          'SOCSO',
-          'EIS',
+          'PERKESO',
+          'SIP',
           'POTONGAN',
           'JUMLAH BERSIH',
         ]);
@@ -15332,10 +15332,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           headerCell.value = xls.TextCellValue(cleanHeaders[column]);
           final style = headerCell.cellStyle ?? xls.CellStyle();
           headerCell.cellStyle = style.copyWith(
+            boldVal: true,
             fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
                 ? exportBodyFontSize
                 : style.fontSize,
             horizontalAlignVal: xls.HorizontalAlign.Center,
+            verticalAlignVal: xls.VerticalAlign.Center,
+            textWrappingVal: xls.TextWrapping.WrapText,
           );
         }
 
