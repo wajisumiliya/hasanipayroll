@@ -14978,11 +14978,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           'group': temporaryStaffGroup,
           'totalRow': 22,
           'layout': 'standard21',
+          // The template merges Q:R for labels and S:U for values.
+          'footerLabelColumn': 16,
           'footerValueColumn': 18,
+          'footerEndColumn': 20,
           'paymentRows': <String, int>{
             'payroll': 2,
-            'cash': 3,
-            'instant': 4,
+            'instant': 3,
+            'cash': 4,
           },
           'footerTotalOffset': 5,
         },
@@ -15174,6 +15177,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       }
 
       void writeMonthHeader(xls.Sheet sheet, int lastColumnIndex) {
+        final monthText =
+            DateFormat('MMMM yyyy').format(selectedPayrollMonth).toUpperCase();
         final cell = sheet.cell(
           xls.CellIndex.indexByString('A3'),
         );
@@ -15183,10 +15188,12 @@ class _AdminDashboardState extends State<AdminDashboard>
             columnIndex: lastColumnIndex,
             rowIndex: 2,
           ),
-          customValue: xls.TextCellValue(
-            DateFormat('MMM-yyyy').format(selectedPayrollMonth),
-          ),
+          customValue: xls.TextCellValue(monthText),
         );
+        // The supplied sheets already contain this merged range. In that case
+        // merge() may preserve the existing blank value, so always write the
+        // selected payroll month explicitly to the merge's top-left cell.
+        cell.value = xls.TextCellValue(monthText);
         cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
           boldVal: true,
           fontSizeVal: 16,
@@ -15310,7 +15317,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           // branch sheets need extra height so employee data is easier to read.
           sheet.setRowHeight(
             rowNumber - 1,
-            sheetName == 'Edar (L)' ? 18 : 25,
+            sheetName == 'Edar (L)' ? 18 : 32,
           );
 
           final payroll = branchRecords[rowOffset];
@@ -15483,8 +15490,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                   : value is num
                       ? moneyNumberFormat
                       : style.numberFormat,
-              fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
-                  ? exportBodyFontSize
+              fontSizeVal: (style.fontSize ?? 9) <
+                      (sheetName == 'Edar (L)' ? exportBodyFontSize : 13)
+                  ? (sheetName == 'Edar (L)' ? exportBodyFontSize : 13)
                   : style.fontSize,
               leftBorderVal: tableBorder,
               rightBorderVal: tableBorder,
@@ -15577,6 +15585,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           paymentTotals[paymentKey] = paymentTotals[paymentKey]! + net;
         }
 
+        // Remove the template's old label and formulas before rebuilding the
+        // total row. This prevents "TOTAL AMOUNT" appearing twice.
+        for (var column = 0; column < columnCount; column++) {
+          writeCell(sheet, totalRow, column, null);
+        }
+
         final firstMoneyColumn = layout == 'foreign21' ? 8 : 7;
         for (var column = firstMoneyColumn;
             column < columnTotals.length;
@@ -15626,7 +15640,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         final displayedPayments = Map<String, double>.from(paymentTotals);
         displayedPayments['payroll'] = netTotal - representedNonPayroll;
 
-        final paymentLabelColumn = footerValueColumn - 1;
+        final paymentLabelColumn =
+            (config['footerLabelColumn'] as int?) ?? footerValueColumn - 1;
+        final footerEndColumn =
+            (config['footerEndColumn'] as int?) ?? footerValueColumn;
         void writePaymentSummaryRow(
           int rowNumber,
           String label,
@@ -15635,7 +15652,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         }) {
           writeCell(sheet, rowNumber, paymentLabelColumn, label);
           writeCell(sheet, rowNumber, footerValueColumn, amount);
-          for (final column in [paymentLabelColumn, footerValueColumn]) {
+          for (var column = paymentLabelColumn;
+              column <= footerEndColumn;
+              column++) {
             final cell = sheet.cell(
               xls.CellIndex.indexByColumnRow(
                 columnIndex: column,
@@ -15643,7 +15662,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             );
             cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
-              boldVal: isTotal,
+              boldVal: isTotal || column < footerValueColumn,
               fontSizeVal: exportTotalFontSize,
               horizontalAlignVal: xls.HorizontalAlign.Center,
               leftBorderVal: tableBorder,
