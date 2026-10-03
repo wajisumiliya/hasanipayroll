@@ -14483,7 +14483,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       );
       monthCell.cellStyle = (monthCell.cellStyle ?? xls.CellStyle()).copyWith(
         boldVal: true,
-        fontSizeVal: 14,
+        fontSizeVal: 16,
         horizontalAlignVal: xls.HorizontalAlign.Center,
       );
 
@@ -14571,6 +14571,26 @@ class _AdminDashboardState extends State<AdminDashboard>
 
       final columnTotals = List<double>.filled(20, 0);
       final tableBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
+      const exportBodyFontSize = 11;
+      const exportTotalFontSize = 13;
+      final moneyNumberFormat = xls.NumFormat.custom(
+        formatCode: '#,##0.00;-#,##0.00;-',
+      );
+      for (var column = 0; column < 20; column++) {
+        final headerCell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(
+            columnIndex: column,
+            rowIndex: firstDataRow - 2,
+          ),
+        );
+        final style = headerCell.cellStyle ?? xls.CellStyle();
+        headerCell.cellStyle = style.copyWith(
+          fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
+              ? exportBodyFontSize
+              : style.fontSize,
+          horizontalAlignVal: xls.HorizontalAlign.Center,
+        );
+      }
       for (var index = 0; index < sortedRecords.length; index++) {
         final payroll = sortedRecords[index];
         final rowNumber = firstDataRow + index;
@@ -14718,18 +14738,29 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
 
           final style = cell.cellStyle ?? xls.CellStyle();
-          cell.cellStyle = style.copyWith(
+          var updatedStyle = style.copyWith(
             // Keep the serial-number column as 1, 2, 3... rather than 1.00.
-            numberFormat:
-                column == 0 ? xls.NumFormat.standard_1 : style.numberFormat,
+            numberFormat: column == 0
+                ? xls.NumFormat.standard_1
+                : value is num
+                    ? moneyNumberFormat
+                    : style.numberFormat,
             // The supplied template is very small on screen; use a readable
-            // minimum while retaining its borders, alignment and colours.
-            fontSizeVal: (style.fontSize ?? 9) < 10 ? 10 : style.fontSize,
+            // minimum while retaining its borders and colours.
+            fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
+                ? exportBodyFontSize
+                : style.fontSize,
             leftBorderVal: tableBorder,
             rightBorderVal: tableBorder,
             topBorderVal: tableBorder,
             bottomBorderVal: tableBorder,
           );
+          if (value is num) {
+            updatedStyle = updatedStyle.copyWith(
+              horizontalAlignVal: xls.HorizontalAlign.Center,
+            );
+          }
+          cell.cellStyle = updatedStyle;
         }
       }
 
@@ -14766,8 +14797,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
         cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
           boldVal: true,
+          fontSizeVal: exportTotalFontSize,
+          horizontalAlignVal: xls.HorizontalAlign.Center,
           topBorderVal: totalBorder,
           bottomBorderVal: totalBorder,
+          leftBorderVal: totalBorder,
+          rightBorderVal: totalBorder,
+          numberFormat:
+              column >= 7 ? moneyNumberFormat : cell.cellStyle?.numberFormat,
         );
       }
 
@@ -15144,7 +15181,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
         cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
           boldVal: true,
-          fontSizeVal: 14,
+          fontSizeVal: 16,
           horizontalAlignVal: xls.HorizontalAlign.Center,
         );
       }
@@ -15200,6 +15237,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         final columnCount = layout == 'local20' ? 20 : 21;
         final columnTotals = List<double>.filled(columnCount, 0);
         final tableBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
+        const exportBodyFontSize = 11;
+        const exportTotalFontSize = 13;
+        final moneyNumberFormat = xls.NumFormat.custom(
+          formatCode: '#,##0.00;-#,##0.00;-',
+        );
         final paymentTotals = <String, double>{
           'payroll': 0,
           'cash': 0,
@@ -15208,6 +15250,21 @@ class _AdminDashboardState extends State<AdminDashboard>
         };
 
         writeMonthHeader(sheet, layout == 'local20' ? 19 : 20);
+        for (var column = 0; column < columnCount; column++) {
+          final headerCell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(
+              columnIndex: column,
+              rowIndex: firstDataRow - 2,
+            ),
+          );
+          final style = headerCell.cellStyle ?? xls.CellStyle();
+          headerCell.cellStyle = style.copyWith(
+            fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
+                ? exportBodyFontSize
+                : style.fontSize,
+            horizontalAlignVal: xls.HorizontalAlign.Center,
+          );
+        }
 
         for (var rowOffset = 0; rowOffset < dataCapacity; rowOffset++) {
           final rowNumber = firstDataRow + rowOffset;
@@ -15381,16 +15438,27 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             );
             final style = cell.cellStyle ?? xls.CellStyle();
-            cell.cellStyle = style.copyWith(
+            var updatedStyle = style.copyWith(
               // The first column is a serial number, never currency/decimal.
-              numberFormat:
-                  column == 0 ? xls.NumFormat.standard_1 : style.numberFormat,
-              fontSizeVal: (style.fontSize ?? 9) < 10 ? 10 : style.fontSize,
+              numberFormat: column == 0
+                  ? xls.NumFormat.standard_1
+                  : value is num
+                      ? moneyNumberFormat
+                      : style.numberFormat,
+              fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
+                  ? exportBodyFontSize
+                  : style.fontSize,
               leftBorderVal: tableBorder,
               rightBorderVal: tableBorder,
               topBorderVal: tableBorder,
               bottomBorderVal: tableBorder,
             );
+            if (value is num) {
+              updatedStyle = updatedStyle.copyWith(
+                horizontalAlignVal: xls.HorizontalAlign.Center,
+              );
+            }
+            cell.cellStyle = updatedStyle;
             if (value is num) columnTotals[column] += value.toDouble();
           }
 
@@ -15481,6 +15549,28 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
+        writeCell(sheet, totalRow, 0, 'TOTAL AMOUNT');
+        for (var column = 0; column < columnCount; column++) {
+          final cell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(
+              columnIndex: column,
+              rowIndex: totalRow - 1,
+            ),
+          );
+          cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+            boldVal: true,
+            fontSizeVal: exportTotalFontSize,
+            horizontalAlignVal: xls.HorizontalAlign.Center,
+            leftBorderVal: tableBorder,
+            rightBorderVal: tableBorder,
+            topBorderVal: tableBorder,
+            bottomBorderVal: tableBorder,
+            numberFormat: column >= firstMoneyColumn
+                ? moneyNumberFormat
+                : cell.cellStyle?.numberFormat,
+          );
+        }
+
         final paymentRows = config['paymentRows'] as Map<String, int>;
         final footerValueColumn = config['footerValueColumn'] as int;
         final netColumn = layout == 'local20' ? 19 : 20;
@@ -15491,20 +15581,50 @@ class _AdminDashboardState extends State<AdminDashboard>
         final displayedPayments = Map<String, double>.from(paymentTotals);
         displayedPayments['payroll'] = netTotal - representedNonPayroll;
 
+        final paymentLabelColumn = footerValueColumn - 1;
+        void writePaymentSummaryRow(
+          int rowNumber,
+          String label,
+          double amount, {
+          bool isTotal = false,
+        }) {
+          writeCell(sheet, rowNumber, paymentLabelColumn, label);
+          writeCell(sheet, rowNumber, footerValueColumn, amount);
+          for (final column in [paymentLabelColumn, footerValueColumn]) {
+            final cell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: rowNumber - 1,
+              ),
+            );
+            cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+              boldVal: isTotal,
+              fontSizeVal: exportTotalFontSize,
+              horizontalAlignVal: xls.HorizontalAlign.Center,
+              leftBorderVal: tableBorder,
+              rightBorderVal: tableBorder,
+              topBorderVal: tableBorder,
+              bottomBorderVal: tableBorder,
+              numberFormat: column == footerValueColumn
+                  ? moneyNumberFormat
+                  : cell.cellStyle?.numberFormat,
+            );
+          }
+        }
+
         for (final paymentRow in paymentRows.entries) {
           final amount = displayedPayments[paymentRow.key] ?? 0;
-          writeCell(
-            sheet,
+          writePaymentSummaryRow(
             totalRow + paymentRow.value,
-            footerValueColumn,
-            amount.abs() < 0.005 ? null : amount,
+            paymentRow.key.toUpperCase(),
+            amount,
           );
         }
-        writeCell(
-          sheet,
+        writePaymentSummaryRow(
           totalRow + (config['footerTotalOffset'] as int),
-          footerValueColumn,
+          'TOTAL',
           netTotal,
+          isTotal: true,
         );
       }
 
