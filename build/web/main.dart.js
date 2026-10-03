@@ -135044,7 +135044,8 @@ m0.a=m1}e4=new A.b_q(c1,d8)
 for(e5=0;e5<d4;++e5){e6=5+e5
 for(e7=0;e7<21;++e7)b6.$4(c1,e6,e7,null)
 if(e5>=J.ai(c4))continue
-c1.S1(e6-1,18)
+m0=J.f(c0,"Edar (L)")?18:25
+c1.S1(e6-1,m0)
 e8=J.d(c4,e5)
 m0=J.d(e8,"employee_id")
 a1=m0==null?null:B.f.u(J.p(m0)).toUpperCase()
