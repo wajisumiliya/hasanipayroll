@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/payroll.dart';
@@ -49,6 +50,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   bool _notificationsLoading = false;
   bool _payrollLoading = false;
   bool _aquariumLoading = false;
+  bool _checkingSalaryIncrease = false;
 
   @override
   void initState() {
@@ -148,10 +150,79 @@ class _EmployeePortalState extends State<EmployeePortal>
     if (mounted) setState(() => _payrollLoading = true);
     try {
       await service.loadPayrollFromSupabase();
+      await _maybeShowSalaryIncreaseCelebration();
     } catch (error) {
       debugPrint('Unable to refresh employee payroll: $error');
     } finally {
       if (mounted) setState(() => _payrollLoading = false);
+    }
+  }
+
+  Future<void> _maybeShowSalaryIncreaseCelebration() async {
+    if (_checkingSalaryIncrease || !mounted) return;
+    _checkingSalaryIncrease = true;
+    try {
+      final history = records.where((record) => record.isPublished).toList()
+        ..sort((a, b) => b.period.compareTo(a.period));
+      if (history.length < 2) return;
+
+      final current = history[0];
+      final previous = history[1];
+      final currentAllowances =
+          current.elaunKedatangan + current.elaunPerkhidmatan;
+      final previousAllowances =
+          previous.elaunKedatangan + previous.elaunPerkhidmatan;
+      final increase = currentAllowances - previousAllowances;
+      if (increase <= 0.004) return;
+
+      final preferenceKey =
+          'salary_increase_seen_${employeeId}_${DateFormat('yyyy_MM').format(current.period)}';
+      final preferences = await SharedPreferences.getInstance();
+      if (preferences.getBool(preferenceKey) == true || !mounted) return;
+      await preferences.setBool(preferenceKey, true);
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: const Color(0xFFF4F9FF),
+          title: const Column(
+            children: [
+              Text('🎉', style: TextStyle(fontSize: 54)),
+              SizedBox(height: 8),
+              Text(
+                'Congratulations!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF08255F),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Your monthly allowance has increased by '
+            'RM ${NumberFormat('#,##0.00').format(increase)} starting from '
+            '${DateFormat('MMMM yyyy').format(current.period)}.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, height: 1.5),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(dialogContext),
+              icon: const Icon(Icons.celebration_outlined),
+              label: const Text('Thank you'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      _checkingSalaryIncrease = false;
     }
   }
 

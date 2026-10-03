@@ -10774,20 +10774,19 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 final attendanceReady = missing.isEmpty;
                                 final attendanceExempt =
                                     attendanceExemptIds.contains(employeeId);
-                                final attendanceExemptLabel =
-                                    _attendanceBool(
-                                      employee['is_management_staff'],
-                                    )
-                                        ? 'Management Staff'
+                                final attendanceExemptLabel = _attendanceBool(
+                                  employee['is_management_staff'],
+                                )
+                                    ? 'Management Staff'
+                                    : _attendanceBool(
+                                        employee['is_temp_staff'],
+                                      )
+                                        ? 'Temporary Staff'
                                         : _attendanceBool(
-                                            employee['is_temp_staff'],
+                                            employee['is_support_staff'],
                                           )
-                                            ? 'Temporary Staff'
-                                            : _attendanceBool(
-                                                employee['is_support_staff'],
-                                              )
-                                                ? 'Support Staff'
-                                                : 'Other Staff';
+                                            ? 'Support Staff'
+                                            : 'Other Staff';
 
                                 return CheckboxListTile(
                                   value: checked,
@@ -14747,7 +14746,8 @@ class _AdminDashboardState extends State<AdminDashboard>
             'tarikh_masuk_kerja',
             'tarikh_masuk',
           ])),
-          dateText(lastIncrement),
+          _salaryIncrementText(employeeId, payroll['period']) ??
+              dateText(lastIncrement),
           dateText(nextIncrement),
           textValue(firstValue(employee, const ['name'])),
           textValue(
@@ -15509,7 +15509,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              dateText(lastIncrement),
+              _salaryIncrementText(employeeId, payroll['period']) ??
+                  dateText(lastIncrement),
               dateText(nextIncrement),
               textValue(firstValue(employee, const [
                 'permit',
@@ -15537,7 +15538,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              dateText(lastIncrement),
+              _salaryIncrementText(employeeId, payroll['period']) ??
+                  dateText(lastIncrement),
               dateText(nextIncrement),
               employeeName,
               identityNumber,
@@ -15560,7 +15562,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              dateText(lastIncrement),
+              _salaryIncrementText(employeeId, payroll['period']) ??
+                  dateText(lastIncrement),
               dateText(nextIncrement),
               employeeName,
               identityNumber,
@@ -15620,10 +15623,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                       : style.fontSize)
                   : 14,
               boldVal: emphasizeEmployeeColumn ? true : null,
-              horizontalAlignVal:
-                  isEdarLocal ? null : xls.HorizontalAlign.Left,
-              verticalAlignVal:
-                  isEdarLocal ? null : xls.VerticalAlign.Center,
+              horizontalAlignVal: isEdarLocal ? null : xls.HorizontalAlign.Left,
+              verticalAlignVal: isEdarLocal ? null : xls.VerticalAlign.Center,
               leftBorderVal: tableBorder,
               rightBorderVal: tableBorder,
               topBorderVal: tableBorder,
@@ -16176,7 +16177,8 @@ class _AdminDashboardState extends State<AdminDashboard>
             i + 1,
             employeeId,
             dateText(employee['joining_date']),
-            dateText(lastIncrement),
+            _salaryIncrementText(employeeId, payroll['period']) ??
+                dateText(lastIncrement),
             dateText(nextIncrement),
             employee['name'] ?? payroll['name'] ?? '',
             employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '',
@@ -16494,7 +16496,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             '${index + 1}',
             employeeId,
             dateText(employee['joining_date']),
-            lastIncrement?.toString() ?? '',
+            _salaryIncrementText(employeeId, payroll['period']) ??
+                lastIncrement?.toString() ??
+                '',
             dateText(nextIncrement),
             (employee['name'] ?? payroll['name'] ?? '').toString(),
             (employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '').toString(),
@@ -17316,6 +17320,51 @@ class _AdminDashboardState extends State<AdminDashboard>
       topBorderVal: border,
       bottomBorderVal: border,
     );
+  }
+
+  String? _salaryIncrementText(String employeeId, dynamic payrollPeriod) {
+    final currentPeriod = payrollPeriod is DateTime
+        ? payrollPeriod
+        : DateTime.tryParse(payrollPeriod?.toString() ?? '');
+    if (currentPeriod == null) return null;
+
+    final history = service
+        .employeePayroll(employeeId)
+        .where((record) => !record.period.isAfter(currentPeriod))
+        .toList()
+      ..sort((a, b) => a.period.compareTo(b.period));
+
+    for (var index = history.length - 1; index > 0; index--) {
+      final current = history[index];
+      final previous = history[index - 1];
+      final currentAllowances =
+          current.elaunKedatangan + current.elaunPerkhidmatan;
+      final previousAllowances =
+          previous.elaunKedatangan + previous.elaunPerkhidmatan;
+      final increase = currentAllowances - previousAllowances;
+      if (increase > 0.004) {
+        final amount = increase.roundToDouble() == increase
+            ? increase.toStringAsFixed(0)
+            : increase.toStringAsFixed(2);
+        const monthNames = [
+          'JAN',
+          'FEB',
+          'MAR',
+          'APR',
+          'MAY',
+          'JUN',
+          'JUL',
+          'AUG',
+          'SEPT',
+          'OCT',
+          'NOV',
+          'DEC',
+        ];
+        final year = (current.period.year % 100).toString().padLeft(2, '0');
+        return '${monthNames[current.period.month - 1]}-$year/$amount';
+      }
+    }
+    return null;
   }
 
   Future<void> _exportStatutoryReportExcel(String report, DateTime month,
