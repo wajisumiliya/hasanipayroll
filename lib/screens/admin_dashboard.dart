@@ -14570,9 +14570,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         ..sort((a, b) => _comparePayrollExportRecords(a, b, employeeMap));
 
       final columnTotals = List<double>.filled(20, 0);
+      final tableBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
       for (var index = 0; index < sortedRecords.length; index++) {
         final payroll = sortedRecords[index];
         final rowNumber = firstDataRow + index;
+        sheet.setRowHeight(rowNumber - 1, 15);
         final employeeId = _normalizeBranchValue(payroll['employee_id']);
         final employee = employeeMap[employeeId] ?? <String, dynamic>{};
         final salary = salaryMap[employeeId] ?? <String, dynamic>{};
@@ -14723,6 +14725,10 @@ class _AdminDashboardState extends State<AdminDashboard>
             // The supplied template is very small on screen; use a readable
             // minimum while retaining its borders, alignment and colours.
             fontSizeVal: (style.fontSize ?? 9) < 10 ? 10 : style.fontSize,
+            leftBorderVal: tableBorder,
+            rightBorderVal: tableBorder,
+            topBorderVal: tableBorder,
+            bottomBorderVal: tableBorder,
           );
         }
       }
@@ -15193,6 +15199,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         final totalRow = templateTotalRow + extraRows;
         final columnCount = layout == 'local20' ? 20 : 21;
         final columnTotals = List<double>.filled(columnCount, 0);
+        final tableBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
         final paymentTotals = <String, double>{
           'payroll': 0,
           'cash': 0,
@@ -15208,6 +15215,8 @@ class _AdminDashboardState extends State<AdminDashboard>
             writeCell(sheet, rowNumber, column, null);
           }
           if (rowOffset >= branchRecords.length) continue;
+
+          sheet.setRowHeight(rowNumber - 1, 15);
 
           final payroll = branchRecords[rowOffset];
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
@@ -15377,6 +15386,10 @@ class _AdminDashboardState extends State<AdminDashboard>
               numberFormat:
                   column == 0 ? xls.NumFormat.standard_1 : style.numberFormat,
               fontSizeVal: (style.fontSize ?? 9) < 10 ? 10 : style.fontSize,
+              leftBorderVal: tableBorder,
+              rightBorderVal: tableBorder,
+              topBorderVal: tableBorder,
+              bottomBorderVal: tableBorder,
             );
             if (value is num) columnTotals[column] += value.toDouble();
           }
