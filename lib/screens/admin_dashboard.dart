@@ -15565,7 +15565,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         for (final paymentRow in paymentRows.entries) {
           final footerRow = totalRow + paymentRow.value;
           final amount = displayedPayments[paymentRow.key] ?? 0;
-          writeCell(sheet, footerRow, footerLabelColumn, paymentLabel(paymentRow.key));
+          writeCell(sheet, footerRow, footerLabelColumn,
+              paymentLabel(paymentRow.key));
           writeCell(sheet, footerRow, footerValueColumn, amount);
           applyTableBorderAndAlignment(
             footerRow,
@@ -15580,8 +15581,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
-        final footerTotalRow =
-            totalRow + (config['footerTotalOffset'] as int);
+        final footerTotalRow = totalRow + (config['footerTotalOffset'] as int);
         writeCell(sheet, footerTotalRow, footerLabelColumn, 'TOTAL');
         writeCell(sheet, footerTotalRow, footerValueColumn, netTotal);
         applyTableBorderAndAlignment(
