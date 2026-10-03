@@ -11104,6 +11104,56 @@ class _AdminDashboardState extends State<AdminDashboard>
     return value?.toString().trim().toUpperCase() ?? '';
   }
 
+  /// Payroll exports follow the business roster order: management first, then
+  /// staff by joining date.  Missing/identical dates fall back to employee ID
+  /// so the output remains stable and predictable.
+  int _comparePayrollExportRecords(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+    Map<String, Map<String, dynamic>> employees,
+  ) {
+    final aId = _normalizeBranchValue(a['employee_id']);
+    final bId = _normalizeBranchValue(b['employee_id']);
+    final aEmployee = employees[aId] ?? const <String, dynamic>{};
+    final bEmployee = employees[bId] ?? const <String, dynamic>{};
+
+    bool isManagement(Map<String, dynamic> employee) {
+      final value = employee['is_management_staff'];
+      return value == true || value?.toString().trim().toLowerCase() == 'true';
+    }
+
+    final aManagement = isManagement(aEmployee);
+    final bManagement = isManagement(bEmployee);
+    if (aManagement != bManagement) return aManagement ? -1 : 1;
+
+    DateTime? joiningDate(Map<String, dynamic> employee) {
+      final text = (employee['joining_date'] ?? employee['joiningDate'] ?? '')
+          .toString()
+          .trim();
+      if (text.isEmpty) return null;
+      final isoDate = DateTime.tryParse(text);
+      if (isoDate != null) return isoDate;
+      try {
+        return DateFormat('dd/MM/yyyy').parseStrict(text);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final aJoiningDate = joiningDate(aEmployee);
+    final bJoiningDate = joiningDate(bEmployee);
+    if (aJoiningDate != null && bJoiningDate != null) {
+      final dateOrder = aJoiningDate.compareTo(bJoiningDate);
+      if (dateOrder != 0) return dateOrder;
+    } else if (aJoiningDate != null) {
+      return -1;
+    } else if (bJoiningDate != null) {
+      return 1;
+    }
+
+    return aId.compareTo(bId);
+  }
+
   String _payrollBranchIdFromEmployee(Map<String, dynamic> employee) {
     final payrollBranch = _normalizeBranchValue(employee['payroll_branch_id']);
     return payrollBranch.isNotEmpty
@@ -14506,8 +14556,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       // 7. Write branch payroll rows using the exact template columns.
       // --------------------------------------------------------------------------
       final sortedRecords = List<Map<String, dynamic>>.from(records)
-        ..sort((a, b) => _normalizeBranchValue(a['employee_id'])
-            .compareTo(_normalizeBranchValue(b['employee_id'])));
+        ..sort((a, b) => _comparePayrollExportRecords(a, b, employeeMap));
 
       final columnTotals = List<double>.filled(20, 0);
       for (var index = 0; index < sortedRecords.length; index++) {
@@ -15078,8 +15127,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         final templateTotalRow = config['totalRow'] as int;
         final branchRecords = List<Map<String, dynamic>>.from(
           grouped[config['group']] ?? const <Map<String, dynamic>>[],
-        )..sort((a, b) => _normalizeBranchValue(a['employee_id'])
-            .compareTo(_normalizeBranchValue(b['employee_id'])));
+        )..sort((a, b) => _comparePayrollExportRecords(a, b, employeeMap));
 
         const firstDataRow = 5;
         final originalDataCapacity = templateTotalRow - firstDataRow;
@@ -15679,8 +15727,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         }
         final branchRecords =
             List<Map<String, dynamic>>.from(grouped[branchId]!)
-              ..sort((a, b) => _normalizeBranchValue(a['employee_id'])
-                  .compareTo(_normalizeBranchValue(b['employee_id'])));
+              ..sort((a, b) => _comparePayrollExportRecords(a, b, employeeMap));
 
         sheet.cell(xls.CellIndex.indexByString('A1')).value =
             xls.TextCellValue('PENYATA GAJI - ${branchName.toUpperCase()}');
