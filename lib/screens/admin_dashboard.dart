@@ -15232,10 +15232,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
           final style = cell.cellStyle ?? xls.CellStyle();
           cell.cellStyle = style.copyWith(
-            boldVal: bold ? true : style.bold,
-            fontSizeVal: fontSize ?? style.fontSize,
+            boldVal: bold ? true : null,
+            fontSizeVal: fontSize?.toInt(),
             horizontalAlignVal:
-                center ? xls.HorizontalAlign.Center : style.horizontalAlign,
+                center ? xls.HorizontalAlign.Center : null,
             leftBorderVal: tableBorder,
             rightBorderVal: tableBorder,
             topBorderVal: tableBorder,
