@@ -15331,15 +15331,15 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
           headerCell.value = xls.TextCellValue(cleanHeaders[column]);
           final style = headerCell.cellStyle ?? xls.CellStyle();
-          headerCell.cellStyle = style.copyWith(
-            boldVal: true,
-            fontSizeVal: (style.fontSize ?? 9) < exportBodyFontSize
-                ? exportBodyFontSize
-                : style.fontSize,
-            horizontalAlignVal: xls.HorizontalAlign.Center,
-            verticalAlignVal: xls.VerticalAlign.Center,
-            textWrappingVal: xls.TextWrapping.WrapText,
-          );
+          if (sheetName != 'Edar (L)') {
+            headerCell.cellStyle = style.copyWith(
+              boldVal: true,
+              fontSizeVal: 14,
+              horizontalAlignVal: xls.HorizontalAlign.Center,
+              verticalAlignVal: xls.VerticalAlign.Center,
+              textWrappingVal: xls.TextWrapping.WrapText,
+            );
+          }
         }
 
         void applyTableBorderAndAlignment(
@@ -15698,6 +15698,24 @@ class _AdminDashboardState extends State<AdminDashboard>
         for (var column = 0; column < columnCount; column++) {
           writeCell(sheet, totalRow, column, null);
         }
+        if (sheetName != 'Edar (L)') {
+          final totalStart = xls.CellIndex.indexByColumnRow(
+            columnIndex: 0,
+            rowIndex: totalRow - 1,
+          );
+          final totalEnd = xls.CellIndex.indexByColumnRow(
+            columnIndex: 6,
+            rowIndex: totalRow - 1,
+          );
+          sheet.merge(
+            totalStart,
+            totalEnd,
+            customValue: xls.TextCellValue('TOTAL AMOUNT'),
+          );
+          // Existing template merges keep their original value, so explicitly
+          // set the top-left cell after merging as well.
+          sheet.cell(totalStart).value = xls.TextCellValue('TOTAL AMOUNT');
+        }
 
         final firstMoneyColumn = layout == 'foreign21' ? 8 : 7;
         for (var column = firstMoneyColumn;
@@ -15716,7 +15734,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
-        writeCell(sheet, totalRow, 0, 'TOTAL AMOUNT');
+        if (sheetName == 'Edar (L)') {
+          writeCell(sheet, totalRow, 0, 'TOTAL AMOUNT');
+        }
         for (var column = 0; column < columnCount; column++) {
           final cell = sheet.cell(
             xls.CellIndex.indexByColumnRow(
