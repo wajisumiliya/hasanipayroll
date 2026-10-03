@@ -14473,8 +14473,19 @@ class _AdminDashboardState extends State<AdminDashboard>
       sheet.cell(xls.CellIndex.indexByString('L2')).value = xls.TextCellValue(
         '${branchName.toUpperCase()} (PEKERJA TEMPATAN)',
       );
-      sheet.cell(xls.CellIndex.indexByString('A3')).value =
-          xls.TextCellValue(monthText);
+      final monthCell = sheet.cell(
+        xls.CellIndex.indexByString('A3'),
+      );
+      sheet.merge(
+        xls.CellIndex.indexByString('A3'),
+        xls.CellIndex.indexByString('T3'),
+        customValue: xls.TextCellValue(monthText),
+      );
+      monthCell.cellStyle = (monthCell.cellStyle ?? xls.CellStyle()).copyWith(
+        boldVal: true,
+        fontSizeVal: 14,
+        horizontalAlignVal: xls.HorizontalAlign.Center,
+      );
 
       // --------------------------------------------------------------------------
       // 5. Make enough formatted employee rows.
@@ -14758,12 +14769,6 @@ class _AdminDashboardState extends State<AdminDashboard>
       final footerTotalRow = totalRow + 5;
       sheet.cell(xls.CellIndex.indexByString('R$footerTotalRow')).value =
           xls.DoubleCellValue(columnTotals[19]);
-
-      // Let Excel size every payroll column from its header and populated data.
-      for (var column = 0; column < 20; column++) {
-        sheet.getColumnWidths.remove(column);
-        sheet.setColumnAutoFit(column);
-      }
 
       // --------------------------------------------------------------------------
       // 9. Filename: branch + selected month.
@@ -15117,6 +15122,27 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
       }
 
+      void writeMonthHeader(xls.Sheet sheet, int lastColumnIndex) {
+        final cell = sheet.cell(
+          xls.CellIndex.indexByString('A3'),
+        );
+        sheet.merge(
+          xls.CellIndex.indexByString('A3'),
+          xls.CellIndex.indexByColumnRow(
+            columnIndex: lastColumnIndex,
+            rowIndex: 2,
+          ),
+          customValue: xls.TextCellValue(
+            DateFormat('MMM-yyyy').format(selectedPayrollMonth),
+          ),
+        );
+        cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+          boldVal: true,
+          fontSizeVal: 14,
+          horizontalAlignVal: xls.HorizontalAlign.Center,
+        );
+      }
+
       for (final config in sheetConfigs) {
         final sheetName = config['sheet'] as String;
         if (!excel.tables.containsKey(sheetName)) {
@@ -15174,12 +15200,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           'paid': 0,
         };
 
-        writeCell(
-          sheet,
-          3,
-          0,
-          DateFormat('MMM-yyyy').format(selectedPayrollMonth),
-        );
+        writeMonthHeader(sheet, layout == 'local20' ? 19 : 20);
 
         for (var rowOffset = 0; rowOffset < dataCapacity; rowOffset++) {
           final rowNumber = firstDataRow + rowOffset;
@@ -15472,13 +15493,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           footerValueColumn,
           netTotal,
         );
-
-        // Existing template widths are intentionally replaced so the output
-        // adapts to the real employee IDs, names, dates and money values.
-        for (var column = 0; column < columnCount; column++) {
-          sheet.getColumnWidths.remove(column);
-          sheet.setColumnAutoFit(column);
-        }
       }
 
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
