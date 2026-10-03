@@ -14574,7 +14574,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       for (var index = 0; index < sortedRecords.length; index++) {
         final payroll = sortedRecords[index];
         final rowNumber = firstDataRow + index;
-        sheet.setRowHeight(rowNumber - 1, 15);
+        sheet.setRowHeight(rowNumber - 1, 18);
         final employeeId = _normalizeBranchValue(payroll['employee_id']);
         final employee = employeeMap[employeeId] ?? <String, dynamic>{};
         final salary = salaryMap[employeeId] ?? <String, dynamic>{};
