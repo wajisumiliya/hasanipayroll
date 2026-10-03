@@ -285,6 +285,7 @@ class AttendancePayrollService {
     final elaunKedatangan = _number(salaryDefault['elaun_kedatangan']);
     final elaunPerkhidmatan = _number(salaryDefault['elaun_perkhidmatan']);
     final elaunKerajinan = _number(salaryDefault['elaun_kerajinan']);
+    final elaunMakanan = _number(salaryDefault['elaun_makanan']);
     final zakat = _number(salaryDefault['zakat']);
 
     // Employee-specific statutory settings.
@@ -575,6 +576,7 @@ class AttendancePayrollService {
       'elaun_kedatangan': elaunKedatangan,
       'elaun_perkhidmatan': elaunPerkhidmatan,
       'elaun_kerajinan': elaunKerajinan,
+      'elaun_makanan': elaunMakanan,
 
       // Attendance / earnings
       'overtime': overtimeAmount,
@@ -658,6 +660,7 @@ class AttendancePayrollService {
           elaunKedatangan: elaunKedatangan,
           elaunPerkhidmatan: elaunPerkhidmatan,
           elaunKerajinan: elaunKerajinan,
+          elaunMakanan: elaunMakanan,
           overtimeDuration: totalOvertimeHours,
           overtimeAmount: overtimeAmount,
           cutiUmum: cutiUmum,
@@ -711,6 +714,7 @@ class AttendancePayrollService {
       elaunKedatangan: elaunKedatangan,
       elaunPerkhidmatan: elaunPerkhidmatan,
       elaunKerajinan: elaunKerajinan,
+      elaunMakanan: elaunMakanan,
       overtimeDuration: totalOvertimeHours,
       overtimeAmount: overtimeAmount,
       cutiUmum: cutiUmum,
@@ -774,6 +778,7 @@ class AttendancePayrollService {
             'elaun_kedatangan,'
             'elaun_perkhidmatan,'
             'elaun_kerajinan,'
+            'elaun_makanan,'
             'zakat,'
             'epf_category,'
             'eis_applicable,'
@@ -1818,6 +1823,7 @@ class PayrollGenerationItem {
   final double elaunKedatangan;
   final double elaunPerkhidmatan;
   final double elaunKerajinan;
+  final double elaunMakanan;
   final double overtimeDuration;
   final double overtimeAmount;
   final double cutiUmum;
@@ -1851,6 +1857,7 @@ class PayrollGenerationItem {
     this.elaunKedatangan = 0.0,
     this.elaunPerkhidmatan = 0.0,
     this.elaunKerajinan = 0.0,
+    this.elaunMakanan = 0.0,
     this.overtimeDuration = 0.0,
     this.overtimeAmount = 0.0,
     this.cutiUmum = 0.0,

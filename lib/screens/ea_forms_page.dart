@@ -155,7 +155,8 @@ class _EaFormsPageState extends State<EaFormsPage> {
           final allowances = _money(
             _number(record['elaun_kedatangan']) +
                 _number(record['elaun_perkhidmatan']) +
-                _number(record['elaun_kerajinan']),
+                _number(record['elaun_kerajinan']) +
+                _number(record['elaun_makanan']),
           );
           monthlyBreakdown.add({
             'month': period.month,

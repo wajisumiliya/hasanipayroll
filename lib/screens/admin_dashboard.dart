@@ -2098,7 +2098,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               sum +
               _number(row['elaun_kedatangan']) +
               _number(row['elaun_perkhidmatan']) +
-              _number(row['elaun_kerajinan']),
+              _number(row['elaun_kerajinan']) +
+              _number(row['elaun_makanan']),
         );
         final overtime = sumField('overtime');
         final bonus = sumField('bonus');
@@ -5128,6 +5129,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final elaunKedatangan = TextEditingController(text: '0');
     final elaunPerkhidmatan = TextEditingController(text: '0');
     final elaunKerajinan = TextEditingController(text: '0');
+    final elaunMakanan = TextEditingController(text: '0');
     final zakat = TextEditingController(text: '0');
 
     String branchId =
@@ -5202,6 +5204,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true)),
                         _dialogField(elaunKerajinan, 'Elaun Kerajinan (RM)',
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true)),
+                        _dialogField(elaunMakanan, 'Elaun Makanan (RM)',
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true)),
                         _dialogField(zakat, 'Zakat (RM)',
@@ -5473,6 +5478,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     final parsedElaunPerkhidmatan =
                         salaryValue(elaunPerkhidmatan);
                     final parsedElaunKerajinan = salaryValue(elaunKerajinan);
+                    final parsedElaunMakanan = salaryValue(elaunMakanan);
                     final parsedZakat = salaryValue(zakat);
                     final salaryValues = [
                       parsedBasicSalary,
@@ -5480,6 +5486,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       parsedElaunKedatangan,
                       parsedElaunPerkhidmatan,
                       parsedElaunKerajinan,
+                      parsedElaunMakanan,
                       parsedZakat,
                     ];
 
@@ -5521,6 +5528,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         'elaun_kedatangan': parsedElaunKedatangan!,
                         'elaun_perkhidmatan': parsedElaunPerkhidmatan!,
                         'elaun_kerajinan': parsedElaunKerajinan!,
+                        'elaun_makanan': parsedElaunMakanan!,
                         'zakat': parsedZakat!,
                         'epf_category': epfCategory,
                         'eis_applicable': eisApplicable,
@@ -6586,6 +6594,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'Elaun Kedatangan (RM)': makeSalary('elaun_kedatangan'),
       'Elaun Perkhidmatan (RM)': makeSalary('elaun_perkhidmatan'),
       'Elaun Kerajinan (RM)': makeSalary('elaun_kerajinan'),
+      'Elaun Makanan (RM)': makeSalary('elaun_makanan'),
       'Zakat (RM)': makeSalary('zakat'),
     };
     var epfCategory = salaryDefault['epf_category']?.toString().trim() ?? '';
@@ -6975,6 +6984,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 salaryValues['Elaun Perkhidmatan (RM)'],
                             'elaun_kerajinan':
                                 salaryValues['Elaun Kerajinan (RM)'],
+                            'elaun_makanan': salaryValues['Elaun Makanan (RM)'],
                             'zakat': salaryValues['Zakat (RM)'],
                             'epf_category': epfCategory,
                             'eis_applicable': eisApplicable,
@@ -11029,6 +11039,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'Kedatangan RM ${item.elaunKedatangan.toStringAsFixed(2)} • '
                             'Perkhidmatan RM ${item.elaunPerkhidmatan.toStringAsFixed(2)} • '
                             'Kerajinan RM ${item.elaunKerajinan.toStringAsFixed(2)} • '
+                            'Makanan RM ${item.elaunMakanan.toStringAsFixed(2)} • '
                             'Approved OT ${item.overtimeDuration.toStringAsFixed(2)} hours / '
                             'RM ${item.overtimeAmount.toStringAsFixed(2)} • '
                             'Cuti Umum RM ${item.cutiUmum.toStringAsFixed(2)} • '
@@ -11139,6 +11150,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       ('elaun_kedatangan', 'Elaun Kedatangan', 'Earnings'),
       ('elaun_perkhidmatan', 'Elaun Perkhidmatan', 'Earnings'),
       ('elaun_kerajinan', 'Elaun Kerajinan', 'Earnings'),
+      ('elaun_makanan', 'Elaun Makanan', 'Earnings'),
       ('overtime', 'Overtime', 'Earnings'),
       ('cuti_umum', 'Cuti Umum', 'Earnings'),
       ('bonus', 'Bonus', 'Earnings'),
@@ -13104,6 +13116,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           payroll['elaun_kerajinan'],
         ) +
         _payrollNumber(
+          payroll['elaun_makanan'],
+        ) +
+        _payrollNumber(
           payroll['overtime'],
         ) +
         _payrollNumber(
@@ -13196,6 +13211,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           'elaun_perkhidmatan': 'elaun_perkhidmatan',
           'elaunKerajinan': 'elaun_kerajinan',
           'elaun_kerajinan': 'elaun_kerajinan',
+          'elaunMakanan': 'elaun_makanan',
+          'elaun_makanan': 'elaun_makanan',
           'overtime': 'overtime',
           'bonus': 'bonus',
           'commission': 'commission',
@@ -13265,6 +13282,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'elaun_kedatangan',
         'elaun_perkhidmatan',
         'elaun_kerajinan',
+        'elaun_makanan',
         'overtime',
         'bonus',
         'commission',
@@ -13612,7 +13630,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       SelectableText(
                         'id,employeeId,period,basicSalary,'
                         'elaunKedatangan,elaunPerkhidmatan,'
-                        'elaunKerajinan,overtime,bonus,commission,'
+                        'elaunKerajinan,elaunMakanan,overtime,bonus,commission,'
                         'otherEarnings,cutiUmum,epfEmployee,'
                         'socsoEmployee,eisEmployee,pcb,zakat,'
                         'epfEmployer,socsoEmployer,eisEmployer,'
@@ -14100,6 +14118,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'elaun_kedatangan': 'Elaun Kedatangan',
         'elaun_perkhidmatan': 'Elaun Perkhidmatan',
         'elaun_kerajinan': 'Elaun Kerajinan',
+        'elaun_makanan': 'Elaun Makanan',
         'overtime': 'Overtime',
         'cuti_umum': 'Cuti Umum',
         'late_deduction': 'Late Deduction',
@@ -14140,6 +14159,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'elaun_kedatangan',
       'elaun_perkhidmatan',
       'elaun_kerajinan',
+      'elaun_makanan',
       'overtime',
       'cuti_umum',
       'late_deduction',
@@ -15046,15 +15066,41 @@ class _AdminDashboardState extends State<AdminDashboard>
             .compareTo(_normalizeBranchValue(b['employee_id'])));
 
         const firstDataRow = 5;
-        final dataCapacity = templateTotalRow - firstDataRow;
-        if (branchRecords.length > dataCapacity) {
-          throw Exception(
-            '$sheetName has ${branchRecords.length} employees but the exact '
-            'manual layout supports $dataCapacity rows.',
-          );
+        final originalDataCapacity = templateTotalRow - firstDataRow;
+        final extraRows = branchRecords.length > originalDataCapacity
+            ? branchRecords.length - originalDataCapacity
+            : 0;
+        if (extraRows > 0) {
+          // Insert immediately before the total row.  The template's total,
+          // payment summary, signatures, and print layout move down together.
+          // Copying the final data-row style keeps the added rows identical to
+          // the manually prepared layout.
+          for (var index = 0; index < extraRows; index++) {
+            excel.insertRow(sheetName, templateTotalRow - 1 + index);
+          }
+          for (var rowOffset = 0; rowOffset < extraRows; rowOffset++) {
+            final sourceRow = templateTotalRow - 2;
+            final targetRow = templateTotalRow - 1 + rowOffset;
+            for (var column = 0; column < 21; column++) {
+              final source = sheet.cell(
+                xls.CellIndex.indexByColumnRow(
+                  columnIndex: column,
+                  rowIndex: sourceRow,
+                ),
+              );
+              final target = sheet.cell(
+                xls.CellIndex.indexByColumnRow(
+                  columnIndex: column,
+                  rowIndex: targetRow,
+                ),
+              );
+              target.cellStyle = source.cellStyle;
+            }
+          }
         }
 
-        final totalRow = templateTotalRow;
+        final dataCapacity = originalDataCapacity + extraRows;
+        final totalRow = templateTotalRow + extraRows;
         final columnCount = layout == 'local20' ? 20 : 21;
         final columnTotals = List<double>.filled(columnCount, 0);
         final paymentTotals = <String, double>{
@@ -15082,16 +15128,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
           final employee = employeeMap[employeeId] ?? <String, dynamic>{};
           final salary = salaryMap[employeeId] ?? <String, dynamic>{};
-          final isForeign = isForeignEmployee(employee, salary);
-
           final basic = money(payroll['basic_salary']);
           final foreignSalary = money(payroll['fw_salary']);
           final salaryBase = foreignSalary != 0 ? foreignSalary : basic;
           final attendanceAllowance = money(payroll['elaun_kedatangan']);
           final serviceAllowance = money(payroll['elaun_perkhidmatan']);
-          final diligenceOrFood = money(payroll['elaun_kerajinan']);
-          final diligenceAllowance = isForeign ? 0.0 : diligenceOrFood;
-          final foodAllowance = isForeign ? diligenceOrFood : 0.0;
+          final diligenceAllowance = money(payroll['elaun_kerajinan']);
+          final foodAllowance = money(payroll['elaun_makanan']);
           final overtime = money(payroll['overtime']);
           final publicHoliday = money(payroll['cuti_umum']);
           final gross = salaryBase +
@@ -15368,8 +15411,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       );
       _message('$fileName exported successfully with 11 formatted sheets.');
     } catch (e) {
-      _message('Formatted workbook failed; preparing the basic export: $e');
-      await _exportPayrollAllBranchesExcelLegacy(records, branchNames);
+      _message('Formatted all-branches workbook could not be exported: $e');
     }
   }
 
@@ -16248,7 +16290,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       final basic = _number(row['basic_salary']);
       final allowances = _number(row['elaun_kedatangan']) +
           _number(row['elaun_perkhidmatan']) +
-          _number(row['elaun_kerajinan']);
+          _number(row['elaun_kerajinan']) +
+          _number(row['elaun_makanan']);
       final gross = _payrollTotalEarnings(row);
       final overtime = _number(row['overtime']);
       final otherAllowances =
@@ -17574,6 +17617,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             money(row['elaun_kedatangan']) +
             money(row['elaun_perkhidmatan']) +
             money(row['elaun_kerajinan']) +
+            money(row['elaun_makanan']) +
             money(row['overtime']) +
             money(row['bonus']) +
             money(row['commission']) +

@@ -862,6 +862,12 @@ class AppService extends ChangeNotifier {
       elaunKerajinan: _doubleValue(
         data['elaun_kerajinan'] ?? data['elaunKerajinan'],
       ),
+      elaunMakanan: _doubleValue(
+        data['elaun_makanan'] ??
+            data['elaunMakanan'] ??
+            data['food_allowance'] ??
+            data['foodAllowance'],
+      ),
       overtime: _doubleValue(
         data['overtime'],
       ),
@@ -2478,6 +2484,13 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
               'elaunkerajinan',
             ],
           ),
+          elaunMakanan: _csvMoney(
+            row,
+            [
+              'elaunmakanan',
+              'foodallowance',
+            ],
+          ),
           overtime: _csvMoney(
             row,
             [
@@ -3843,6 +3856,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'elaun_kedatangan': record.elaunKedatangan,
       'elaun_perkhidmatan': record.elaunPerkhidmatan,
       'elaun_kerajinan': record.elaunKerajinan,
+      'elaun_makanan': record.elaunMakanan,
       'overtime': record.overtime,
       'bonus': record.bonus,
       'commission': record.commission,

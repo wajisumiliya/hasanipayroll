@@ -29,6 +29,9 @@ class PayrollRecord {
   /// ELAUN KERAJINAN
   final double elaunKerajinan;
 
+  /// ELAUN MAKANAN
+  final double elaunMakanan;
+
   final double overtime;
   final double bonus;
   final double commission;
@@ -92,6 +95,7 @@ class PayrollRecord {
     required this.elaunKedatangan,
     required this.elaunPerkhidmatan,
     required this.elaunKerajinan,
+    this.elaunMakanan = 0,
     this.overtime = 0,
     this.bonus = 0,
     this.commission = 0,
@@ -137,7 +141,7 @@ class PayrollRecord {
   // COMPATIBILITY GETTERS
   // ==========================================================================
 
-  double get foodAllowance => elaunKedatangan;
+  double get foodAllowance => elaunMakanan;
 
   double get otherAllowance {
     return elaunPerkhidmatan + elaunKerajinan;
@@ -164,13 +168,14 @@ class PayrollRecord {
   }
 
   double get totalAllowance {
-    return elaunKedatangan + elaunPerkhidmatan + elaunKerajinan;
+    return elaunKedatangan + elaunPerkhidmatan + elaunKerajinan + elaunMakanan;
   }
 
   double get additionalEarnings {
     return elaunKedatangan +
         elaunPerkhidmatan +
         elaunKerajinan +
+        elaunMakanan +
         overtime +
         bonus +
         commission +
@@ -187,6 +192,7 @@ class PayrollRecord {
       elaunKedatangan: elaunKedatangan,
       elaunPerkhidmatan: elaunPerkhidmatan,
       elaunKerajinan: elaunKerajinan,
+      elaunMakanan: elaunMakanan,
       overtime: overtime,
       bonus: bonus,
       commission: commission,
@@ -244,6 +250,7 @@ class PayrollRecord {
     double? elaunKedatangan,
     double? elaunPerkhidmatan,
     double? elaunKerajinan,
+    double? elaunMakanan,
     double? overtime,
     double? bonus,
     double? commission,
@@ -274,6 +281,7 @@ class PayrollRecord {
       elaunKedatangan: elaunKedatangan ?? this.elaunKedatangan,
       elaunPerkhidmatan: elaunPerkhidmatan ?? this.elaunPerkhidmatan,
       elaunKerajinan: elaunKerajinan ?? this.elaunKerajinan,
+      elaunMakanan: elaunMakanan ?? this.elaunMakanan,
       overtime: overtime ?? this.overtime,
       bonus: bonus ?? this.bonus,
       commission: commission ?? this.commission,
@@ -311,6 +319,7 @@ class PayrollRecord {
       'elaunKedatangan': elaunKedatangan,
       'elaunPerkhidmatan': elaunPerkhidmatan,
       'elaunKerajinan': elaunKerajinan,
+      'elaunMakanan': elaunMakanan,
       'overtime': overtime,
       'bonus': bonus,
       'commission': commission,
@@ -363,6 +372,9 @@ class PayrollRecord {
       ),
       elaunKerajinan: _doubleValue(
         json['elaunKerajinan'] ?? json['ELAUN KERAJINAN'],
+      ),
+      elaunMakanan: _doubleValue(
+        json['elaunMakanan'] ?? json['elaun_makanan'] ?? json['ELAUN MAKANAN'],
       ),
       overtime: _doubleValue(json['overtime']),
       bonus: _doubleValue(json['bonus']),

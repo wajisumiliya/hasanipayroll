@@ -85,6 +85,7 @@ class PayrollCalculationService {
     double elaunKedatangan = 0,
     double elaunPerkhidmatan = 0,
     double elaunKerajinan = 0,
+    double elaunMakanan = 0,
     double overtime = 0,
     double bonus = 0,
     double commission = 0,
@@ -97,6 +98,7 @@ class PayrollCalculationService {
         elaunKedatangan +
         elaunPerkhidmatan +
         elaunKerajinan +
+        elaunMakanan +
         overtime +
         bonus +
         commission +
