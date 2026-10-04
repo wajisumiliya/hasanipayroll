@@ -18172,9 +18172,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   double? _incrementDetailsAmount(dynamic value) {
     final text = value?.toString().trim() ?? '';
     if (text.isEmpty) return null;
-    final match =
-        RegExp(r'[/]\s*([0-9]+(?:\.[0-9]+)?)\s*
-    return match == null ? null : double.tryParse(match.group(1)!);
+    final separator = text.lastIndexOf('/');
+    if (separator < 0 || separator == text.length - 1) return null;
+    return double.tryParse(text.substring(separator + 1).trim());
   }
 
   String? _salaryIncrementText(
@@ -20203,81 +20203,6 @@ class _AdminDigitalClockState extends State<_AdminDigitalClock> {
     );
   }
 }
-).firstMatch(text);
-    return match == null ? null : double.tryParse(match.group(1)!);
-  }
-
-  String? _salaryIncrementText(
-    String employeeId,
-    dynamic payrollPeriod, {
-    dynamic defaultIncrementDetails,
-  }) {
-    final currentPeriod = payrollPeriod is DateTime
-        ? payrollPeriod
-        : DateTime.tryParse(payrollPeriod?.toString() ?? '');
-    if (currentPeriod == null) return null;
-
-    // KENAIKAN TERAKHIR is not applicable to management staff.
-    final employee = service.employeeById(employeeId);
-    if (employee?.isManagementStaff == true) return null;
-
-    final fallback = defaultIncrementDetails?.toString().trim() ?? '';
-
-    // INC_DETAILS is the maintained salary-default source of truth. When it
-    // explicitly records an increment for this payroll month, use it directly
-    // instead of rebuilding the amount from incomplete/legacy payroll history.
-    if (_incrementDetailsMatchesMonth(fallback, currentPeriod)) {
-      return fallback;
-    }
-
-    final history = service
-        .employeePayroll(employeeId)
-        .where((record) => !record.period.isAfter(currentPeriod))
-        .map(
-          (record) => (
-            period: record.period,
-            attendanceAllowance: record.elaunKedatangan,
-            serviceAllowance: record.elaunPerkhidmatan,
-          ),
-        )
-        .toList();
-    final increment =
-        PayrollCalculationService.latestStablePayrollAllowanceIncrement(
-      history,
-    );
-
-    // Only a genuine increment in the payroll month overrides INC_DETAILS.
-    // For example, September payroll prints SEPT-YY/amount only when the
-    // employee actually has a September increment.
-    if (increment != null &&
-        increment.period.year == currentPeriod.year &&
-        increment.period.month == currentPeriod.month) {
-      final amount = increment.amount.roundToDouble() == increment.amount
-          ? increment.amount.toStringAsFixed(0)
-          : increment.amount.toStringAsFixed(2);
-      const monthNames = [
-        'JAN',
-        'FEB',
-        'MAR',
-        'APR',
-        'MAY',
-        'JUN',
-        'JUL',
-        'AUG',
-        'SEPT',
-        'OCT',
-        'NOV',
-        'DEC',
-      ];
-      final year = (increment.period.year % 100).toString().padLeft(2, '0');
-      return '${monthNames[increment.period.month - 1]}-$year/$amount';
-    }
-
-    // No increment in this payroll month: use the employee's maintained
-    // salary-default INC_DETAILS exactly as stored instead of recalculating
-    // an older increment from payroll history.
-    return fallback.isEmpty ? null : fallback;
-  }
 
   Future<void> _exportStatutoryReportExcel(String report, DateTime month,
       List<String> headers, List<List<dynamic>> rows) async {
