@@ -14987,6 +14987,29 @@ class _AdminDashboardState extends State<AdminDashboard>
           .select()
           .inFilter('employee_id', employeeIds);
 
+      // Load the immediately previous month's payroll directly for this export.
+      // KENAIKAN TERAKHIR must compare the actual exported current row against
+      // the actual previous calendar-month row, not UI/service cache state.
+      final previousPayrollMonth =
+          DateTime(selectedPayrollMonth.year, selectedPayrollMonth.month - 1);
+      final previousPayrollResponse = await SupabaseService.client
+          .from('payroll')
+          .select()
+          .inFilter('employee_id', employeeIds)
+          .gte(
+            'period',
+            DateFormat('yyyy-MM-dd').format(previousPayrollMonth),
+          )
+          .lt(
+            'period',
+            DateFormat('yyyy-MM-dd').format(
+              DateTime(
+                previousPayrollMonth.year,
+                previousPayrollMonth.month + 1,
+              ),
+            ),
+          );
+
       final salaryMap = <String, Map<String, dynamic>>{};
       for (final row in List<Map<String, dynamic>>.from(salaryResponse)) {
         final id = _normalizeBranchValue(row['employee_id']);
@@ -15453,6 +15476,14 @@ class _AdminDashboardState extends State<AdminDashboard>
       for (final row in List<Map<String, dynamic>>.from(salaryResponse)) {
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) salaryMap[id] = Map<String, dynamic>.from(row);
+      }
+      final previousPayrollMap = <String, Map<String, dynamic>>{};
+      for (final row
+          in List<Map<String, dynamic>>.from(previousPayrollResponse)) {
+        final id = _normalizeBranchValue(row['employee_id']);
+        if (id.isNotEmpty) {
+          previousPayrollMap[id] = Map<String, dynamic>.from(row);
+        }
       }
 
       const sungaiPetaniForeignerGroup = '__SUNGAI_PETANI_FOREIGNER__';
@@ -16064,6 +16095,56 @@ class _AdminDashboardState extends State<AdminDashboard>
               ]));
           final net = gross - unpaid - epf - socso - eis - otherDeductions;
 
+          String lastIncrementText() {
+            final previous = previousPayrollMap[employeeId];
+            if (previous != null) {
+              final currentIncrementBase = salaryBase +
+                  attendanceAllowance +
+                  serviceAllowance +
+                  diligenceAllowance;
+              final previousBasic = money(previous['basic_salary']);
+              final previousForeign = money(previous['fw_salary']);
+              final previousSalaryBase =
+                  previousForeign != 0 ? previousForeign : previousBasic;
+              final previousIncrementBase = previousSalaryBase +
+                  money(previous['elaun_kedatangan']) +
+                  money(previous['elaun_perkhidmatan']) +
+                  money(previous['elaun_kerajinan']);
+              final difference =
+                  ((currentIncrementBase - previousIncrementBase) * 100)
+                          .round() /
+                      100;
+
+              if (difference > 0) {
+                const monthNames = [
+                  'JAN',
+                  'FEB',
+                  'MAR',
+                  'APR',
+                  'MAY',
+                  'JUN',
+                  'JUL',
+                  'AUG',
+                  'SEPT',
+                  'OCT',
+                  'NOV',
+                  'DEC',
+                ];
+                final year = (selectedPayrollMonth.year % 100)
+                    .toString()
+                    .padLeft(2, '0');
+                final amount = difference.roundToDouble() == difference
+                    ? difference.toStringAsFixed(0)
+                    : difference.toStringAsFixed(2);
+                return '${monthNames[selectedPayrollMonth.month - 1]}-$year/$amount';
+              }
+            }
+
+            final maintained =
+                salaryMap[employeeId]?['inc_details']?.toString().trim() ?? '';
+            return maintained;
+          }
+
           final employeeName = textValue(
             firstValue(employee, const ['name']) ?? payroll['name'],
           );
@@ -16078,9 +16159,9 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ?? '',
+              lastIncrementText(),
               _nextSalaryIncrementText(
-                    _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                    lastIncrementText(),
                     firstValue(employee, const ['joining_date']),
                   ) ??
                   '',
@@ -16110,9 +16191,9 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ?? '',
+              lastIncrementText(),
               _nextSalaryIncrementText(
-                    _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                    lastIncrementText(),
                     firstValue(employee, const ['joining_date']),
                   ) ??
                   '',
@@ -16137,9 +16218,9 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ?? '',
+              lastIncrementText(),
               _nextSalaryIncrementText(
-                    _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                    lastIncrementText(),
                     firstValue(employee, const ['joining_date']),
                   ) ??
                   '',
@@ -16924,9 +17005,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             i + 1,
             employeeId,
             dateText(employee['joining_date']),
-            _salaryIncrementText(employeeId, payroll['period']) ?? '',
+            lastIncrementText(),
             _nextSalaryIncrementText(
-                  _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                  lastIncrementText(),
                   employee['joining_date'],
                 ) ??
                 '',
@@ -17239,9 +17320,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             '${index + 1}',
             employeeId,
             dateText(employee['joining_date']),
-            _salaryIncrementText(employeeId, payroll['period']) ?? '',
+            lastIncrementText(),
             _nextSalaryIncrementText(
-                  _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                  lastIncrementText(),
                   employee['joining_date'],
                 ) ??
                 '',
