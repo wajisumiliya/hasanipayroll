@@ -11157,7 +11157,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       // Batch generation writes directly through AttendancePayrollService.
       // Refresh the shared payroll cache so Employee Payslips immediately
       // includes the newly generated month without requiring a manual reload.
-      await service.loadPayrollFromSupabase();
+      await service.loadPayrollMonthFromSupabase(month);
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -12981,7 +12981,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               ? const Padding(
                   padding: EdgeInsets.symmetric(vertical: 28),
                   child: Text(
-                    'No employee service-allowance increments were found for this month.',
+                    'No employee allowance increments were found for this month.',
                     textAlign: TextAlign.center,
                   ),
                 )
@@ -13258,14 +13258,12 @@ class _AdminDashboardState extends State<AdminDashboard>
             final period = DateTime.parse(record['period'].toString());
             return (
               period: period,
-              amount: PayrollCalculationService.incrementListAllowanceAmount(
-                attendanceAllowance: _payrollNumber(record['elaun_kedatangan']),
-                serviceAllowance: _payrollNumber(record['elaun_perkhidmatan']),
-              ),
+              attendanceAllowance: _payrollNumber(record['elaun_kedatangan']),
+              serviceAllowance: _payrollNumber(record['elaun_perkhidmatan']),
             );
           }).toList();
           final increment =
-              PayrollCalculationService.latestStableAllowanceIncrement(
+              PayrollCalculationService.latestStablePayrollAllowanceIncrement(
             history,
           );
           if (increment == null ||

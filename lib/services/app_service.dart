@@ -827,6 +827,67 @@ class AppService extends ChangeNotifier {
     }
   }
 
+  /// Refreshes only one generated payroll month instead of downloading the
+  /// complete payroll history after every batch generation.
+  Future<void> loadPayrollMonthFromSupabase(DateTime month) async {
+    final start = DateTime(month.year, month.month, 1);
+    final end = DateTime(month.year, month.month + 1, 1);
+    const pageSize = 1000;
+    final response = <Map<String, dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final batch = await _supabase
+          .from('payroll')
+          .select()
+          .gte('period', _dateOnlyString(start))
+          .lt('period', _dateOnlyString(end))
+          .order('employee_id', ascending: true)
+          .range(offset, offset + pageSize - 1);
+      final page = List<Map<String, dynamic>>.from(batch);
+      response.addAll(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    final allowedEmployeeIds = employees
+        .map((employee) => employee.employeeId.trim().toUpperCase())
+        .toSet();
+    payroll.removeWhere(
+      (record) =>
+          record.period.year == start.year &&
+          record.period.month == start.month,
+    );
+
+    for (final rawRow in response) {
+      try {
+        final row = Map<String, dynamic>.from(rawRow);
+        if (_currentUser?.isEmployee == true &&
+            !_supabaseBool(row['is_published'] ?? row['isPublished'])) {
+          continue;
+        }
+        final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
+        if (_currentUser?.staffScope != null &&
+            !allowedEmployeeIds.contains(employeeId)) {
+          continue;
+        }
+        payroll.add(_payrollFromSupabase(row));
+      } catch (_) {
+        // Keep the same malformed-row handling as the full payroll loader.
+      }
+    }
+
+    payroll.sort((a, b) {
+      final periodComparison = b.period.compareTo(a.period);
+      return periodComparison != 0
+          ? periodComparison
+          : a.employeeId.compareTo(b.employeeId);
+    });
+    notifyListeners();
+  }
+
   // ==========================================================================
   // PAYROLL FROM SUPABASE
   // ==========================================================================

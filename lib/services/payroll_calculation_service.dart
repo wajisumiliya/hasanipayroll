@@ -108,22 +108,21 @@ class PayrollCalculationService {
     required int allocatedShiftMinutes,
     required int allocatedBreakMinutes,
   }) {
-    if (!isLocalStaff ||
-        workMinutes <= 0 ||
-        allocatedShiftMinutes <= 0) {
+    if (!isLocalStaff || workMinutes <= 0 || allocatedShiftMinutes <= 0) {
       return 0;
     }
     final excessBreakMinutes =
         (actualBreakMinutes - allocatedBreakMinutes).clamp(0, 24 * 60);
     final overtimeMinutes =
         (workMinutes - allocatedShiftMinutes - excessBreakMinutes)
-        .clamp(0, 24 * 60)
-        .toInt();
+            .clamp(0, 24 * 60)
+            .toInt();
     return eligibleOvertimeMinutes(overtimeMinutes);
   }
 
   /// OT shorter than 30 minutes is not eligible or displayed.
-  static int eligibleOvertimeMinutes(int minutes) => minutes >= 30 ? minutes : 0;
+  static int eligibleOvertimeMinutes(int minutes) =>
+      minutes >= 30 ? minutes : 0;
 
   /// A day's OT is payable only when its calculated value exceeds RM5.00.
   static bool isPayableOvertimeAmount(double amount) =>
@@ -196,16 +195,6 @@ class PayrollCalculationService {
         other;
   }
 
-  /// Total used by the Admin increment list. Both recurring employee
-  /// allowances are eligible, so an attendance-allowance-only increase must
-  /// not disappear from the report.
-  static double incrementListAllowanceAmount({
-    required double attendanceAllowance,
-    required double serviceAllowance,
-  }) {
-    return _roundMoney(attendanceAllowance + serviceAllowance);
-  }
-
   /// Finds the latest genuine allowance increment.
   ///
   /// A baseline is accepted only when the same amount was paid for at least
@@ -274,6 +263,78 @@ class PayrollCalculationService {
       );
     }
     return latest;
+  }
+
+  /// Applies the stable-baseline rule to each increment-eligible allowance
+  /// separately. This prevents a temporary reduction in one allowance from
+  /// hiding or changing a genuine increase in the other allowance.
+  static ({
+    DateTime period,
+    double attendanceDifference,
+    double serviceDifference,
+    double amount,
+  })? latestStablePayrollAllowanceIncrement(
+    List<
+            ({
+              DateTime period,
+              double attendanceAllowance,
+              double serviceAllowance,
+            })>
+        history, {
+    int stableMonths = 3,
+    int lookbackMonths = 6,
+  }) {
+    final attendanceIncrement = latestStableAllowanceIncrement(
+      history
+          .map(
+            (entry) => (
+              period: entry.period,
+              amount: entry.attendanceAllowance,
+            ),
+          )
+          .toList(),
+      stableMonths: stableMonths,
+      lookbackMonths: lookbackMonths,
+    );
+    final serviceIncrement = latestStableAllowanceIncrement(
+      history
+          .map(
+            (entry) => (
+              period: entry.period,
+              amount: entry.serviceAllowance,
+            ),
+          )
+          .toList(),
+      stableMonths: stableMonths,
+      lookbackMonths: lookbackMonths,
+    );
+
+    if (attendanceIncrement == null && serviceIncrement == null) return null;
+
+    final latestPeriod = attendanceIncrement == null
+        ? serviceIncrement!.period
+        : serviceIncrement == null ||
+                attendanceIncrement.period.isAfter(serviceIncrement.period)
+            ? attendanceIncrement.period
+            : serviceIncrement.period;
+    var attendanceDifference = 0.0;
+    var serviceDifference = 0.0;
+    if (attendanceIncrement != null &&
+        attendanceIncrement.period.year == latestPeriod.year &&
+        attendanceIncrement.period.month == latestPeriod.month) {
+      attendanceDifference = attendanceIncrement.amount;
+    }
+    if (serviceIncrement != null &&
+        serviceIncrement.period.year == latestPeriod.year &&
+        serviceIncrement.period.month == latestPeriod.month) {
+      serviceDifference = serviceIncrement.amount;
+    }
+    return (
+      period: latestPeriod,
+      attendanceDifference: attendanceDifference,
+      serviceDifference: serviceDifference,
+      amount: _roundMoney(attendanceDifference + serviceDifference),
+    );
   }
 
   /// Applies the payroll rule for the final monthly late deduction.

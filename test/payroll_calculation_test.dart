@@ -572,57 +572,110 @@ void main() {
   });
 
   group('Increment list allowance detection', () {
-    test('includes both attendance and service allowances', () {
-      expect(
-        PayrollCalculationService.incrementListAllowanceAmount(
-          attendanceAllowance: 150,
-          serviceAllowance: 250,
-        ),
-        400,
-      );
-    });
-
     test('detects an attendance-allowance-only increase', () {
-      final history = <({DateTime period, double amount})>[
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
         for (var month = 5; month <= 8; month++)
           (
             period: DateTime(2026, month),
-            amount: PayrollCalculationService.incrementListAllowanceAmount(
-              attendanceAllowance: 100,
-              serviceAllowance: 250,
-            ),
+            attendanceAllowance: 100,
+            serviceAllowance: 250,
           ),
         (
           period: DateTime(2026, 9),
-          amount: PayrollCalculationService.incrementListAllowanceAmount(
-            attendanceAllowance: 200,
-            serviceAllowance: 250,
-          ),
+          attendanceAllowance: 200,
+          serviceAllowance: 250,
         ),
       ];
 
       final increment =
-          PayrollCalculationService.latestStableAllowanceIncrement(history);
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
 
       expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.attendanceDifference, 100);
+      expect(increment?.serviceDifference, 0);
       expect(increment?.amount, 100);
     });
 
-    test('still ignores temporary vacation reductions', () {
-      final history = <({DateTime period, double amount})>[
-        (period: DateTime(2026, 4), amount: 200),
-        (period: DateTime(2026, 5), amount: 200),
-        (period: DateTime(2026, 6), amount: 200),
-        (period: DateTime(2026, 7), amount: 100),
-        (period: DateTime(2026, 8), amount: 155),
-        (period: DateTime(2026, 9), amount: 250),
+    test('checks vacation reductions separately for each allowance', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (
+          period: DateTime(2026, 4),
+          attendanceAllowance: 100,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 5),
+          attendanceAllowance: 100,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 100,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 0,
+          serviceAllowance: 0
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 55,
+          serviceAllowance: 55
+        ),
+        (
+          period: DateTime(2026, 9),
+          attendanceAllowance: 100,
+          serviceAllowance: 150
+        ),
       ];
 
       final increment =
-          PayrollCalculationService.latestStableAllowanceIncrement(history);
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
 
       expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.attendanceDifference, 0);
+      expect(increment?.serviceDifference, 50);
       expect(increment?.amount, 50);
+    });
+
+    test('adds genuine increases from both columns in the same month', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        for (var month = 5; month <= 8; month++)
+          (
+            period: DateTime(2026, month),
+            attendanceAllowance: 100,
+            serviceAllowance: 250,
+          ),
+        (
+          period: DateTime(2026, 9),
+          attendanceAllowance: 150,
+          serviceAllowance: 300,
+        ),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
+
+      expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.attendanceDifference, 50);
+      expect(increment?.serviceDifference, 50);
+      expect(increment?.amount, 100);
     });
   });
 

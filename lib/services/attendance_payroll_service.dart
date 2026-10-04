@@ -176,8 +176,24 @@ class AttendancePayrollService {
       throw Exception('Please select at least one employee.');
     }
 
-    final employees = await _getEmployeesByIds(normalizedIds);
+    final period = _periodText(periodMonth);
+    final bulkData = await Future.wait<Object>([
+      _getEmployeesByIds(normalizedIds),
+      _getSalaryDefaultsByIds(normalizedIds),
+      _getSubmittedAttendanceForEmployeesMonth(normalizedIds, periodMonth),
+      _getPayrollForEmployeesPeriod(normalizedIds, period),
+      _getMonthlyRostersForEmployees(normalizedIds, periodMonth),
+    ]);
+    final employees = bulkData[0] as List<Map<String, dynamic>>;
+    final salaryDefaults = bulkData[1] as List<Map<String, dynamic>>;
+    final attendanceRows = bulkData[2] as List<Map<String, dynamic>>;
+    final existingPayrollRows = bulkData[3] as List<Map<String, dynamic>>;
+    final rosterRows = bulkData[4] as List<Map<String, dynamic>>;
     final employeeMap = <String, Map<String, dynamic>>{};
+    final salaryDefaultMap = <String, Map<String, dynamic>>{};
+    final attendanceByEmployee = <String, List<Map<String, dynamic>>>{};
+    final existingPayrollMap = <String, Map<String, dynamic>>{};
+    final rostersByEmployee = <String, List<Map<String, dynamic>>>{};
 
     for (final employee in employees) {
       final id = _normalizeId(employee['employee_id']);
@@ -185,9 +201,30 @@ class AttendancePayrollService {
         employeeMap[id] = employee;
       }
     }
+    for (final salaryDefault in salaryDefaults) {
+      final id = _normalizeId(salaryDefault['employee_id']);
+      if (id.isNotEmpty) salaryDefaultMap[id] = salaryDefault;
+    }
+    for (final attendance in attendanceRows) {
+      final id = _normalizeId(attendance['employee_id']);
+      if (id.isNotEmpty) {
+        attendanceByEmployee.putIfAbsent(id, () => []).add(attendance);
+      }
+    }
+    for (final payroll in existingPayrollRows) {
+      final id = _normalizeId(payroll['employee_id']);
+      if (id.isNotEmpty) existingPayrollMap[id] = payroll;
+    }
+    for (final roster in rosterRows) {
+      final id = _normalizeId(roster['employee_id']);
+      if (id.isNotEmpty) {
+        rostersByEmployee.putIfAbsent(id, () => []).add(roster);
+      }
+    }
 
     final generated = <PayrollGenerationItem>[];
     final skipped = <PayrollGenerationItem>[];
+    final pendingPayrollWrites = <Map<String, dynamic>>[];
 
     for (final employeeId in normalizedIds) {
       final employee = employeeMap[employeeId];
@@ -205,10 +242,16 @@ class AttendancePayrollService {
       }
 
       try {
-        final result = await generateEmployeePayroll(
+        final result = await _generateEmployeePayroll(
           employee: employee,
           month: periodMonth,
           overwriteExisting: overwriteExisting,
+          preloadedSalaryDefault: salaryDefaultMap[employeeId],
+          preloadedAttendance: attendanceByEmployee[employeeId] ?? const [],
+          preloadedExistingPayroll: existingPayrollMap[employeeId],
+          preloadedRosterRows: rostersByEmployee[employeeId] ?? const [],
+          pendingPayrollWrites: pendingPayrollWrites,
+          usePreloadedData: true,
         );
 
         if (result.generated) {
@@ -228,6 +271,13 @@ class AttendancePayrollService {
       }
     }
 
+    if (pendingPayrollWrites.isNotEmpty) {
+      await SupabaseService.client.from('payroll').upsert(
+            pendingPayrollWrites,
+            onConflict: 'employee_id,period',
+          );
+    }
+
     return PayrollGenerationResult(
       month: periodMonth,
       generated: generated,
@@ -243,6 +293,24 @@ class AttendancePayrollService {
     required Map<String, dynamic> employee,
     required DateTime month,
     bool overwriteExisting = true,
+  }) {
+    return _generateEmployeePayroll(
+      employee: employee,
+      month: month,
+      overwriteExisting: overwriteExisting,
+    );
+  }
+
+  static Future<PayrollGenerationItem> _generateEmployeePayroll({
+    required Map<String, dynamic> employee,
+    required DateTime month,
+    required bool overwriteExisting,
+    Map<String, dynamic>? preloadedSalaryDefault,
+    List<Map<String, dynamic>>? preloadedAttendance,
+    Map<String, dynamic>? preloadedExistingPayroll,
+    List<Map<String, dynamic>>? preloadedRosterRows,
+    List<Map<String, dynamic>>? pendingPayrollWrites,
+    bool usePreloadedData = false,
   }) async {
     final employeeId = _normalizeId(employee['employee_id']);
     final employeeName = _text(employee['name']);
@@ -265,7 +333,9 @@ class AttendancePayrollService {
     // 1. SALARY DEFAULT
     // ------------------------------------------------------------------------
 
-    final salaryDefault = await _getSalaryDefault(employeeId);
+    final salaryDefault = usePreloadedData
+        ? preloadedSalaryDefault
+        : await _getSalaryDefault(employeeId);
 
     if (salaryDefault == null) {
       return PayrollGenerationItem(
@@ -334,20 +404,28 @@ class AttendancePayrollService {
 
     final attendance = isPayrollOnlyStaff
         ? <Map<String, dynamic>>[]
-        : await _getSubmittedAttendanceForMonth(
-            employeeId,
-            month,
-          );
+        : usePreloadedData
+            ? preloadedAttendance ?? <Map<String, dynamic>>[]
+            : await _getSubmittedAttendanceForMonth(
+                employeeId,
+                month,
+              );
 
     final branchId = _text(employee['branch_id'] ?? employee['branch']).trim();
     final rosterRows = isPayrollOnlyStaff || branchId.isEmpty
         ? <Map<String, dynamic>>[]
-        : await SupabaseService.getMonthlyRosters(
-            branchId: branchId,
-            year: month.year,
-            month: month.month,
-            employeeId: employeeId,
-          );
+        : usePreloadedData
+            ? (preloadedRosterRows ?? <Map<String, dynamic>>[])
+                .where(
+                  (row) => _text(row['branch_id']).trim() == branchId,
+                )
+                .toList()
+            : await SupabaseService.getMonthlyRosters(
+                branchId: branchId,
+                year: month.year,
+                month: month.month,
+                employeeId: employeeId,
+              );
     final rosterByWeek = <int, Map<String, dynamic>>{
       for (final row in rosterRows) _intNumber(row['week_number']): row,
     };
@@ -675,10 +753,12 @@ class AttendancePayrollService {
     // 10. EXISTING PAYROLL
     // ------------------------------------------------------------------------
 
-    final existing = await _getPayrollForPeriod(
-      employeeId,
-      period,
-    );
+    final existing = usePreloadedData
+        ? preloadedExistingPayroll
+        : await _getPayrollForPeriod(
+            employeeId,
+            period,
+          );
 
     if (existing != null) {
       if (!overwriteExisting) {
@@ -720,14 +800,21 @@ class AttendancePayrollService {
         throw Exception('Existing payroll record has no id.');
       }
 
-      await SupabaseService.client
-          .from('payroll')
-          .update(data)
-          .eq('id', existingId);
+      if (pendingPayrollWrites != null) {
+        pendingPayrollWrites.add(data);
+      } else {
+        await SupabaseService.client
+            .from('payroll')
+            .update(data)
+            .eq('id', existingId);
+      }
     } else {
-      // Do not send payroll.id.
-      // The database is expected to generate it.
-      await SupabaseService.client.from('payroll').insert(data);
+      if (pendingPayrollWrites != null) {
+        pendingPayrollWrites.add(data);
+      } else {
+        // Do not send payroll.id. The database generates it.
+        await SupabaseService.client.from('payroll').insert(data);
+      }
     }
 
     return PayrollGenerationItem(
@@ -785,6 +872,34 @@ class AttendancePayrollService {
   // SALARY DEFAULT
   // ==========================================================================
 
+  static Future<List<Map<String, dynamic>>> _getSalaryDefaultsByIds(
+    List<String> employeeIds,
+  ) async {
+    final response = await SupabaseService.client
+        .from('employee_salary_defaults')
+        .select(
+          'employee_id,'
+          'address,'
+          'basic_salary,'
+          'fw_salary,'
+          'elaun_kedatangan,'
+          'elaun_perkhidmatan,'
+          'elaun_kerajinan,'
+          'elaun_makanan,'
+          'pcb,'
+          'zakat,'
+          'epf_category,'
+          'eis_applicable,'
+          'epf_enabled,'
+          'eis_enabled,'
+          'socso_enabled,'
+          'socso_category',
+        )
+        .inFilter('employee_id', employeeIds);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   static Future<Map<String, dynamic>?> _getSalaryDefault(
     String employeeId,
   ) async {
@@ -833,6 +948,44 @@ class AttendancePayrollService {
   // SUBMITTED ATTENDANCE
   // ==========================================================================
 
+  static Future<List<Map<String, dynamic>>>
+      _getSubmittedAttendanceForEmployeesMonth(
+    List<String> employeeIds,
+    DateTime month,
+  ) async {
+    final start = DateTime(month.year, month.month, 1);
+    final end = DateTime(month.year, month.month + 1, 1);
+    const pageSize = 1000;
+    final rows = <Map<String, dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final response = await SupabaseService.client
+          .from('attendance')
+          .select(
+            'employee_id,attendance_date,work_minutes,break_minutes,'
+            'net_working_minutes,net_working_duration,overtime_minutes,'
+            'overtime_duration,approved_ot_minutes,ot_authorized,is_submitted,'
+            'is_public_holiday,is_unpaid,status',
+          )
+          .inFilter('employee_id', employeeIds)
+          .or(
+            'is_submitted.eq.true,ot_authorized.eq.true,'
+            'approved_ot_minutes.not.is.null,is_public_holiday.eq.true,'
+            'is_unpaid.eq.true',
+          )
+          .gte('attendance_date', _dateText(start))
+          .lt('attendance_date', _dateText(end))
+          .order('employee_id')
+          .order('attendance_date')
+          .range(offset, offset + pageSize - 1);
+      final page = List<Map<String, dynamic>>.from(response);
+      rows.addAll(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return rows;
+  }
+
   static Future<List<Map<String, dynamic>>> _getSubmittedAttendanceForMonth(
     String employeeId,
     DateTime month,
@@ -872,6 +1025,44 @@ class AttendancePayrollService {
   // ==========================================================================
   // EXISTING PAYROLL
   // ==========================================================================
+
+  static Future<List<Map<String, dynamic>>> _getPayrollForEmployeesPeriod(
+    List<String> employeeIds,
+    String period,
+  ) async {
+    final response = await SupabaseService.client
+        .from('payroll')
+        .select('id,employee_id,period')
+        .inFilter('employee_id', employeeIds)
+        .eq('period', period);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> _getMonthlyRostersForEmployees(
+    List<String> employeeIds,
+    DateTime month,
+  ) async {
+    const pageSize = 1000;
+    final rows = <Map<String, dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final response = await SupabaseService.client
+          .from('monthly_rosters')
+          .select()
+          .inFilter('employee_id', employeeIds)
+          .eq('roster_year', month.year)
+          .eq('roster_month', month.month)
+          .order('employee_id')
+          .order('week_number')
+          .range(offset, offset + pageSize - 1);
+      final page = List<Map<String, dynamic>>.from(response);
+      rows.addAll(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return rows;
+  }
 
   static Future<Map<String, dynamic>?> _getPayrollForPeriod(
     String employeeId,
