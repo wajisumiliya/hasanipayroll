@@ -95,10 +95,14 @@ class PayrollCalculationService {
         allocatedWorkingMinutes <= 0) {
       return 0;
     }
-    return (netWorkingMinutes - allocatedWorkingMinutes)
+    final overtimeMinutes = (netWorkingMinutes - allocatedWorkingMinutes)
         .clamp(0, 24 * 60)
         .toInt();
+    return eligibleOvertimeMinutes(overtimeMinutes);
   }
+
+  /// OT shorter than 30 minutes is not eligible or displayed.
+  static int eligibleOvertimeMinutes(int minutes) => minutes >= 30 ? minutes : 0;
 
   /// A day's OT is payable only when its calculated value exceeds RM5.00.
   static bool isPayableOvertimeAmount(double amount) =>
@@ -110,8 +114,13 @@ class PayrollCalculationService {
     required bool isPublicHoliday,
     required bool worked,
     bool isForeignEmployee = false,
-  }) =>
-      !isForeignEmployee && !isUnpaid && !isPublicHoliday && worked;
+    String employeeId = '',
+  }) {
+    // HED1007 is deducted only for explicitly marked UNPAID days. Normal
+    // attendance shortages, including Early Out, are not deductible.
+    if (employeeId.trim().toUpperCase() == 'HED1007') return false;
+    return !isForeignEmployee && !isUnpaid && !isPublicHoliday && worked;
+  }
 
   static double grossEarnings({
     required double basicSalary,

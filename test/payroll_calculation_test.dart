@@ -454,6 +454,36 @@ void main() {
       );
     });
 
+    test('does not convert an unused scheduled break into OT', () {
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: true,
+          netWorkingMinutes: 540,
+          allocatedWorkingMinutes: 540,
+        ),
+        0,
+      );
+    });
+
+    test('does not show automatic OT below 30 minutes', () {
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: true,
+          netWorkingMinutes: 479,
+          allocatedWorkingMinutes: 450,
+        ),
+        0,
+      );
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: true,
+          netWorkingMinutes: 480,
+          allocatedWorkingMinutes: 450,
+        ),
+        30,
+      );
+    });
+
     test('does not automatically calculate OT for foreign staff', () {
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
@@ -478,6 +508,30 @@ void main() {
         isTrue,
       );
       expect(PayrollCalculationService.isPayableOvertimeAmount(13), isTrue);
+    });
+  });
+
+  group('HED1007 deduction exception', () {
+    test('does not apply a normal early-out shortage deduction', () {
+      expect(
+        PayrollCalculationService.shouldApplyShortageDeduction(
+          employeeId: 'HED1007',
+          isUnpaid: false,
+          isPublicHoliday: false,
+          worked: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('does not change the explicit unpaid-day calculation path', () {
+      expect(
+        PayrollCalculationService.unpaidDailyRate(
+          basicSalary: 2600,
+          isForeignEmployee: false,
+        ),
+        100,
+      );
     });
   });
 }

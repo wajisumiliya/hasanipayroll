@@ -435,6 +435,7 @@ class AttendancePayrollService {
         isPublicHoliday: isPublicHoliday,
         worked: worked,
         isForeignEmployee: isForeignEmployee,
+        employeeId: employeeId,
       )) {
         // Checkout has a 15-minute grace window. This grace is applied only
         // to an early checkout and never offsets late check-in time.
@@ -1031,7 +1032,9 @@ class AttendancePayrollService {
     // The approved request is the only source of payable overtime. Never
     // derive OT from long attendance hours or legacy overtime totals.
     if (row['approved_ot_minutes'] == null) return 0.0;
-    final approvedMinutes = _intNumber(row['approved_ot_minutes']);
+    final approvedMinutes = PayrollCalculationService.eligibleOvertimeMinutes(
+      _intNumber(row['approved_ot_minutes']),
+    );
     return approvedMinutes > 0 ? approvedMinutes / 60.0 : 0.0;
   }
 

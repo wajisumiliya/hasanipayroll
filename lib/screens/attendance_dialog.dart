@@ -22,8 +22,8 @@ import '../widgets/employee_photo.dart';
 /// - Unpaid: automatically based on attendance rows marked unpaid by Admin.
 /// - Public holiday: only counted when Admin marks the day as public holiday
 ///   and the employee actually worked.
-/// - OT requests have no eligibility gate; displayed OT is calculated from
-///   net hours and Admin controls approval.
+/// - Local OT is calculated from net hours above the full allocated shift;
+///   Admin may override it. Foreign-staff OT remains Admin-entered.
 /// The payroll service should consume these attendance totals.
 ///
 class AttendanceDialog extends StatefulWidget {
@@ -368,7 +368,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         c.savedNetWorkingMinutes = _intValue(row['net_working_minutes']);
         c.savedOvertimeMinutes = _intValue(row['overtime_minutes']);
         c.approvedOtMinutes = _intValue(row['approved_ot_minutes']);
-        c.approvedOtHours.text = c.approvedOtMinutes <= 0
+        c.approvedOtHours.text = c.approvedOtMinutes < 30
             ? ''
             : _directOtHoursText(c.approvedOtMinutes);
       }
@@ -1069,17 +1069,24 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         }
         final row = controllers[day - 1];
 
-        if (_isAdminView() && !_isLocalStaff) {
-          final directOtMinutes =
-              PayrollCalculationService.directOvertimeMinutes(
-                  row.approvedOtHours.text);
-          if (directOtMinutes == null) {
-            throw Exception(
-              'Invalid OT hours on day $day. Enter a number from 0 to 24.',
-            );
+        if (_isAdminView()) {
+          final hasManualLocalOverride =
+              _isLocalStaff && row.approvedOtHours.text.trim().isNotEmpty;
+          if (_isLocalStaff && !hasManualLocalOverride) {
+            row.approvedOtMinutes = 0;
+            row.otAuthorized = false;
+          } else {
+            final directOtMinutes =
+                PayrollCalculationService.directOvertimeMinutes(
+                    row.approvedOtHours.text);
+            if (directOtMinutes == null) {
+              throw Exception(
+                'Invalid OT hours on day $day. Enter a number from 0 to 24.',
+              );
+            }
+            row.approvedOtMinutes = directOtMinutes;
+            row.otAuthorized = directOtMinutes > 0;
           }
-          row.approvedOtMinutes = directOtMinutes;
-          row.otAuthorized = directOtMinutes > 0;
         }
 
         if (!row.hasData &&
@@ -1538,8 +1545,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     ? const Color(0xFF315AD9)
                     : Colors.black54,
               ),
-              _isAdminView() && !_isLocalStaff
-                  ? _directOtInput(c, widths[5], day: day)
+              _isAdminView()
+                  ? _directOtInput(
+                      c,
+                      widths[5],
+                      day: day,
+                      automaticMinutes:
+                          _isLocalStaff ? overtimeMinutes : null,
+                    )
                   : _tableCell(
                       formatMinutes(overtimeMinutes),
                       widths[5],
@@ -1585,6 +1598,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     AttendanceDayControllers c,
     double width, {
     required int day,
+    int? automaticMinutes,
   }) {
     return Container(
       width: width,
@@ -1609,8 +1623,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           fontWeight: FontWeight.w700,
           color: Colors.orange.shade900,
         ),
-        decoration: const InputDecoration(
-          hintText: 'Hours',
+        decoration: InputDecoration(
+          hintText: automaticMinutes != null && automaticMinutes > 0
+              ? _directOtHoursText(automaticMinutes)
+              : 'Hours',
           isDense: true,
           contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 7),
           border: OutlineInputBorder(),
@@ -1640,6 +1656,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     required int netWorkingMinutes,
   }) {
     if (_isLocalStaff) {
+      if (_isAdminView() && c.approvedOtHours.text.trim().isNotEmpty) {
+        return PayrollCalculationService.eligibleOvertimeMinutes(
+          c.approvedOtMinutes,
+        );
+      }
       return PayrollCalculationService.automaticLocalOvertimeMinutes(
         isLocalStaff: true,
         netWorkingMinutes: netWorkingMinutes,
@@ -1648,7 +1669,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     }
 
     // Foreign-staff overtime retains the existing Admin approval rule.
-    return c.otAuthorized ? c.approvedOtMinutes : 0;
+    return c.otAuthorized
+        ? PayrollCalculationService.eligibleOvertimeMinutes(
+            c.approvedOtMinutes,
+          )
+        : 0;
   }
 
   int _allocatedWorkingMinutes(int day) {
@@ -1659,8 +1684,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     if (shiftStart != null && shiftEnd != null) {
       var grossMinutes = shiftEnd - shiftStart;
       if (grossMinutes <= 0) grossMinutes += 24 * 60;
-      final allocated = grossMinutes - _intValue(roster?['break_minutes']);
-      if (allocated > 0) return allocated;
+      // Compare against the full scheduled shift. The roster's unused break
+      // allowance must never become automatic OT; actual breaks are already
+      // removed from netWorkingMinutes.
+      if (grossMinutes > 0) return grossMinutes;
     }
     return (_requiredWorkHours * 60).round();
   }
