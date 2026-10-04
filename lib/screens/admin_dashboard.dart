@@ -14987,29 +14987,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           .select()
           .inFilter('employee_id', employeeIds);
 
-      // Load the immediately previous month's payroll directly for this export.
-      // KENAIKAN TERAKHIR must compare the actual exported current row against
-      // the actual previous calendar-month row, not UI/service cache state.
-      final previousPayrollMonth =
-          DateTime(selectedPayrollMonth.year, selectedPayrollMonth.month - 1);
-      final previousPayrollResponse = await SupabaseService.client
-          .from('payroll')
-          .select()
-          .inFilter('employee_id', employeeIds)
-          .gte(
-            'period',
-            DateFormat('yyyy-MM-dd').format(previousPayrollMonth),
-          )
-          .lt(
-            'period',
-            DateFormat('yyyy-MM-dd').format(
-              DateTime(
-                previousPayrollMonth.year,
-                previousPayrollMonth.month + 1,
-              ),
-            ),
-          );
-
       final salaryMap = <String, Map<String, dynamic>>{};
       for (final row in List<Map<String, dynamic>>.from(salaryResponse)) {
         final id = _normalizeBranchValue(row['employee_id']);
@@ -15466,6 +15443,23 @@ class _AdminDashboardState extends State<AdminDashboard>
           .from('employee_salary_defaults')
           .select()
           .inFilter('employee_id', employeeIds);
+
+      final previousPayrollMonth =
+          DateTime(selectedPayrollMonth.year, selectedPayrollMonth.month - 1);
+      final previousPayrollResponse = await SupabaseService.client
+          .from('payroll')
+          .select()
+          .inFilter('employee_id', employeeIds)
+          .gte('period', DateFormat('yyyy-MM-dd').format(previousPayrollMonth))
+          .lt(
+            'period',
+            DateFormat('yyyy-MM-dd').format(
+              DateTime(
+                previousPayrollMonth.year,
+                previousPayrollMonth.month + 1,
+              ),
+            ),
+          );
 
       final employeeMap = <String, Map<String, dynamic>>{};
       for (final row in List<Map<String, dynamic>>.from(employeeResponse)) {
@@ -17320,9 +17314,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             '${index + 1}',
             employeeId,
             dateText(employee['joining_date']),
-            lastIncrementText(),
+            _salaryIncrementText(employeeId, payroll['period']) ?? '',
             _nextSalaryIncrementText(
-                  lastIncrementText(),
+                  _salaryIncrementText(employeeId, payroll['period']) ?? '',
                   employee['joining_date'],
                 ) ??
                 '',
