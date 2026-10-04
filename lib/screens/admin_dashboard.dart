@@ -18185,8 +18185,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     // KENAIKAN TERAKHIR must come only from
     // employee_salary_defaults.inc_details.
     //
-    // Example: when the maintained value for September is
-    // SEPT-26/100, Excel prints SEPT-26/100 exactly as stored.
+    // Example: when the maintained value for September is SEPT-26/100,
+    // Excel prints SEPT-26/100 exactly as stored.
     final employee = service.employeeById(employeeId);
     if (employee?.isManagementStaff == true) return null;
 
