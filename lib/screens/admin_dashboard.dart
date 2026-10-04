@@ -18172,9 +18172,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   double? _incrementDetailsAmount(dynamic value) {
     final text = value?.toString().trim() ?? '';
     if (text.isEmpty) return null;
-    final match =
-        RegExp(r'[/]\s*([0-9]+(?:\.[0-9]+)?)\s*
-    return match == null ? null : double.tryParse(match.group(1)!);
+    final separator = text.lastIndexOf('/');
+    if (separator < 0 || separator == text.length - 1) return null;
+    return double.tryParse(text.substring(separator + 1).trim());
   }
 
   String? _salaryIncrementText(
@@ -20203,15 +20203,6 @@ class _AdminDigitalClockState extends State<_AdminDigitalClock> {
     );
   }
 }
-).firstMatch(text);
-    return match == null ? null : double.tryParse(match.group(1)!);
-  }
-
-  String? _salaryIncrementText(
-    String employeeId,
-    dynamic payrollPeriod, {
-    dynamic defaultIncrementDetails,
-  }) {
     final currentPeriod = payrollPeriod is DateTime
         ? payrollPeriod
         : DateTime.tryParse(payrollPeriod?.toString() ?? '');
