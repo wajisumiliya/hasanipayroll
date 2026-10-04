@@ -13131,8 +13131,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         final employees = List<Map<String, dynamic>>.from(data[1] as List);
         final rawPayrollRecords =
             List<Map<String, dynamic>>.from(data[2] as List);
-        final salaryDefaults =
-            List<Map<String, dynamic>>.from(data[3] as List);
+        final salaryDefaults = List<Map<String, dynamic>>.from(data[3] as List);
         final monthlyAttendance =
             List<Map<String, dynamic>>.from(data[4] as List);
 
@@ -13285,8 +13284,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               _incrementDetailsMatchesMonth(incDetails, currentPeriod)
                   ? _incrementDetailsAmount(incDetails)
                   : null;
-          final calculatedCurrentMonth =
-              increment != null &&
+          final calculatedCurrentMonth = increment != null &&
                   increment.period.year == currentPeriod.year &&
                   increment.period.month == currentPeriod.month
               ? increment.amount
@@ -18173,7 +18171,2038 @@ class _AdminDashboardState extends State<AdminDashboard>
   double? _incrementDetailsAmount(dynamic value) {
     final text = value?.toString().trim() ?? '';
     if (text.isEmpty) return null;
-    final match = RegExp(r'[/]\\s*([0-9]+(?:\\.[0-9]+)?)\\s*$').firstMatch(text);
+    final match =
+        RegExp(r'[/]\\s*([0-9]+(?:\\.[0-9]+)?)\\s*
+    return match == null ? null : double.tryParse(match.group(1)!);
+  }
+
+  String? _salaryIncrementText(
+    String employeeId,
+    dynamic payrollPeriod, {
+    dynamic defaultIncrementDetails,
+  }) {
+    final currentPeriod = payrollPeriod is DateTime
+        ? payrollPeriod
+        : DateTime.tryParse(payrollPeriod?.toString() ?? '');
+    if (currentPeriod == null) return null;
+
+    // KENAIKAN TERAKHIR is not applicable to management staff.
+    final employee = service.employeeById(employeeId);
+    if (employee?.isManagementStaff == true) return null;
+
+    final fallback = defaultIncrementDetails?.toString().trim() ?? '';
+
+    // INC_DETAILS is the maintained salary-default source of truth. When it
+    // explicitly records an increment for this payroll month, use it directly
+    // instead of rebuilding the amount from incomplete/legacy payroll history.
+    if (_incrementDetailsMatchesMonth(fallback, currentPeriod)) {
+      return fallback;
+    }
+
+    final history = service
+        .employeePayroll(employeeId)
+        .where((record) => !record.period.isAfter(currentPeriod))
+        .map(
+          (record) => (
+            period: record.period,
+            attendanceAllowance: record.elaunKedatangan,
+            serviceAllowance: record.elaunPerkhidmatan,
+          ),
+        )
+        .toList();
+    final increment =
+        PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+      history,
+    );
+
+    // Only a genuine increment in the payroll month overrides INC_DETAILS.
+    // For example, September payroll prints SEPT-YY/amount only when the
+    // employee actually has a September increment.
+    if (increment != null &&
+        increment.period.year == currentPeriod.year &&
+        increment.period.month == currentPeriod.month) {
+      final amount = increment.amount.roundToDouble() == increment.amount
+          ? increment.amount.toStringAsFixed(0)
+          : increment.amount.toStringAsFixed(2);
+      const monthNames = [
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEPT',
+        'OCT',
+        'NOV',
+        'DEC',
+      ];
+      final year = (increment.period.year % 100).toString().padLeft(2, '0');
+      return '${monthNames[increment.period.month - 1]}-$year/$amount';
+    }
+
+    // No increment in this payroll month: use the employee's maintained
+    // salary-default INC_DETAILS exactly as stored instead of recalculating
+    // an older increment from payroll history.
+    return fallback.isEmpty ? null : fallback;
+  }
+
+  Future<void> _exportStatutoryReportExcel(String report, DateTime month,
+      List<String> headers, List<List<dynamic>> rows) async {
+    final printedAt = DateTime.now();
+    final excel = xls.Excel.createExcel();
+    final defaultName = excel.getDefaultSheet();
+    if (defaultName != null) excel.rename(defaultName, report);
+    final sheet = excel[report];
+    final lastColumn = headers.length - 1;
+
+    sheet.merge(
+      xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      xls.CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 0),
+    );
+    final titleCell =
+        sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0));
+    titleCell.value = xls.TextCellValue(
+        'HASANI BOOKS    $report - ${DateFormat('MMMM yyyy').format(month)}    Print Date: ${DateFormat('dd/MM/yyyy').format(printedAt)}');
+    titleCell.cellStyle = xls.CellStyle(bold: true, fontSize: 14);
+
+    for (var column = 0; column < headers.length; column++) {
+      final cell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 2));
+      cell.value = xls.TextCellValue(headers[column]);
+      cell.cellStyle = _excelHeaderStyle(cell.cellStyle);
+    }
+    for (var row = 0; row < rows.length; row++) {
+      for (var column = 0; column < rows[row].length; column++) {
+        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
+            columnIndex: column, rowIndex: row + 3));
+        final value = rows[row][column];
+        cell.value = value is num
+            ? xls.DoubleCellValue(value.toDouble())
+            : xls.TextCellValue(value.toString());
+      }
+    }
+    final footerRow = rows.length + 5;
+    sheet.merge(
+      xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: footerRow),
+      xls.CellIndex.indexByColumnRow(
+          columnIndex: lastColumn, rowIndex: footerRow),
+    );
+    final footerCell = sheet.cell(
+        xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: footerRow));
+    footerCell.value = xls.TextCellValue(
+        'Prepared by Admin | ${DateFormat('dd/MM/yyyy hh:mm a').format(printedAt)}');
+    footerCell.cellStyle = xls.CellStyle(bold: true);
+
+    final output = excel.encode();
+    if (output == null) throw Exception('Excel file could not be generated.');
+    await FileSaver.instance.saveFile(
+      name: '${report}_${DateFormat('yyyy_MM').format(month)}',
+      bytes: Uint8List.fromList(output),
+      ext: 'xlsx',
+      mimeType: MimeType.microsoftExcel,
+    );
+    _message('$report Excel exported successfully.');
+  }
+
+  Future<void> _showDashboardReport(String report) async {
+    var month = selectedPayrollMonth;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          insetPadding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: 1180,
+            height: MediaQuery.sizeOf(context).height * .82,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text('$report Preview',
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.w800)),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_month_outlined),
+                      label: Text(DateFormat('MMMM yyyy').format(month)),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: month,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                          helpText: 'Select report month',
+                        );
+                        if (picked != null) {
+                          setDialogState(() =>
+                              month = DateTime(picked.year, picked.month));
+                        }
+                      },
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(_reportDescription(report),
+                      style: const TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      key: ValueKey('${report}_${month.year}_${month.month}'),
+                      future: _loadDashboardReportRows(month),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(
+                              child: Text(
+                                  'Unable to load report: ${snapshot.error}'));
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) {
+                          return const Center(
+                              child:
+                                  Text('No payroll records for this month.'));
+                        }
+                        return Column(children: [
+                          Expanded(
+                              child: _dashboardReportPreview(report, rows)),
+                          const SizedBox(height: 12),
+                          Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (report == 'HRDF' ||
+                                    report == 'Payroll Summary')
+                                  OutlinedButton.icon(
+                                    onPressed: () => _printDashboardReport(
+                                        report, month, rows),
+                                    icon: const Icon(Icons.print_outlined),
+                                    label: const Text('Print Landscape A4'),
+                                  ),
+                                if (report == 'HRDF' ||
+                                    report == 'Payroll Summary')
+                                  const SizedBox(width: 10),
+                                FilledButton.icon(
+                                  onPressed: () async {
+                                    setState(
+                                        () => selectedPayrollMonth = month);
+                                    if (const ['EPF', 'SOCSO', 'EIS']
+                                        .contains(report)) {
+                                      await _exportRhbLayout(
+                                          only: report.toLowerCase());
+                                    } else if (report == 'Payroll') {
+                                      await _exportRhbLayout(only: 'rhb');
+                                    } else {
+                                      await _exportDashboardSummaryExcel(
+                                          report, month, rows);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.download_outlined),
+                                  label: const Text('Export Excel'),
+                                ),
+                              ]),
+                        ]);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _reportDescription(String report) => report == 'HRDF'
+      ? 'Eligible Malaysian employee count, basic salary, attendance deductions, levy base after deductions, and the 1% HRDF levy.'
+      : report == 'Payroll Summary'
+          ? 'Branch totals for earnings, statutory contributions, deductions and net payroll.'
+          : report == 'Payroll'
+              ? 'Branch employee count, basic salary, allowances, gross pay, deductions and net pay.'
+              : '$report records use the same payroll calculations and eligibility rules as RHB Layout.';
+
+  List<String> _dashboardReportHeaders(String report) {
+    if (report == 'HRDF') {
+      return const [
+        'BRANCH',
+        'MALAYSIAN STAFF',
+        'BASIC SALARY',
+        'DEDUCTION',
+        'LEVY BASE',
+        'LEVY 1%'
+      ];
+    }
+    if (report == 'Payroll Summary') {
+      return const [
+        'BRANCH',
+        'STAFF',
+        'BASIC',
+        'OVERTIME',
+        'ALLOWANCE',
+        'GROSS PAY',
+        'EPF EE',
+        'EPF ER',
+        'TOTAL EPF',
+        'SOCSO EE',
+        'SOCSO ER',
+        'TOTAL SOCSO',
+        'EIS EE',
+        'EIS ER',
+        'TOTAL EIS',
+        'UNPAID LEAVE',
+        'PCB',
+        'ZAKAT',
+        'ADVANCE',
+        'HRDF',
+        'GROSS DEDUCTION',
+        'NET PAY'
+      ];
+    }
+    return const [
+      'BRANCH',
+      'EMPLOYEES',
+      'BASIC SALARY',
+      'ALLOWANCES',
+      'GROSS PAY',
+      'DEDUCTIONS',
+      'NET PAY'
+    ];
+  }
+
+  List<dynamic> _dashboardReportValues(
+      String report, Map<String, dynamic> row) {
+    if (report == 'HRDF') {
+      final base = _number(row['hrdfBase']);
+      return [
+        row['branch'],
+        row['malaysianEmployees'],
+        row['hrdfBasic'],
+        row['hrdfDeduction'],
+        base,
+        base * .01
+      ];
+    }
+    if (report == 'Payroll Summary') {
+      return [
+        row['branch'],
+        row['employees'],
+        row['basic'],
+        row['overtime'],
+        row['otherAllowances'],
+        row['gross'],
+        row['epfEmployee'],
+        row['epfEmployer'],
+        _number(row['epfEmployee']) + _number(row['epfEmployer']),
+        row['socsoEmployee'],
+        row['socsoEmployer'],
+        _number(row['socsoEmployee']) + _number(row['socsoEmployer']),
+        row['eisEmployee'],
+        row['eisEmployer'],
+        _number(row['eisEmployee']) + _number(row['eisEmployer']),
+        row['unpaid'],
+        row['pcb'],
+        row['zakat'],
+        row['advance'],
+        _number(row['hrdfBase']) * .01,
+        row['deductions'],
+        row['net']
+      ];
+    }
+    return [
+      row['branch'],
+      row['employees'],
+      row['basic'],
+      row['allowances'],
+      row['gross'],
+      row['deductions'],
+      row['net']
+    ];
+  }
+
+  Widget _dashboardReportPreview(
+      String report, List<Map<String, dynamic>> rows) {
+    final headers = _dashboardReportHeaders(report);
+    return Scrollbar(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SingleChildScrollView(
+          child: DataTable(
+            headingRowColor: WidgetStatePropertyAll(Colors.grey.shade100),
+            columns: headers
+                .map((header) => DataColumn(
+                    label: Text(header,
+                        style: const TextStyle(fontWeight: FontWeight.w700))))
+                .toList(),
+            rows: rows.map((row) {
+              final values = _dashboardReportValues(report, row);
+              final isGrandTotal = row['branch'] == 'GRAND TOTAL';
+              const payrollTotalColumns = {8, 11, 14};
+              return DataRow(
+                  cells: values.asMap().entries.map((entry) {
+                final value = entry.value;
+                final text = entry.key >= 2 && value is num
+                    ? NumberFormat('#,##0.00').format(value)
+                    : value.toString();
+                final bold = isGrandTotal ||
+                    (report == 'Payroll Summary' &&
+                        (entry.key == 0 ||
+                            payrollTotalColumns.contains(entry.key)));
+                return DataCell(Text(
+                  text,
+                  style: bold
+                      ? const TextStyle(fontWeight: FontWeight.w800)
+                      : null,
+                ));
+              }).toList());
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportDashboardSummaryExcel(
+      String report, DateTime month, List<Map<String, dynamic>> rows) async {
+    final printedAt = DateTime.now();
+    final excel = xls.Excel.createExcel();
+    final defaultName = excel.getDefaultSheet();
+    final sheetName = report == 'Payroll Summary' ? 'Payroll Summary' : report;
+    if (defaultName != null) excel.rename(defaultName, sheetName);
+    final sheet = excel[sheetName];
+    final headers = _dashboardReportHeaders(report);
+    sheet.merge(
+      xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      xls.CellIndex.indexByColumnRow(
+          columnIndex: headers.length - 1, rowIndex: 0),
+    );
+    final titleCell =
+        sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0));
+    titleCell.value = xls.TextCellValue(
+        'HASANI BOOKS    $report - ${DateFormat('MMMM yyyy').format(month)}    Print Date: ${DateFormat('dd/MM/yyyy').format(printedAt)}');
+    titleCell.cellStyle = xls.CellStyle(bold: true, fontSize: 14);
+    for (var column = 0; column < headers.length; column++) {
+      final cell = sheet.cell(
+          xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 2));
+      cell.value = xls.TextCellValue(headers[column]);
+      cell.cellStyle = _excelHeaderStyle(cell.cellStyle);
+    }
+    const payrollTotalColumns = {8, 11, 14};
+    for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      final values = _dashboardReportValues(report, rows[rowIndex]);
+      final isGrandTotal = rows[rowIndex]['branch'] == 'GRAND TOTAL';
+      for (var column = 0; column < values.length; column++) {
+        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
+            columnIndex: column, rowIndex: rowIndex + 3));
+        final value = values[column];
+        cell.value = value is num
+            ? xls.DoubleCellValue(value.toDouble())
+            : xls.TextCellValue(value.toString());
+        if (isGrandTotal ||
+            (report == 'Payroll Summary' &&
+                (column == 0 || payrollTotalColumns.contains(column)))) {
+          cell.cellStyle = xls.CellStyle(bold: true);
+        }
+      }
+    }
+    final footerRow = rows.length + 5;
+    sheet.merge(
+      xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: footerRow),
+      xls.CellIndex.indexByColumnRow(
+          columnIndex: headers.length - 1, rowIndex: footerRow),
+    );
+    final footerCell = sheet.cell(
+        xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: footerRow));
+    footerCell.value = xls.TextCellValue(
+        'Prepared by Admin | ${DateFormat('dd/MM/yyyy hh:mm a').format(printedAt)}');
+    footerCell.cellStyle = xls.CellStyle(bold: true);
+    final output = excel.encode();
+    if (output == null) throw Exception('Excel file could not be generated.');
+    await FileSaver.instance.saveFile(
+      name:
+          '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}',
+      bytes: Uint8List.fromList(output),
+      ext: 'xlsx',
+      mimeType: MimeType.microsoftExcel,
+    );
+    _message('$report Excel exported successfully.');
+  }
+
+  Future<void> _printDashboardReport(
+      String report, DateTime month, List<Map<String, dynamic>> rows) async {
+    final printedAt = DateTime.now();
+    pw.MemoryImage? hasaniBooksLogo;
+    if (report == 'Payroll Summary' || report == 'HRDF') {
+      hasaniBooksLogo = await _loadHasaniBooksPdfLogo();
+    }
+    final headers = _dashboardReportHeaders(report);
+    final data = rows
+        .map((row) => _dashboardReportValues(report, row)
+            .asMap()
+            .entries
+            .map((entry) => entry.value is num && entry.key != 1
+                ? NumberFormat('#,##0.00').format(entry.value)
+                : entry.value.toString())
+            .toList())
+        .toList();
+    final document = pw.Document();
+    document.addPage(pw.Page(
+      pageFormat: PdfPageFormat.a4.landscape,
+      margin: report == 'Payroll Summary'
+          ? const pw.EdgeInsets.all(6)
+          : const pw.EdgeInsets.all(18),
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          if (report == 'Payroll Summary' || report == 'HRDF')
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Expanded(
+                  child: pw.Align(
+                    alignment: pw.Alignment.centerLeft,
+                    child: hasaniBooksLogo == null
+                        ? pw.Text(
+                            'hasani BOOKS',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          )
+                        : pw.Image(
+                            hasaniBooksLogo,
+                            width: 72,
+                            height: 28,
+                            fit: pw.BoxFit.contain,
+                          ),
+                  ),
+                ),
+                pw.Expanded(
+                  flex: 2,
+                  child: pw.Text(
+                    '$report - ${DateFormat('MMMM yyyy').format(month)}',
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(
+                      fontSize: 15,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+                pw.Expanded(
+                  child: pw.Text(
+                    'Print Date: ${DateFormat('dd/MM/yyyy').format(printedAt)}',
+                    textAlign: pw.TextAlign.right,
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                ),
+              ],
+            )
+          else
+            pw.Text('$report - ${DateFormat('MMMM yyyy').format(month)}',
+                textAlign: pw.TextAlign.center,
+                style:
+                    pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 10),
+          if (report == 'Payroll Summary')
+            pw.Table(
+              border: pw.TableBorder.all(
+                color: PdfColors.grey500,
+                width: .35,
+              ),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(1.8),
+                1: const pw.FlexColumnWidth(.55),
+                2: const pw.FlexColumnWidth(1),
+                3: const pw.FlexColumnWidth(.9),
+                4: const pw.FlexColumnWidth(1.15),
+                5: const pw.FlexColumnWidth(1.15),
+                6: const pw.FlexColumnWidth(.85),
+                7: const pw.FlexColumnWidth(.85),
+                8: const pw.FlexColumnWidth(.95),
+                9: const pw.FlexColumnWidth(.85),
+                10: const pw.FlexColumnWidth(.85),
+                11: const pw.FlexColumnWidth(.95),
+                12: const pw.FlexColumnWidth(.8),
+                13: const pw.FlexColumnWidth(.8),
+                14: const pw.FlexColumnWidth(.9),
+                15: const pw.FlexColumnWidth(1),
+                16: const pw.FlexColumnWidth(.75),
+                17: const pw.FlexColumnWidth(.8),
+                18: const pw.FlexColumnWidth(.8),
+                19: const pw.FlexColumnWidth(.8),
+                20: const pw.FlexColumnWidth(1.15),
+                21: const pw.FlexColumnWidth(1.1),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: headers
+                      .map((header) => pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(
+                              horizontal: .5,
+                              vertical: 13,
+                            ),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              header,
+                              textAlign: pw.TextAlign.center,
+                              style: pw.TextStyle(
+                                fontSize: 6.5,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                ),
+                ...data.asMap().entries.map((rowEntry) {
+                  final isGrandTotal =
+                      rows[rowEntry.key]['branch'] == 'GRAND TOTAL';
+                  const totalColumns = {8, 11, 14};
+                  return pw.TableRow(
+                    decoration: isGrandTotal
+                        ? const pw.BoxDecoration(color: PdfColors.grey200)
+                        : null,
+                    children: rowEntry.value.asMap().entries.map((entry) {
+                      final bold = isGrandTotal ||
+                          entry.key == 0 ||
+                          totalColumns.contains(entry.key);
+                      return pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: .5,
+                          vertical: 14,
+                        ),
+                        alignment: entry.key < 2
+                            ? pw.Alignment.centerLeft
+                            : pw.Alignment.centerRight,
+                        child: pw.Text(
+                          entry.value,
+                          maxLines: 1,
+                          style: pw.TextStyle(
+                            fontSize: 7.2,
+                            fontWeight: bold
+                                ? pw.FontWeight.bold
+                                : pw.FontWeight.normal,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                }),
+              ],
+            )
+          else
+            pw.TableHelper.fromTextArray(
+              headers: headers,
+              data: data,
+              headerStyle:
+                  pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+              cellStyle: const pw.TextStyle(fontSize: 5.5),
+              cellPadding: const pw.EdgeInsets.all(3),
+            ),
+          if (report == 'Payroll Summary' || report == 'HRDF') ...[
+            pw.Spacer(),
+            pw.Align(
+              alignment: pw.Alignment.bottomRight,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    'Prepared by Admin',
+                    style: pw.TextStyle(
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    DateFormat('dd/MM/yyyy hh:mm a').format(printedAt),
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    ));
+    await Printing.layoutPdf(
+      name:
+          '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}.pdf',
+      format: PdfPageFormat.a4.landscape,
+      onLayout: (_) => document.save(),
+    );
+  }
+
+  Future<void> _exportRhbLayout({String? only}) async {
+    try {
+      _message(
+        only == 'rhb'
+            ? 'Preparing RHB layout...'
+            : 'Preparing RHB, EPF, EIS and SOCSO layouts...',
+      );
+
+      final selectedMonth =
+          DateFormat('MMMM yyyy').format(selectedPayrollMonth);
+
+      final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
+      final exportStamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+
+      // ============================================================
+      // LOAD PAYROLL
+      // ============================================================
+
+      final response = await SupabaseService.client
+          .from('payroll')
+          .select()
+          .order('employee_id');
+
+      final payrollRows = List<Map<String, dynamic>>.from(response)
+          .where(
+            (row) => _payrollPeriodMatchesMonth(
+              row['period'],
+              selectedPayrollMonth,
+            ),
+          )
+          .toList()
+        ..sort(
+          (a, b) => _normalizeBranchValue(a['employee_id'])
+              .compareTo(_normalizeBranchValue(b['employee_id'])),
+        );
+
+      if (payrollRows.isEmpty) {
+        _message(
+          'No generated payroll found for $selectedMonth.',
+        );
+        return;
+      }
+
+      // ============================================================
+      // LOAD EMPLOYEES
+      // ============================================================
+
+      final employeeIds = payrollRows
+          .map(
+            (row) => _normalizeBranchValue(
+              row['employee_id'],
+            ),
+          )
+          .where(
+            (id) => id.isNotEmpty,
+          )
+          .toSet()
+          .toList();
+
+      final employeeResponse =
+          await SupabaseService.client.from('employees').select().inFilter(
+                'employee_id',
+                employeeIds,
+              );
+
+      final employeeMap = <String, Map<String, dynamic>>{};
+
+      for (final employee in List<Map<String, dynamic>>.from(
+        employeeResponse,
+      )) {
+        final id = _normalizeBranchValue(
+          employee['employee_id'],
+        );
+
+        if (id.isNotEmpty) {
+          employeeMap[id] = employee;
+        }
+      }
+
+      final salaryDefaultsResponse = await SupabaseService.client
+          .from('employee_salary_defaults')
+          .select()
+          .inFilter('employee_id', employeeIds);
+      final salaryDefaultsMap = <String, Map<String, dynamic>>{};
+      for (final salaryDefault in List<Map<String, dynamic>>.from(
+        salaryDefaultsResponse,
+      )) {
+        final id = _normalizeBranchValue(salaryDefault['employee_id']);
+        if (id.isNotEmpty) {
+          salaryDefaultsMap[id] = salaryDefault;
+        }
+      }
+
+      // ============================================================
+      // MONEY HELPER
+      // ============================================================
+
+      double money(dynamic value) {
+        if (value == null) {
+          return 0.0;
+        }
+
+        if (value is num) {
+          return value.toDouble();
+        }
+
+        final cleaned = value
+            .toString()
+            .replaceAll(',', '')
+            .replaceAll(
+              RegExp(r'RM', caseSensitive: false),
+              '',
+            )
+            .trim();
+
+        return double.tryParse(cleaned) ?? 0.0;
+      }
+
+      // ============================================================
+      // TEXT VALUE HELPER
+      // ============================================================
+
+      String value(
+        Map<String, dynamic> row,
+        List<String> keys,
+      ) {
+        for (final key in keys) {
+          final raw = row[key];
+
+          if (raw == null) {
+            continue;
+          }
+
+          final text = raw.toString().trim();
+
+          if (text.isNotEmpty) {
+            return text;
+          }
+        }
+
+        return '';
+      }
+
+      // ============================================================
+      // JUMLAH / GROSS SALARY
+      //
+      // First use an existing gross field if available.
+      // Otherwise calculate gross from payroll components.
+      // ============================================================
+
+      double jumlah(
+        Map<String, dynamic> row,
+      ) {
+        // Existing calculated gross amount.
+        for (final key in const [
+          'gross_pay',
+          'gross_salary',
+          'total_gross',
+          'grossPay',
+          'jumlah',
+          'total_earnings',
+          'totalEarnings',
+        ]) {
+          if (row[key] != null) {
+            return money(row[key]);
+          }
+        }
+
+        // Calculate gross manually when the database
+        // does not contain a gross amount.
+
+        final snakeBasic = money(row['basic_salary']);
+        final camelBasic = money(row['basicSalary']);
+        final snakeFw = money(row['fw_salary']);
+        final camelFw = money(row['fwSalary']);
+        final salaryBase = snakeFw != 0
+            ? snakeFw
+            : (camelFw != 0
+                ? camelFw
+                : (snakeBasic != 0 ? snakeBasic : camelBasic));
+
+        final gross = salaryBase +
+            money(row['food_allowance']) +
+            money(row['foodAllowance']) +
+            money(row['other_allowance']) +
+            money(row['otherAllowance']) +
+            money(row['elaun_kedatangan']) +
+            money(row['elaun_perkhidmatan']) +
+            money(row['elaun_kerajinan']) +
+            money(row['elaun_makanan']) +
+            money(row['overtime']) +
+            money(row['bonus']) +
+            money(row['commission']) +
+            money(row['other_earnings']) +
+            money(row['otherEarnings']) +
+            money(row['cuti_umum']);
+
+        return gross;
+      }
+
+      // ============================================================
+      // NET SALARY
+      // ============================================================
+
+      double netSalary(
+        Map<String, dynamic> row,
+      ) {
+        // Prefer an existing calculated net amount.
+        for (final key in const [
+          'net_pay',
+          'net_salary',
+          'total_net',
+          'netPay',
+          'net',
+        ]) {
+          if (row[key] != null) {
+            return money(row[key]);
+          }
+        }
+
+        // Otherwise calculate:
+        //
+        // GROSS - EMPLOYEE DEDUCTIONS
+
+        final gross = jumlah(row);
+
+        final deductions = money(row['epf_employee']) +
+            money(row['epfEmployee']) +
+            money(row['socso_employee']) +
+            money(row['socsoEmployee']) +
+            money(row['eis_employee']) +
+            money(row['eisEmployee']) +
+            money(row['pcb']) +
+            money(row['zakat']) +
+            money(row['advance']) +
+            money(row['late_deduction']) +
+            money(row['lateDeduction']) +
+            money(row['unpaid_deduction']) +
+            money(row['unpaidDeduction']) +
+            money(row['other_deductions']) +
+            money(row['otherDeduction']);
+
+        return gross - deductions;
+      }
+
+      // ============================================================
+      // EXCEL ROW WRITER
+      // ============================================================
+
+      void writeRow(
+        xls.Sheet sheet,
+        int row,
+        List<dynamic> values, {
+        Set<int> textColumns = const <int>{},
+      }) {
+        for (var c = 0; c < values.length; c++) {
+          final cell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(
+              columnIndex: c,
+              rowIndex: row,
+            ),
+          );
+
+          final item = values[c];
+
+          if (textColumns.contains(c)) {
+            cell.value = xls.TextCellValue(
+              item?.toString() ?? '',
+            );
+          } else if (item is num) {
+            cell.value = xls.DoubleCellValue(
+              item.toDouble(),
+            );
+          } else {
+            cell.value = xls.TextCellValue(
+              item?.toString() ?? '',
+            );
+          }
+        }
+      }
+
+      // ============================================================
+      // SAVE EXCEL
+      // ============================================================
+
+      void saveExcel(
+        String fileName,
+        String sheetName,
+        List<String> headers,
+        List<List<dynamic>> rows,
+      ) {
+        final excel = xls.Excel.createExcel();
+
+        final defaultSheet = excel.getDefaultSheet();
+
+        if (defaultSheet != null && defaultSheet != sheetName) {
+          excel.rename(
+            defaultSheet,
+            sheetName,
+          );
+        }
+
+        final sheet = excel[sheetName];
+        final textColumns = <int>{
+          for (var index = 0; index < headers.length; index++)
+            if (const {
+              'NEW_IC_NO',
+              'IC_NO',
+              'EPF_NO',
+              'BANK_ACCOUNT',
+            }.contains(headers[index].trim().toUpperCase()))
+              index,
+        };
+
+        writeRow(
+          sheet,
+          0,
+          headers,
+        );
+        for (var column = 0; column < headers.length; column++) {
+          final headerCell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(
+              columnIndex: column,
+              rowIndex: 0,
+            ),
+          );
+          headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
+        }
+
+        for (var r = 0; r < rows.length; r++) {
+          writeRow(
+            sheet,
+            r + 1,
+            rows[r],
+            textColumns: textColumns,
+          );
+        }
+
+        final bytes = excel.save(
+          fileName: fileName,
+        );
+
+        if (bytes == null || bytes.isEmpty) {
+          throw Exception(
+            '$fileName could not be generated.',
+          );
+        }
+      }
+
+      // ============================================================
+      // OUTPUT ROWS
+      // ============================================================
+
+      final rhb = <List<dynamic>>[];
+
+      final epfLocal = <List<dynamic>>[];
+
+      final epfForeign = <List<dynamic>>[];
+
+      final eisLocal = <List<dynamic>>[];
+
+      final eisForeign = <List<dynamic>>[];
+
+      final socsoLocal = <List<dynamic>>[];
+
+      final socsoForeign = <List<dynamic>>[];
+
+      // ============================================================
+      // BUILD EXPORT DATA
+      // ============================================================
+
+      for (final payroll in payrollRows) {
+        final id = _normalizeBranchValue(
+          payroll['employee_id'],
+        );
+
+        final employee = employeeMap[id] ?? <String, dynamic>{};
+        final salaryDefault = salaryDefaultsMap[id] ?? <String, dynamic>{};
+
+        // ----------------------------------------------------------
+        // EMPLOYEE NAME
+        // ----------------------------------------------------------
+
+        final employeeName = value(
+          employee,
+          const [
+            'name',
+            'employee_name',
+          ],
+        );
+
+        final payrollName = value(
+          payroll,
+          const [
+            'name',
+            'employee_name',
+          ],
+        );
+
+        final name = employeeName.isNotEmpty ? employeeName : payrollName;
+
+        // ----------------------------------------------------------
+        // IC
+        // ----------------------------------------------------------
+
+        final employeeIc = value(
+          employee,
+          const [
+            'new_ic_no',
+            'newIcNo',
+          ],
+        );
+
+        final payrollIc = value(
+          payroll,
+          const [
+            'new_ic_no',
+            'newIcNo',
+          ],
+        );
+
+        final ic = employeeIc.isNotEmpty ? employeeIc : payrollIc;
+
+        // Prefer the salary-default address, with employee address as a schema
+        // fallback. A value containing FRN uses SOCSO number; empty/non-FRN
+        // uses IC number.
+        final salaryDefaultAddress = value(
+          salaryDefault,
+          const ['address', 'Address', 'ADDRESS'],
+        );
+        final employeeAddress = value(
+          employee,
+          const ['address', 'Address', 'ADDRESS'],
+        );
+        final address = salaryDefaultAddress.isNotEmpty
+            ? salaryDefaultAddress
+            : employeeAddress;
+        final socsoNo = value(
+          employee,
+          const [
+            'socso_no',
+            'socsoNo',
+            'socso_number',
+            'SOCSO_NO',
+          ],
+        );
+        final icDigits = ic.replaceAll(RegExp(r'[^0-9]'), '');
+        final icDigitCount = icDigits.length;
+        final isForeign = address.trim().toUpperCase().contains('FRN');
+        final isDigitsOnly = RegExp(r'^\d+$').hasMatch(ic);
+        final exportIc = !isForeign && isDigitsOnly && ic.length < 12
+            ? ic.padLeft(12, '0')
+            : (icDigitCount == 12 ? icDigits : ic.replaceAll('-', ''));
+        final useForeignSocsoNo = isForeign && socsoNo.isNotEmpty;
+        final socsoIdentifier =
+            useForeignSocsoNo ? socsoNo.replaceAll('-', '') : exportIc;
+
+        // ----------------------------------------------------------
+        // BANK ACCOUNT
+        // ----------------------------------------------------------
+
+        final employeeBank = value(
+          employee,
+          const [
+            'bank_account',
+            'bankAccount',
+          ],
+        );
+
+        final payrollBank = value(
+          payroll,
+          const [
+            'bank_account',
+            'bankAccount',
+          ],
+        );
+
+        final bankAccount =
+            employeeBank.isNotEmpty ? employeeBank : payrollBank;
+
+        // ----------------------------------------------------------
+        // EPF NUMBER
+        // ----------------------------------------------------------
+
+        final employeeEpfNo = value(
+          employee,
+          const [
+            'epf_no',
+            'epfNo',
+            'kwsp_no',
+            'kwspNo',
+          ],
+        );
+
+        final payrollEpfNo = value(
+          payroll,
+          const [
+            'epf_no',
+            'epfNo',
+            'kwsp_no',
+            'kwspNo',
+          ],
+        );
+
+        final epfNo = employeeEpfNo.isNotEmpty ? employeeEpfNo : payrollEpfNo;
+
+        // ----------------------------------------------------------
+        // CALCULATE AMOUNTS
+        // ----------------------------------------------------------
+
+        final gross = jumlah(payroll);
+
+        final net = netSalary(payroll);
+
+        final epfEmployee = money(
+          payroll['epf_employee'] ?? payroll['epfEmployee'],
+        );
+
+        final epfEmployer = money(
+          payroll['epf_employer'] ?? payroll['epfEmployer'],
+        );
+
+        final eisEmployee = money(
+          payroll['eis_employee'] ?? payroll['eisEmployee'],
+        );
+
+        final eisEmployer = money(
+          payroll['eis_employer'] ?? payroll['eisEmployer'],
+        );
+
+        final socsoEmployee = money(
+          payroll['socso_employee'] ?? payroll['socsoEmployee'],
+        );
+
+        final socsoEmployer = money(
+          payroll['socso_employer'] ?? payroll['socsoEmployer'],
+        );
+
+        // ----------------------------------------------------------
+        // TOTAL STATUTORY AMOUNTS
+        // ----------------------------------------------------------
+
+        final eisTotal = eisEmployee + eisEmployer;
+
+        final socsoTotal = socsoEmployee + socsoEmployer;
+
+        // ----------------------------------------------------------
+        // RHB
+        //
+        // JUMLAH = NET SALARY
+        // ----------------------------------------------------------
+
+        rhb.add([
+          name,
+          exportIc,
+          bankAccount,
+          net,
+          selectedMonth,
+        ]);
+
+        // ----------------------------------------------------------
+        // EPF
+        //
+        // JUMLAH = GROSS SALARY
+        // ----------------------------------------------------------
+
+        final eligibleForEpfExport =
+            epfEmployee + epfEmployer > 0 && (!isForeign || epfNo.isNotEmpty);
+        if (eligibleForEpfExport) {
+          final epfRow = <dynamic>[
+            name,
+            '',
+            '',
+            exportIc,
+            epfNo,
+            epfEmployee,
+            epfEmployer,
+            '',
+            gross,
+          ];
+          if (isForeign) {
+            epfForeign.add(epfRow);
+          } else {
+            epfLocal.add(epfRow);
+          }
+        }
+
+        // ----------------------------------------------------------
+        // EIS
+        // ----------------------------------------------------------
+
+        if (eisTotal > 0) {
+          final eisRow = <dynamic>[
+            name,
+            exportIc,
+            '',
+            eisTotal,
+          ];
+          if (isForeign) {
+            eisForeign.add(eisRow);
+          } else {
+            eisLocal.add(eisRow);
+          }
+        }
+
+        // ----------------------------------------------------------
+        // SOCSO
+        // ----------------------------------------------------------
+
+        final eligibleForSocsoExport = socsoTotal > 0 &&
+            (isForeign ? socsoNo.isNotEmpty : icDigitCount == 12);
+        if (eligibleForSocsoExport) {
+          final socsoRow = <dynamic>[
+            name,
+            socsoIdentifier,
+            '',
+            socsoTotal,
+          ];
+          if (isForeign) {
+            socsoForeign.add(socsoRow);
+          } else {
+            socsoLocal.add(socsoRow);
+          }
+        }
+      }
+
+      // ============================================================
+      // CREATE RHB EXCEL
+      // ============================================================
+
+      if (only == null || only == 'rhb') {
+        saveExcel(
+          'RHB_Layout_${monthFile}_$exportStamp.xlsx',
+          'RHB Layout',
+          const [
+            'NAME',
+            'NEW_IC_NO',
+            'BANK_ACCOUNT',
+            'JUMLAH',
+            'SELECTED PAYROLL MONTH',
+          ],
+          rhb,
+        );
+      }
+
+      // ============================================================
+      // CREATE EPF EXCEL
+      // ============================================================
+
+      if (only == null || only == 'epf') {
+        saveExcel(
+          'EPF_${monthFile}_$exportStamp.xlsx',
+          'EPF',
+          const [
+            'NAME',
+            '',
+            '',
+            'IC_NO',
+            'EPF_NO',
+            'EMPLOYEE EPF AMOUNT',
+            'EMPLOYER EPF AMOUNT',
+            '',
+            'TOTAL AMOUNT',
+          ],
+          [
+            ...epfLocal,
+            ...epfForeign,
+          ],
+        );
+      }
+
+      // ============================================================
+      // CREATE EIS EXCEL
+      // ============================================================
+
+      if (only == null || only == 'eis') {
+        saveExcel(
+          'EIS_${monthFile}_$exportStamp.xlsx',
+          'EIS',
+          const [
+            'NAME',
+            'IC_NO',
+            '',
+            'EIS TOTAL AMOUNT',
+          ],
+          [
+            ...eisLocal,
+            ...eisForeign,
+          ],
+        );
+      }
+
+      // ============================================================
+      // CREATE SOCSO EXCEL
+      // ============================================================
+
+      if (only == null || only == 'socso') {
+        saveExcel(
+          'SOCSO_${monthFile}_$exportStamp.xlsx',
+          'SOCSO',
+          const [
+            'NAME',
+            'IC_NO',
+            '',
+            'SOCSO TOTAL AMOUNT',
+          ],
+          [
+            ...socsoLocal,
+            ...socsoForeign,
+          ],
+        );
+      }
+
+      // ============================================================
+      // SUCCESS
+      // ============================================================
+
+      _message(only == null
+          ? 'Generated 4 Excel files for $selectedMonth: '
+              'RHB Layout, EPF, EIS and SOCSO (export $exportStamp). '
+              'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
+              'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
+              'SOCSO exported ${socsoLocal.length} local and '
+              '${socsoForeign.length} foreign employee(s).'
+          : '${only.toUpperCase()} Excel exported for $selectedMonth.');
+    } catch (e) {
+      _message(
+        'RHB / statutory Excel export failed: $e',
+      );
+    }
+  }
+
+  Widget _rhbLayoutPage() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.account_balance, size: 56),
+          const SizedBox(height: 12),
+          const Text(
+            'RHB Layout',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Salary month: ${DateFormat('MMMM yyyy').format(selectedPayrollMonth)}',
+          ),
+        ],
+      ),
+    );
+  }
+
+// ============================================================================
+// PAYROLL PERIOD MATCHER
+// ============================================================================
+
+  bool _payrollPeriodMatchesMonth(
+    dynamic value,
+    DateTime month,
+  ) {
+    if (value == null) return false;
+
+    final text = value.toString().trim();
+    if (text.isEmpty) return false;
+
+    final parsed = DateTime.tryParse(text);
+    if (parsed != null) {
+      return parsed.year == month.year && parsed.month == month.month;
+    }
+
+    final normalized = text.toLowerCase();
+    final monthNames = const [
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'may',
+      'jun',
+      'jul',
+      'aug',
+      'sep',
+      'oct',
+      'nov',
+      'dec',
+    ];
+
+    for (var i = 0; i < monthNames.length; i++) {
+      if (normalized.contains(monthNames[i]) &&
+          normalized.contains(month.year.toString())) {
+        return i + 1 == month.month;
+      }
+    }
+
+    final yearMonth = RegExp(r'^(\d{4})[-/]([0-9]{1,2})$').firstMatch(text);
+    if (yearMonth != null) {
+      return int.tryParse(yearMonth.group(1) ?? '') == month.year &&
+          int.tryParse(yearMonth.group(2) ?? '') == month.month;
+    }
+
+    final monthYear = RegExp(r'^([0-9]{1,2})[-/](\d{4})$').firstMatch(text);
+    if (monthYear != null) {
+      return int.tryParse(monthYear.group(1) ?? '') == month.month &&
+          int.tryParse(monthYear.group(2) ?? '') == month.year;
+    }
+
+    return false;
+  }
+
+// ============================================================================
+// PAYROLL PERIOD FORMATTER
+// ============================================================================
+
+  String _formatPayrollPeriod(
+    dynamic value,
+  ) {
+    if (value == null) {
+      return '-';
+    }
+
+    final text = value.toString();
+
+    if (text.isEmpty) {
+      return '-';
+    }
+
+    final parsed = DateTime.tryParse(text);
+
+    if (parsed == null) {
+      return text;
+    }
+
+    return DateFormat(
+      'MMM yyyy',
+    ).format(parsed);
+  }
+
+// ============================================================================
+// PAYROLL NUMBER
+// ============================================================================
+
+  double _payrollNumber(
+    dynamic value,
+  ) {
+    if (value == null) {
+      return 0;
+    }
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    final text = value
+        .toString()
+        .replaceAll(',', '')
+        .replaceAll('RM', '')
+        .replaceAll('rm', '')
+        .trim();
+
+    return double.tryParse(text) ?? 0;
+  }
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+  Widget _responsiveFormGrid({
+    required List<Widget> children,
+    double minimumFieldWidth = 250,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final availableWidth = constraints.maxWidth;
+        final columns =
+            ((availableWidth + spacing) / (minimumFieldWidth + spacing))
+                .floor()
+                .clamp(1, 5)
+                .toInt();
+        final fieldWidth =
+            (availableWidth - (spacing * (columns - 1))) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: children
+              .map((child) => SizedBox(width: fieldWidth, child: child))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _dialogField(
+    TextEditingController controller,
+    String label, {
+    TextInputType? keyboardType,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: 10,
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  Widget _detail(
+    String title,
+    String value,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: 5,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.black54,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.isEmpty ? '-' : value,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Border _hasaniOuterBorder([double width = 2]) => Border(
+        top: BorderSide(color: const Color(0xFF1B2234), width: width),
+        left: BorderSide(color: const Color(0xFF1B2234), width: width),
+        right: BorderSide(color: const Color(0xFFD6B24F), width: width),
+        bottom: BorderSide(color: const Color(0xFFD6B24F), width: width),
+      );
+
+  Widget _panel(
+    String title,
+    Widget child,
+  ) {
+    final isDashboard = selectedPage == 0;
+    final panelStyle = switch (title) {
+      'Payroll Management' => const (
+          Icons.account_balance_wallet_rounded,
+          Color(0xFFD6B24F)
+        ),
+      'Payroll Report' => const (Icons.analytics_rounded, Color(0xFF7C3AED)),
+      'Settings' => const (Icons.settings_rounded, Color(0xFFD6B24F)),
+      'Quick actions' => const (Icons.bolt_rounded, Color(0xFFD6B24F)),
+      'System status' => const (Icons.monitor_heart_rounded, Color(0xFF8B7740)),
+      'Employee List' => const (Icons.groups_rounded, Color(0xFFD6B24F)),
+      _ => const (Icons.dashboard_customize_rounded, Color(0xFF1B2234)),
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDashboard ? Colors.transparent : Colors.white,
+        borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
+        border: _hasaniOuterBorder(2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    panelStyle.$2.withValues(alpha: .95),
+                    Color.lerp(panelStyle.$2, Colors.black, .18)!,
+                  ]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: panelStyle.$2.withValues(alpha: .22),
+                      blurRadius: 9,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(panelStyle.$1, color: Colors.white, size: 23),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _statCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color, [
+    VoidCallback? onTap,
+  ]) {
+    final isDashboard = selectedPage == 0;
+    return SizedBox(
+      width: 220,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(
+          14,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: isDashboard ? .96 : 1),
+            borderRadius: BorderRadius.circular(
+              isDashboard ? 18 : 14,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withValues(
+                    alpha: 0.1,
+                  ),
+                  borderRadius: BorderRadius.circular(
+                    12,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(
+                height: 18,
+              ),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(
+                height: 6,
+              ),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton(
+    String title,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    final palette = switch (title) {
+      'Employees' => const (Color(0xFF289BFF), Color(0xFF0754D8)),
+      'Payroll' => const (Color(0xFF35D879), Color(0xFF08A84F)),
+      'Edit Payroll' => const (Color(0xFFFFB52D), Color(0xFFF07A00)),
+      'Attendance' => const (Color(0xFFFFB52D), Color(0xFFF07A00)),
+      'Import CSV' => const (Color(0xFF2DD4D7), Color(0xFF0698AD)),
+      'Reports' => const (Color(0xFF9A55FF), Color(0xFF6425E5)),
+      _ => const (Color(0xFFFF5570), Color(0xFFE51D43)),
+    };
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 150,
+        height: 132,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.white, palette.$1.withValues(alpha: .07)],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: palette.$1.withValues(alpha: .24)),
+          boxShadow: [
+            BoxShadow(
+              color: palette.$1.withValues(alpha: .10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 55,
+              height: 55,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [palette.$1, palette.$2]),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.$1.withValues(alpha: .30),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 29),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _reportRow(
+    String title,
+    String value,
+  ) {
+    final icon = switch (title) {
+      'Employees' || 'Active Employees' => Icons.groups_rounded,
+      'Payroll Records' => Icons.receipt_long_rounded,
+      'Attendance Records' => Icons.event_available_rounded,
+      'Departments' => Icons.business_center_rounded,
+      'Branches' => Icons.store_rounded,
+      'Vacation Employees' => Icons.flight_rounded,
+      'New Joiners' => Icons.person_add_alt_1_rounded,
+      'Gross Payroll' || 'Net Payroll' => Icons.payments_rounded,
+      'Total Deductions' => Icons.remove_circle_rounded,
+      _ => Icons.analytics_rounded,
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: 6,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            margin: const EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF289BFF), Color(0xFF0754D8)],
+              ),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: Colors.white, size: 17),
+          ),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _money(
+    double value,
+  ) {
+    return 'RM ${NumberFormat('#,##0.00').format(value)}';
+  }
+
+  void _message(
+    String message,
+  ) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+class _PowerEmptyIcon extends StatelessWidget {
+  const _PowerEmptyIcon(this.icon, this.color);
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            color.withValues(alpha: .95),
+            Color.lerp(color, Colors.black, .18)!,
+          ]),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: .25),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: Colors.white, size: 38),
+      );
+}
+
+class _AdminDigitalClock extends StatefulWidget {
+  const _AdminDigitalClock();
+
+  @override
+  State<_AdminDigitalClock> createState() => _AdminDigitalClockState();
+}
+
+class _AdminDigitalClockState extends State<_AdminDigitalClock> {
+  late DateTime _now;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 61,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .86),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withValues(alpha: .10)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.schedule_outlined,
+            size: 18,
+            color: Color(0xFFD6B24F),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat('hh:mm:ss a').format(_now),
+                style: const TextStyle(
+                  color: Color(0xFF20242D),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .3,
+                ),
+              ),
+              Text(
+                DateFormat('dd MMM yyyy').format(_now),
+                style: const TextStyle(
+                  color: Color(0xFF667085),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+).firstMatch(text);
     return match == null ? null : double.tryParse(match.group(1)!);
   }
 
