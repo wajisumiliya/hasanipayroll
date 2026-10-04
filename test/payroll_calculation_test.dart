@@ -927,6 +927,36 @@ void main() {
     });
   });
 
+  group('Combined allowance increment list', () {
+    test('does not carry an August allowance increase into September', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 50,
+          serviceAllowance: 150
+        ),
+        (
+          period: DateTime(2026, 9),
+          attendanceAllowance: 100,
+          serviceAllowance: 200
+        ),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
+
+      expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.attendanceDifference, 50);
+      expect(increment?.serviceDifference, 50);
+      expect(increment?.amount, 100);
+    });
+  });
+
   group('HED1007 deduction exception', () {
     test('does not apply a normal early-out shortage deduction', () {
       expect(
