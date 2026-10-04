@@ -816,15 +816,36 @@ void main() {
         double attendanceAllowance,
         double serviceAllowance,
       })>[
-        (period: DateTime(2026, 5), attendanceAllowance: 100, serviceAllowance: 250),
-        (period: DateTime(2026, 6), attendanceAllowance: 0, serviceAllowance: 0),
-        (period: DateTime(2026, 7), attendanceAllowance: 55, serviceAllowance: 100),
-        (period: DateTime(2026, 8), attendanceAllowance: 100, serviceAllowance: 250),
-        (period: DateTime(2026, 9), attendanceAllowance: 150, serviceAllowance: 300),
+        (
+          period: DateTime(2026, 5),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 0,
+          serviceAllowance: 0
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 55,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 9),
+          attendanceAllowance: 150,
+          serviceAllowance: 300
+        ),
       ];
 
       final increment =
-          PayrollCalculationService.latestStablePayrollAllowanceIncrement(history);
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
 
       expect(increment?.period, DateTime(2026, 9));
       expect(increment?.attendanceDifference, 50);
@@ -838,14 +859,31 @@ void main() {
         double attendanceAllowance,
         double serviceAllowance,
       })>[
-        (period: DateTime(2026, 6), attendanceAllowance: 100, serviceAllowance: 250),
-        (period: DateTime(2026, 7), attendanceAllowance: 100, serviceAllowance: 250),
-        (period: DateTime(2026, 8), attendanceAllowance: 150, serviceAllowance: 300),
-        (period: DateTime(2026, 9), attendanceAllowance: 175, serviceAllowance: 325),
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 150,
+          serviceAllowance: 300
+        ),
+        (
+          period: DateTime(2026, 9),
+          attendanceAllowance: 175,
+          serviceAllowance: 325
+        ),
       ];
 
       final increment =
-          PayrollCalculationService.latestStablePayrollAllowanceIncrement(history);
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
 
       expect(increment?.period, DateTime(2026, 9));
       expect(increment?.attendanceDifference, 25);
@@ -859,14 +897,31 @@ void main() {
         double attendanceAllowance,
         double serviceAllowance,
       })>[
-        (period: DateTime(2026, 5), attendanceAllowance: 100, serviceAllowance: 250),
-        (period: DateTime(2026, 6), attendanceAllowance: 0, serviceAllowance: 0),
-        (period: DateTime(2026, 7), attendanceAllowance: 55, serviceAllowance: 100),
-        (period: DateTime(2026, 8), attendanceAllowance: 100, serviceAllowance: 250),
+        (
+          period: DateTime(2026, 5),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 0,
+          serviceAllowance: 0
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 55,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
       ];
 
       final increment =
-          PayrollCalculationService.latestStablePayrollAllowanceIncrement(history);
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
 
       expect(increment, isNull);
     });
