@@ -438,7 +438,11 @@ class AttendancePayrollService {
     final requiredWorkHours = requiredWorkMinutes / 60.0;
     final overtimeEligible =
         PayrollCalculationService.isEmployeeOvertimeEligible(employeeId);
-    final dailySalary = PayrollCalculationService.unpaidDailyRate(
+    final unpaidDailySalary = PayrollCalculationService.unpaidDailyRate(
+      basicSalary: basicSalary,
+      month: month,
+    );
+    final shortageDailySalary = PayrollCalculationService.shortageDailyRate(
       basicSalary: basicSalary,
       isForeignEmployee: isForeignEmployee,
     );
@@ -463,8 +467,9 @@ class AttendancePayrollService {
       final dailyRequiredMinutes =
           _rosterRequiredMinutes(roster) ?? requiredWorkMinutes;
       final dailyRequiredHours = dailyRequiredMinutes / 60.0;
-      final dailyShortageRate =
-          dailyRequiredHours > 0 ? dailySalary / dailyRequiredHours : 0.0;
+      final dailyShortageRate = dailyRequiredHours > 0
+          ? shortageDailySalary / dailyRequiredHours
+          : 0.0;
       final attendanceStatus = _text(row['status']).trim().toUpperCase();
       final isUnpaid = _toBool(row['is_unpaid']) ||
           attendanceStatus == 'UNPAID' ||
@@ -562,7 +567,7 @@ class AttendancePayrollService {
         PayrollCalculationService.payableLateDeduction(totalLateDeduction);
 
     final unpaidDeduction = _roundMoney(
-      dailySalary * unpaidDays,
+      unpaidDailySalary * unpaidDays,
     );
 
     final overtimeAmount = PayrollCalculationService.roundPayrollAmount(

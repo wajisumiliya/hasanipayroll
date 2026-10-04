@@ -22,8 +22,19 @@ class PayrollCalculationService {
   }
 
   /// Daily rate used only for explicit UNPAID attendance days.
-  /// Local employees use 26 days; foreign employees use 28 days.
+  /// The divisor is the actual number of calendar days in the payroll month.
   static double unpaidDailyRate({
+    required double basicSalary,
+    required DateTime month,
+  }) {
+    if (basicSalary <= 0) return 0;
+    final calendarDays = DateTime(month.year, month.month + 1, 0).day;
+    return basicSalary / calendarDays;
+  }
+
+  /// Existing normal-day rate used for short-hours/late deductions.
+  /// This remains separate from the calendar-day UNPAID leave rule.
+  static double shortageDailyRate({
     required double basicSalary,
     required bool isForeignEmployee,
   }) {

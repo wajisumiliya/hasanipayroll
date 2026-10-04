@@ -331,23 +331,41 @@ void main() {
   });
 
   group('Historical payroll edge cases', () {
-    test('local employee unpaid daily rate uses basic salary divided by 26',
-        () {
+    test('September unpaid daily rate uses 30 calendar days', () {
       expect(
         PayrollCalculationService.unpaidDailyRate(
-          basicSalary: 2600,
-          isForeignEmployee: false,
+          basicSalary: 3000,
+          month: DateTime(2026, 9),
         ),
         100,
       );
     });
 
-    test('foreign employee unpaid daily rate uses basic salary divided by 28',
-        () {
+    test('October unpaid daily rate uses 31 calendar days', () {
+      expect(
+        PayrollCalculationService.unpaidDailyRate(
+          basicSalary: 3100,
+          month: DateTime(2026, 10),
+        ),
+        100,
+      );
+    });
+
+    test('February unpaid daily rate uses 28 calendar days', () {
       expect(
         PayrollCalculationService.unpaidDailyRate(
           basicSalary: 2800,
-          isForeignEmployee: true,
+          month: DateTime(2026, 2),
+        ),
+        100,
+      );
+    });
+
+    test('leap-year February unpaid daily rate uses 29 calendar days', () {
+      expect(
+        PayrollCalculationService.unpaidDailyRate(
+          basicSalary: 2900,
+          month: DateTime(2024, 2),
         ),
         100,
       );
@@ -695,8 +713,8 @@ void main() {
     test('does not change the explicit unpaid-day calculation path', () {
       expect(
         PayrollCalculationService.unpaidDailyRate(
-          basicSalary: 2600,
-          isForeignEmployee: false,
+          basicSalary: 3100,
+          month: DateTime(2026, 10),
         ),
         100,
       );
