@@ -337,11 +337,15 @@ class PayrollCalculationService {
       );
     }
 
+    final latestMonthAmount =
+        _roundMoney(attendanceDifference + serviceDifference);
+    if (latestMonthAmount <= 0) return null;
+
     return (
       period: totalIncrement.period,
       attendanceDifference: attendanceDifference,
       serviceDifference: serviceDifference,
-      amount: totalIncrement.amount,
+      amount: latestMonthAmount,
     );
   }
 
