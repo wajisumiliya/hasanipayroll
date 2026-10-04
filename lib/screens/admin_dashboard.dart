@@ -22048,7 +22048,7 @@ class _AdminDigitalClockState extends State<_AdminDigitalClock> {
       ),
     );
   }
-
+                }
 
 class _PowerEmptyIcon extends StatelessWidget {
   const _PowerEmptyIcon(this.icon, this.color);
