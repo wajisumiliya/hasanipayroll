@@ -18191,7 +18191,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     if (employee?.isManagementStaff == true) return null;
 
     final incDetails = defaultIncrementDetails?.toString().trim() ?? '';
-    final previousPeriod = DateTime(currentPeriod.year, currentPeriod.month - 1);
+    final previousPeriod =
+        DateTime(currentPeriod.year, currentPeriod.month - 1);
 
     // For the payroll month being generated, compare exactly with the previous
     // calendar month: GAJI + ELAUN KEDATANGAN + ELAUN PERKHIDMATAN +
