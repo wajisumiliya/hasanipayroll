@@ -274,56 +274,59 @@ class PayrollCalculationService {
     int stableMonths = 3,
     int lookbackMonths = 6,
   }) {
-    final attendanceIncrement = latestStableAllowanceIncrement(
+    // Treat Attendance + Service as one increment value. Otherwise an older
+    // increase from one allowance can be counted again in a later month.
+    final totalIncrement = latestStableAllowanceIncrement(
       history
           .map(
             (entry) => (
               period: entry.period,
-              amount: entry.attendanceAllowance,
+              amount: entry.attendanceAllowance + entry.serviceAllowance,
             ),
           )
           .toList(),
       stableMonths: stableMonths,
       lookbackMonths: lookbackMonths,
     );
-    final serviceIncrement = latestStableAllowanceIncrement(
-      history
-          .map(
-            (entry) => (
-              period: entry.period,
-              amount: entry.serviceAllowance,
-            ),
-          )
-          .toList(),
-      stableMonths: stableMonths,
-      lookbackMonths: lookbackMonths,
+    if (totalIncrement == null) return null;
+
+    int monthKey(DateTime value) => value.year * 12 + value.month;
+    final byMonth = <int, ({
+      DateTime period,
+      double attendanceAllowance,
+      double serviceAllowance,
+    })>{};
+    for (final entry in history) {
+      byMonth[monthKey(entry.period)] = entry;
+    }
+    final months = byMonth.values.toList()
+      ..sort((a, b) => a.period.compareTo(b.period));
+    final currentIndex = months.indexWhere(
+      (entry) =>
+          entry.period.year == totalIncrement.period.year &&
+          entry.period.month == totalIncrement.period.month,
     );
 
-    if (attendanceIncrement == null && serviceIncrement == null) return null;
-
-    final latestPeriod = attendanceIncrement == null
-        ? serviceIncrement!.period
-        : serviceIncrement == null ||
-                attendanceIncrement.period.isAfter(serviceIncrement.period)
-            ? attendanceIncrement.period
-            : serviceIncrement.period;
     var attendanceDifference = 0.0;
     var serviceDifference = 0.0;
-    if (attendanceIncrement != null &&
-        attendanceIncrement.period.year == latestPeriod.year &&
-        attendanceIncrement.period.month == latestPeriod.month) {
-      attendanceDifference = attendanceIncrement.amount;
+    if (currentIndex > 0) {
+      final current = months[currentIndex];
+      final previous = months[currentIndex - 1];
+      attendanceDifference = _roundMoney(
+        (current.attendanceAllowance - previous.attendanceAllowance)
+            .clamp(0.0, double.infinity),
+      );
+      serviceDifference = _roundMoney(
+        (current.serviceAllowance - previous.serviceAllowance)
+            .clamp(0.0, double.infinity),
+      );
     }
-    if (serviceIncrement != null &&
-        serviceIncrement.period.year == latestPeriod.year &&
-        serviceIncrement.period.month == latestPeriod.month) {
-      serviceDifference = serviceIncrement.amount;
-    }
+
     return (
-      period: latestPeriod,
+      period: totalIncrement.period,
       attendanceDifference: attendanceDifference,
       serviceDifference: serviceDifference,
-      amount: _roundMoney(attendanceDifference + serviceDifference),
+      amount: totalIncrement.amount,
     );
   }
 
