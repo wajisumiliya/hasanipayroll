@@ -16999,9 +16999,21 @@ class _AdminDashboardState extends State<AdminDashboard>
             i + 1,
             employeeId,
             dateText(employee['joining_date']),
-            lastIncrementText(),
+            _salaryIncrementText(
+                  employeeId,
+                  payroll['period'],
+                  defaultIncrementDetails:
+                      salaryMap[employeeId]?['inc_details'],
+                ) ??
+                '',
             _nextSalaryIncrementText(
-                  lastIncrementText(),
+                  _salaryIncrementText(
+                        employeeId,
+                        payroll['period'],
+                        defaultIncrementDetails:
+                            salaryMap[employeeId]?['inc_details'],
+                      ) ??
+                      '',
                   employee['joining_date'],
                 ) ??
                 '',
