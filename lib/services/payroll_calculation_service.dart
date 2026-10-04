@@ -312,13 +312,27 @@ class PayrollCalculationService {
     var serviceDifference = 0.0;
     if (currentIndex > 0) {
       final current = months[currentIndex];
-      final previous = months[currentIndex - 1];
+
+      // Attribute the combined increment against each allowance's previous
+      // normal/high value. This keeps vacation/re-entry recovery out of the
+      // component breakdown while the authoritative increment amount remains
+      // the combined Attendance + Service increase calculated above.
+      var previousAttendanceHigh = months.first.attendanceAllowance;
+      var previousServiceHigh = months.first.serviceAllowance;
+      for (var index = 1; index < currentIndex; index++) {
+        if (months[index].attendanceAllowance > previousAttendanceHigh) {
+          previousAttendanceHigh = months[index].attendanceAllowance;
+        }
+        if (months[index].serviceAllowance > previousServiceHigh) {
+          previousServiceHigh = months[index].serviceAllowance;
+        }
+      }
       attendanceDifference = _roundMoney(
-        (current.attendanceAllowance - previous.attendanceAllowance)
+        (current.attendanceAllowance - previousAttendanceHigh)
             .clamp(0.0, double.infinity),
       );
       serviceDifference = _roundMoney(
-        (current.serviceAllowance - previous.serviceAllowance)
+        (current.serviceAllowance - previousServiceHigh)
             .clamp(0.0, double.infinity),
       );
     }
