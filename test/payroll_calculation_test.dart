@@ -809,6 +809,45 @@ void main() {
     });
   });
 
+  group('Previous combined high increment amount', () {
+    test('reports RM100 when combined allowance rises from 700 to 800', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 100,
+          serviceAllowance: 600,
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 0,
+          serviceAllowance: 0,
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 100,
+          serviceAllowance: 300,
+        ),
+        (
+          period: DateTime(2026, 9),
+          attendanceAllowance: 100,
+          serviceAllowance: 700,
+        ),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+        history,
+      );
+
+      expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.amount, 100);
+    });
+  });
+
   group('Vacation return and latest-month increment rules', () {
     test('shows September increment after employee returns from vacation', () {
       final history = <({
