@@ -13057,6 +13057,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             .select()
             .order('period', ascending: false),
         SupabaseService.client
+            .from('employee_salary_defaults')
+            .select('employee_id,inc_details'),
+        SupabaseService.client
             .from('attendance')
             .select('employee_id,branch_id')
             .gte(
@@ -13123,13 +13126,23 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
-        final data = snapshot.data ?? const [[], [], [], []];
+        final data = snapshot.data ?? const [[], [], [], [], []];
         final branches = List<Map<String, dynamic>>.from(data[0] as List);
         final employees = List<Map<String, dynamic>>.from(data[1] as List);
         final rawPayrollRecords =
             List<Map<String, dynamic>>.from(data[2] as List);
-        final monthlyAttendance =
+        final salaryDefaults =
             List<Map<String, dynamic>>.from(data[3] as List);
+        final monthlyAttendance =
+            List<Map<String, dynamic>>.from(data[4] as List);
+
+        final salaryDefaultByEmployee = <String, Map<String, dynamic>>{};
+        for (final row in salaryDefaults) {
+          final employeeId = _normalizeBranchValue(row['employee_id']);
+          if (employeeId.isNotEmpty) {
+            salaryDefaultByEmployee[employeeId] = row;
+          }
+        }
 
         final employeeBranchById = <String, String>{};
         for (final employee in employees) {
@@ -13266,9 +13279,21 @@ class _AdminDashboardState extends State<AdminDashboard>
               PayrollCalculationService.latestStablePayrollAllowanceIncrement(
             history,
           );
-          if (increment == null ||
-              increment.period.year != currentPeriod.year ||
-              increment.period.month != currentPeriod.month) {
+          final incDetails =
+              salaryDefaultByEmployee[employeeId]?['inc_details'];
+          final defaultCurrentMonthAmount =
+              _incrementDetailsMatchesMonth(incDetails, currentPeriod)
+                  ? _incrementDetailsAmount(incDetails)
+                  : null;
+          final calculatedCurrentMonth =
+              increment != null &&
+                  increment.period.year == currentPeriod.year &&
+                  increment.period.month == currentPeriod.month
+              ? increment.amount
+              : null;
+          final incrementAmount =
+              defaultCurrentMonthAmount ?? calculatedCurrentMonth;
+          if (incrementAmount == null || incrementAmount <= 0) {
             continue;
           }
 
@@ -13283,7 +13308,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     ? employee['name'].toString().trim()
                     : employeeId,
             'branch_name': branchNames[attendanceBranch] ?? attendanceBranch,
-            'increment_amount': increment.amount,
+            'increment_amount': incrementAmount,
           });
         }
         monthlyIncrements.sort((a, b) {
@@ -18119,6 +18144,39 @@ class _AdminDashboardState extends State<AdminDashboard>
     return '${monthNames[next.month - 1]}-$shortYear';
   }
 
+  bool _incrementDetailsMatchesMonth(dynamic value, DateTime month) {
+    final text = value?.toString().trim().toUpperCase() ?? '';
+    if (text.isEmpty) return false;
+    const monthNumbers = <String, int>{
+      'JAN': 1,
+      'FEB': 2,
+      'MAR': 3,
+      'APR': 4,
+      'MAY': 5,
+      'JUN': 6,
+      'JUL': 7,
+      'AUG': 8,
+      'SEP': 9,
+      'SEPT': 9,
+      'OCT': 10,
+      'NOV': 11,
+      'DEC': 12,
+    };
+    final match = RegExp(r'^([A-Z]{3,4})[-/](\\d{2}|\\d{4})').firstMatch(text);
+    if (match == null) return false;
+    final parsedMonth = monthNumbers[match.group(1)];
+    var parsedYear = int.tryParse(match.group(2)!);
+    if (parsedYear != null && parsedYear < 100) parsedYear += 2000;
+    return parsedMonth == month.month && parsedYear == month.year;
+  }
+
+  double? _incrementDetailsAmount(dynamic value) {
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty) return null;
+    final match = RegExp(r'[/]\\s*([0-9]+(?:\\.[0-9]+)?)\\s*$').firstMatch(text);
+    return match == null ? null : double.tryParse(match.group(1)!);
+  }
+
   String? _salaryIncrementText(
     String employeeId,
     dynamic payrollPeriod, {
@@ -18132,6 +18190,15 @@ class _AdminDashboardState extends State<AdminDashboard>
     // KENAIKAN TERAKHIR is not applicable to management staff.
     final employee = service.employeeById(employeeId);
     if (employee?.isManagementStaff == true) return null;
+
+    final fallback = defaultIncrementDetails?.toString().trim() ?? '';
+
+    // INC_DETAILS is the maintained salary-default source of truth. When it
+    // explicitly records an increment for this payroll month, use it directly
+    // instead of rebuilding the amount from incomplete/legacy payroll history.
+    if (_incrementDetailsMatchesMonth(fallback, currentPeriod)) {
+      return fallback;
+    }
 
     final history = service
         .employeePayroll(employeeId)
@@ -18179,7 +18246,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     // No increment in this payroll month: use the employee's maintained
     // salary-default INC_DETAILS exactly as stored instead of recalculating
     // an older increment from payroll history.
-    final fallback = defaultIncrementDetails?.toString().trim() ?? '';
     return fallback.isEmpty ? null : fallback;
   }
 
