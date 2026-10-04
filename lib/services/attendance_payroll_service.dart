@@ -477,11 +477,11 @@ class AttendancePayrollService {
       dailySalary * unpaidDays,
     );
 
-    final overtimeAmount = _roundMoney(
+    final overtimeAmount = PayrollCalculationService.roundPayrollAmount(
       totalOvertimeAmount,
     );
 
-    cutiUmum = _roundMoney(cutiUmum);
+    cutiUmum = PayrollCalculationService.roundPayrollAmount(cutiUmum);
 
     // ------------------------------------------------------------------------
     // 3. STATUTORY WAGE

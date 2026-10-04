@@ -149,6 +149,12 @@ class PayrollCalculationService {
   /// nearest ten sen (for example, RM130.77 becomes RM130.80).
   static double payableLateDeduction(double amount) {
     if (!amount.isFinite || amount < 10) return 0;
+    return roundPayrollAmount(amount);
+  }
+
+  /// Rounds payroll earnings to the nearest ten sen.
+  static double roundPayrollAmount(double amount) {
+    if (!amount.isFinite) return 0;
     return (amount * 10).roundToDouble() / 10;
   }
 

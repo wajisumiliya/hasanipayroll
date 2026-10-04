@@ -422,4 +422,12 @@ void main() {
       expect(PayrollCalculationService.payableLateDeduction(130.77), 130.8);
     });
   });
+
+  group('Payroll earning rounding', () {
+    test('rounds OT and public-holiday amounts to the nearest ten sen', () {
+      expect(PayrollCalculationService.roundPayrollAmount(130.74), 130.7);
+      expect(PayrollCalculationService.roundPayrollAmount(130.75), 130.8);
+      expect(PayrollCalculationService.roundPayrollAmount(130.77), 130.8);
+    });
+  });
 }

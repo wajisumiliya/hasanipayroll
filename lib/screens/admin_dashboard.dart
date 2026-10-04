@@ -12912,10 +12912,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           if (history.isEmpty) continue;
 
           final currentAmount =
-              _payrollNumber(current['elaun_perkhidmatan']);
+              _payrollNumber(current['elaun_kedatangan']) +
+                  _payrollNumber(current['elaun_perkhidmatan']);
           final previousAmount =
-              _payrollNumber(history.first['elaun_perkhidmatan']);
-          if (currentAmount <= previousAmount + 0.004) continue;
+              _payrollNumber(history.first['elaun_kedatangan']) +
+                  _payrollNumber(history.first['elaun_perkhidmatan']);
+          final incrementAmount = currentAmount - previousAmount;
+          if (incrementAmount <= 0.004) continue;
 
           final employee = employeeById[employeeId] ?? const {};
           monthlyIncrements.add({
@@ -12925,7 +12928,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ? employee['name'].toString().trim()
                 : employeeId,
             'branch_name': current['branch_name']?.toString() ?? '',
-            'increment_amount': currentAmount,
+            'increment_amount': incrementAmount,
           });
         }
         monthlyIncrements.sort((a, b) => a['employee_name']
@@ -15304,33 +15307,6 @@ class _AdminDashboardState extends State<AdminDashboard>
         return parsed == null ? text : DateFormat('dd/MM/yyyy').format(parsed);
       }
 
-      String lastIncrementText({
-        required String employeeId,
-        required dynamic payrollPeriod,
-        required dynamic fallbackIncrement,
-        required double serviceAllowance,
-      }) {
-        final roundedAllowance = serviceAllowance.round();
-        final isAllowedAllowance =
-            (serviceAllowance - roundedAllowance).abs() < 0.005 &&
-                roundedAllowance >= 50 &&
-                roundedAllowance <= 1000 &&
-                roundedAllowance % 50 == 0;
-        if (!isAllowedAllowance) return '';
-
-        final calculated = _salaryIncrementText(employeeId, payrollPeriod);
-        var monthYear = calculated?.split('/').first.trim() ?? '';
-        if (monthYear.isEmpty) {
-          final fallback = textValue(fallbackIncrement);
-          final parsed = DateTime.tryParse(fallback);
-          monthYear = parsed == null
-              ? fallback.split('/').first.trim().toUpperCase()
-              : DateFormat('MMM-yy').format(parsed).toUpperCase();
-        }
-        if (monthYear.isEmpty) return '';
-        return '$monthYear/$roundedAllowance';
-      }
-
       double money(dynamic value) => _payrollNumber(value);
 
       void writeCell(
@@ -15475,6 +15451,52 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         const firstDataRow = 5;
         final originalDataCapacity = templateTotalRow - firstDataRow;
+        final originalColumnCount = layout == 'local20' ? 20 : 21;
+        final originalFooterValueColumn = config['footerValueColumn'] as int;
+        final originalFooterLabelColumn =
+            (config['footerLabelColumn'] as int?) ??
+                (layout == 'local20'
+                    ? originalFooterValueColumn - 1
+                    : layout == 'foreign21'
+                        ? 15
+                        : originalFooterValueColumn - 2);
+        final originalFooterEndColumn =
+            (config['footerEndColumn'] as int?) ??
+                (layout == 'local20' ? originalFooterValueColumn : 20);
+
+        // Clear the template's original total and payment-summary values
+        // before rows move. Some spreadsheet readers retain those cells at
+        // their old positions after removeRow, which otherwise prints a
+        // duplicate total/payment block below the rebuilt one.
+        for (var column = 0; column < originalColumnCount; column++) {
+          sheet
+              .cell(
+                xls.CellIndex.indexByColumnRow(
+                  columnIndex: column,
+                  rowIndex: templateTotalRow - 1,
+                ),
+              )
+              .value = null;
+        }
+        final originalSummaryOffsets = <int>{
+          ...(config['paymentRows'] as Map<String, int>).values,
+          config['footerTotalOffset'] as int,
+        };
+        for (final offset in originalSummaryOffsets) {
+          for (var column = originalFooterLabelColumn;
+              column <= originalFooterEndColumn;
+              column++) {
+            sheet
+                .cell(
+                  xls.CellIndex.indexByColumnRow(
+                    columnIndex: column,
+                    rowIndex: templateTotalRow + offset - 1,
+                  ),
+                )
+                .value = null;
+          }
+        }
+
         final extraRows = branchRecords.length > originalDataCapacity
             ? branchRecords.length - originalDataCapacity
             : 0;
@@ -15677,12 +15699,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              lastIncrementText(
-                employeeId: employeeId,
-                payrollPeriod: payroll['period'],
-                fallbackIncrement: lastIncrement,
-                serviceAllowance: serviceAllowance,
-              ),
+              _salaryIncrementText(employeeId, payroll['period']) ??
+                  dateText(lastIncrement),
               dateText(nextIncrement),
               textValue(firstValue(employee, const [
                 'permit',
@@ -15710,12 +15728,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              lastIncrementText(
-                employeeId: employeeId,
-                payrollPeriod: payroll['period'],
-                fallbackIncrement: lastIncrement,
-                serviceAllowance: serviceAllowance,
-              ),
+              _salaryIncrementText(employeeId, payroll['period']) ??
+                  dateText(lastIncrement),
               dateText(nextIncrement),
               employeeName,
               identityNumber,
@@ -15738,12 +15752,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              lastIncrementText(
-                employeeId: employeeId,
-                payrollPeriod: payroll['period'],
-                fallbackIncrement: lastIncrement,
-                serviceAllowance: serviceAllowance,
-              ),
+              _salaryIncrementText(employeeId, payroll['period']) ??
+                  dateText(lastIncrement),
               dateText(nextIncrement),
               employeeName,
               identityNumber,
@@ -15803,7 +15813,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                       : style.fontSize)
                   : 14,
               boldVal: emphasizeEmployeeColumn ? true : null,
-              horizontalAlignVal: xls.HorizontalAlign.Center,
+              horizontalAlignVal: column <= 6
+                  ? xls.HorizontalAlign.Left
+                  : xls.HorizontalAlign.Center,
               verticalAlignVal: xls.VerticalAlign.Center,
               leftBorderVal: tableBorder,
               rightBorderVal: tableBorder,
@@ -17519,8 +17531,11 @@ class _AdminDashboardState extends State<AdminDashboard>
     for (var index = history.length - 1; index > 0; index--) {
       final current = history[index];
       final previous = history[index - 1];
-      final increase =
-          current.elaunPerkhidmatan - previous.elaunPerkhidmatan;
+      final currentAllowances =
+          current.elaunKedatangan + current.elaunPerkhidmatan;
+      final previousAllowances =
+          previous.elaunKedatangan + previous.elaunPerkhidmatan;
+      final increase = currentAllowances - previousAllowances;
       if (increase > 0.004) {
         final amount = increase.roundToDouble() == increase
             ? increase.toStringAsFixed(0)
