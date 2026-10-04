@@ -11912,7 +11912,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       if (!mounted) return;
       setState(() {});
       _message(
-        '${DateFormat('MMMM yyyy').format(record.period)} payslip published for employees.',
+        '${DateFormat('MMMM yyyy').format(record.period)} payslip approved. '
+        'Employees can view it on the 5th at 9:00 PM Malaysia time.',
       );
     } catch (error) {
       if (mounted) _message('Unable to publish payslip: $error');

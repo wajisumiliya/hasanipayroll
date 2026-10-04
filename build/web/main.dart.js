@@ -134528,7 +134528,7 @@ case 7:s=8
 return A.m(j.te(),$async$EF)
 case 8:if(n.c==null){s=1
 break}n.J(new A.b1E())
-n.dj(A.b3("MMMM yyyy",null).ar(a.c)+" payslip published for employees.")
+n.dj(A.b3("MMMM yyyy",null).ar(a.c)+" payslip approved. Employees can view it on the 5th at 9:00 PM Malaysia time.")
 p=2
 s=6
 break
