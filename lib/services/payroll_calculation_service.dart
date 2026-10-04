@@ -337,8 +337,24 @@ class PayrollCalculationService {
       );
     }
 
-    final latestMonthAmount =
-        _roundMoney(attendanceDifference + serviceDifference);
+    final current = months[currentIndex];
+    final currentTotal =
+        _roundMoney(current.attendanceAllowance + current.serviceAllowance);
+    var previousHighTotal = 0.0;
+    for (var index = 0; index < currentIndex; index++) {
+      final previousTotal = _roundMoney(
+        months[index].attendanceAllowance + months[index].serviceAllowance,
+      );
+      if (previousTotal > previousHighTotal) {
+        previousHighTotal = previousTotal;
+      }
+    }
+
+    // The Increment List is the increase in the employee's combined eligible
+    // allowance over their previous genuine high. This prevents vacation or
+    // re-entry reductions from making the whole current allowance look like
+    // an increment. Examples: 200 -> 300 = RM100, 700 -> 800 = RM100.
+    final latestMonthAmount = _roundMoney(currentTotal - previousHighTotal);
     if (latestMonthAmount <= 0) return null;
 
     return (
