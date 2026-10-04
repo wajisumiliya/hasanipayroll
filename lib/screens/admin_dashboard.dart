@@ -18172,7 +18172,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final text = value?.toString().trim() ?? '';
     if (text.isEmpty) return null;
     final match =
-        RegExp(r'[/]\\s*([0-9]+(?:\\.[0-9]+)?)\\s*
+        RegExp(r'[/]\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\$').firstMatch(text);
     return match == null ? null : double.tryParse(match.group(1)!);
   }
 
@@ -20202,9 +20202,6 @@ class _AdminDigitalClockState extends State<_AdminDigitalClock> {
     );
   }
 }
-).firstMatch(text);
-    return match == null ? null : double.tryParse(match.group(1)!);
-  }
 
   String? _salaryIncrementText(
     String employeeId,
