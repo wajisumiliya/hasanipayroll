@@ -74,6 +74,15 @@ class PayrollCalculationService {
   static int? directOvertimeMinutes(String value) {
     final text = value.trim();
     if (text.isEmpty) return 0;
+    final hoursAndMinutes = RegExp(r'^(\d{1,2})[.:](\d{2})$').firstMatch(text);
+    if (hoursAndMinutes != null) {
+      final hours = int.parse(hoursAndMinutes.group(1)!);
+      final minutes = int.parse(hoursAndMinutes.group(2)!);
+      if (hours > 24 || minutes > 59 || (hours == 24 && minutes > 0)) {
+        return null;
+      }
+      return hours * 60 + minutes;
+    }
     final hours = double.tryParse(text);
     if (hours == null || !hours.isFinite || hours < 0 || hours > 24) {
       return null;
@@ -83,19 +92,24 @@ class PayrollCalculationService {
 
   /// Automatic attendance OT for local staff.
   ///
-  /// [netWorkingMinutes] must already exclude all employee break time. OT is
-  /// therefore available only for net time above the allocated working time.
+  /// Break usage up to [allocatedBreakMinutes] is neutral: it neither reduces
+  /// OT nor becomes extra OT when unused. Only excess break time reduces OT.
   static int automaticLocalOvertimeMinutes({
     required bool isLocalStaff,
-    required int netWorkingMinutes,
-    required int allocatedWorkingMinutes,
+    required int workMinutes,
+    required int actualBreakMinutes,
+    required int allocatedShiftMinutes,
+    required int allocatedBreakMinutes,
   }) {
     if (!isLocalStaff ||
-        netWorkingMinutes <= 0 ||
-        allocatedWorkingMinutes <= 0) {
+        workMinutes <= 0 ||
+        allocatedShiftMinutes <= 0) {
       return 0;
     }
-    final overtimeMinutes = (netWorkingMinutes - allocatedWorkingMinutes)
+    final excessBreakMinutes =
+        (actualBreakMinutes - allocatedBreakMinutes).clamp(0, 24 * 60);
+    final overtimeMinutes =
+        (workMinutes - allocatedShiftMinutes - excessBreakMinutes)
         .clamp(0, 24 * 60)
         .toInt();
     return eligibleOvertimeMinutes(overtimeMinutes);

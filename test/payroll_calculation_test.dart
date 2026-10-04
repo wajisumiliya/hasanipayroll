@@ -260,7 +260,9 @@ void main() {
 
     test('Admin direct OT hours convert to approved minutes', () {
       expect(PayrollCalculationService.directOvertimeMinutes('1.5'), 90);
-      expect(PayrollCalculationService.directOvertimeMinutes('2.25'), 135);
+      expect(PayrollCalculationService.directOvertimeMinutes('1.30'), 90);
+      expect(PayrollCalculationService.directOvertimeMinutes('1.59'), 119);
+      expect(PayrollCalculationService.directOvertimeMinutes('2.00'), 120);
       expect(PayrollCalculationService.directOvertimeMinutes(''), 0);
       expect(PayrollCalculationService.directOvertimeMinutes('-1'), isNull);
       expect(PayrollCalculationService.directOvertimeMinutes('24.1'), isNull);
@@ -432,36 +434,42 @@ void main() {
   });
 
   group('Automatic local attendance OT', () {
-    test('counts only net minutes above allocated working time', () {
+    test('counts time worked beyond the allocated shift', () {
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
           isLocalStaff: true,
-          netWorkingMinutes: 510,
-          allocatedWorkingMinutes: 450,
+          workMinutes: 600,
+          actualBreakMinutes: 90,
+          allocatedShiftMinutes: 540,
+          allocatedBreakMinutes: 90,
         ),
         60,
       );
     });
 
-    test('does not count OT when breaks reduce net time below allocation', () {
+    test('subtracts only break time above the allocated allowance', () {
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
           isLocalStaff: true,
-          netWorkingMinutes: 420,
-          allocatedWorkingMinutes: 450,
+          workMinutes: 600,
+          actualBreakMinutes: 120,
+          allocatedShiftMinutes: 540,
+          allocatedBreakMinutes: 90,
         ),
-        0,
+        30,
       );
     });
 
-    test('does not convert an unused scheduled break into OT', () {
+    test('does not add unused allocated break time to OT', () {
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
           isLocalStaff: true,
-          netWorkingMinutes: 540,
-          allocatedWorkingMinutes: 540,
+          workMinutes: 840,
+          actualBreakMinutes: 0,
+          allocatedShiftMinutes: 540,
+          allocatedBreakMinutes: 90,
         ),
-        0,
+        300,
       );
     });
 
@@ -469,16 +477,20 @@ void main() {
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
           isLocalStaff: true,
-          netWorkingMinutes: 479,
-          allocatedWorkingMinutes: 450,
+          workMinutes: 569,
+          actualBreakMinutes: 0,
+          allocatedShiftMinutes: 540,
+          allocatedBreakMinutes: 90,
         ),
         0,
       );
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
           isLocalStaff: true,
-          netWorkingMinutes: 480,
-          allocatedWorkingMinutes: 450,
+          workMinutes: 570,
+          actualBreakMinutes: 0,
+          allocatedShiftMinutes: 540,
+          allocatedBreakMinutes: 90,
         ),
         30,
       );
@@ -488,8 +500,10 @@ void main() {
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
           isLocalStaff: false,
-          netWorkingMinutes: 600,
-          allocatedWorkingMinutes: 450,
+          workMinutes: 900,
+          actualBreakMinutes: 0,
+          allocatedShiftMinutes: 540,
+          allocatedBreakMinutes: 90,
         ),
         0,
       );

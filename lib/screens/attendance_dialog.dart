@@ -368,9 +368,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         c.savedNetWorkingMinutes = _intValue(row['net_working_minutes']);
         c.savedOvertimeMinutes = _intValue(row['overtime_minutes']);
         c.approvedOtMinutes = _intValue(row['approved_ot_minutes']);
-        c.approvedOtHours.text = c.approvedOtMinutes < 30
-            ? ''
-            : _directOtHoursText(c.approvedOtMinutes);
+        c.hasManualOtOverride = _toBool(row['ot_manual_override']);
+        c.approvedOtHours.text = c.hasManualOtOverride
+            ? _directOtHoursText(c.approvedOtMinutes)
+            : '';
       }
     } catch (e) {
       loadError = e.toString();
@@ -1068,11 +1069,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           continue;
         }
         final row = controllers[day - 1];
+        var hasManualOtOverride = false;
 
         if (_isAdminView()) {
-          final hasManualLocalOverride =
-              _isLocalStaff && row.approvedOtHours.text.trim().isNotEmpty;
-          if (_isLocalStaff && !hasManualLocalOverride) {
+          hasManualOtOverride = row.approvedOtHours.text.trim().isNotEmpty;
+          row.hasManualOtOverride = hasManualOtOverride;
+          if (_isLocalStaff && !hasManualOtOverride) {
             row.approvedOtMinutes = 0;
             row.otAuthorized = false;
           } else {
@@ -1228,9 +1230,15 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               'overtime_duration': formatMinutes(dailyOtMinutes),
               'ot_requested': row.otRequested,
               'ot_authorized': _isAdminView() && dailyOtMinutes > 0,
-              if (_isAdminView())
-                'approved_ot_minutes':
-                    dailyOtMinutes > 0 ? dailyOtMinutes : null,
+              if (_isAdminView()) ...{
+                // Keep the calculated value payable, but separately remember
+                // whether Admin entered it. On reload a manual value wins over
+                // the automatic local-staff calculation, including zero.
+                'approved_ot_minutes': dailyOtMinutes > 0
+                    ? dailyOtMinutes
+                    : (hasManualOtOverride ? 0 : null),
+                'ot_manual_override': hasManualOtOverride,
+              },
               'is_unpaid': row.isUnpaid,
               'is_public_holiday': row.isPublicHoliday,
             })
@@ -1554,7 +1562,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                           _isLocalStaff ? overtimeMinutes : null,
                     )
                   : _tableCell(
-                      formatMinutes(overtimeMinutes),
+                      overtimeMinutes <= 0
+                          ? ''
+                          : _directOtHoursText(overtimeMinutes),
                       widths[5],
                       bold: true,
                       color: overtimeMinutes > 0
@@ -1588,10 +1598,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   bool _isAdminView() => widget.adminOnlyAfterSubmit;
 
   String _directOtHoursText(int minutes) {
-    final hours = minutes / 60;
-    return hours == hours.roundToDouble()
-        ? hours.toStringAsFixed(0)
-        : hours.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    return remainingMinutes == 0
+        ? hours.toString()
+        : '$hours.${remainingMinutes.toString().padLeft(2, '0')}';
   }
 
   Widget _directOtInput(
@@ -1636,6 +1647,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               PayrollCalculationService.directOvertimeMinutes(value);
           if (minutes == null) return;
           setState(() {
+            c.hasManualOtOverride = value.trim().isNotEmpty;
             c.approvedOtMinutes = minutes;
             c.otAuthorized = minutes > 0;
           });
@@ -1661,10 +1673,17 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           c.approvedOtMinutes,
         );
       }
+      final actualBreakMinutes = _calculateBreakMinutes(c);
+      final allocation = _allocatedShift(day);
       return PayrollCalculationService.automaticLocalOvertimeMinutes(
         isLocalStaff: true,
-        netWorkingMinutes: netWorkingMinutes,
-        allocatedWorkingMinutes: _allocatedWorkingMinutes(day),
+        workMinutes: allocation.hasRoster
+            ? netWorkingMinutes + actualBreakMinutes
+            : netWorkingMinutes,
+        actualBreakMinutes:
+            allocation.hasRoster ? actualBreakMinutes : 0,
+        allocatedShiftMinutes: allocation.shiftMinutes,
+        allocatedBreakMinutes: allocation.breakMinutes,
       );
     }
 
@@ -1676,7 +1695,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         : 0;
   }
 
-  int _allocatedWorkingMinutes(int day) {
+  ({int shiftMinutes, int breakMinutes, bool hasRoster}) _allocatedShift(
+    int day,
+  ) {
     final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
     final shiftStart =
         _clockMinutes(roster?['shift_start']?.toString() ?? '');
@@ -1684,12 +1705,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     if (shiftStart != null && shiftEnd != null) {
       var grossMinutes = shiftEnd - shiftStart;
       if (grossMinutes <= 0) grossMinutes += 24 * 60;
-      // Compare against the full scheduled shift. The roster's unused break
-      // allowance must never become automatic OT; actual breaks are already
-      // removed from netWorkingMinutes.
-      if (grossMinutes > 0) return grossMinutes;
+      if (grossMinutes > 0) {
+        return (
+          shiftMinutes: grossMinutes,
+          breakMinutes: _intValue(roster?['break_minutes']),
+          hasRoster: true,
+        );
+      }
     }
-    return (_requiredWorkHours * 60).round();
+    return (
+      shiftMinutes: (_requiredWorkHours * 60).round(),
+      breakMinutes: 0,
+      hasRoster: false,
+    );
   }
 
   int? _clockMinutes(String value) {
@@ -2820,7 +2848,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             _summaryChip(
                 'NET WORK', formatMinutes(netTotal), const Color(0xFF315AD9)),
             const SizedBox(width: 10),
-            _summaryChip('OT', formatMinutes(overtimeTotal), Colors.orange),
+            _summaryChip(
+              'OT',
+              overtimeTotal <= 0 ? '' : _directOtHoursText(overtimeTotal),
+              Colors.orange,
+            ),
           ],
         ),
       ),
@@ -3002,6 +3034,7 @@ class AttendanceDayControllers {
   int savedNetWorkingMinutes = 0;
   int savedOvertimeMinutes = 0;
   int approvedOtMinutes = 0;
+  bool hasManualOtOverride = false;
   final TextEditingController approvedOtHours = TextEditingController();
 
   bool get hasData {
