@@ -18109,6 +18109,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         : DateTime.tryParse(payrollPeriod?.toString() ?? '');
     if (currentPeriod == null) return null;
 
+    // KENAIKAN TERAKHIR is not applicable to management staff.
+    final employee = service.employeeById(employeeId);
+    if (employee?.isManagementStaff == true) return null;
+
     final history = service
         .employeePayroll(employeeId)
         .where((record) => !record.period.isAfter(currentPeriod))
@@ -18122,6 +18126,13 @@ class _AdminDashboardState extends State<AdminDashboard>
     final increment =
         PayrollCalculationService.latestStableAllowanceIncrement(history);
     if (increment == null) return null;
+
+    // Do not print a stale last increment. If the employee has gone more than
+    // 18 months (1.5 years) without another increment, leave the field blank.
+    final incrementMonth =
+        increment.period.year * 12 + increment.period.month;
+    final payrollMonth = currentPeriod.year * 12 + currentPeriod.month;
+    if (payrollMonth - incrementMonth > 18) return null;
 
     final amount = increment.amount.roundToDouble() == increment.amount
         ? increment.amount.toStringAsFixed(0)
