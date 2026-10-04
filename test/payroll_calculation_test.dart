@@ -695,6 +695,118 @@ void main() {
       expect(increment?.serviceDifference, 50);
       expect(increment?.amount, 100);
     });
+
+    test('detects an increase without three identical baseline months', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 150,
+          serviceAllowance: 250
+        ),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
+
+      expect(increment?.period, DateTime(2026, 8));
+      expect(increment?.attendanceDifference, 50);
+      expect(increment?.serviceDifference, 0);
+      expect(increment?.amount, 50);
+    });
+
+    test('does not treat a temporary reduction and recovery as an increment',
+        () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (
+          period: DateTime(2026, 5),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 0,
+          serviceAllowance: 0
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 55,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 100,
+          serviceAllowance: 250
+        ),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
+
+      expect(increment, isNull);
+    });
+
+    test('uses the previous genuine high after temporary lower months', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (
+          period: DateTime(2026, 4),
+          attendanceAllowance: 100,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 5),
+          attendanceAllowance: 100,
+          serviceAllowance: 100
+        ),
+        (
+          period: DateTime(2026, 6),
+          attendanceAllowance: 0,
+          serviceAllowance: 0
+        ),
+        (
+          period: DateTime(2026, 7),
+          attendanceAllowance: 55,
+          serviceAllowance: 55
+        ),
+        (
+          period: DateTime(2026, 8),
+          attendanceAllowance: 150,
+          serviceAllowance: 150
+        ),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+              history);
+
+      expect(increment?.period, DateTime(2026, 8));
+      expect(increment?.attendanceDifference, 50);
+      expect(increment?.serviceDifference, 50);
+      expect(increment?.amount, 100);
+    });
   });
 
   group('HED1007 deduction exception', () {

@@ -1579,23 +1579,23 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               !_isOvertimeEligible
                   ? _tableCell('', widths[5])
                   : _isAdminView()
-                  ? _directOtInput(
-                      c,
-                      widths[5],
-                      day: day,
-                      automaticMinutes:
-                          _isLocalStaff ? overtimeMinutes : null,
-                    )
-                  : _tableCell(
-                      overtimeMinutes <= 0
-                          ? ''
-                          : _directOtHoursText(overtimeMinutes),
-                      widths[5],
-                      bold: true,
-                      color: overtimeMinutes > 0
-                          ? Colors.orange.shade800
-                          : Colors.black38,
-                    ),
+                      ? _directOtInput(
+                          c,
+                          widths[5],
+                          day: day,
+                          automaticMinutes:
+                              _isLocalStaff ? overtimeMinutes : null,
+                        )
+                      : _tableCell(
+                          overtimeMinutes <= 0
+                              ? ''
+                              : _directOtHoursText(overtimeMinutes),
+                          widths[5],
+                          bold: true,
+                          color: overtimeMinutes > 0
+                              ? Colors.orange.shade800
+                              : Colors.black38,
+                        ),
               Expanded(
                 child: Container(
                   height: double.infinity,
@@ -1725,8 +1725,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     int day,
   ) {
     final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
-    final shiftStart =
-        _clockMinutes(roster?['shift_start']?.toString() ?? '');
+    final shiftStart = _clockMinutes(roster?['shift_start']?.toString() ?? '');
     final shiftEnd = _clockMinutes(roster?['shift_end']?.toString() ?? '');
     if (shiftStart != null && shiftEnd != null) {
       var grossMinutes = shiftEnd - shiftStart;
@@ -1745,8 +1744,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     // always takes precedence above.
     const fallbackBreakMinutes = 60;
     return (
-      shiftMinutes:
-          (_requiredWorkHours * 60).round() + fallbackBreakMinutes,
+      shiftMinutes: (_requiredWorkHours * 60).round() + fallbackBreakMinutes,
       breakMinutes: fallbackBreakMinutes,
     );
   }
