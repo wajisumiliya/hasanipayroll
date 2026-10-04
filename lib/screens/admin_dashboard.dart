@@ -18160,8 +18160,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'NOV': 11,
       'DEC': 12,
     };
-    final match =
-        RegExp(r'^([A-Z]{3,4})[-/](\d{2}|\d{4})').firstMatch(text);
+    final match = RegExp(r'^([A-Z]{3,4})[-/](\d{2}|\d{4})').firstMatch(text);
     if (match == null) return false;
     final parsedMonth = monthNumbers[match.group(1)];
     var parsedYear = int.tryParse(match.group(2)!);
