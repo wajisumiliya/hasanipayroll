@@ -15220,9 +15220,25 @@ class _AdminDashboardState extends State<AdminDashboard>
             'tarikh_masuk_kerja',
             'tarikh_masuk',
           ])),
-          _salaryIncrementText(employeeId, payroll['period']) ?? '',
+          _salaryIncrementText(
+                employeeId,
+                payroll['period'],
+                defaultIncrementDetails: firstValue(
+                  salaryMap[employeeId] ?? <String, dynamic>{},
+                  const ['inc_details', 'incDetails'],
+                ),
+              ) ??
+              '',
           _nextSalaryIncrementText(
-                _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                _salaryIncrementText(
+                      employeeId,
+                      payroll['period'],
+                      defaultIncrementDetails: firstValue(
+                        salaryMap[employeeId] ?? <String, dynamic>{},
+                        const ['inc_details', 'incDetails'],
+                      ),
+                    ) ??
+                    '',
                 firstValue(employee, const [
                   'joining_date',
                   'joiningDate',
@@ -18103,7 +18119,11 @@ class _AdminDashboardState extends State<AdminDashboard>
     return '${monthNames[next.month - 1]}-$shortYear';
   }
 
-  String? _salaryIncrementText(String employeeId, dynamic payrollPeriod) {
+  String? _salaryIncrementText(
+    String employeeId,
+    dynamic payrollPeriod, {
+    dynamic defaultIncrementDetails,
+  }) {
     final currentPeriod = payrollPeriod is DateTime
         ? payrollPeriod
         : DateTime.tryParse(payrollPeriod?.toString() ?? '');
@@ -18119,39 +18139,48 @@ class _AdminDashboardState extends State<AdminDashboard>
         .map(
           (record) => (
             period: record.period,
-            amount: record.elaunPerkhidmatan,
+            attendanceAllowance: record.elaunKedatangan,
+            serviceAllowance: record.elaunPerkhidmatan,
           ),
         )
         .toList();
     final increment =
-        PayrollCalculationService.latestStableAllowanceIncrement(history);
-    if (increment == null) return null;
+        PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+      history,
+    );
 
-    // Do not print a stale last increment. If the employee has gone more than
-    // 18 months (1.5 years) without another increment, leave the field blank.
-    final incrementMonth = increment.period.year * 12 + increment.period.month;
-    final payrollMonth = currentPeriod.year * 12 + currentPeriod.month;
-    if (payrollMonth - incrementMonth > 18) return null;
+    // Only a genuine increment in the payroll month overrides INC_DETAILS.
+    // For example, September payroll prints SEPT-YY/amount only when the
+    // employee actually has a September increment.
+    if (increment != null &&
+        increment.period.year == currentPeriod.year &&
+        increment.period.month == currentPeriod.month) {
+      final amount = increment.amount.roundToDouble() == increment.amount
+          ? increment.amount.toStringAsFixed(0)
+          : increment.amount.toStringAsFixed(2);
+      const monthNames = [
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEPT',
+        'OCT',
+        'NOV',
+        'DEC',
+      ];
+      final year = (increment.period.year % 100).toString().padLeft(2, '0');
+      return '${monthNames[increment.period.month - 1]}-$year/$amount';
+    }
 
-    final amount = increment.amount.roundToDouble() == increment.amount
-        ? increment.amount.toStringAsFixed(0)
-        : increment.amount.toStringAsFixed(2);
-    const monthNames = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEPT',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
-    final year = (increment.period.year % 100).toString().padLeft(2, '0');
-    return '${monthNames[increment.period.month - 1]}-$year/$amount';
+    // No increment in this payroll month: use the employee's maintained
+    // salary-default INC_DETAILS exactly as stored instead of recalculating
+    // an older increment from payroll history.
+    final fallback = defaultIncrementDetails?.toString().trim() ?? '';
+    return fallback.isEmpty ? null : fallback;
   }
 
   Future<void> _exportStatutoryReportExcel(String report, DateTime month,
