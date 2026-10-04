@@ -9076,10 +9076,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           return (otMinutesByEmployee[id] ?? 0) > 0;
         }).toList()
           ..sort((a, b) {
-            final aId =
-                (a['employee_id'] ?? a['id'] ?? '').toString();
-            final bId =
-                (b['employee_id'] ?? b['id'] ?? '').toString();
+            final aId = (a['employee_id'] ?? a['id'] ?? '').toString();
+            final bId = (b['employee_id'] ?? b['id'] ?? '').toString();
             final byMinutes = (otMinutesByEmployee[bId] ?? 0)
                 .compareTo(otMinutesByEmployee[aId] ?? 0);
             if (byMinutes != 0) return byMinutes;
@@ -12909,7 +12907,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         margin: const pw.EdgeInsets.all(28),
         header: (_) => pw.Column(
           children: [
-            _brandedPdfHeader('EMPLOYEE INCREMENT LIST', month, printedAt, logo),
+            _brandedPdfHeader(
+                'EMPLOYEE INCREMENT LIST', month, printedAt, logo),
             pw.SizedBox(height: 12),
           ],
         ),
@@ -12917,55 +12916,50 @@ class _AdminDashboardState extends State<AdminDashboard>
         build: (_) => orderedBranches
             .expand<pw.Widget>(
               (branch) => [
-                  pw.Container(
-                    width: double.infinity,
-                    padding: const pw.EdgeInsets.all(7),
-                    color: PdfColors.blue100,
-                    child: pw.Text(
-                      branch.toUpperCase(),
-                      style: pw.TextStyle(
-                        fontSize: 11,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  pw.TableHelper.fromTextArray(
-                    headers: const [
-                      'EMPLOYEE',
-                      'EMPLOYEE ID',
-                      'INCREMENT'
-                    ],
-                    data: groupedByBranch[branch]!
-                        .map(
-                          (item) => [
-                            item['employee_name'].toString(),
-                            item['employee_id'].toString(),
-                            'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
-                          ],
-                        )
-                        .toList(),
-                    headerStyle: pw.TextStyle(
-                      fontSize: 9,
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.all(7),
+                  color: PdfColors.blue100,
+                  child: pw.Text(
+                    branch.toUpperCase(),
+                    style: pw.TextStyle(
+                      fontSize: 11,
                       fontWeight: pw.FontWeight.bold,
                     ),
-                    headerDecoration:
-                        const pw.BoxDecoration(color: PdfColors.grey200),
-                    cellStyle: const pw.TextStyle(fontSize: 9),
-                    cellPadding: const pw.EdgeInsets.all(6),
-                    border: pw.TableBorder.all(
-                      color: PdfColors.grey500,
-                      width: .5,
-                    ),
                   ),
-                  pw.SizedBox(height: 14),
-                ],
+                ),
+                pw.TableHelper.fromTextArray(
+                  headers: const ['EMPLOYEE', 'EMPLOYEE ID', 'INCREMENT'],
+                  data: groupedByBranch[branch]!
+                      .map(
+                        (item) => [
+                          item['employee_name'].toString(),
+                          item['employee_id'].toString(),
+                          'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
+                        ],
+                      )
+                      .toList(),
+                  headerStyle: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  headerDecoration:
+                      const pw.BoxDecoration(color: PdfColors.grey200),
+                  cellStyle: const pw.TextStyle(fontSize: 9),
+                  cellPadding: const pw.EdgeInsets.all(6),
+                  border: pw.TableBorder.all(
+                    color: PdfColors.grey500,
+                    width: .5,
+                  ),
+                ),
+                pw.SizedBox(height: 14),
+              ],
             )
             .toList(),
       ),
     );
     await Printing.layoutPdf(
-      name:
-          'Employee_Increments_${DateFormat('yyyy_MM').format(month)}.pdf',
+      name: 'Employee_Increments_${DateFormat('yyyy_MM').format(month)}.pdf',
       format: PdfPageFormat.a4,
       onLayout: (_) => document.save(),
     );
@@ -13017,7 +13011,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       '${item['employee_name']}\n${item['employee_id']}',
                                     ),
                                   ),
-                                  DataCell(Text(item['branch_name'].toString())),
+                                  DataCell(
+                                      Text(item['branch_name'].toString())),
                                   DataCell(
                                     Text(
                                       'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
@@ -13173,11 +13168,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                 .compareTo((branchNames[b] ?? b).toLowerCase()),
           );
 
-        final attendanceBranchCounts =
-            <String, Map<String, int>>{};
+        final attendanceBranchCounts = <String, Map<String, int>>{};
         for (final attendance in monthlyAttendance) {
-          final employeeId =
-              _normalizeBranchValue(attendance['employee_id']);
+          final employeeId = _normalizeBranchValue(attendance['employee_id']);
           final branchId = _normalizeBranchValue(attendance['branch_id']);
           if (employeeId.isEmpty || branchId.isEmpty) continue;
           final counts = attendanceBranchCounts.putIfAbsent(
@@ -13265,7 +13258,10 @@ class _AdminDashboardState extends State<AdminDashboard>
             final period = DateTime.parse(record['period'].toString());
             return (
               period: period,
-              amount: _payrollNumber(record['elaun_perkhidmatan']),
+              amount: PayrollCalculationService.incrementListAllowanceAmount(
+                attendanceAllowance: _payrollNumber(record['elaun_kedatangan']),
+                serviceAllowance: _payrollNumber(record['elaun_perkhidmatan']),
+              ),
             );
           }).toList();
           final increment =
@@ -13284,10 +13280,10 @@ class _AdminDashboardState extends State<AdminDashboard>
               _normalizeBranchValue(current['branch_id']);
           monthlyIncrements.add({
             'employee_id': employeeId,
-            'employee_name': employee['name']?.toString().trim().isNotEmpty ==
-                    true
-                ? employee['name'].toString().trim()
-                : employeeId,
+            'employee_name':
+                employee['name']?.toString().trim().isNotEmpty == true
+                    ? employee['name'].toString().trim()
+                    : employeeId,
             'branch_name': branchNames[attendanceBranch] ?? attendanceBranch,
             'increment_amount': increment.amount,
           });
@@ -15525,6 +15521,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           'footerLabelColumn': 16,
           'footerValueColumn': 18,
           'footerEndColumn': 20,
+          'preparedByName': 'Anwar',
+          'preparedByNameOffset': 2,
+          'preparedByOffset': 3,
+          'approvedByOffset': 3,
           'paymentRows': <String, int>{
             'payroll': 2,
             'instant': 3,
@@ -15816,6 +15816,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         final sheet = excel[sheetName];
         final layout = config['layout'] as String;
         final templateTotalRow = config['totalRow'] as int;
+        final templatePrintArea = sheet.printArea;
+        final templatePrintEndRow = int.tryParse(
+          RegExp(r'(\d+)$').firstMatch(templatePrintArea ?? '')?.group(1) ?? '',
+        );
         final branchRecords = List<Map<String, dynamic>>.from(
           grouped[config['group']] ?? const <Map<String, dynamic>>[],
         )..sort((a, b) => _comparePayrollExportRecords(a, b, employeeMap));
@@ -16343,8 +16347,8 @@ class _AdminDashboardState extends State<AdminDashboard>
             boldVal: true,
             fontSizeVal: exportTotalFontSize,
             horizontalAlignVal: xls.HorizontalAlign.Center,
-            backgroundColorHexVal:
-                xls.ExcelColor.fromHexString('FFD9EAF7'),
+            verticalAlignVal: xls.VerticalAlign.Center,
+            backgroundColorHexVal: xls.ExcelColor.fromHexString('FFD9EAF7'),
             leftBorderVal: tableBorder,
             rightBorderVal: tableBorder,
             topBorderVal: tableBorder,
@@ -16355,9 +16359,44 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
+        final preparedByOffset = config['preparedByOffset'] as int?;
+        if (preparedByOffset != null) {
+          final preparedByRow = totalRow + preparedByOffset;
+          final preparedByNameRow =
+              totalRow + (config['preparedByNameOffset'] as int? ?? 2);
+          final preparedByName =
+              config['preparedByName']?.toString() ?? 'Anwar';
+          final signatureLine = xls.Border(
+            borderStyle: xls.BorderStyle.Thin,
+          );
+          final nameCell = sheet.cell(
+            xls.CellIndex.indexByString('F$preparedByNameRow'),
+          );
+          nameCell.value = xls.TextCellValue(preparedByName);
+          nameCell.cellStyle = (nameCell.cellStyle ?? xls.CellStyle()).copyWith(
+            horizontalAlignVal: xls.HorizontalAlign.Center,
+            verticalAlignVal: xls.VerticalAlign.Center,
+            bottomBorderVal: signatureLine,
+          );
+          final labelCell = sheet.cell(
+            xls.CellIndex.indexByString('F$preparedByRow'),
+          );
+          labelCell.value = xls.TextCellValue('PREPARED BY');
+          labelCell.cellStyle =
+              (labelCell.cellStyle ?? xls.CellStyle()).copyWith(
+            boldVal: true,
+            horizontalAlignVal: xls.HorizontalAlign.Center,
+            verticalAlignVal: xls.VerticalAlign.Center,
+            topBorderVal: signatureLine,
+          );
+        }
+
         final approvedByOffset = config['approvedByOffset'] as int?;
         if (approvedByOffset != null) {
           final approvedByRow = totalRow + approvedByOffset;
+          if (sheetName == 'Edar (Temp)') {
+            excel.unMerge(sheetName, 'L$approvedByRow:O$approvedByRow');
+          }
           excel.unMerge(sheetName, 'M$approvedByRow:N$approvedByRow');
           sheet.merge(
             xls.CellIndex.indexByString('M$approvedByRow'),
@@ -16390,9 +16429,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           columnIndex: netColumn,
           rowIndex: 0,
         ).cellId.replaceAll(RegExp(r'\d'), '');
-        final representedNonPayrollKeys = paymentRows.keys
-            .where((key) => key != 'payroll')
-            .toSet();
+        final representedNonPayrollKeys =
+            paymentRows.keys.where((key) => key != 'payroll').toSet();
 
         List<int> paymentContributorRows(String paymentKey) {
           if (paymentKey != 'payroll') {
@@ -16499,46 +16537,51 @@ class _AdminDashboardState extends State<AdminDashboard>
               'SUM($netColumnName$firstDataRow:$netColumnName${totalRow - 1})',
         );
 
-        if (sheetName == 'Edar (L)') {
-          // Enclose the complete PAYROLL / INSTANT / CASH / TOTAL summary in
-          // the requested O:T double-line outer box. Internal cell borders
-          // remain thin so the four values are still easy to distinguish.
-          const boxStartColumn = 14; // O
-          const boxEndColumn = 19; // T
-          final boxTopRow = totalRow + paymentRows.values.reduce(
-            (first, next) => first < next ? first : next,
-          );
-          final boxBottomRow =
-              totalRow + (config['footerTotalOffset'] as int);
-          final doubleBorder = xls.Border(
-            borderStyle: xls.BorderStyle.Double,
-          );
+        // Enclose every sheet's payment summary in the same double-line
+        // outer box. EDAR (L) retains its explicitly requested O:T range;
+        // other sheets follow their own label/value footer ranges.
+        final boxStartColumn =
+            sheetName == 'Edar (L)' ? 14 : paymentLabelColumn;
+        final boxEndColumn = sheetName == 'Edar (L)' ? 19 : footerEndColumn;
+        final boxTopRow = totalRow +
+            paymentRows.values.reduce(
+              (first, next) => first < next ? first : next,
+            );
+        final boxBottomRow = totalRow + (config['footerTotalOffset'] as int);
+        final doubleBorder = xls.Border(
+          borderStyle: xls.BorderStyle.Double,
+        );
 
-          for (var row = boxTopRow; row <= boxBottomRow; row++) {
-            for (var column = boxStartColumn;
-                column <= boxEndColumn;
-                column++) {
-              final cell = sheet.cell(
-                xls.CellIndex.indexByColumnRow(
-                  columnIndex: column,
-                  rowIndex: row - 1,
-                ),
-              );
-              final style = cell.cellStyle ?? xls.CellStyle();
-              cell.cellStyle = style.copyWith(
-                leftBorderVal: column == boxStartColumn
-                    ? doubleBorder
-                    : style.leftBorder,
-                rightBorderVal: column == boxEndColumn
-                    ? doubleBorder
-                    : style.rightBorder,
-                topBorderVal:
-                    row == boxTopRow ? doubleBorder : style.topBorder,
-                bottomBorderVal:
-                    row == boxBottomRow ? doubleBorder : style.bottomBorder,
-              );
-            }
+        for (var row = boxTopRow; row <= boxBottomRow; row++) {
+          for (var column = boxStartColumn; column <= boxEndColumn; column++) {
+            final cell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: row - 1,
+              ),
+            );
+            final style = cell.cellStyle ?? xls.CellStyle();
+            cell.cellStyle = style.copyWith(
+              leftBorderVal:
+                  column == boxStartColumn ? doubleBorder : style.leftBorder,
+              rightBorderVal:
+                  column == boxEndColumn ? doubleBorder : style.rightBorder,
+              topBorderVal: row == boxTopRow ? doubleBorder : style.topBorder,
+              bottomBorderVal:
+                  row == boxBottomRow ? doubleBorder : style.bottomBorder,
+            );
           }
+        }
+
+        // Row insertion does not automatically extend an XLSX defined print
+        // area. Keep the complete shifted footer and signatures printable.
+        if (templatePrintEndRow != null) {
+          sheet.setPrintArea(
+            xls.CellIndex.indexByString('A1'),
+            xls.CellIndex.indexByString(
+              '${layout == 'local20' ? 'T' : 'U'}${templatePrintEndRow + extraRows}',
+            ),
+          );
         }
       }
 
@@ -18034,23 +18077,21 @@ class _AdminDashboardState extends State<AdminDashboard>
         month = parsedJoiningDate.month;
         year = parsedJoiningDate.year;
       } else {
-        final date = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})')
-            .firstMatch(rawJoiningDate);
+        final date =
+            RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})').firstMatch(rawJoiningDate);
         if (date != null) {
           month = int.tryParse(date.group(2)!);
           year = int.tryParse(date.group(3)!);
         }
       }
     } else {
-      final monthYear =
-          RegExp(r'^([A-Z]{3,4})-(\d{2}|\d{4})').firstMatch(text);
+      final monthYear = RegExp(r'^([A-Z]{3,4})-(\d{2}|\d{4})').firstMatch(text);
       if (monthYear != null) {
         month = monthNumbers[monthYear.group(1)];
         year = int.tryParse(monthYear.group(2)!);
         if (year != null && year < 100) year += 2000;
       } else {
-        final date =
-            RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})').firstMatch(text);
+        final date = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})').firstMatch(text);
         if (date != null) {
           month = int.tryParse(date.group(2)!);
           year = int.tryParse(date.group(3)!);
@@ -18101,8 +18142,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'NOV',
       'DEC',
     ];
-    final year =
-        (increment.period.year % 100).toString().padLeft(2, '0');
+    final year = (increment.period.year % 100).toString().padLeft(2, '0');
     return '${monthNames[increment.period.month - 1]}-$year/$amount';
   }
 

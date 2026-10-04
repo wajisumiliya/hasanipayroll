@@ -196,7 +196,17 @@ class PayrollCalculationService {
         other;
   }
 
-  /// Finds the latest genuine service-allowance increment.
+  /// Total used by the Admin increment list. Both recurring employee
+  /// allowances are eligible, so an attendance-allowance-only increase must
+  /// not disappear from the report.
+  static double incrementListAllowanceAmount({
+    required double attendanceAllowance,
+    required double serviceAllowance,
+  }) {
+    return _roundMoney(attendanceAllowance + serviceAllowance);
+  }
+
+  /// Finds the latest genuine allowance increment.
   ///
   /// A baseline is accepted only when the same amount was paid for at least
   /// [stableMonths] consecutive months within the [lookbackMonths] before the

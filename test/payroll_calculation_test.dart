@@ -571,6 +571,61 @@ void main() {
     });
   });
 
+  group('Increment list allowance detection', () {
+    test('includes both attendance and service allowances', () {
+      expect(
+        PayrollCalculationService.incrementListAllowanceAmount(
+          attendanceAllowance: 150,
+          serviceAllowance: 250,
+        ),
+        400,
+      );
+    });
+
+    test('detects an attendance-allowance-only increase', () {
+      final history = <({DateTime period, double amount})>[
+        for (var month = 5; month <= 8; month++)
+          (
+            period: DateTime(2026, month),
+            amount: PayrollCalculationService.incrementListAllowanceAmount(
+              attendanceAllowance: 100,
+              serviceAllowance: 250,
+            ),
+          ),
+        (
+          period: DateTime(2026, 9),
+          amount: PayrollCalculationService.incrementListAllowanceAmount(
+            attendanceAllowance: 200,
+            serviceAllowance: 250,
+          ),
+        ),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStableAllowanceIncrement(history);
+
+      expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.amount, 100);
+    });
+
+    test('still ignores temporary vacation reductions', () {
+      final history = <({DateTime period, double amount})>[
+        (period: DateTime(2026, 4), amount: 200),
+        (period: DateTime(2026, 5), amount: 200),
+        (period: DateTime(2026, 6), amount: 200),
+        (period: DateTime(2026, 7), amount: 100),
+        (period: DateTime(2026, 8), amount: 155),
+        (period: DateTime(2026, 9), amount: 250),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStableAllowanceIncrement(history);
+
+      expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.amount, 50);
+    });
+  });
+
   group('HED1007 deduction exception', () {
     test('does not apply a normal early-out shortage deduction', () {
       expect(
