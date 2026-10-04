@@ -457,13 +457,18 @@ class AttendancePayrollService {
           row['approved_ot_minutes'] != null) {
         final otHours = _attendanceOvertimeHours(row, dailyRequiredMinutes);
         if (otHours > 0) {
-          approvedOtDays++;
-          totalOvertimeHours += otHours;
           final rateHours =
               dailyRequiredHours > 0 ? dailyRequiredHours : requiredWorkHours;
           final dailyOtRate =
               rateHours > 0 ? (basicSalary / 26.0 / rateHours) * 1.5 : 0.0;
-          totalOvertimeAmount += otHours * dailyOtRate;
+          final dailyOtAmount = otHours * dailyOtRate;
+          if (PayrollCalculationService.isPayableOvertimeAmount(
+            dailyOtAmount,
+          )) {
+            approvedOtDays++;
+            totalOvertimeHours += otHours;
+            totalOvertimeAmount += dailyOtAmount;
+          }
         }
       }
     }

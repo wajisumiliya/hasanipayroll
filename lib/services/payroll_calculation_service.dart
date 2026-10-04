@@ -81,6 +81,29 @@ class PayrollCalculationService {
     return (hours * 60).round();
   }
 
+  /// Automatic attendance OT for local staff.
+  ///
+  /// [netWorkingMinutes] must already exclude all employee break time. OT is
+  /// therefore available only for net time above the allocated working time.
+  static int automaticLocalOvertimeMinutes({
+    required bool isLocalStaff,
+    required int netWorkingMinutes,
+    required int allocatedWorkingMinutes,
+  }) {
+    if (!isLocalStaff ||
+        netWorkingMinutes <= 0 ||
+        allocatedWorkingMinutes <= 0) {
+      return 0;
+    }
+    return (netWorkingMinutes - allocatedWorkingMinutes)
+        .clamp(0, 24 * 60)
+        .toInt();
+  }
+
+  /// A day's OT is payable only when its calculated value exceeds RM5.00.
+  static bool isPayableOvertimeAmount(double amount) =>
+      amount.isFinite && amount > 5.0;
+
   /// Prevents a normal late/shortage deduction on UNPAID or PH rows.
   static bool shouldApplyShortageDeduction({
     required bool isUnpaid,

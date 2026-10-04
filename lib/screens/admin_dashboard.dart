@@ -14834,7 +14834,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       sheet.cell(xls.CellIndex.indexByString('L2')).value = null;
       sheet.merge(
         xls.CellIndex.indexByString('M2'),
-        xls.CellIndex.indexByString('T2'),
+        xls.CellIndex.indexByString('U2'),
       );
       final branchHeaderCell = sheet.cell(xls.CellIndex.indexByString('M2'));
       branchHeaderCell.value = xls.TextCellValue(
@@ -14843,11 +14843,12 @@ class _AdminDashboardState extends State<AdminDashboard>
       branchHeaderCell.cellStyle =
           (branchHeaderCell.cellStyle ?? xls.CellStyle()).copyWith(
         boldVal: true,
-        fontSizeVal: 11,
+        fontSizeVal: 20,
+        fontColorHexVal: xls.ExcelColor.fromHexString('FF1F4E78'),
         horizontalAlignVal: xls.HorizontalAlign.Center,
         verticalAlignVal: xls.VerticalAlign.Center,
       );
-      sheet.setRowHeight(1, 24);
+      sheet.setRowHeight(1, 32);
       final monthCell = sheet.cell(
         xls.CellIndex.indexByString('A3'),
       );
@@ -15721,7 +15722,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             sheet.cell(xls.CellIndex.indexByString(branchHeaderStart)).value;
         excel.unMerge(sheetName, branchHeaderRange);
         sheet.cell(xls.CellIndex.indexByString(branchHeaderStart)).value = null;
-        final movedBranchHeaderEnd = layout == 'local20' ? 'T2' : 'U2';
+        const movedBranchHeaderEnd = 'U2';
         sheet.merge(
           xls.CellIndex.indexByString('M2'),
           xls.CellIndex.indexByString(movedBranchHeaderEnd),
@@ -15731,11 +15732,12 @@ class _AdminDashboardState extends State<AdminDashboard>
         movedBranchHeader.cellStyle =
             (movedBranchHeader.cellStyle ?? xls.CellStyle()).copyWith(
           boldVal: true,
-          fontSizeVal: 11,
+          fontSizeVal: 20,
+          fontColorHexVal: xls.ExcelColor.fromHexString('FF1F4E78'),
           horizontalAlignVal: xls.HorizontalAlign.Center,
           verticalAlignVal: xls.VerticalAlign.Center,
         );
-        sheet.setRowHeight(1, 24);
+        sheet.setRowHeight(1, 32);
 
         final cleanHeaders = cleanPayrollHeaders(layout);
         for (var column = 0; column < columnCount; column++) {

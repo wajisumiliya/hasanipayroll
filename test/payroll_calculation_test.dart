@@ -430,4 +430,54 @@ void main() {
       expect(PayrollCalculationService.roundPayrollAmount(130.77), 130.8);
     });
   });
+
+  group('Automatic local attendance OT', () {
+    test('counts only net minutes above allocated working time', () {
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: true,
+          netWorkingMinutes: 510,
+          allocatedWorkingMinutes: 450,
+        ),
+        60,
+      );
+    });
+
+    test('does not count OT when breaks reduce net time below allocation', () {
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: true,
+          netWorkingMinutes: 420,
+          allocatedWorkingMinutes: 450,
+        ),
+        0,
+      );
+    });
+
+    test('does not automatically calculate OT for foreign staff', () {
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: false,
+          netWorkingMinutes: 600,
+          allocatedWorkingMinutes: 450,
+        ),
+        0,
+      );
+    });
+  });
+
+  group('OT payment minimum', () {
+    test('does not pay a daily OT amount of RM5 or less', () {
+      expect(PayrollCalculationService.isPayableOvertimeAmount(2), isFalse);
+      expect(PayrollCalculationService.isPayableOvertimeAmount(5), isFalse);
+    });
+
+    test('pays a daily OT amount above RM5', () {
+      expect(
+        PayrollCalculationService.isPayableOvertimeAmount(5.01),
+        isTrue,
+      );
+      expect(PayrollCalculationService.isPayableOvertimeAmount(13), isTrue);
+    });
+  });
 }

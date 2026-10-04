@@ -76,6 +76,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   }
 
   double _requiredWorkHours = 7.5;
+  bool _isLocalStaff = true;
   bool _salaryRuleLoaded = false;
   final Map<int, Map<String, dynamic>> _weeklyRoster = {};
   final Map<int, Map<String, dynamic>> _dailyRoster = {};
@@ -227,8 +228,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         // EIS-not-applicable employees have 10:30 target and no OT.
         if (epfCategory == 'normal1' || eisApplicable) {
           _requiredWorkHours = 7.5;
+          _isLocalStaff = true;
         } else {
           _requiredWorkHours = 10.5;
+          _isLocalStaff = false;
         }
       }
     } finally {
@@ -250,9 +253,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       }
 
-      // Admin needs the employee's salary rule to decide whether OT can be
-      // authorized for a particular day.
-      if (widget.adminOnlyAfterSubmit && !_salaryRuleLoaded) {
+      // Both branch attendance and Admin need the salary rule to distinguish
+      // local automatic OT from foreign-staff manual OT.
+      if (!_salaryRuleLoaded) {
         await _loadSalaryWorkingRule(employeeId);
       }
 
@@ -1066,7 +1069,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         }
         final row = controllers[day - 1];
 
-        if (_isAdminView()) {
+        if (_isAdminView() && !_isLocalStaff) {
           final directOtMinutes =
               PayrollCalculationService.directOvertimeMinutes(
                   row.approvedOtHours.text);
@@ -1535,7 +1538,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     ? const Color(0xFF315AD9)
                     : Colors.black54,
               ),
-              _isAdminView()
+              _isAdminView() && !_isLocalStaff
                   ? _directOtInput(c, widths[5], day: day)
                   : _tableCell(
                       formatMinutes(overtimeMinutes),
@@ -1636,9 +1639,30 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
-    // Overtime is never inferred from long working hours. It appears only
-    // after the employee request has been approved by Admin for this date.
+    if (_isLocalStaff) {
+      return PayrollCalculationService.automaticLocalOvertimeMinutes(
+        isLocalStaff: true,
+        netWorkingMinutes: netWorkingMinutes,
+        allocatedWorkingMinutes: _allocatedWorkingMinutes(day),
+      );
+    }
+
+    // Foreign-staff overtime retains the existing Admin approval rule.
     return c.otAuthorized ? c.approvedOtMinutes : 0;
+  }
+
+  int _allocatedWorkingMinutes(int day) {
+    final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
+    final shiftStart =
+        _clockMinutes(roster?['shift_start']?.toString() ?? '');
+    final shiftEnd = _clockMinutes(roster?['shift_end']?.toString() ?? '');
+    if (shiftStart != null && shiftEnd != null) {
+      var grossMinutes = shiftEnd - shiftStart;
+      if (grossMinutes <= 0) grossMinutes += 24 * 60;
+      final allocated = grossMinutes - _intValue(roster?['break_minutes']);
+      if (allocated > 0) return allocated;
+    }
+    return (_requiredWorkHours * 60).round();
   }
 
   int? _clockMinutes(String value) {
