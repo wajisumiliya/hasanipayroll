@@ -208,21 +208,24 @@ class PayrollCalculationService {
 
   /// Finds the latest genuine allowance increment.
   ///
-  /// A baseline is accepted only when the same amount was paid for at least
-  /// [stableMonths] consecutive months within the [lookbackMonths] before the
-  /// change. Temporary vacation/re-entry reductions are skipped, so a history
-  /// of 100, 100, 100, 0, 55, 150 produces an increment of 50, not 95.
+  /// An increment is recorded whenever an allowance reaches a new genuine
+  /// high compared with the employee's earlier payroll history. Lower values
+  /// caused by vacation, unpaid periods, re-entry, or payroll corrections do
+  /// not reset the baseline. This also works for employees who do not have
+  /// three identical months before an increase.
+  ///
+  /// Example: 100, 100, 0, 55, 150 => increment 50.
+  /// Example: 100, 150, 200 => latest increment 50.
   static ({DateTime period, double amount})? latestStableAllowanceIncrement(
     List<({DateTime period, double amount})> history, {
     int stableMonths = 3,
     int lookbackMonths = 6,
   }) {
-    if (stableMonths < 1 || lookbackMonths < stableMonths) return null;
-
-    int monthKey(DateTime value) => value.year * 12 + value.month;
     bool sameAmount(double a, double b) => (a - b).abs() <= 0.004;
 
     // Keep one value per payroll month and normalize dates to month precision.
+    // The latest record supplied for a month wins.
+    int monthKey(DateTime value) => value.year * 12 + value.month;
     final byMonth = <int, ({DateTime period, double amount})>{};
     for (final entry in history) {
       if (!entry.amount.isFinite || entry.amount < 0) continue;
@@ -231,52 +234,29 @@ class PayrollCalculationService {
     }
     final months = byMonth.values.toList()
       ..sort((a, b) => a.period.compareTo(b.period));
-    if (months.length <= stableMonths) return null;
+    if (months.length < 2) return null;
 
-    double? stableBaselineBefore(int candidateIndex) {
-      final candidateMonth = monthKey(months[candidateIndex].period);
-      var end = candidateIndex - 1;
-      while (end >= 0) {
-        if (candidateMonth - monthKey(months[end].period) > lookbackMonths) {
-          break;
-        }
-        final amount = months[end].amount;
-        var start = end;
-        while (start > 0 &&
-            sameAmount(months[start - 1].amount, amount) &&
-            monthKey(months[start].period) -
-                    monthKey(months[start - 1].period) ==
-                1 &&
-            candidateMonth - monthKey(months[start - 1].period) <=
-                lookbackMonths) {
-          start--;
-        }
-        if (end - start + 1 >= stableMonths) return amount;
-        end = start - 1;
-      }
-      return null;
-    }
-
+    // Use the highest amount already paid as the baseline. A temporary lower
+    // month therefore cannot create a false increment when the allowance
+    // returns to normal.
+    var previousHigh = months.first.amount;
     ({DateTime period, double amount})? latest;
     for (var index = 1; index < months.length; index++) {
-      final previous = months[index - 1];
       final current = months[index];
-      final consecutive =
-          monthKey(current.period) - monthKey(previous.period) == 1;
-      if (consecutive && sameAmount(current.amount, previous.amount)) {
-        continue;
+      if (current.amount > previousHigh + 0.004) {
+        latest = (
+          period: current.period,
+          amount: _roundMoney(current.amount - previousHigh),
+        );
+        previousHigh = current.amount;
+      } else if (sameAmount(current.amount, previousHigh)) {
+        previousHigh = current.amount;
       }
-      final baseline = stableBaselineBefore(index);
-      if (baseline == null || current.amount <= baseline + 0.004) continue;
-      latest = (
-        period: current.period,
-        amount: _roundMoney(current.amount - baseline),
-      );
     }
     return latest;
   }
 
-  /// Applies the stable-baseline rule to each increment-eligible allowance
+  /// Applies the genuine-increase rule to each increment-eligible allowance
   /// separately. This prevents a temporary reduction in one allowance from
   /// hiding or changing a genuine increase in the other allowance.
   static ({
