@@ -18181,15 +18181,71 @@ class _AdminDashboardState extends State<AdminDashboard>
     dynamic payrollPeriod, {
     dynamic defaultIncrementDetails,
   }) {
-    // KENAIKAN TERAKHIR must come only from
-    // employee_salary_defaults.inc_details.
-    //
-    // Example: when the maintained value for September is SEPT-26/100,
-    // Excel prints SEPT-26/100 exactly as stored.
+    final currentPeriod = payrollPeriod is DateTime
+        ? payrollPeriod
+        : DateTime.tryParse(payrollPeriod?.toString() ?? '');
+    if (currentPeriod == null) return null;
+
+    // KENAIKAN TERAKHIR is not applicable to management staff.
     final employee = service.employeeById(employeeId);
     if (employee?.isManagementStaff == true) return null;
 
     final incDetails = defaultIncrementDetails?.toString().trim() ?? '';
+    final previousPeriod =
+        DateTime(currentPeriod.year, currentPeriod.month - 1);
+
+    // For the payroll month being generated, compare exactly with the previous
+    // calendar month: GAJI + ELAUN KEDATANGAN + ELAUN PERKHIDMATAN +
+    // ELAUN KERAJINAN. The positive net difference is the current increment.
+    final payrollHistory = service.employeePayroll(employeeId);
+    dynamic currentPayroll;
+    dynamic previousPayroll;
+    for (final record in payrollHistory) {
+      if (record.period.year == currentPeriod.year &&
+          record.period.month == currentPeriod.month) {
+        currentPayroll = record;
+      } else if (record.period.year == previousPeriod.year &&
+          record.period.month == previousPeriod.month) {
+        previousPayroll = record;
+      }
+    }
+
+    if (currentPayroll != null && previousPayroll != null) {
+      final currentIncrementBase = currentPayroll.basicSalary +
+          currentPayroll.elaunKedatangan +
+          currentPayroll.elaunPerkhidmatan +
+          currentPayroll.elaunKerajinan;
+      final previousIncrementBase = previousPayroll.basicSalary +
+          previousPayroll.elaunKedatangan +
+          previousPayroll.elaunPerkhidmatan +
+          previousPayroll.elaunKerajinan;
+      final difference =
+          ((currentIncrementBase - previousIncrementBase) * 100).round() / 100;
+
+      if (difference > 0) {
+        const monthNames = [
+          'JAN',
+          'FEB',
+          'MAR',
+          'APR',
+          'MAY',
+          'JUN',
+          'JUL',
+          'AUG',
+          'SEPT',
+          'OCT',
+          'NOV',
+          'DEC',
+        ];
+        final year = (currentPeriod.year % 100).toString().padLeft(2, '0');
+        final amount = difference.roundToDouble() == difference
+            ? difference.toStringAsFixed(0)
+            : difference.toStringAsFixed(2);
+        return '${monthNames[currentPeriod.month - 1]}-$year/$amount';
+      }
+    }
+
+    // No increment in the generated month: keep the maintained last increment.
     return incDetails.isEmpty ? null : incDetails;
   }
 
