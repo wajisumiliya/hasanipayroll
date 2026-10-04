@@ -8888,6 +8888,127 @@ class _AdminDashboardState extends State<AdminDashboard>
     _attendancePageFutureKey = null;
   }
 
+  int _attendanceOtMinutes(Map<String, dynamic> record) {
+    final employeeId = (record['employee_id'] ?? '').toString();
+    if (!PayrollCalculationService.isEmployeeOvertimeEligible(employeeId)) {
+      return 0;
+    }
+    final overtime = record['overtime_minutes'];
+    final approved = record['approved_ot_minutes'];
+    // An explicit Admin approval/override is authoritative, including zero.
+    // Otherwise use the automatically calculated attendance OT value.
+    final source = approved ?? overtime;
+    final value = source is num
+        ? source.toInt()
+        : int.tryParse(source?.toString() ?? '') ?? 0;
+    return PayrollCalculationService.eligibleOvertimeMinutes(value);
+  }
+
+  String _attendanceOtHoursText(int minutes) {
+    final hours = minutes ~/ 60;
+    final remainder = minutes % 60;
+    return remainder == 0
+        ? '$hours hour${hours == 1 ? '' : 's'}'
+        : '$hours h ${remainder.toString().padLeft(2, '0')} min';
+  }
+
+  Future<void> _showEmployeeAttendanceOtDays(
+    Map<String, dynamic> employee,
+    List<Map<String, dynamic>> records,
+  ) async {
+    final overtimeDays = records
+        .where((record) => _attendanceOtMinutes(record) > 0)
+        .toList()
+      ..sort((a, b) => (a['attendance_date'] ?? '')
+          .toString()
+          .compareTo((b['attendance_date'] ?? '').toString()));
+    if (overtimeDays.isEmpty) return;
+
+    final employeeId =
+        (employee['employee_id'] ?? employee['id'] ?? '').toString();
+    final name =
+        (employee['name'] ?? employee['full_name'] ?? employeeId).toString();
+    final totalMinutes = overtimeDays.fold<int>(
+      0,
+      (sum, record) => sum + _attendanceOtMinutes(record),
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.more_time_rounded, color: _midnight),
+            const SizedBox(width: 10),
+            Expanded(child: Text(name)),
+          ],
+        ),
+        content: SizedBox(
+          width: 560,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$employeeId • ${DateFormat('MMMM yyyy').format(selectedAttendanceMonth)}',
+                style: const TextStyle(color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${overtimeDays.length} OT day(s) • Total ${_attendanceOtHoursText(totalMinutes)}',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 14),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 420),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: overtimeDays.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final record = overtimeDays[index];
+                    final date = DateTime.tryParse(
+                      (record['attendance_date'] ?? '').toString(),
+                    );
+                    final minutes = _attendanceOtMinutes(record);
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: _champagne.withValues(alpha: .18),
+                        foregroundColor: _midnight,
+                        child: Text(date?.day.toString() ?? '-'),
+                      ),
+                      title: Text(
+                        date == null
+                            ? 'Unknown date'
+                            : DateFormat('EEEE, dd MMMM yyyy').format(date),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      trailing: Text(
+                        _attendanceOtHoursText(minutes),
+                        style: const TextStyle(
+                          color: _midnight,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _branchAttendanceEmployeesPage(String branchId) {
     return FutureBuilder<List<dynamic>>(
       future: _adminAttendancePageData(branchId),
@@ -8936,12 +9057,42 @@ class _AdminDashboardState extends State<AdminDashboard>
               (employee['employee_id'] ?? employee['id'] ?? '').toString();
           return !submittedEmployeeIds.contains(id);
         }).toList();
+        final otMinutesByEmployee = <String, int>{};
+        for (final entry in byEmployee.entries) {
+          if (!submittedEmployeeIds.contains(entry.key)) continue;
+          final minutes = entry.value
+              .where((record) => _attendanceBool(record['is_submitted']))
+              .fold<int>(
+                0,
+                (sum, record) => sum + _attendanceOtMinutes(record),
+              );
+          if (minutes > 0) otMinutesByEmployee[entry.key] = minutes;
+        }
+        final otEmployees = submittedEmployees.where((employee) {
+          final id =
+              (employee['employee_id'] ?? employee['id'] ?? '').toString();
+          return (otMinutesByEmployee[id] ?? 0) > 0;
+        }).toList()
+          ..sort((a, b) {
+            final aId =
+                (a['employee_id'] ?? a['id'] ?? '').toString();
+            final bId =
+                (b['employee_id'] ?? b['id'] ?? '').toString();
+            final byMinutes = (otMinutesByEmployee[bId] ?? 0)
+                .compareTo(otMinutesByEmployee[aId] ?? 0);
+            if (byMinutes != 0) return byMinutes;
+            return (a['name'] ?? '').toString().compareTo(
+                  (b['name'] ?? '').toString(),
+                );
+          });
         final submittedCount = submittedEmployees.length;
         final pendingCount = employees.length - submittedCount;
         final search = _attendanceEmployeeSearch.trim().toLowerCase();
-        final displayedEmployees = _attendanceSubmissionFilter == 'pending'
-            ? pendingEmployees
-            : submittedEmployees;
+        final displayedEmployees = switch (_attendanceSubmissionFilter) {
+          'pending' => pendingEmployees,
+          'ot' => otEmployees,
+          _ => submittedEmployees,
+        };
         final filteredEmployees = displayedEmployees.where((employee) {
           if (search.isEmpty) return true;
           final id = (employee['employee_id'] ?? employee['id'] ?? '')
@@ -8982,8 +9133,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                 const SizedBox(height: 6),
                 Text(
                   '${filteredEmployees.length} '
-                  '${_attendanceSubmissionFilter == 'pending' ? 'pending' : 'submitted'} '
-                  'attendance record(s) shown',
+                  '${switch (_attendanceSubmissionFilter) {
+                    'pending' => 'pending attendance',
+                    'ot' => 'employee(s) with OT',
+                    _ => 'submitted attendance',
+                  }} shown',
                   style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
@@ -9009,6 +9163,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                       selected: _attendanceSubmissionFilter == 'pending',
                       onTap: () => setState(
                         () => _attendanceSubmissionFilter = 'pending',
+                      ),
+                    ),
+                    _attendanceCountCard(
+                      label: 'OT Employees',
+                      count: otEmployees.length,
+                      icon: Icons.more_time_rounded,
+                      color: const Color(0xFF7C3AED),
+                      selected: _attendanceSubmissionFilter == 'ot',
+                      onTap: () => setState(
+                        () => _attendanceSubmissionFilter = 'ot',
                       ),
                     ),
                   ],
@@ -9088,16 +9252,31 @@ class _AdminDashboardState extends State<AdminDashboard>
                           .toString();
                       final records = byEmployee[employeeId] ??
                           const <Map<String, dynamic>>[];
+                      final showingOt = _attendanceSubmissionFilter == 'ot';
+                      final otRecords = records
+                          .where((record) =>
+                              _attendanceBool(record['is_submitted']) &&
+                              _attendanceOtMinutes(record) > 0)
+                          .toList();
+                      final employeeOtMinutes =
+                          otMinutesByEmployee[employeeId] ?? 0;
                       final submitted = records
                           .any((r) => _attendanceBool(r['is_submitted']));
-                      final accent = index.isEven ? _midnight : _champagne;
+                      final accent = showingOt
+                          ? const Color(0xFF7C3AED)
+                          : (index.isEven ? _midnight : _champagne);
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(18),
-                        onTap: () => _openAdminAttendance(
-                          employee,
-                          branchId,
-                        ),
+                        onTap: showingOt
+                            ? () => _showEmployeeAttendanceOtDays(
+                                  employee,
+                                  otRecords,
+                                )
+                            : () => _openAdminAttendance(
+                                  employee,
+                                  branchId,
+                                ),
                         child: Card(
                           elevation: 2,
                           color: accent.withValues(alpha: .10),
@@ -9134,17 +9313,25 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: submitted
-                                            ? Colors.green.shade50
-                                            : Colors.orange.shade50,
+                                        color: showingOt
+                                            ? const Color(0xFFF3E8FF)
+                                            : (submitted
+                                                ? Colors.green.shade50
+                                                : Colors.orange.shade50),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
-                                        submitted ? 'SUBMITTED' : 'PENDING',
+                                        showingOt
+                                            ? 'OT'
+                                            : (submitted
+                                                ? 'SUBMITTED'
+                                                : 'PENDING'),
                                         style: TextStyle(
-                                          color: submitted
-                                              ? Colors.green.shade700
-                                              : Colors.orange.shade700,
+                                          color: showingOt
+                                              ? const Color(0xFF7C3AED)
+                                              : (submitted
+                                                  ? Colors.green.shade700
+                                                  : Colors.orange.shade700),
                                           fontSize: 10,
                                           fontWeight: FontWeight.w800,
                                         ),
@@ -9174,20 +9361,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 Row(
                                   children: [
                                     Icon(
-                                      submitted
-                                          ? Icons.edit_outlined
-                                          : Icons.lock_outline,
+                                      showingOt
+                                          ? Icons.more_time_rounded
+                                          : (submitted
+                                              ? Icons.edit_outlined
+                                              : Icons.lock_outline),
                                       size: 14,
-                                      color: submitted
-                                          ? Colors.green.shade700
-                                          : Colors.orange.shade700,
+                                      color: showingOt
+                                          ? const Color(0xFF7C3AED)
+                                          : (submitted
+                                              ? Colors.green.shade700
+                                              : Colors.orange.shade700),
                                     ),
                                     const SizedBox(width: 5),
                                     Expanded(
                                       child: Text(
-                                        submitted
-                                            ? 'Branch submitted • Admin can edit'
-                                            : 'Waiting for Branch submission',
+                                        showingOt
+                                            ? '${otRecords.length} OT day(s) • ${_attendanceOtHoursText(employeeOtMinutes)}'
+                                            : (submitted
+                                                ? 'Branch submitted • Admin can edit'
+                                                : 'Waiting for Branch submission'),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(

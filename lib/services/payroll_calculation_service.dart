@@ -4,6 +4,13 @@
 /// basic_salary and fw_salary. [salaryBase] deliberately chooses one salary
 /// source so those records are never double counted.
 class PayrollCalculationService {
+  static const Set<String> _overtimeExcludedEmployeeIds = {'HED1016'};
+
+  /// Employees in this exception list cannot calculate, approve, display, or
+  /// receive overtime, including OT values saved before the exception existed.
+  static bool isEmployeeOvertimeEligible(String employeeId) =>
+      !_overtimeExcludedEmployeeIds.contains(employeeId.trim().toUpperCase());
+
   const PayrollCalculationService._();
 
   static double salaryBase({

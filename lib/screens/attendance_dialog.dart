@@ -164,6 +164,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         .toString();
   }
 
+  bool get _isOvertimeEligible =>
+      PayrollCalculationService.isEmployeeOvertimeEligible(_employeeId());
+
   String _employeeName() {
     return widget.employee['name']?.toString() ?? 'Employee';
   }
@@ -369,9 +372,18 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         c.savedOvertimeMinutes = _intValue(row['overtime_minutes']);
         c.approvedOtMinutes = _intValue(row['approved_ot_minutes']);
         c.hasManualOtOverride = _toBool(row['ot_manual_override']);
-        c.approvedOtHours.text = c.hasManualOtOverride
-            ? _directOtHoursText(c.approvedOtMinutes)
-            : '';
+        if (_isOvertimeEligible) {
+          c.approvedOtHours.text = c.hasManualOtOverride
+              ? _directOtHoursText(c.approvedOtMinutes)
+              : '';
+        } else {
+          c.otRequested = false;
+          c.otAuthorized = false;
+          c.savedOvertimeMinutes = 0;
+          c.approvedOtMinutes = 0;
+          c.hasManualOtOverride = false;
+          c.approvedOtHours.clear();
+        }
       }
     } catch (e) {
       loadError = e.toString();
@@ -1072,22 +1084,30 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         var hasManualOtOverride = false;
 
         if (_isAdminView()) {
-          hasManualOtOverride = row.approvedOtHours.text.trim().isNotEmpty;
-          row.hasManualOtOverride = hasManualOtOverride;
-          if (_isLocalStaff && !hasManualOtOverride) {
+          if (!_isOvertimeEligible) {
+            row.approvedOtHours.clear();
             row.approvedOtMinutes = 0;
+            row.hasManualOtOverride = false;
+            row.otRequested = false;
             row.otAuthorized = false;
           } else {
-            final directOtMinutes =
-                PayrollCalculationService.directOvertimeMinutes(
-                    row.approvedOtHours.text);
-            if (directOtMinutes == null) {
-              throw Exception(
-                'Invalid OT hours on day $day. Enter a number from 0 to 24.',
-              );
+            hasManualOtOverride = row.approvedOtHours.text.trim().isNotEmpty;
+            row.hasManualOtOverride = hasManualOtOverride;
+            if (_isLocalStaff && !hasManualOtOverride) {
+              row.approvedOtMinutes = 0;
+              row.otAuthorized = false;
+            } else {
+              final directOtMinutes =
+                  PayrollCalculationService.directOvertimeMinutes(
+                      row.approvedOtHours.text);
+              if (directOtMinutes == null) {
+                throw Exception(
+                  'Invalid OT hours on day $day. Enter a number from 0 to 24.',
+                );
+              }
+              row.approvedOtMinutes = directOtMinutes;
+              row.otAuthorized = directOtMinutes > 0;
             }
-            row.approvedOtMinutes = directOtMinutes;
-            row.otAuthorized = directOtMinutes > 0;
           }
         }
 
@@ -1230,14 +1250,17 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               'overtime_duration': formatMinutes(dailyOtMinutes),
               'ot_requested': row.otRequested,
               'ot_authorized': _isAdminView() && dailyOtMinutes > 0,
-              if (_isAdminView()) ...{
+              if (_isAdminView() || !_isOvertimeEligible) ...{
                 // Keep the calculated value payable, but separately remember
                 // whether Admin entered it. On reload a manual value wins over
                 // the automatic local-staff calculation, including zero.
-                'approved_ot_minutes': dailyOtMinutes > 0
-                    ? dailyOtMinutes
-                    : (hasManualOtOverride ? 0 : null),
-                'ot_manual_override': hasManualOtOverride,
+                'approved_ot_minutes': _isOvertimeEligible
+                    ? (dailyOtMinutes > 0
+                        ? dailyOtMinutes
+                        : (hasManualOtOverride ? 0 : null))
+                    : null,
+                'ot_manual_override':
+                    _isOvertimeEligible && hasManualOtOverride,
               },
               'is_unpaid': row.isUnpaid,
               'is_public_holiday': row.isPublicHoliday,
@@ -1553,7 +1576,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     ? const Color(0xFF315AD9)
                     : Colors.black54,
               ),
-              _isAdminView()
+              !_isOvertimeEligible
+                  ? _tableCell('', widths[5])
+                  : _isAdminView()
                   ? _directOtInput(
                       c,
                       widths[5],
@@ -1667,6 +1692,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
+    if (!_isOvertimeEligible) return 0;
+
     if (_isLocalStaff) {
       if (_isAdminView() && c.approvedOtHours.text.trim().isNotEmpty) {
         return PayrollCalculationService.eligibleOvertimeMinutes(
@@ -1677,11 +1704,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       final allocation = _allocatedShift(day);
       return PayrollCalculationService.automaticLocalOvertimeMinutes(
         isLocalStaff: true,
-        workMinutes: allocation.hasRoster
-            ? netWorkingMinutes + actualBreakMinutes
-            : netWorkingMinutes,
-        actualBreakMinutes:
-            allocation.hasRoster ? actualBreakMinutes : 0,
+        // Rebuild gross elapsed work time so an unused portion of the
+        // allocated break can never be converted into overtime.
+        workMinutes: netWorkingMinutes + actualBreakMinutes,
+        actualBreakMinutes: actualBreakMinutes,
         allocatedShiftMinutes: allocation.shiftMinutes,
         allocatedBreakMinutes: allocation.breakMinutes,
       );
@@ -1695,7 +1721,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         : 0;
   }
 
-  ({int shiftMinutes, int breakMinutes, bool hasRoster}) _allocatedShift(
+  ({int shiftMinutes, int breakMinutes}) _allocatedShift(
     int day,
   ) {
     final roster = _dailyRoster[day] ?? _weeklyRoster[((day - 1) ~/ 7) + 1];
@@ -1709,14 +1735,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         return (
           shiftMinutes: grossMinutes,
           breakMinutes: _intValue(roster?['break_minutes']),
-          hasRoster: true,
         );
       }
     }
+
+    // Older attendance can have no daily/weekly roster. Local employees still
+    // have a one-hour allocated break, and none of that unused allowance may
+    // be claimed as OT. A saved roster (including a 90-minute allocation)
+    // always takes precedence above.
+    const fallbackBreakMinutes = 60;
     return (
-      shiftMinutes: (_requiredWorkHours * 60).round(),
-      breakMinutes: 0,
-      hasRoster: false,
+      shiftMinutes:
+          (_requiredWorkHours * 60).round() + fallbackBreakMinutes,
+      breakMinutes: fallbackBreakMinutes,
     );
   }
 
@@ -2012,42 +2043,44 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           const PopupMenuDivider(),
         ];
 
-        if (_isAdminView()) {
-          items.add(
-            PopupMenuItem(
-              value: 'APPROVE_OT',
-              enabled: c.otRequested,
-              child: Text(
-                c.otAuthorized
-                    ? 'OT APPROVED'
-                    : (c.otRequested
-                        ? 'APPROVE OT'
-                        : 'APPROVE OT (request required)'),
+        if (_isOvertimeEligible) {
+          if (_isAdminView()) {
+            items.add(
+              PopupMenuItem(
+                value: 'APPROVE_OT',
+                enabled: c.otRequested,
+                child: Text(
+                  c.otAuthorized
+                      ? 'OT APPROVED'
+                      : (c.otRequested
+                          ? 'APPROVE OT'
+                          : 'APPROVE OT (request required)'),
+                ),
               ),
-            ),
-          );
-          items.add(
-            PopupMenuItem(
-              value: 'REJECT_OT',
-              enabled: c.otRequested || c.otAuthorized,
-              child: const Text('REJECT OT'),
-            ),
-          );
-        } else {
-          items.add(
-            PopupMenuItem(
-              value: 'REQUEST_OT',
-              enabled: !c.otRequested,
-              child: const Text('REQUEST OT'),
-            ),
-          );
-          items.add(
-            PopupMenuItem(
-              value: 'CANCEL_OT',
-              enabled: c.otRequested,
-              child: const Text('CANCEL OT REQUEST'),
-            ),
-          );
+            );
+            items.add(
+              PopupMenuItem(
+                value: 'REJECT_OT',
+                enabled: c.otRequested || c.otAuthorized,
+                child: const Text('REJECT OT'),
+              ),
+            );
+          } else {
+            items.add(
+              PopupMenuItem(
+                value: 'REQUEST_OT',
+                enabled: !c.otRequested,
+                child: const Text('REQUEST OT'),
+              ),
+            );
+            items.add(
+              PopupMenuItem(
+                value: 'CANCEL_OT',
+                enabled: c.otRequested,
+                child: const Text('CANCEL OT REQUEST'),
+              ),
+            );
+          }
         }
 
         items.add(const PopupMenuDivider());

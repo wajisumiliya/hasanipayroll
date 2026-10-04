@@ -473,6 +473,32 @@ void main() {
       );
     });
 
+    test('does not turn one unused break minute into OT', () {
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: true,
+          workMinutes: 540,
+          actualBreakMinutes: 59,
+          allocatedShiftMinutes: 510,
+          allocatedBreakMinutes: 60,
+        ),
+        30,
+      );
+    });
+
+    test('reserves the full break when none of it was taken', () {
+      expect(
+        PayrollCalculationService.automaticLocalOvertimeMinutes(
+          isLocalStaff: true,
+          workMinutes: 816,
+          actualBreakMinutes: 0,
+          allocatedShiftMinutes: 510,
+          allocatedBreakMinutes: 60,
+        ),
+        306,
+      );
+    });
+
     test('does not show automatic OT below 30 minutes', () {
       expect(
         PayrollCalculationService.automaticLocalOvertimeMinutes(
@@ -522,6 +548,26 @@ void main() {
         isTrue,
       );
       expect(PayrollCalculationService.isPayableOvertimeAmount(13), isTrue);
+    });
+  });
+
+  group('Employee OT eligibility', () {
+    test('HED1016 is completely excluded from overtime', () {
+      expect(
+        PayrollCalculationService.isEmployeeOvertimeEligible('HED1016'),
+        isFalse,
+      );
+      expect(
+        PayrollCalculationService.isEmployeeOvertimeEligible(' hed1016 '),
+        isFalse,
+      );
+    });
+
+    test('other employees remain eligible for overtime', () {
+      expect(
+        PayrollCalculationService.isEmployeeOvertimeEligible('HED1007'),
+        isTrue,
+      );
     });
   });
 

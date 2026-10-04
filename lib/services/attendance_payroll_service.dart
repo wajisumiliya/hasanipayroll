@@ -357,6 +357,8 @@ class AttendancePayrollService {
     );
 
     final requiredWorkHours = requiredWorkMinutes / 60.0;
+    final overtimeEligible =
+        PayrollCalculationService.isEmployeeOvertimeEligible(employeeId);
     final dailySalary = PayrollCalculationService.unpaidDailyRate(
       basicSalary: basicSalary,
       isForeignEmployee: isForeignEmployee,
@@ -454,8 +456,9 @@ class AttendancePayrollService {
       // OT is only paid when Admin authorized it.
       // A non-null approved_ot_minutes value is itself an Admin approval.
       // This also supports legacy rows where ot_authorized was not persisted.
-      if (_isOtAuthorized(row['ot_authorized']) ||
-          row['approved_ot_minutes'] != null) {
+      if (overtimeEligible &&
+          (_isOtAuthorized(row['ot_authorized']) ||
+              row['approved_ot_minutes'] != null)) {
         final otHours = _attendanceOvertimeHours(row, dailyRequiredMinutes);
         if (otHours > 0) {
           final rateHours =
