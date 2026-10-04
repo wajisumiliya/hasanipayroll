@@ -996,6 +996,148 @@ void main() {
     });
   });
 
+  group('Four-field payroll increment', () {
+    test('adds changes from salary and all three increment allowances', () {
+      final history = [
+        (
+          period: DateTime(2026, 8),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+        (
+          period: DateTime(2026, 9),
+          basicSalary: 1700.0,
+          attendanceAllowance: 50.0,
+          serviceAllowance: 100.0,
+          diligenceAllowance: 100.0,
+        ),
+      ];
+
+      expect(
+        PayrollCalculationService.payrollIncrementForMonth(
+          history,
+          DateTime(2026, 9),
+        ),
+        150,
+      );
+    });
+
+    test('uses the last normal salary before vacation or partial-pay months',
+        () {
+      final history = [
+        (
+          period: DateTime(2026, 6),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+        (
+          period: DateTime(2026, 8),
+          basicSalary: 900.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 0.0,
+          diligenceAllowance: 0.0,
+        ),
+        (
+          period: DateTime(2026, 9),
+          basicSalary: 1700.0,
+          attendanceAllowance: 50.0,
+          serviceAllowance: 100.0,
+          diligenceAllowance: 100.0,
+        ),
+      ];
+
+      expect(
+        PayrollCalculationService.payrollIncrementForMonth(
+          history,
+          DateTime(2026, 9),
+        ),
+        150,
+      );
+    });
+
+    test('does not count vacation recovery without a genuine increment', () {
+      final history = [
+        (
+          period: DateTime(2026, 6),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+        (
+          period: DateTime(2026, 8),
+          basicSalary: 900.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 0.0,
+          diligenceAllowance: 0.0,
+        ),
+        (
+          period: DateTime(2026, 9),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+      ];
+
+      expect(
+        PayrollCalculationService.payrollIncrementForMonth(
+          history,
+          DateTime(2026, 9),
+        ),
+        isNull,
+      );
+    });
+
+    test('rejects a difference that is not an RM50 increment step', () {
+      final history = [
+        (
+          period: DateTime(2026, 8),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+        (
+          period: DateTime(2026, 9),
+          basicSalary: 1700.0,
+          attendanceAllowance: 45.0,
+          serviceAllowance: 100.0,
+          diligenceAllowance: 100.0,
+        ),
+      ];
+
+      expect(
+        PayrollCalculationService.payrollIncrementForMonth(
+          history,
+          DateTime(2026, 9),
+        ),
+        isNull,
+      );
+    });
+
+    test('accepts only RM50 steps from RM50 through RM1000', () {
+      for (var amount = 50; amount <= 1000; amount += 50) {
+        expect(
+          PayrollCalculationService.isValidPayrollIncrementAmount(
+            amount.toDouble(),
+          ),
+          isTrue,
+        );
+      }
+      for (final amount in [0.0, 49.0, 55.0, 150.5, 1001.0]) {
+        expect(
+          PayrollCalculationService.isValidPayrollIncrementAmount(amount),
+          isFalse,
+        );
+      }
+    });
+  });
+
   group('HED1007 deduction exception', () {
     test('does not apply a normal early-out shortage deduction', () {
       expect(

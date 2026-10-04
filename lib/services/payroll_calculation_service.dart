@@ -206,6 +206,93 @@ class PayrollCalculationService {
         other;
   }
 
+  static bool isValidPayrollIncrementAmount(double amount) {
+    if (!amount.isFinite) return false;
+    final rounded = _roundMoney(amount);
+    final wholeAmount = rounded.round();
+    return rounded >= 50 &&
+        rounded <= 1000 &&
+        (rounded - wholeAmount).abs() <= 0.004 &&
+        wholeAmount % 50 == 0;
+  }
+
+  /// Returns the genuine increment for [currentPeriod] using the four salary
+  /// fields printed in KENAIKAN TERAKHIR.
+  ///
+  /// The highest total from the previous three calendar months is used as the
+  /// normal baseline. This skips missing, vacation, unpaid, or partial-pay
+  /// months without treating the employee's return to normal pay as a new
+  /// increment. Only the company's valid RM50 increment steps, from RM50 to
+  /// RM1,000, are accepted.
+  static double? payrollIncrementForMonth(
+    List<
+            ({
+              DateTime period,
+              double basicSalary,
+              double attendanceAllowance,
+              double serviceAllowance,
+              double diligenceAllowance,
+            })>
+        history,
+    DateTime currentPeriod, {
+    int lookbackMonths = 3,
+  }) {
+    int monthKey(DateTime value) => value.year * 12 + value.month;
+    double incrementBase(
+      ({
+        DateTime period,
+        double basicSalary,
+        double attendanceAllowance,
+        double serviceAllowance,
+        double diligenceAllowance,
+      }) entry,
+    ) =>
+        entry.basicSalary +
+        entry.attendanceAllowance +
+        entry.serviceAllowance +
+        entry.diligenceAllowance;
+
+    final currentMonth = DateTime(currentPeriod.year, currentPeriod.month);
+    final currentKey = monthKey(currentMonth);
+    final byMonth = <int,
+        ({
+      DateTime period,
+      double basicSalary,
+      double attendanceAllowance,
+      double serviceAllowance,
+      double diligenceAllowance,
+    })>{};
+    for (final entry in history) {
+      final values = [
+        entry.basicSalary,
+        entry.attendanceAllowance,
+        entry.serviceAllowance,
+        entry.diligenceAllowance,
+      ];
+      if (values.any((value) => !value.isFinite || value < 0)) continue;
+      byMonth[monthKey(entry.period)] = entry;
+    }
+
+    final current = byMonth[currentKey];
+    if (current == null || lookbackMonths < 1) return null;
+
+    final previousTotals = <double>[];
+    for (var monthsAgo = 1; monthsAgo <= lookbackMonths; monthsAgo++) {
+      final previous = byMonth[currentKey - monthsAgo];
+      if (previous != null) previousTotals.add(incrementBase(previous));
+    }
+    if (previousTotals.isEmpty) return null;
+
+    final normalPreviousTotal = previousTotals.reduce(
+      (highest, value) => value > highest ? value : highest,
+    );
+    final difference = _roundMoney(
+      incrementBase(current) - normalPreviousTotal,
+    );
+    if (!isValidPayrollIncrementAmount(difference)) return null;
+    return difference.roundToDouble();
+  }
+
   /// Finds the latest genuine allowance increment.
   ///
   /// Temporary vacation/unpaid/re-entry reductions are ignored when choosing

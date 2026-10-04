@@ -13270,13 +13270,16 @@ class _AdminDashboardState extends State<AdminDashboard>
             final period = DateTime.parse(record['period'].toString());
             return (
               period: period,
+              basicSalary: _payrollNumber(record['basic_salary']),
               attendanceAllowance: _payrollNumber(record['elaun_kedatangan']),
               serviceAllowance: _payrollNumber(record['elaun_perkhidmatan']),
+              diligenceAllowance: _payrollNumber(record['elaun_kerajinan']),
             );
           }).toList();
-          final increment =
-              PayrollCalculationService.latestStablePayrollAllowanceIncrement(
+          final calculatedCurrentMonth =
+              PayrollCalculationService.payrollIncrementForMonth(
             history,
+            currentPeriod,
           );
           final incDetails =
               salaryDefaultByEmployee[employeeId]?['inc_details'];
@@ -13284,13 +13287,15 @@ class _AdminDashboardState extends State<AdminDashboard>
               _incrementDetailsMatchesMonth(incDetails, currentPeriod)
                   ? _incrementDetailsAmount(incDetails)
                   : null;
-          final calculatedCurrentMonth = increment != null &&
-                  increment.period.year == currentPeriod.year &&
-                  increment.period.month == currentPeriod.month
-              ? increment.amount
-              : null;
+          final validDefaultCurrentMonthAmount =
+              defaultCurrentMonthAmount != null &&
+                      PayrollCalculationService.isValidPayrollIncrementAmount(
+                        defaultCurrentMonthAmount,
+                      )
+                  ? defaultCurrentMonthAmount
+                  : null;
           final incrementAmount =
-              defaultCurrentMonthAmount ?? calculatedCurrentMonth;
+              calculatedCurrentMonth ?? validDefaultCurrentMonthAmount;
           if (incrementAmount == null || incrementAmount <= 0) {
             continue;
           }
@@ -17002,16 +17007,16 @@ class _AdminDashboardState extends State<AdminDashboard>
             _salaryIncrementText(
                   employeeId,
                   payroll['period'],
-                  defaultIncrementDetails:
-                      salaryMap[employeeId]?['inc_details'],
+                  defaultIncrementDetails: salaryMap[employeeId]
+                      ?['inc_details'],
                 ) ??
                 '',
             _nextSalaryIncrementText(
                   _salaryIncrementText(
                         employeeId,
                         payroll['period'],
-                        defaultIncrementDetails:
-                            salaryMap[employeeId]?['inc_details'],
+                        defaultIncrementDetails: salaryMap[employeeId]
+                            ?['inc_details'],
                       ) ??
                       '',
                   employee['joining_date'],
@@ -18278,62 +18283,53 @@ class _AdminDashboardState extends State<AdminDashboard>
     if (employee?.isManagementStaff == true) return null;
 
     final incDetails = defaultIncrementDetails?.toString().trim() ?? '';
-    final previousPeriod =
-        DateTime(currentPeriod.year, currentPeriod.month - 1);
-
-    // For the payroll month being generated, compare exactly with the previous
-    // calendar month: GAJI + ELAUN KEDATANGAN + ELAUN PERKHIDMATAN +
-    // ELAUN KERAJINAN. The positive net difference is the current increment.
+    // Compare GAJI + ELAUN KEDATANGAN + ELAUN PERKHIDMATAN + ELAUN KERAJINAN
+    // with the highest normal total in the previous three months. Lower or
+    // missing vacation months are skipped by the shared calculation rule.
     final payrollHistory = service.employeePayroll(employeeId);
-    dynamic currentPayroll;
-    dynamic previousPayroll;
-    for (final record in payrollHistory) {
-      if (record.period.year == currentPeriod.year &&
-          record.period.month == currentPeriod.month) {
-        currentPayroll = record;
-      } else if (record.period.year == previousPeriod.year &&
-          record.period.month == previousPeriod.month) {
-        previousPayroll = record;
-      }
+    final difference = PayrollCalculationService.payrollIncrementForMonth(
+      payrollHistory
+          .map(
+            (record) => (
+              period: record.period,
+              basicSalary: record.basicSalary,
+              attendanceAllowance: record.elaunKedatangan,
+              serviceAllowance: record.elaunPerkhidmatan,
+              diligenceAllowance: record.elaunKerajinan,
+            ),
+          )
+          .toList(),
+      currentPeriod,
+    );
+
+    if (difference != null) {
+      const monthNames = [
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MAY',
+        'JUN',
+        'JUL',
+        'AUG',
+        'SEPT',
+        'OCT',
+        'NOV',
+        'DEC',
+      ];
+      final year = (currentPeriod.year % 100).toString().padLeft(2, '0');
+      final amount = difference.toStringAsFixed(0);
+      return '${monthNames[currentPeriod.month - 1]}-$year/$amount';
     }
 
-    if (currentPayroll != null && previousPayroll != null) {
-      final currentIncrementBase = currentPayroll.basicSalary +
-          currentPayroll.elaunKedatangan +
-          currentPayroll.elaunPerkhidmatan +
-          currentPayroll.elaunKerajinan;
-      final previousIncrementBase = previousPayroll.basicSalary +
-          previousPayroll.elaunKedatangan +
-          previousPayroll.elaunPerkhidmatan +
-          previousPayroll.elaunKerajinan;
-      final difference =
-          ((currentIncrementBase - previousIncrementBase) * 100).round() / 100;
-
-      if (difference > 0) {
-        const monthNames = [
-          'JAN',
-          'FEB',
-          'MAR',
-          'APR',
-          'MAY',
-          'JUN',
-          'JUL',
-          'AUG',
-          'SEPT',
-          'OCT',
-          'NOV',
-          'DEC',
-        ];
-        final year = (currentPeriod.year % 100).toString().padLeft(2, '0');
-        final amount = difference.roundToDouble() == difference
-            ? difference.toStringAsFixed(0)
-            : difference.toStringAsFixed(2);
-        return '${monthNames[currentPeriod.month - 1]}-$year/$amount';
-      }
-    }
-
-    // No increment in the generated month: keep the maintained last increment.
-    return incDetails.isEmpty ? null : incDetails;
+    // No increment in the generated month: keep a valid maintained increment.
+    final maintainedAmount = _incrementDetailsAmount(incDetails);
+    return maintainedAmount != null &&
+            PayrollCalculationService.isValidPayrollIncrementAmount(
+              maintainedAmount,
+            )
+        ? incDetails
+        : null;
   }
 
   Future<void> _exportStatutoryReportExcel(String report, DateTime month,
