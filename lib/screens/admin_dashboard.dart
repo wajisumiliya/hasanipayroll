@@ -18129,8 +18129,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     // Do not print a stale last increment. If the employee has gone more than
     // 18 months (1.5 years) without another increment, leave the field blank.
-    final incrementMonth =
-        increment.period.year * 12 + increment.period.month;
+    final incrementMonth = increment.period.year * 12 + increment.period.month;
     final payrollMonth = currentPeriod.year * 12 + currentPeriod.month;
     if (payrollMonth - incrementMonth > 18) return null;
 
