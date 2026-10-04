@@ -6596,6 +6596,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'Elaun Perkhidmatan (RM)': makeSalary('elaun_perkhidmatan'),
       'Elaun Kerajinan (RM)': makeSalary('elaun_kerajinan'),
       'Elaun Makanan (RM)': makeSalary('elaun_makanan'),
+      'PCB (RM)': makeSalary('pcb'),
       'Zakat (RM)': makeSalary('zakat'),
     };
     var epfCategory = salaryDefault['epf_category']?.toString().trim() ?? '';
@@ -6986,6 +6987,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'elaun_kerajinan':
                                 salaryValues['Elaun Kerajinan (RM)'],
                             'elaun_makanan': salaryValues['Elaun Makanan (RM)'],
+                            'pcb': salaryValues['PCB (RM)'],
                             'zakat': salaryValues['Zakat (RM)'],
                             'epf_category': epfCategory,
                             'eis_applicable': eisApplicable,
@@ -13258,22 +13260,23 @@ class _AdminDashboardState extends State<AdminDashboard>
             }
             final period =
                 DateTime.tryParse(record['period']?.toString() ?? '');
-            return period != null && period.isBefore(currentPeriod);
-          }).toList()
-            ..sort((a, b) => (DateTime.tryParse(b['period'].toString()) ??
-                    DateTime(1900))
-                .compareTo(DateTime.tryParse(a['period'].toString()) ??
-                    DateTime(1900)));
-          if (history.isEmpty) continue;
-
-          final currentAmount =
-              _payrollNumber(current['elaun_kedatangan']) +
-                  _payrollNumber(current['elaun_perkhidmatan']);
-          final previousAmount =
-              _payrollNumber(history.first['elaun_kedatangan']) +
-                  _payrollNumber(history.first['elaun_perkhidmatan']);
-          final incrementAmount = currentAmount - previousAmount;
-          if (incrementAmount <= 0.004) continue;
+            return period != null && !period.isAfter(currentPeriod);
+          }).map((record) {
+            final period = DateTime.parse(record['period'].toString());
+            return (
+              period: period,
+              amount: _payrollNumber(record['elaun_perkhidmatan']),
+            );
+          }).toList();
+          final increment =
+              PayrollCalculationService.latestStableAllowanceIncrement(
+            history,
+          );
+          if (increment == null ||
+              increment.period.year != currentPeriod.year ||
+              increment.period.month != currentPeriod.month) {
+            continue;
+          }
 
           final employee = employeeById[employeeId] ?? const {};
           final attendanceBranch = attendanceBranchByEmployee[employeeId] ??
@@ -13286,7 +13289,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ? employee['name'].toString().trim()
                 : employeeId,
             'branch_name': branchNames[attendanceBranch] ?? attendanceBranch,
-            'increment_amount': incrementAmount,
+            'increment_amount': increment.amount,
           });
         }
         monthlyIncrements.sort((a, b) {
@@ -15160,7 +15163,6 @@ class _AdminDashboardState extends State<AdminDashboard>
         sheet.setRowHeight(rowNumber - 1, 18);
         final employeeId = _normalizeBranchValue(payroll['employee_id']);
         final employee = employeeMap[employeeId] ?? <String, dynamic>{};
-        final salary = salaryMap[employeeId] ?? <String, dynamic>{};
 
         final basicSalary = money(payroll['basic_salary']);
         final fwSalary = money(payroll['fw_salary']);
@@ -15213,47 +15215,6 @@ class _AdminDashboardState extends State<AdminDashboard>
         final net =
             jumlah - cutiTanpaGaji - epf - socso - eis - otherDeductions;
 
-        final lastIncrement = firstValue(
-              salary,
-              const [
-                'inc_details',
-                'last_increment',
-                'last_increament',
-                'last_increment_date',
-                'last_increament_date',
-              ],
-            ) ??
-            firstValue(
-              employee,
-              const [
-                'last_increment',
-                'last_increament',
-                'last_increment_date',
-                'last_increament_date',
-              ],
-            );
-
-        final nextIncrement = firstValue(
-              salary,
-              const [
-                'next_increment',
-                'next_increament',
-                'next_increment_date',
-                'next_increament_date',
-                'month',
-              ],
-            ) ??
-            firstValue(
-              employee,
-              const [
-                'next_increment',
-                'next_increament',
-                'next_increment_date',
-                'next_increament_date',
-                'month',
-              ],
-            );
-
         final values = <dynamic>[
           index + 1,
           employeeId,
@@ -15265,13 +15226,19 @@ class _AdminDashboardState extends State<AdminDashboard>
             'tarikh_masuk_kerja',
             'tarikh_masuk',
           ])),
-          _salaryIncrementText(employeeId, payroll['period']) ??
-              dateText(lastIncrement),
+          _salaryIncrementText(employeeId, payroll['period']) ?? '',
           _nextSalaryIncrementText(
-                _salaryIncrementText(employeeId, payroll['period']) ??
-                    dateText(lastIncrement),
+                _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                firstValue(employee, const [
+                  'joining_date',
+                  'joiningDate',
+                  'date_joined',
+                  'dateJoined',
+                  'tarikh_masuk_kerja',
+                  'tarikh_masuk',
+                ]),
               ) ??
-              dateText(nextIncrement),
+              '',
           textValue(firstValue(employee, const ['name'])),
           textValue(
             firstValue(
@@ -15753,14 +15720,13 @@ class _AdminDashboardState extends State<AdminDashboard>
             rowIndex: rowNumber - 1,
           ),
         );
-        // A zero formula result is displayed as "-" to match the printed
-        // payroll statement. Non-zero cells keep their live Excel formula.
-        cell.value = cachedValue.abs() < 0.005
-            ? xls.TextCellValue('-')
-            : xls.FormulaCellValue(
-                formula,
-                cachedValue: cachedValue.toString(),
-              );
+        // Keep the formula even when its current result is zero so that
+        // manual edits in Excel always recalculate. The money number format
+        // displays a zero result as "-" without replacing it with text.
+        cell.value = xls.FormulaCellValue(
+          formula,
+          cachedValue: cachedValue.toString(),
+        );
       }
 
       void writeMonthHeader(xls.Sheet sheet, int lastColumnIndex) {
@@ -15907,6 +15873,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           'instant': 0,
           'paid': 0,
         };
+        final paymentEmployeeRows = <String, List<int>>{
+          'payroll': <int>[],
+          'cash': <int>[],
+          'instant': <int>[],
+          'paid': <int>[],
+        };
 
         writeMonthHeader(sheet, layout == 'local20' ? 19 : 20);
         final branchHeaderRange = config['branchHeaderRange'] as String;
@@ -15956,6 +15928,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           bool center = false,
           bool left = false,
           bool middle = false,
+          xls.NumFormat? numberFormat,
         }) {
           final cell = sheet.cell(
             xls.CellIndex.indexByColumnRow(
@@ -15967,6 +15940,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           cell.cellStyle = style.copyWith(
             boldVal: bold ? true : null,
             fontSizeVal: fontSize?.toInt(),
+            numberFormat: numberFormat ?? style.numberFormat,
             horizontalAlignVal: left
                 ? xls.HorizontalAlign.Left
                 : center
@@ -16000,7 +15974,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           final payroll = branchRecords[rowOffset];
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
           final employee = employeeMap[employeeId] ?? <String, dynamic>{};
-          final salary = salaryMap[employeeId] ?? <String, dynamic>{};
           final basic = money(payroll['basic_salary']);
           final foreignSalary = money(payroll['fw_salary']);
           final salaryBase = foreignSalary != 0 ? foreignSalary : basic;
@@ -16050,26 +16023,6 @@ class _AdminDashboardState extends State<AdminDashboard>
               ]));
           final net = gross - unpaid - epf - socso - eis - otherDeductions;
 
-          final lastIncrement = firstValue(salary, const ['inc_details']) ??
-              firstValue(employee, const [
-                'last_increment',
-                'last_increament',
-                'last_increment_date',
-                'last_increament_date',
-              ]);
-          final nextIncrement = firstValue(salary, const [
-                'next_increment',
-                'next_increament',
-                'next_increment_date',
-                'next_increament_date',
-              ]) ??
-              firstValue(employee, const [
-                'next_increment',
-                'next_increament',
-                'next_increment_date',
-                'next_increament_date',
-                'month',
-              ]);
           final employeeName = textValue(
             firstValue(employee, const ['name']) ?? payroll['name'],
           );
@@ -16084,13 +16037,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ??
-                  dateText(lastIncrement),
+              _salaryIncrementText(employeeId, payroll['period']) ?? '',
               _nextSalaryIncrementText(
-                    _salaryIncrementText(employeeId, payroll['period']) ??
-                        dateText(lastIncrement),
+                    _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                    firstValue(employee, const ['joining_date']),
                   ) ??
-                  dateText(nextIncrement),
+                  '',
               textValue(firstValue(employee, const [
                 'permit',
                 'permit_type',
@@ -16117,13 +16069,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ??
-                  dateText(lastIncrement),
+              _salaryIncrementText(employeeId, payroll['period']) ?? '',
               _nextSalaryIncrementText(
-                    _salaryIncrementText(employeeId, payroll['period']) ??
-                        dateText(lastIncrement),
+                    _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                    firstValue(employee, const ['joining_date']),
                   ) ??
-                  dateText(nextIncrement),
+                  '',
               employeeName,
               identityNumber,
               salaryBase,
@@ -16145,13 +16096,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ??
-                  dateText(lastIncrement),
+              _salaryIncrementText(employeeId, payroll['period']) ?? '',
               _nextSalaryIncrementText(
-                    _salaryIncrementText(employeeId, payroll['period']) ??
-                        dateText(lastIncrement),
+                    _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                    firstValue(employee, const ['joining_date']),
                   ) ??
-                  dateText(nextIncrement),
+                  '',
               employeeName,
               identityNumber,
               salaryBase,
@@ -16240,7 +16190,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               sheet,
               rowNumber,
               19,
-              'N$rowNumber-O$rowNumber-P$rowNumber-Q$rowNumber-R$rowNumber-S$rowNumber',
+              'N$rowNumber-SUM(O$rowNumber:S$rowNumber)',
               net,
             );
           } else if (layout == 'foreign21') {
@@ -16255,7 +16205,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               sheet,
               rowNumber,
               20,
-              'P$rowNumber-Q$rowNumber-R$rowNumber-S$rowNumber-T$rowNumber',
+              'P$rowNumber-SUM(Q$rowNumber:T$rowNumber)',
               net,
             );
           } else {
@@ -16270,7 +16220,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               sheet,
               rowNumber,
               20,
-              'O$rowNumber-P$rowNumber-Q$rowNumber-R$rowNumber-S$rowNumber-T$rowNumber',
+              'O$rowNumber-SUM(P$rowNumber:T$rowNumber)',
               net,
             );
           }
@@ -16298,6 +16248,20 @@ class _AdminDashboardState extends State<AdminDashboard>
                 middle: true,
               );
             }
+          } else {
+            // EDAR (L): JUMLAH and JUMLAH BERSIH must remain visually
+            // consistent after their live formulas replace the cell values.
+            for (final column in [grossColumn, netColumn]) {
+              applyTableBorderAndAlignment(
+                rowNumber,
+                column,
+                bold: true,
+                fontSize: 11,
+                center: true,
+                middle: true,
+                numberFormat: moneyNumberFormat,
+              );
+            }
           }
 
           final bankAccount = textValue(
@@ -16321,6 +16285,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ? 'payroll'
                       : 'instant';
           paymentTotals[paymentKey] = paymentTotals[paymentKey]! + net;
+          paymentEmployeeRows[paymentKey]!.add(rowNumber);
         }
 
         // Remove the template's old label and formulas before rebuilding the
@@ -16421,11 +16386,49 @@ class _AdminDashboardState extends State<AdminDashboard>
         final footerValueColumn = config['footerValueColumn'] as int;
         final netColumn = layout == 'local20' ? 19 : 20;
         final netTotal = columnTotals[netColumn];
-        final representedNonPayroll = paymentRows.keys
+        final netColumnName = xls.CellIndex.indexByColumnRow(
+          columnIndex: netColumn,
+          rowIndex: 0,
+        ).cellId.replaceAll(RegExp(r'\d'), '');
+        final representedNonPayrollKeys = paymentRows.keys
             .where((key) => key != 'payroll')
-            .fold<double>(0, (sum, key) => sum + (paymentTotals[key] ?? 0));
-        final displayedPayments = Map<String, double>.from(paymentTotals);
-        displayedPayments['payroll'] = netTotal - representedNonPayroll;
+            .toSet();
+
+        List<int> paymentContributorRows(String paymentKey) {
+          if (paymentKey != 'payroll') {
+            return List<int>.from(
+              paymentEmployeeRows[paymentKey] ?? const <int>[],
+            );
+          }
+
+          // PAYROLL is the remainder category in templates that do not show
+          // every payment type (for example, PAID). Preserve that behaviour
+          // while making the total traceable to the exact employee cells.
+          final rows = paymentEmployeeRows.entries
+              .where(
+                (entry) => !representedNonPayrollKeys.contains(entry.key),
+              )
+              .expand((entry) => entry.value)
+              .toList();
+          rows.sort();
+          return rows;
+        }
+
+        String? formulaForNetRows(List<int> rows) {
+          if (rows.isEmpty) return null;
+          return 'SUM(${rows.map((row) => '$netColumnName$row').join(',')})';
+        }
+
+        double cachedPaymentTotal(String paymentKey) {
+          if (paymentKey != 'payroll') {
+            return paymentTotals[paymentKey] ?? 0;
+          }
+          return paymentTotals.entries
+              .where(
+                (entry) => !representedNonPayrollKeys.contains(entry.key),
+              )
+              .fold<double>(0, (sum, entry) => sum + entry.value);
+        }
 
         final paymentLabelColumn = (config['footerLabelColumn'] as int?) ??
             (layout == 'local20'
@@ -16440,9 +16443,20 @@ class _AdminDashboardState extends State<AdminDashboard>
           String label,
           double amount, {
           bool isTotal = false,
+          String? formula,
         }) {
           writeCell(sheet, rowNumber, paymentLabelColumn, label);
-          writeCell(sheet, rowNumber, footerValueColumn, amount);
+          if (formula == null) {
+            writeCell(sheet, rowNumber, footerValueColumn, amount);
+          } else {
+            writeFormula(
+              sheet,
+              rowNumber,
+              footerValueColumn,
+              formula,
+              amount,
+            );
+          }
           for (var column = paymentLabelColumn;
               column <= footerEndColumn;
               column++) {
@@ -16468,11 +16482,12 @@ class _AdminDashboardState extends State<AdminDashboard>
         }
 
         for (final paymentRow in paymentRows.entries) {
-          final amount = displayedPayments[paymentRow.key] ?? 0;
+          final contributorRows = paymentContributorRows(paymentRow.key);
           writePaymentSummaryRow(
             totalRow + paymentRow.value,
             paymentRow.key.toUpperCase(),
-            amount,
+            cachedPaymentTotal(paymentRow.key),
+            formula: formulaForNetRows(contributorRows),
           );
         }
         writePaymentSummaryRow(
@@ -16480,7 +16495,51 @@ class _AdminDashboardState extends State<AdminDashboard>
           'TOTAL',
           netTotal,
           isTotal: true,
+          formula:
+              'SUM($netColumnName$firstDataRow:$netColumnName${totalRow - 1})',
         );
+
+        if (sheetName == 'Edar (L)') {
+          // Enclose the complete PAYROLL / INSTANT / CASH / TOTAL summary in
+          // the requested O:T double-line outer box. Internal cell borders
+          // remain thin so the four values are still easy to distinguish.
+          const boxStartColumn = 14; // O
+          const boxEndColumn = 19; // T
+          final boxTopRow = totalRow + paymentRows.values.reduce(
+            (first, next) => first < next ? first : next,
+          );
+          final boxBottomRow =
+              totalRow + (config['footerTotalOffset'] as int);
+          final doubleBorder = xls.Border(
+            borderStyle: xls.BorderStyle.Double,
+          );
+
+          for (var row = boxTopRow; row <= boxBottomRow; row++) {
+            for (var column = boxStartColumn;
+                column <= boxEndColumn;
+                column++) {
+              final cell = sheet.cell(
+                xls.CellIndex.indexByColumnRow(
+                  columnIndex: column,
+                  rowIndex: row - 1,
+                ),
+              );
+              final style = cell.cellStyle ?? xls.CellStyle();
+              cell.cellStyle = style.copyWith(
+                leftBorderVal: column == boxStartColumn
+                    ? doubleBorder
+                    : style.leftBorder,
+                rightBorderVal: column == boxEndColumn
+                    ? doubleBorder
+                    : style.rightBorder,
+                topBorderVal:
+                    row == boxTopRow ? doubleBorder : style.topBorder,
+                bottomBorderVal:
+                    row == boxBottomRow ? doubleBorder : style.bottomBorder,
+              );
+            }
+          }
+        }
       }
 
       final monthFile = DateFormat('yyyy_MM').format(selectedPayrollMonth);
@@ -16750,7 +16809,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           final row = i + 4;
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
           final employee = employeeMap[employeeId] ?? <String, dynamic>{};
-          final salary = salaryMap[employeeId] ?? <String, dynamic>{};
 
           final basic = money(payroll['basic_salary']);
           final fw = money(payroll['fw_salary']);
@@ -16782,32 +16840,16 @@ class _AdminDashboardState extends State<AdminDashboard>
               money(payroll['advance']);
           final net = jumlah - cutiTanpaGaji - epf - socso - eis - potongan;
 
-          final lastIncrement = firstValue(salary, ['inc_details']) ??
-              firstValue(employee, [
-                'last_increment',
-                'last_increament',
-                'last_increment_date',
-                'last_increament_date',
-              ]);
-          final nextIncrement = firstValue(employee, [
-            'next_increment',
-            'next_increament',
-            'next_increment_date',
-            'next_increament_date',
-            'month',
-          ]);
-
           final values = <dynamic>[
             i + 1,
             employeeId,
             dateText(employee['joining_date']),
-            _salaryIncrementText(employeeId, payroll['period']) ??
-                dateText(lastIncrement),
+            _salaryIncrementText(employeeId, payroll['period']) ?? '',
             _nextSalaryIncrementText(
-                  _salaryIncrementText(employeeId, payroll['period']) ??
-                      dateText(lastIncrement),
+                  _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                  employee['joining_date'],
                 ) ??
-                dateText(nextIncrement),
+                '',
             employee['name'] ?? payroll['name'] ?? '',
             employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '',
             basic + fw,
@@ -17068,7 +17110,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           final payroll = branchRecords[index];
           final employeeId = _normalizeBranchValue(payroll['employee_id']);
           final employee = employeeMap[employeeId] ?? <String, dynamic>{};
-          final salary = salaryMap[employeeId] ?? <String, dynamic>{};
           final basic = money(payroll['fw_salary']) != 0
               ? money(payroll['fw_salary'])
               : money(payroll['basic_salary']);
@@ -17114,28 +17155,16 @@ class _AdminDashboardState extends State<AdminDashboard>
           for (var i = 0; i < numbers.length; i++) {
             totals[i + 7] += numbers[i];
           }
-          final lastIncrement = salary['inc_details'] ??
-              employee['last_increment'] ??
-              employee['last_increament'] ??
-              employee['last_increment_date'] ??
-              employee['last_increament_date'];
-          final nextIncrement = employee['next_increment'] ??
-              employee['next_increament'] ??
-              employee['next_increment_date'] ??
-              employee['next_increament_date'] ??
-              employee['month'];
           data.add([
             '${index + 1}',
             employeeId,
             dateText(employee['joining_date']),
-            _salaryIncrementText(employeeId, payroll['period']) ??
-                lastIncrement?.toString() ??
-                '',
+            _salaryIncrementText(employeeId, payroll['period']) ?? '',
             _nextSalaryIncrementText(
-                  _salaryIncrementText(employeeId, payroll['period']) ??
-                      dateText(lastIncrement),
+                  _salaryIncrementText(employeeId, payroll['period']) ?? '',
+                  employee['joining_date'],
                 ) ??
-                dateText(nextIncrement),
+                '',
             (employee['name'] ?? payroll['name'] ?? '').toString(),
             (employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '').toString(),
             ...numbers.map(pdfMoney),
@@ -17958,9 +17987,11 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  String? _nextSalaryIncrementText(String lastIncrementText) {
+  String? _nextSalaryIncrementText(
+    String lastIncrementText, [
+    dynamic joiningDate,
+  ]) {
     final text = lastIncrementText.trim().toUpperCase();
-    if (text.isEmpty) return null;
 
     const monthNumbers = <String, int>{
       'JAN': 1,
@@ -17994,21 +18025,41 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     int? month;
     int? year;
-    final monthYear = RegExp(r'^([A-Z]{3,4})-(\d{2}|\d{4})').firstMatch(text);
-    if (monthYear != null) {
-      month = monthNumbers[monthYear.group(1)];
-      year = int.tryParse(monthYear.group(2)!);
-      if (year != null && year < 100) year += 2000;
+    if (text.isEmpty) {
+      final rawJoiningDate = joiningDate?.toString().trim() ?? '';
+      final parsedJoiningDate = joiningDate is DateTime
+          ? joiningDate
+          : DateTime.tryParse(rawJoiningDate);
+      if (parsedJoiningDate != null) {
+        month = parsedJoiningDate.month;
+        year = parsedJoiningDate.year;
+      } else {
+        final date = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})')
+            .firstMatch(rawJoiningDate);
+        if (date != null) {
+          month = int.tryParse(date.group(2)!);
+          year = int.tryParse(date.group(3)!);
+        }
+      }
     } else {
-      final date = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})').firstMatch(text);
-      if (date != null) {
-        month = int.tryParse(date.group(2)!);
-        year = int.tryParse(date.group(3)!);
+      final monthYear =
+          RegExp(r'^([A-Z]{3,4})-(\d{2}|\d{4})').firstMatch(text);
+      if (monthYear != null) {
+        month = monthNumbers[monthYear.group(1)];
+        year = int.tryParse(monthYear.group(2)!);
+        if (year != null && year < 100) year += 2000;
+      } else {
+        final date =
+            RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})').firstMatch(text);
+        if (date != null) {
+          month = int.tryParse(date.group(2)!);
+          year = int.tryParse(date.group(3)!);
+        }
       }
     }
     if (month == null || year == null || month < 1 || month > 12) return null;
 
-    final next = DateTime(year, month + 6);
+    final next = DateTime(year, month + 6, 1);
     final shortYear = (next.year % 100).toString().padLeft(2, '0');
     return '${monthNames[next.month - 1]}-$shortYear';
   }
@@ -18022,40 +18073,37 @@ class _AdminDashboardState extends State<AdminDashboard>
     final history = service
         .employeePayroll(employeeId)
         .where((record) => !record.period.isAfter(currentPeriod))
-        .toList()
-      ..sort((a, b) => a.period.compareTo(b.period));
+        .map(
+          (record) => (
+            period: record.period,
+            amount: record.elaunPerkhidmatan,
+          ),
+        )
+        .toList();
+    final increment =
+        PayrollCalculationService.latestStableAllowanceIncrement(history);
+    if (increment == null) return null;
 
-    for (var index = history.length - 1; index > 0; index--) {
-      final current = history[index];
-      final previous = history[index - 1];
-      final currentAllowances =
-          current.elaunKedatangan + current.elaunPerkhidmatan;
-      final previousAllowances =
-          previous.elaunKedatangan + previous.elaunPerkhidmatan;
-      final increase = currentAllowances - previousAllowances;
-      if (increase > 0.004) {
-        final amount = increase.roundToDouble() == increase
-            ? increase.toStringAsFixed(0)
-            : increase.toStringAsFixed(2);
-        const monthNames = [
-          'JAN',
-          'FEB',
-          'MAR',
-          'APR',
-          'MAY',
-          'JUN',
-          'JUL',
-          'AUG',
-          'SEPT',
-          'OCT',
-          'NOV',
-          'DEC',
-        ];
-        final year = (current.period.year % 100).toString().padLeft(2, '0');
-        return '${monthNames[current.period.month - 1]}-$year/$amount';
-      }
-    }
-    return null;
+    final amount = increment.amount.roundToDouble() == increment.amount
+        ? increment.amount.toStringAsFixed(0)
+        : increment.amount.toStringAsFixed(2);
+    const monthNames = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEPT',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    final year =
+        (increment.period.year % 100).toString().padLeft(2, '0');
+    return '${monthNames[increment.period.month - 1]}-$year/$amount';
   }
 
   Future<void> _exportStatutoryReportExcel(String report, DateTime month,

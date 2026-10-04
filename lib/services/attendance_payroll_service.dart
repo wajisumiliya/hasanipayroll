@@ -294,6 +294,7 @@ class AttendancePayrollService {
     final elaunPerkhidmatan = _number(salaryDefault['elaun_perkhidmatan']);
     final elaunKerajinan = _number(salaryDefault['elaun_kerajinan']);
     final elaunMakanan = _number(salaryDefault['elaun_makanan']);
+    final pcb = _number(salaryDefault['pcb']);
     final zakat = _number(salaryDefault['zakat']);
 
     // Employee-specific statutory settings.
@@ -626,7 +627,7 @@ class AttendancePayrollService {
       'eis_employer': eis.employer,
 
       // Future deductions
-      'pcb': 0,
+      'pcb': pcb,
       'zakat': zakat,
       'advance': 0,
 
@@ -805,6 +806,7 @@ class AttendancePayrollService {
             'elaun_perkhidmatan,'
             'elaun_kerajinan,'
             'elaun_makanan,'
+            'pcb,'
             'zakat,'
             'epf_category,'
             'eis_applicable,'
