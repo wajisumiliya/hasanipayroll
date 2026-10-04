@@ -809,6 +809,69 @@ void main() {
     });
   });
 
+  group('Vacation return and latest-month increment rules', () {
+    test('shows September increment after employee returns from vacation', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (period: DateTime(2026, 5), attendanceAllowance: 100, serviceAllowance: 250),
+        (period: DateTime(2026, 6), attendanceAllowance: 0, serviceAllowance: 0),
+        (period: DateTime(2026, 7), attendanceAllowance: 55, serviceAllowance: 100),
+        (period: DateTime(2026, 8), attendanceAllowance: 100, serviceAllowance: 250),
+        (period: DateTime(2026, 9), attendanceAllowance: 150, serviceAllowance: 300),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(history);
+
+      expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.attendanceDifference, 50);
+      expect(increment?.serviceDifference, 50);
+      expect(increment?.amount, 100);
+    });
+
+    test('when August and September both increase, reports September only', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (period: DateTime(2026, 6), attendanceAllowance: 100, serviceAllowance: 250),
+        (period: DateTime(2026, 7), attendanceAllowance: 100, serviceAllowance: 250),
+        (period: DateTime(2026, 8), attendanceAllowance: 150, serviceAllowance: 300),
+        (period: DateTime(2026, 9), attendanceAllowance: 175, serviceAllowance: 325),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(history);
+
+      expect(increment?.period, DateTime(2026, 9));
+      expect(increment?.attendanceDifference, 25);
+      expect(increment?.serviceDifference, 25);
+      expect(increment?.amount, 50);
+    });
+
+    test('vacation recovery alone is not an increment', () {
+      final history = <({
+        DateTime period,
+        double attendanceAllowance,
+        double serviceAllowance,
+      })>[
+        (period: DateTime(2026, 5), attendanceAllowance: 100, serviceAllowance: 250),
+        (period: DateTime(2026, 6), attendanceAllowance: 0, serviceAllowance: 0),
+        (period: DateTime(2026, 7), attendanceAllowance: 55, serviceAllowance: 100),
+        (period: DateTime(2026, 8), attendanceAllowance: 100, serviceAllowance: 250),
+      ];
+
+      final increment =
+          PayrollCalculationService.latestStablePayrollAllowanceIncrement(history);
+
+      expect(increment, isNull);
+    });
+  });
+
   group('HED1007 deduction exception', () {
     test('does not apply a normal early-out shortage deduction', () {
       expect(
