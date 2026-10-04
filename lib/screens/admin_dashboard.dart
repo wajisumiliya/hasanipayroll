@@ -13,6 +13,7 @@ import '../services/app_service.dart';
 import '../theme/daily_portal_theme.dart';
 import '../services/ot_request_pdf_service.dart';
 import '../services/attendance_payroll_service.dart';
+import '../services/payroll_calculation_service.dart';
 import '../services/pdf_service.dart';
 import '../services/notification_service.dart';
 import 'login_screen.dart';
@@ -12691,6 +12692,56 @@ class _AdminDashboardState extends State<AdminDashboard>
 // PAYROLL PAGE
 // ============================================================================
 
+  Future<void> _printPayrollIncrementList({
+    required DateTime month,
+    required List<Map<String, dynamic>> increments,
+  }) async {
+    final printedAt = DateTime.now();
+    final logo = await _loadHasaniBooksPdfLogo();
+    final document = pw.Document();
+    document.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(28),
+        header: (_) => pw.Column(
+          children: [
+            _brandedPdfHeader('EMPLOYEE INCREMENT LIST', month, printedAt, logo),
+            pw.SizedBox(height: 12),
+          ],
+        ),
+        footer: (_) => _brandedPdfFooter(printedAt),
+        build: (_) => [
+          pw.TableHelper.fromTextArray(
+            headers: const ['EMPLOYEE', 'EMPLOYEE ID', 'BRANCH', 'INCREMENT'],
+            data: increments
+                .map(
+                  (item) => [
+                    item['employee_name'].toString(),
+                    item['employee_id'].toString(),
+                    item['branch_name'].toString(),
+                    'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
+                  ],
+                )
+                .toList(),
+            headerStyle:
+                pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+            headerDecoration:
+                const pw.BoxDecoration(color: PdfColors.lightBlue100),
+            cellStyle: const pw.TextStyle(fontSize: 9),
+            cellPadding: const pw.EdgeInsets.all(6),
+            border: pw.TableBorder.all(color: PdfColors.grey500, width: .5),
+          ),
+        ],
+      ),
+    );
+    await Printing.layoutPdf(
+      name:
+          'Employee_Increments_${DateFormat('yyyy_MM').format(month)}.pdf',
+      format: PdfPageFormat.a4,
+      onLayout: (_) => document.save(),
+    );
+  }
+
   Future<void> _showPayrollIncrementListDialog({
     required DateTime month,
     required List<Map<String, dynamic>> increments,
@@ -12753,6 +12804,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
         ),
         actions: [
+          FilledButton.icon(
+            onPressed: increments.isEmpty
+                ? null
+                : () => _printPayrollIncrementList(
+                      month: month,
+                      increments: increments,
+                    ),
+            icon: const Icon(Icons.print_outlined),
+            label: const Text('Print A4'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Close'),
@@ -14787,8 +14848,12 @@ class _AdminDashboardState extends State<AdminDashboard>
         final elaunKedatangan = money(payroll['elaun_kedatangan']);
         final elaunPerkhidmatan = money(payroll['elaun_perkhidmatan']);
         final elaunKerajinan = money(payroll['elaun_kerajinan']);
-        final overtime = money(payroll['overtime']);
-        final cutiUmum = money(payroll['cuti_umum']);
+        final overtime = PayrollCalculationService.roundPayrollAmount(
+          money(payroll['overtime']),
+        );
+        final cutiUmum = PayrollCalculationService.roundPayrollAmount(
+          money(payroll['cuti_umum']),
+        );
 
         // The template calls this column "JUMLAH". It is the earnings total.
         final jumlah = totalSalary +
@@ -14879,7 +14944,11 @@ class _AdminDashboardState extends State<AdminDashboard>
           ])),
           _salaryIncrementText(employeeId, payroll['period']) ??
               dateText(lastIncrement),
-          dateText(nextIncrement),
+          _nextSalaryIncrementText(
+                _salaryIncrementText(employeeId, payroll['period']) ??
+                    dateText(lastIncrement),
+              ) ??
+              dateText(nextIncrement),
           textValue(firstValue(employee, const ['name'])),
           textValue(
             firstValue(
@@ -15451,52 +15520,6 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         const firstDataRow = 5;
         final originalDataCapacity = templateTotalRow - firstDataRow;
-        final originalColumnCount = layout == 'local20' ? 20 : 21;
-        final originalFooterValueColumn = config['footerValueColumn'] as int;
-        final originalFooterLabelColumn =
-            (config['footerLabelColumn'] as int?) ??
-                (layout == 'local20'
-                    ? originalFooterValueColumn - 1
-                    : layout == 'foreign21'
-                        ? 15
-                        : originalFooterValueColumn - 2);
-        final originalFooterEndColumn =
-            (config['footerEndColumn'] as int?) ??
-                (layout == 'local20' ? originalFooterValueColumn : 20);
-
-        // Clear the template's original total and payment-summary values
-        // before rows move. Some spreadsheet readers retain those cells at
-        // their old positions after removeRow, which otherwise prints a
-        // duplicate total/payment block below the rebuilt one.
-        for (var column = 0; column < originalColumnCount; column++) {
-          sheet
-              .cell(
-                xls.CellIndex.indexByColumnRow(
-                  columnIndex: column,
-                  rowIndex: templateTotalRow - 1,
-                ),
-              )
-              .value = null;
-        }
-        final originalSummaryOffsets = <int>{
-          ...(config['paymentRows'] as Map<String, int>).values,
-          config['footerTotalOffset'] as int,
-        };
-        for (final offset in originalSummaryOffsets) {
-          for (var column = originalFooterLabelColumn;
-              column <= originalFooterEndColumn;
-              column++) {
-            sheet
-                .cell(
-                  xls.CellIndex.indexByColumnRow(
-                    columnIndex: column,
-                    rowIndex: templateTotalRow + offset - 1,
-                  ),
-                )
-                .value = null;
-          }
-        }
-
         final extraRows = branchRecords.length > originalDataCapacity
             ? branchRecords.length - originalDataCapacity
             : 0;
@@ -15529,17 +15552,11 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
         }
 
-        // Collapse unused template rows so the total follows the last
-        // employee without a blank printed area.
-        final rowsToRemove = branchRecords.length < originalDataCapacity
-            ? originalDataCapacity - branchRecords.length
-            : 0;
-        for (var index = 0; index < rowsToRemove; index++) {
-          sheet.removeRow(firstDataRow + branchRecords.length - 1);
-        }
-
-        final dataCapacity = branchRecords.length;
-        final totalRow = templateTotalRow + extraRows - rowsToRemove;
+        // Keep the template footer rows intact. Physically deleting employee
+        // rows can damage its merged signature/payment layout, so unused rows
+        // are collapsed during the data pass instead.
+        final dataCapacity = originalDataCapacity + extraRows;
+        final totalRow = templateTotalRow + extraRows;
         final columnCount = layout == 'local20' ? 20 : 21;
         final columnTotals = List<double>.filled(columnCount, 0);
         final tableBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
@@ -15609,7 +15626,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           for (var column = 0; column < 21; column++) {
             writeCell(sheet, rowNumber, column, null);
           }
-          if (rowOffset >= branchRecords.length) continue;
+          if (rowOffset >= branchRecords.length) {
+            sheet.setRowHeight(rowNumber - 1, 0.1);
+            continue;
+          }
 
           // Keep the original compact EDAR (L) employee rows. All other
           // branch sheets need extra height so employee data is easier to read.
@@ -15629,8 +15649,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           final serviceAllowance = money(payroll['elaun_perkhidmatan']);
           final diligenceAllowance = money(payroll['elaun_kerajinan']);
           final foodAllowance = money(payroll['elaun_makanan']);
-          final overtime = money(payroll['overtime']);
-          final publicHoliday = money(payroll['cuti_umum']);
+          final overtime = PayrollCalculationService.roundPayrollAmount(
+            money(payroll['overtime']),
+          );
+          final publicHoliday = PayrollCalculationService.roundPayrollAmount(
+            money(payroll['cuti_umum']),
+          );
           final gross = salaryBase +
               attendanceAllowance +
               serviceAllowance +
@@ -15701,7 +15725,11 @@ class _AdminDashboardState extends State<AdminDashboard>
               dateText(firstValue(employee, const ['joining_date'])),
               _salaryIncrementText(employeeId, payroll['period']) ??
                   dateText(lastIncrement),
-              dateText(nextIncrement),
+              _nextSalaryIncrementText(
+                    _salaryIncrementText(employeeId, payroll['period']) ??
+                        dateText(lastIncrement),
+                  ) ??
+                  dateText(nextIncrement),
               textValue(firstValue(employee, const [
                 'permit',
                 'permit_type',
@@ -15730,7 +15758,11 @@ class _AdminDashboardState extends State<AdminDashboard>
               dateText(firstValue(employee, const ['joining_date'])),
               _salaryIncrementText(employeeId, payroll['period']) ??
                   dateText(lastIncrement),
-              dateText(nextIncrement),
+              _nextSalaryIncrementText(
+                    _salaryIncrementText(employeeId, payroll['period']) ??
+                        dateText(lastIncrement),
+                  ) ??
+                  dateText(nextIncrement),
               employeeName,
               identityNumber,
               salaryBase,
@@ -15754,7 +15786,11 @@ class _AdminDashboardState extends State<AdminDashboard>
               dateText(firstValue(employee, const ['joining_date'])),
               _salaryIncrementText(employeeId, payroll['period']) ??
                   dateText(lastIncrement),
-              dateText(nextIncrement),
+              _nextSalaryIncrementText(
+                    _salaryIncrementText(employeeId, payroll['period']) ??
+                        dateText(lastIncrement),
+                  ) ??
+                  dateText(nextIncrement),
               employeeName,
               identityNumber,
               salaryBase,
@@ -16333,8 +16369,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           final elaunKedatangan = money(payroll['elaun_kedatangan']);
           final elaunPerkhidmatan = money(payroll['elaun_perkhidmatan']);
           final elaunKerajinan = money(payroll['elaun_kerajinan']);
-          final overtime = money(payroll['overtime']);
-          final cutiUmum = money(payroll['cuti_umum']);
+          final overtime = PayrollCalculationService.roundPayrollAmount(
+            money(payroll['overtime']),
+          );
+          final cutiUmum = PayrollCalculationService.roundPayrollAmount(
+            money(payroll['cuti_umum']),
+          );
           final jumlah = (fw != 0 ? fw : basic) +
               elaunKedatangan +
               elaunPerkhidmatan +
@@ -16373,7 +16413,11 @@ class _AdminDashboardState extends State<AdminDashboard>
             dateText(employee['joining_date']),
             _salaryIncrementText(employeeId, payroll['period']) ??
                 dateText(lastIncrement),
-            dateText(nextIncrement),
+            _nextSalaryIncrementText(
+                  _salaryIncrementText(employeeId, payroll['period']) ??
+                      dateText(lastIncrement),
+                ) ??
+                dateText(nextIncrement),
             employee['name'] ?? payroll['name'] ?? '',
             employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '',
             basic + fw,
@@ -16641,8 +16685,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           final attendance = money(payroll['elaun_kedatangan']);
           final service = money(payroll['elaun_perkhidmatan']);
           final diligence = money(payroll['elaun_kerajinan']);
-          final overtime = money(payroll['overtime']);
-          final publicHoliday = money(payroll['cuti_umum']);
+          final overtime = PayrollCalculationService.roundPayrollAmount(
+            money(payroll['overtime']),
+          );
+          final publicHoliday = PayrollCalculationService.roundPayrollAmount(
+            money(payroll['cuti_umum']),
+          );
           final gross = basic +
               attendance +
               service +
@@ -16693,7 +16741,11 @@ class _AdminDashboardState extends State<AdminDashboard>
             _salaryIncrementText(employeeId, payroll['period']) ??
                 lastIncrement?.toString() ??
                 '',
-            dateText(nextIncrement),
+            _nextSalaryIncrementText(
+                  _salaryIncrementText(employeeId, payroll['period']) ??
+                      dateText(lastIncrement),
+                ) ??
+                dateText(nextIncrement),
             (employee['name'] ?? payroll['name'] ?? '').toString(),
             (employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '').toString(),
             ...numbers.map(pdfMoney),
@@ -17514,6 +17566,61 @@ class _AdminDashboardState extends State<AdminDashboard>
       topBorderVal: border,
       bottomBorderVal: border,
     );
+  }
+
+  String? _nextSalaryIncrementText(String lastIncrementText) {
+    final text = lastIncrementText.trim().toUpperCase();
+    if (text.isEmpty) return null;
+
+    const monthNumbers = <String, int>{
+      'JAN': 1,
+      'FEB': 2,
+      'MAR': 3,
+      'APR': 4,
+      'MAY': 5,
+      'JUN': 6,
+      'JUL': 7,
+      'AUG': 8,
+      'SEP': 9,
+      'SEPT': 9,
+      'OCT': 10,
+      'NOV': 11,
+      'DEC': 12,
+    };
+    const monthNames = <String>[
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEPT',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+
+    int? month;
+    int? year;
+    final monthYear = RegExp(r'^([A-Z]{3,4})-(\d{2}|\d{4})').firstMatch(text);
+    if (monthYear != null) {
+      month = monthNumbers[monthYear.group(1)];
+      year = int.tryParse(monthYear.group(2)!);
+      if (year != null && year < 100) year += 2000;
+    } else {
+      final date = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})').firstMatch(text);
+      if (date != null) {
+        month = int.tryParse(date.group(2)!);
+        year = int.tryParse(date.group(3)!);
+      }
+    }
+    if (month == null || year == null || month < 1 || month > 12) return null;
+
+    final next = DateTime(year, month + 6);
+    final shortYear = (next.year % 100).toString().padLeft(2, '0');
+    return '${monthNames[next.month - 1]}-$shortYear';
   }
 
   String? _salaryIncrementText(String employeeId, dynamic payrollPeriod) {
