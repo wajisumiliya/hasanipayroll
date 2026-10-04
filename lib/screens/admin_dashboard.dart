@@ -12699,6 +12699,15 @@ class _AdminDashboardState extends State<AdminDashboard>
     final printedAt = DateTime.now();
     final logo = await _loadHasaniBooksPdfLogo();
     final document = pw.Document();
+    final groupedByBranch = <String, List<Map<String, dynamic>>>{};
+    for (final item in increments) {
+      final branch = item['branch_name']?.toString().trim() ?? '';
+      groupedByBranch
+          .putIfAbsent(branch.isEmpty ? 'UNASSIGNED BRANCH' : branch, () => [])
+          .add(item);
+    }
+    final orderedBranches = groupedByBranch.keys.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -12710,28 +12719,53 @@ class _AdminDashboardState extends State<AdminDashboard>
           ],
         ),
         footer: (_) => _brandedPdfFooter(printedAt),
-        build: (_) => [
-          pw.TableHelper.fromTextArray(
-            headers: const ['EMPLOYEE', 'EMPLOYEE ID', 'BRANCH', 'INCREMENT'],
-            data: increments
-                .map(
-                  (item) => [
-                    item['employee_name'].toString(),
-                    item['employee_id'].toString(),
-                    item['branch_name'].toString(),
-                    'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
-                  ],
-                )
-                .toList(),
-            headerStyle:
-                pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-            headerDecoration:
-                const pw.BoxDecoration(color: PdfColors.lightBlue100),
-            cellStyle: const pw.TextStyle(fontSize: 9),
-            cellPadding: const pw.EdgeInsets.all(6),
-            border: pw.TableBorder.all(color: PdfColors.grey500, width: .5),
-          ),
-        ],
+        build: (_) => orderedBranches
+            .expand<pw.Widget>(
+              (branch) => [
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.all(7),
+                    color: PdfColors.blue100,
+                    child: pw.Text(
+                      branch.toUpperCase(),
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  pw.TableHelper.fromTextArray(
+                    headers: const [
+                      'EMPLOYEE',
+                      'EMPLOYEE ID',
+                      'INCREMENT'
+                    ],
+                    data: groupedByBranch[branch]!
+                        .map(
+                          (item) => [
+                            item['employee_name'].toString(),
+                            item['employee_id'].toString(),
+                            'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
+                          ],
+                        )
+                        .toList(),
+                    headerStyle: pw.TextStyle(
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                    headerDecoration:
+                        const pw.BoxDecoration(color: PdfColors.grey200),
+                    cellStyle: const pw.TextStyle(fontSize: 9),
+                    cellPadding: const pw.EdgeInsets.all(6),
+                    border: pw.TableBorder.all(
+                      color: PdfColors.grey500,
+                      width: .5,
+                    ),
+                  ),
+                  pw.SizedBox(height: 14),
+                ],
+            )
+            .toList(),
       ),
     );
     await Printing.layoutPdf(
@@ -12832,6 +12866,29 @@ class _AdminDashboardState extends State<AdminDashboard>
             .from('payroll')
             .select()
             .order('period', ascending: false),
+        SupabaseService.client
+            .from('attendance')
+            .select('employee_id,branch_id')
+            .gte(
+              'attendance_date',
+              DateFormat('yyyy-MM-dd').format(
+                DateTime(
+                  selectedPayrollMonth.year,
+                  selectedPayrollMonth.month,
+                  1,
+                ),
+              ),
+            )
+            .lt(
+              'attendance_date',
+              DateFormat('yyyy-MM-dd').format(
+                DateTime(
+                  selectedPayrollMonth.year,
+                  selectedPayrollMonth.month + 1,
+                  1,
+                ),
+              ),
+            ),
       ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -12876,11 +12933,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
-        final data = snapshot.data ?? const [[], [], []];
+        final data = snapshot.data ?? const [[], [], [], []];
         final branches = List<Map<String, dynamic>>.from(data[0] as List);
         final employees = List<Map<String, dynamic>>.from(data[1] as List);
         final rawPayrollRecords =
             List<Map<String, dynamic>>.from(data[2] as List);
+        final monthlyAttendance =
+            List<Map<String, dynamic>>.from(data[3] as List);
 
         final employeeBranchById = <String, String>{};
         for (final employee in employees) {
@@ -12919,6 +12978,34 @@ class _AdminDashboardState extends State<AdminDashboard>
                 .compareTo((branchNames[b] ?? b).toLowerCase()),
           );
 
+        final attendanceBranchCounts =
+            <String, Map<String, int>>{};
+        for (final attendance in monthlyAttendance) {
+          final employeeId =
+              _normalizeBranchValue(attendance['employee_id']);
+          final branchId = _normalizeBranchValue(attendance['branch_id']);
+          if (employeeId.isEmpty || branchId.isEmpty) continue;
+          final counts = attendanceBranchCounts.putIfAbsent(
+            employeeId,
+            () => <String, int>{},
+          );
+          counts[branchId] = (counts[branchId] ?? 0) + 1;
+        }
+        final attendanceBranchByEmployee = <String, String>{};
+        for (final entry in attendanceBranchCounts.entries) {
+          final branchesByFrequency = entry.value.entries.toList()
+            ..sort((a, b) {
+              final countComparison = b.value.compareTo(a.value);
+              return countComparison != 0
+                  ? countComparison
+                  : a.key.compareTo(b.key);
+            });
+          if (branchesByFrequency.isNotEmpty) {
+            attendanceBranchByEmployee[entry.key] =
+                branchesByFrequency.first.key;
+          }
+        }
+
         final payrollRecords = rawPayrollRecords.map((record) {
           final copy = Map<String, dynamic>.from(record);
           final employeeId = _normalizeBranchValue(record['employee_id']);
@@ -12951,8 +13038,22 @@ class _AdminDashboardState extends State<AdminDashboard>
           for (final employee in employees)
             _normalizeBranchValue(employee['employee_id']): employee,
         };
+        final incrementPayrollRecords = payrollRecords.where((record) {
+          if (!_payrollPeriodMatchesMonth(
+            record['period'],
+            selectedPayrollMonth,
+          )) {
+            return false;
+          }
+          if (selectedPayrollBranchId == null) return true;
+          final employeeId = _normalizeBranchValue(record['employee_id']);
+          final attendanceBranch = attendanceBranchByEmployee[employeeId] ??
+              employeeBranchById[employeeId] ??
+              _normalizeBranchValue(record['branch_id']);
+          return attendanceBranch == selectedPayrollBranchId;
+        }).toList();
         final monthlyIncrements = <Map<String, dynamic>>[];
-        for (final current in visiblePayrollRecords) {
+        for (final current in incrementPayrollRecords) {
           final employeeId = _normalizeBranchValue(current['employee_id']);
           final currentPeriod =
               DateTime.tryParse(current['period']?.toString() ?? '');
@@ -12982,20 +13083,31 @@ class _AdminDashboardState extends State<AdminDashboard>
           if (incrementAmount <= 0.004) continue;
 
           final employee = employeeById[employeeId] ?? const {};
+          final attendanceBranch = attendanceBranchByEmployee[employeeId] ??
+              employeeBranchById[employeeId] ??
+              _normalizeBranchValue(current['branch_id']);
           monthlyIncrements.add({
             'employee_id': employeeId,
             'employee_name': employee['name']?.toString().trim().isNotEmpty ==
                     true
                 ? employee['name'].toString().trim()
                 : employeeId,
-            'branch_name': current['branch_name']?.toString() ?? '',
+            'branch_name': branchNames[attendanceBranch] ?? attendanceBranch,
             'increment_amount': incrementAmount,
           });
         }
-        monthlyIncrements.sort((a, b) => a['employee_name']
-            .toString()
-            .toLowerCase()
-            .compareTo(b['employee_name'].toString().toLowerCase()));
+        monthlyIncrements.sort((a, b) {
+          final branchComparison = a['branch_name']
+              .toString()
+              .toLowerCase()
+              .compareTo(b['branch_name'].toString().toLowerCase());
+          return branchComparison != 0
+              ? branchComparison
+              : a['employee_name']
+                  .toString()
+                  .toLowerCase()
+                  .compareTo(b['employee_name'].toString().toLowerCase());
+        });
 
         double totalPayroll = 0;
         for (final payroll in visiblePayrollRecords) {
@@ -14718,9 +14830,24 @@ class _AdminDashboardState extends State<AdminDashboard>
 
       sheet.cell(xls.CellIndex.indexByString('A1')).value =
           xls.TextCellValue('PENYATA GAJI');
-      sheet.cell(xls.CellIndex.indexByString('L2')).value = xls.TextCellValue(
+      excel.unMerge('Sheet1', 'L2:Q2');
+      sheet.cell(xls.CellIndex.indexByString('L2')).value = null;
+      sheet.merge(
+        xls.CellIndex.indexByString('M2'),
+        xls.CellIndex.indexByString('T2'),
+      );
+      final branchHeaderCell = sheet.cell(xls.CellIndex.indexByString('M2'));
+      branchHeaderCell.value = xls.TextCellValue(
         '${branchName.toUpperCase()} (PEKERJA TEMPATAN)',
       );
+      branchHeaderCell.cellStyle =
+          (branchHeaderCell.cellStyle ?? xls.CellStyle()).copyWith(
+        boldVal: true,
+        fontSizeVal: 11,
+        horizontalAlignVal: xls.HorizontalAlign.Center,
+        verticalAlignVal: xls.VerticalAlign.Center,
+      );
+      sheet.setRowHeight(1, 24);
       final monthCell = sheet.cell(
         xls.CellIndex.indexByString('A3'),
       );
@@ -14880,7 +15007,9 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         // M01 / CUTI TANPA GAJI contains BOTH unpaid and late deduction.
         final lateDeduction = money(payroll['late_deduction']);
-        final cutiTanpaGaji = unpaidDeduction + lateDeduction;
+        final cutiTanpaGaji = PayrollCalculationService.roundPayrollAmount(
+          unpaidDeduction + lateDeduction,
+        );
 
         // POTONGAN contains only PCB + Zakat. Late deduction is already in M01.
         final otherDeductions = money(payroll['pcb']) +
@@ -15213,6 +15342,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       final sheetConfigs = <Map<String, dynamic>>[
         {
           'sheet': 'Edar (L)',
+          'branchHeaderRange': 'L2:Q2',
           'group': 'sungaipetani',
           'totalRow': 54,
           'layout': 'local20',
@@ -15226,6 +15356,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Edar (Temp)',
+          'branchHeaderRange': 'L2:P2',
           'group': temporaryStaffGroup,
           'totalRow': 22,
           'layout': 'standard21',
@@ -15242,6 +15373,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Edar (F)',
+          'branchHeaderRange': 'L2:Q2',
           'group': sungaiPetaniForeignerGroup,
           'totalRow': 21,
           'layout': 'foreign21',
@@ -15255,6 +15387,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'AMJ',
+          'branchHeaderRange': 'L2:N2',
           'group': 'amanjaya',
           'totalRow': 17,
           'layout': 'standard21',
@@ -15268,6 +15401,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Gurun',
+          'branchHeaderRange': 'L2:N2',
           'group': 'gurun',
           'totalRow': 11,
           'layout': 'standard21',
@@ -15280,6 +15414,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Hasani Books Prai',
+          'branchHeaderRange': 'L2:N2',
+          'approvedByOffset': 5,
           'group': 'prai',
           'totalRow': 29,
           'layout': 'standard21',
@@ -15293,6 +15429,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Buku A.Setar',
+          'branchHeaderRange': 'L2:O2',
+          'approvedByOffset': 5,
           'group': 'alorsetar',
           'totalRow': 25,
           'layout': 'standard21',
@@ -15306,6 +15444,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Jitra',
+          'branchHeaderRange': 'L2:N2',
           'group': 'jitra',
           'totalRow': 24,
           'layout': 'standard21',
@@ -15319,6 +15458,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Kulim',
+          'branchHeaderRange': 'J2:N2',
           'group': 'kulim',
           'totalRow': 27,
           'layout': 'standard21',
@@ -15332,6 +15472,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Astana',
+          'branchHeaderRange': 'L2:N2',
           'group': 'astana',
           'totalRow': 18,
           'layout': 'standard21',
@@ -15345,6 +15486,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         },
         {
           'sheet': 'Langkawi',
+          'branchHeaderRange': 'L2:O2',
           'group': 'langkawi',
           'totalRow': 17,
           'layout': 'standard21',
@@ -15573,6 +15715,28 @@ class _AdminDashboardState extends State<AdminDashboard>
         };
 
         writeMonthHeader(sheet, layout == 'local20' ? 19 : 20);
+        final branchHeaderRange = config['branchHeaderRange'] as String;
+        final branchHeaderStart = branchHeaderRange.split(':').first;
+        final branchHeaderValue =
+            sheet.cell(xls.CellIndex.indexByString(branchHeaderStart)).value;
+        excel.unMerge(sheetName, branchHeaderRange);
+        sheet.cell(xls.CellIndex.indexByString(branchHeaderStart)).value = null;
+        final movedBranchHeaderEnd = layout == 'local20' ? 'T2' : 'U2';
+        sheet.merge(
+          xls.CellIndex.indexByString('M2'),
+          xls.CellIndex.indexByString(movedBranchHeaderEnd),
+        );
+        final movedBranchHeader = sheet.cell(xls.CellIndex.indexByString('M2'));
+        movedBranchHeader.value = branchHeaderValue;
+        movedBranchHeader.cellStyle =
+            (movedBranchHeader.cellStyle ?? xls.CellStyle()).copyWith(
+          boldVal: true,
+          fontSizeVal: 11,
+          horizontalAlignVal: xls.HorizontalAlign.Center,
+          verticalAlignVal: xls.VerticalAlign.Center,
+        );
+        sheet.setRowHeight(1, 24);
+
         final cleanHeaders = cleanPayrollHeaders(layout);
         for (var column = 0; column < columnCount; column++) {
           final headerCell = sheet.cell(
@@ -15662,12 +15826,14 @@ class _AdminDashboardState extends State<AdminDashboard>
               foodAllowance +
               overtime +
               publicHoliday;
-          final unpaid = money(firstValue(payroll, const [
-                'unpaid_deduction',
-                'unpaid_leave',
-                'cuti_tanpa_gaji',
-              ])) +
-              money(payroll['late_deduction']);
+          final unpaid = PayrollCalculationService.roundPayrollAmount(
+            money(firstValue(payroll, const [
+                  'unpaid_deduction',
+                  'unpaid_leave',
+                  'cuti_tanpa_gaji',
+                ])) +
+                money(payroll['late_deduction']),
+          );
           final epf = money(payroll['epf_employee']);
           final socso = money(payroll['socso_employee']);
           final eis = money(payroll['eis_employee']);
@@ -16029,6 +16195,33 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
+        final approvedByOffset = config['approvedByOffset'] as int?;
+        if (approvedByOffset != null) {
+          final approvedByRow = totalRow + approvedByOffset;
+          excel.unMerge(sheetName, 'M$approvedByRow:N$approvedByRow');
+          sheet.merge(
+            xls.CellIndex.indexByString('M$approvedByRow'),
+            xls.CellIndex.indexByString('O$approvedByRow'),
+            customValue: xls.TextCellValue('APPROVED BY'),
+          );
+          final signatureLine = xls.Border(
+            borderStyle: xls.BorderStyle.Thin,
+          );
+          for (var column = 12; column <= 14; column++) {
+            final cell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: approvedByRow - 1,
+              ),
+            );
+            cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+              boldVal: true,
+              horizontalAlignVal: xls.HorizontalAlign.Left,
+              topBorderVal: signatureLine,
+            );
+          }
+        }
+
         final paymentRows = config['paymentRows'] as Map<String, int>;
         final footerValueColumn = config['footerValueColumn'] as int;
         final netColumn = layout == 'local20' ? 19 : 20;
@@ -16383,7 +16576,9 @@ class _AdminDashboardState extends State<AdminDashboard>
               cutiUmum;
           final unpaid = money(payroll['unpaid_deduction']);
           final late = money(payroll['late_deduction']);
-          final cutiTanpaGaji = unpaid + late;
+          final cutiTanpaGaji = PayrollCalculationService.roundPayrollAmount(
+            unpaid + late,
+          );
           final epf = money(payroll['epf_employee']);
           final socso = money(payroll['socso_employee']);
           final eis = money(payroll['eis_employee']);
