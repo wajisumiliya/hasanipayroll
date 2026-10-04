@@ -406,4 +406,20 @@ void main() {
       );
     });
   });
+
+  group('Late deduction payroll rule', () {
+    test('waives a total below RM10', () {
+      expect(PayrollCalculationService.payableLateDeduction(9.99), 0);
+    });
+
+    test('keeps RM10 chargeable', () {
+      expect(PayrollCalculationService.payableLateDeduction(10), 10);
+    });
+
+    test('rounds a chargeable total to the nearest ten sen', () {
+      expect(PayrollCalculationService.payableLateDeduction(130.74), 130.7);
+      expect(PayrollCalculationService.payableLateDeduction(130.75), 130.8);
+      expect(PayrollCalculationService.payableLateDeduction(130.77), 130.8);
+    });
+  });
 }

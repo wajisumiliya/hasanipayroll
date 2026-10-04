@@ -12691,6 +12691,77 @@ class _AdminDashboardState extends State<AdminDashboard>
 // PAYROLL PAGE
 // ============================================================================
 
+  Future<void> _showPayrollIncrementListDialog({
+    required DateTime month,
+    required List<Map<String, dynamic>> increments,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Employee Increments - ${DateFormat('MMMM yyyy').format(month)}',
+        ),
+        content: SizedBox(
+          width: 720,
+          child: increments.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 28),
+                  child: Text(
+                    'No employee service-allowance increments were found for this month.',
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingRowColor: WidgetStatePropertyAll(
+                          const Color(0xFFD9EAF7),
+                        ),
+                        columns: const [
+                          DataColumn(label: Text('Employee')),
+                          DataColumn(label: Text('Branch')),
+                          DataColumn(
+                            label: Text('Increment Amount'),
+                            numeric: true,
+                          ),
+                        ],
+                        rows: increments
+                            .map(
+                              (item) => DataRow(
+                                cells: [
+                                  DataCell(
+                                    Text(
+                                      '${item['employee_name']}\n${item['employee_id']}',
+                                    ),
+                                  ),
+                                  DataCell(Text(item['branch_name'].toString())),
+                                  DataCell(
+                                    Text(
+                                      'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _payrollPage() {
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
@@ -12808,13 +12879,59 @@ class _AdminDashboardState extends State<AdminDashboard>
             record['period'],
             selectedPayrollMonth,
           );
-
           return branchMatches && monthMatches;
         }).toList()
           ..sort(
             (a, b) => _normalizeBranchValue(a['employee_id'])
                 .compareTo(_normalizeBranchValue(b['employee_id'])),
           );
+
+        final employeeById = <String, Map<String, dynamic>>{
+          for (final employee in employees)
+            _normalizeBranchValue(employee['employee_id']): employee,
+        };
+        final monthlyIncrements = <Map<String, dynamic>>[];
+        for (final current in visiblePayrollRecords) {
+          final employeeId = _normalizeBranchValue(current['employee_id']);
+          final currentPeriod =
+              DateTime.tryParse(current['period']?.toString() ?? '');
+          if (employeeId.isEmpty || currentPeriod == null) continue;
+
+          final history = payrollRecords.where((record) {
+            if (_normalizeBranchValue(record['employee_id']) != employeeId) {
+              return false;
+            }
+            final period =
+                DateTime.tryParse(record['period']?.toString() ?? '');
+            return period != null && period.isBefore(currentPeriod);
+          }).toList()
+            ..sort((a, b) => (DateTime.tryParse(b['period'].toString()) ??
+                    DateTime(1900))
+                .compareTo(DateTime.tryParse(a['period'].toString()) ??
+                    DateTime(1900)));
+          if (history.isEmpty) continue;
+
+          final currentAmount =
+              _payrollNumber(current['elaun_perkhidmatan']);
+          final previousAmount =
+              _payrollNumber(history.first['elaun_perkhidmatan']);
+          if (currentAmount <= previousAmount + 0.004) continue;
+
+          final employee = employeeById[employeeId] ?? const {};
+          monthlyIncrements.add({
+            'employee_id': employeeId,
+            'employee_name': employee['name']?.toString().trim().isNotEmpty ==
+                    true
+                ? employee['name'].toString().trim()
+                : employeeId,
+            'branch_name': current['branch_name']?.toString() ?? '',
+            'increment_amount': currentAmount,
+          });
+        }
+        monthlyIncrements.sort((a, b) => a['employee_name']
+            .toString()
+            .toLowerCase()
+            .compareTo(b['employee_name'].toString().toLowerCase()));
 
         double totalPayroll = 0;
         for (final payroll in visiblePayrollRecords) {
@@ -12890,6 +13007,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                       icon: const Icon(Icons.calendar_month_outlined),
                       label: Text(
                         DateFormat('MMMM yyyy').format(selectedPayrollMonth),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _showPayrollIncrementListDialog(
+                        month: selectedPayrollMonth,
+                        increments: monthlyIncrements,
+                      ),
+                      icon: const Icon(Icons.trending_up_outlined),
+                      label: Text(
+                        'Increment List (${monthlyIncrements.length})',
                       ),
                     ),
                     DropdownButton<String>(
@@ -15177,6 +15304,33 @@ class _AdminDashboardState extends State<AdminDashboard>
         return parsed == null ? text : DateFormat('dd/MM/yyyy').format(parsed);
       }
 
+      String lastIncrementText({
+        required String employeeId,
+        required dynamic payrollPeriod,
+        required dynamic fallbackIncrement,
+        required double serviceAllowance,
+      }) {
+        final roundedAllowance = serviceAllowance.round();
+        final isAllowedAllowance =
+            (serviceAllowance - roundedAllowance).abs() < 0.005 &&
+                roundedAllowance >= 50 &&
+                roundedAllowance <= 1000 &&
+                roundedAllowance % 50 == 0;
+        if (!isAllowedAllowance) return '';
+
+        final calculated = _salaryIncrementText(employeeId, payrollPeriod);
+        var monthYear = calculated?.split('/').first.trim() ?? '';
+        if (monthYear.isEmpty) {
+          final fallback = textValue(fallbackIncrement);
+          final parsed = DateTime.tryParse(fallback);
+          monthYear = parsed == null
+              ? fallback.split('/').first.trim().toUpperCase()
+              : DateFormat('MMM-yy').format(parsed).toUpperCase();
+        }
+        if (monthYear.isEmpty) return '';
+        return '$monthYear/$roundedAllowance';
+      }
+
       double money(dynamic value) => _payrollNumber(value);
 
       void writeCell(
@@ -15353,8 +15507,17 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
         }
 
-        final dataCapacity = originalDataCapacity + extraRows;
-        final totalRow = templateTotalRow + extraRows;
+        // Collapse unused template rows so the total follows the last
+        // employee without a blank printed area.
+        final rowsToRemove = branchRecords.length < originalDataCapacity
+            ? originalDataCapacity - branchRecords.length
+            : 0;
+        for (var index = 0; index < rowsToRemove; index++) {
+          sheet.removeRow(firstDataRow + branchRecords.length - 1);
+        }
+
+        final dataCapacity = branchRecords.length;
+        final totalRow = templateTotalRow + extraRows - rowsToRemove;
         final columnCount = layout == 'local20' ? 20 : 21;
         final columnTotals = List<double>.filled(columnCount, 0);
         final tableBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
@@ -15380,7 +15543,11 @@ class _AdminDashboardState extends State<AdminDashboard>
             ),
           );
           headerCell.value = xls.TextCellValue(cleanHeaders[column]);
-          headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
+          var headerStyle = _excelHeaderStyle(headerCell.cellStyle);
+          if (sheetName == 'Edar (L)') {
+            headerStyle = headerStyle.copyWith(fontSizeVal: 11);
+          }
+          headerCell.cellStyle = headerStyle;
         }
 
         void applyTableBorderAndAlignment(
@@ -15510,8 +15677,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ??
-                  dateText(lastIncrement),
+              lastIncrementText(
+                employeeId: employeeId,
+                payrollPeriod: payroll['period'],
+                fallbackIncrement: lastIncrement,
+                serviceAllowance: serviceAllowance,
+              ),
               dateText(nextIncrement),
               textValue(firstValue(employee, const [
                 'permit',
@@ -15539,8 +15710,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ??
-                  dateText(lastIncrement),
+              lastIncrementText(
+                employeeId: employeeId,
+                payrollPeriod: payroll['period'],
+                fallbackIncrement: lastIncrement,
+                serviceAllowance: serviceAllowance,
+              ),
               dateText(nextIncrement),
               employeeName,
               identityNumber,
@@ -15563,8 +15738,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               rowOffset + 1,
               employeeId,
               dateText(firstValue(employee, const ['joining_date'])),
-              _salaryIncrementText(employeeId, payroll['period']) ??
-                  dateText(lastIncrement),
+              lastIncrementText(
+                employeeId: employeeId,
+                payrollPeriod: payroll['period'],
+                fallbackIncrement: lastIncrement,
+                serviceAllowance: serviceAllowance,
+              ),
               dateText(nextIncrement),
               employeeName,
               identityNumber,
@@ -15624,8 +15803,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                       : style.fontSize)
                   : 14,
               boldVal: emphasizeEmployeeColumn ? true : null,
-              horizontalAlignVal: isEdarLocal ? null : xls.HorizontalAlign.Left,
-              verticalAlignVal: isEdarLocal ? null : xls.VerticalAlign.Center,
+              horizontalAlignVal: xls.HorizontalAlign.Center,
+              verticalAlignVal: xls.VerticalAlign.Center,
               leftBorderVal: tableBorder,
               rightBorderVal: tableBorder,
               topBorderVal: tableBorder,
@@ -15706,7 +15885,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 column,
                 bold: true,
                 fontSize: 14,
-                left: true,
+                center: true,
                 middle: true,
               );
             }
@@ -15790,6 +15969,8 @@ class _AdminDashboardState extends State<AdminDashboard>
             boldVal: true,
             fontSizeVal: exportTotalFontSize,
             horizontalAlignVal: xls.HorizontalAlign.Center,
+            backgroundColorHexVal:
+                xls.ExcelColor.fromHexString('FFD9EAF7'),
             leftBorderVal: tableBorder,
             rightBorderVal: tableBorder,
             topBorderVal: tableBorder,
@@ -17338,11 +17519,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     for (var index = history.length - 1; index > 0; index--) {
       final current = history[index];
       final previous = history[index - 1];
-      final currentAllowances =
-          current.elaunKedatangan + current.elaunPerkhidmatan;
-      final previousAllowances =
-          previous.elaunKedatangan + previous.elaunPerkhidmatan;
-      final increase = currentAllowances - previousAllowances;
+      final increase =
+          current.elaunPerkhidmatan - previous.elaunPerkhidmatan;
       if (increase > 0.004) {
         final amount = increase.roundToDouble() == increase
             ? increase.toStringAsFixed(0)

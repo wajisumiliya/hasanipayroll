@@ -143,6 +143,15 @@ class PayrollCalculationService {
         other;
   }
 
+  /// Applies the payroll rule for the final monthly late deduction.
+  ///
+  /// Totals below RM10 are waived. Chargeable totals are rounded to the
+  /// nearest ten sen (for example, RM130.77 becomes RM130.80).
+  static double payableLateDeduction(double amount) {
+    if (!amount.isFinite || amount < 10) return 0;
+    return (amount * 10).roundToDouble() / 10;
+  }
+
   static double _roundMoney(double value) =>
       (value * 100).roundToDouble() / 100;
 

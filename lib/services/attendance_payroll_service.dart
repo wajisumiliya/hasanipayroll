@@ -470,7 +470,8 @@ class AttendancePayrollService {
 
     // Every local employee's normal-day net-working shortfall is deductible.
     // Foreign employees are deducted only for explicit UNPAID days.
-    totalLateDeduction = _roundMoney(totalLateDeduction);
+    totalLateDeduction =
+        PayrollCalculationService.payableLateDeduction(totalLateDeduction);
 
     final unpaidDeduction = _roundMoney(
       dailySalary * unpaidDays,
