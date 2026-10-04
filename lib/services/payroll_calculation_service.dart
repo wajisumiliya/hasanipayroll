@@ -208,24 +208,21 @@ class PayrollCalculationService {
 
   /// Finds the latest genuine allowance increment.
   ///
-  /// An increment is recorded whenever an allowance reaches a new genuine
-  /// high compared with the employee's earlier payroll history. Lower values
-  /// caused by vacation, unpaid periods, re-entry, or payroll corrections do
-  /// not reset the baseline. This also works for employees who do not have
-  /// three identical months before an increase.
+  /// Temporary vacation/unpaid/re-entry reductions are ignored when choosing
+  /// the employee's normal allowance baseline. After the employee returns, a
+  /// genuine increase is compared with the last normal pre-vacation amount.
   ///
-  /// Example: 100, 100, 0, 55, 150 => increment 50.
-  /// Example: 100, 150, 200 => latest increment 50.
+  /// If increases happen in consecutive months, only the latest month's
+  /// incremental change is returned. Example: 100 -> 150 in August -> 200 in
+  /// September returns September +50, not August +50 + September +50.
   static ({DateTime period, double amount})? latestStableAllowanceIncrement(
     List<({DateTime period, double amount})> history, {
     int stableMonths = 3,
     int lookbackMonths = 6,
   }) {
     bool sameAmount(double a, double b) => (a - b).abs() <= 0.004;
-
-    // Keep one value per payroll month and normalize dates to month precision.
-    // The latest record supplied for a month wins.
     int monthKey(DateTime value) => value.year * 12 + value.month;
+
     final byMonth = <int, ({DateTime period, double amount})>{};
     for (final entry in history) {
       if (!entry.amount.isFinite || entry.amount < 0) continue;
@@ -236,21 +233,23 @@ class PayrollCalculationService {
       ..sort((a, b) => a.period.compareTo(b.period));
     if (months.length < 2) return null;
 
-    // Use the highest amount already paid as the baseline. A temporary lower
-    // month therefore cannot create a false increment when the allowance
-    // returns to normal.
-    var previousHigh = months.first.amount;
+    // Track the last normal/high amount. Lower months do not reset it because
+    // they can represent vacation, unpaid leave or re-entry. A later amount
+    // above this baseline is therefore still detected immediately.
+    var baseline = months.first.amount;
     ({DateTime period, double amount})? latest;
     for (var index = 1; index < months.length; index++) {
       final current = months[index];
-      if (current.amount > previousHigh + 0.004) {
+      if (current.amount > baseline + 0.004) {
         latest = (
           period: current.period,
-          amount: _roundMoney(current.amount - previousHigh),
+          amount: _roundMoney(current.amount - baseline),
         );
-        previousHigh = current.amount;
-      } else if (sameAmount(current.amount, previousHigh)) {
-        previousHigh = current.amount;
+        // Important: advance the baseline after every genuine increase. This
+        // makes consecutive August/September increases report September only.
+        baseline = current.amount;
+      } else if (sameAmount(current.amount, baseline)) {
+        baseline = current.amount;
       }
     }
     return latest;
