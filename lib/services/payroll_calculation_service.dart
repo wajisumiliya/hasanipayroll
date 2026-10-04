@@ -291,11 +291,12 @@ class PayrollCalculationService {
     if (totalIncrement == null) return null;
 
     int monthKey(DateTime value) => value.year * 12 + value.month;
-    final byMonth = <int, ({
-      DateTime period,
-      double attendanceAllowance,
-      double serviceAllowance,
-    })>{};
+    final byMonth = <int,
+        ({
+          DateTime period,
+          double attendanceAllowance,
+          double serviceAllowance,
+        })>{};
     for (final entry in history) {
       byMonth[monthKey(entry.period)] = entry;
     }
