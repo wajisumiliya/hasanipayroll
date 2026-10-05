@@ -1937,42 +1937,7 @@ class _EmployeePortalState extends State<EmployeePortal>
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.black12),
-            ),
-            child: Wrap(
-              spacing: 22,
-              runSpacing: 8,
-              children: [
-                _payslipEarningDetail(
-                  'Elaun Kerajinan',
-                  payroll.elaunKerajinan,
-                ),
-                _payslipEarningDetail(
-                  'Elaun Makanan',
-                  payroll.elaunMakanan,
-                ),
-              ],
-            ),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _payslipEarningDetail(String label, double value) {
-    return Text(
-      '$label: RM ${NumberFormat('#,##0.00').format(value)}',
-      style: const TextStyle(
-        color: Color(0xFF08255F),
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
       ),
     );
   }

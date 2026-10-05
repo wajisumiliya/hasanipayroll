@@ -13457,6 +13457,117 @@ class _AdminDashboardState extends State<AdminDashboard>
             });
           }
 
+          Future<void> showNotificationPreview() async {
+            final monthText = DateFormat('MMMM yyyy').format(month);
+            final previewIncrementAmount = increments.isEmpty
+                ? 150.0
+                : _payrollNumber(increments.first['increment_amount']);
+
+            Widget notificationTile({
+              required IconData icon,
+              required String title,
+              required String body,
+            }) {
+              return ListTile(
+                tileColor: const Color(0xFF1976E9).withValues(alpha: .06),
+                leading: CircleAvatar(
+                  backgroundColor:
+                      const Color(0xFF1976E9).withValues(alpha: .10),
+                  child: Icon(icon, color: const Color(0xFF08255F)),
+                ),
+                title: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text(body),
+                trailing: const Icon(
+                  Icons.circle,
+                  size: 9,
+                  color: Color(0xFF1976E9),
+                ),
+              );
+            }
+
+            await showDialog<void>(
+              context: dialogContext,
+              builder: (previewContext) => AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.visibility_outlined),
+                    SizedBox(width: 10),
+                    Expanded(child: Text('Employee Notification Preview')),
+                  ],
+                ),
+                content: SizedBox(
+                  width: 470,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF4D6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'PREVIEW ONLY — no notification is sent and no '
+                          'payslip is published.',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFD8E1EF)),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: [
+                            notificationTile(
+                              icon: Icons.receipt_long_outlined,
+                              title: 'New Payslip Available',
+                              body: 'Your $monthText payslip is ready to view.',
+                            ),
+                            const Divider(height: 1),
+                            notificationTile(
+                              icon: Icons.trending_up_outlined,
+                              title: 'Salary Increment Confirmed',
+                              body: 'Your RM '
+                                  '${previewIncrementAmount.toStringAsFixed(2)} '
+                                  'salary increment is reflected in your '
+                                  '$monthText payslip.',
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (increments.isEmpty) ...[
+                        const SizedBox(height: 10),
+                        const Text(
+                          'RM 150.00 is an example because this month has no '
+                          'increment employee in the current list.',
+                          style: TextStyle(
+                            color: Color(0xFF667085),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                actions: [
+                  FilledButton(
+                    onPressed: () => Navigator.of(previewContext).pop(),
+                    child: const Text('Design Confirmed'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           Future<void> scheduleRelease() async {
             final releaseUtc = DateTime.utc(
               releaseTime.year,
@@ -13565,6 +13676,11 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             ),
             actions: [
+              OutlinedButton.icon(
+                onPressed: saving ? null : showNotificationPreview,
+                icon: const Icon(Icons.visibility_outlined),
+                label: const Text('Preview Notifications'),
+              ),
               TextButton(
                 onPressed:
                     saving ? null : () => Navigator.of(dialogContext).pop(),
@@ -16862,7 +16978,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                       : style.fontSize)
                   : 14,
               boldVal: emphasizeEmployeeColumn ? true : null,
-              horizontalAlignVal: column <= 6
+              // Keep only the employee name left-aligned. Columns A-E and
+              // the IC/passport column (G on the standard layouts) are
+              // centered, as are all monetary columns.
+              horizontalAlignVal: column == nameColumn
                   ? xls.HorizontalAlign.Left
                   : xls.HorizontalAlign.Center,
               verticalAlignVal: xls.VerticalAlign.Center,
@@ -16948,6 +17067,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 fontSize: 14,
                 center: true,
                 middle: true,
+                numberFormat: moneyNumberFormat,
               );
             }
           } else {
@@ -17055,6 +17175,36 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ? moneyNumberFormat
                 : cell.cellStyle?.numberFormat,
           );
+        }
+
+        // Draw a double-line outer perimeter around the complete payroll
+        // table, from the header row through TOTAL AMOUNT. Interior gridlines
+        // remain thin so individual employee values stay easy to follow.
+        final payrollOuterBorder = xls.Border(
+          borderStyle: xls.BorderStyle.Double,
+        );
+        final headerRow = firstDataRow - 1;
+        for (var row = headerRow; row <= totalRow; row++) {
+          for (var column = 0; column < columnCount; column++) {
+            final cell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: row - 1,
+              ),
+            );
+            final style = cell.cellStyle ?? xls.CellStyle();
+            cell.cellStyle = style.copyWith(
+              leftBorderVal:
+                  column == 0 ? payrollOuterBorder : style.leftBorder,
+              rightBorderVal: column == columnCount - 1
+                  ? payrollOuterBorder
+                  : style.rightBorder,
+              topBorderVal:
+                  row == headerRow ? payrollOuterBorder : style.topBorder,
+              bottomBorderVal:
+                  row == totalRow ? payrollOuterBorder : style.bottomBorder,
+            );
+          }
         }
 
         final preparedByOffset = config['preparedByOffset'] as int?;
