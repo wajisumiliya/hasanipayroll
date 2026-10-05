@@ -19769,6 +19769,71 @@ class _AdminDashboardState extends State<AdminDashboard>
         }
       }
 
+      final branchResponse = await SupabaseService.getBranches();
+      final branchNameById = <String, String>{};
+      for (final branch in branchResponse) {
+        final branchId = _branchIdFromMap(branch);
+        if (branchId.isNotEmpty) {
+          branchNameById[branchId] = _branchNameFromMap(branch, branchId);
+        }
+      }
+
+      String rhbBranchKey({
+        required String branchId,
+        required bool isForeign,
+      }) {
+        final branchName = branchNameById[branchId] ?? branchId;
+        final compact = '$branchId $branchName'
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]'), '');
+        if (compact.contains('sungaipetani') ||
+            compact.contains('spedar') ||
+            compact.contains('hbsp') ||
+            compact.contains('edar')) {
+          return isForeign ? 'hq_foreign' : 'hq_local';
+        }
+        if (compact.contains('prai') || compact.contains('perai')) {
+          return 'prai';
+        }
+        if (compact.contains('kulim')) return 'kulim';
+        if (compact.contains('alorsetar')) return 'alor_setar';
+        if (compact.contains('jitra')) return 'jitra';
+        if (compact.contains('amanjaya') || compact.contains('hbamj')) {
+          return 'amanjaya';
+        }
+        if (compact.contains('astana')) return 'astana';
+        if (compact.contains('gurun')) return 'gurun';
+        if (compact.contains('langkawi') || compact.contains('lkw')) {
+          return 'langkawi';
+        }
+        final fallback = branchName
+            .toUpperCase()
+            .replaceAll(RegExp(r'[^A-Z0-9]+'), '-')
+            .replaceAll(RegExp(r'^-+|-+$'), '');
+        return 'other_${fallback.isEmpty ? 'UNASSIGNED' : fallback}';
+      }
+
+      String rhbFileName(String branchKey) {
+        final titleMonth = DateFormat('MMM yyyy').format(selectedPayrollMonth);
+        final upperMonth = titleMonth.toUpperCase();
+        final upperMonthHyphen =
+            DateFormat('MMM-yyyy').format(selectedPayrollMonth).toUpperCase();
+        return switch (branchKey) {
+          'hq_local' => 'HB-HQ-SALARY-LOCAL-$titleMonth.xlsx',
+          'hq_foreign' => 'HB-HQ-SAL-FOREIGNER-$titleMonth.xlsx',
+          'prai' => 'HB-CF-SAL-$upperMonth.xlsx',
+          'kulim' => 'HB-KULIM-SAL-$upperMonthHyphen.xlsx',
+          'alor_setar' => 'HB-AS-SAL- $upperMonth.xlsx',
+          'jitra' => 'HB-JITRA-SAL- $upperMonth.xlsx',
+          'amanjaya' => 'HB-AMJ-SAL-$upperMonth.xlsx',
+          'astana' => 'HB-ASTANA-SALARY -$upperMonth.xlsx',
+          'gurun' => 'HB-GURUN-SALARY-$upperMonth.xlsx',
+          'langkawi' => 'HB-LKW-SAL -$upperMonth.xlsx',
+          _ => 'HB-${branchKey.replaceFirst('other_', '')}-SAL-'
+              '$upperMonth.xlsx',
+        };
+      }
+
       // ============================================================
       // MONEY HELPER
       // ============================================================
@@ -19965,8 +20030,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         String fileName,
         String sheetName,
         List<String> headers,
-        List<List<dynamic>> rows,
-      ) {
+        List<List<dynamic>> rows, {
+        Set<int> moneyColumns = const <int>{},
+      }) {
         final excel = xls.Excel.createExcel();
 
         final defaultSheet = excel.getDefaultSheet();
@@ -20012,6 +20078,18 @@ class _AdminDashboardState extends State<AdminDashboard>
             rows[r],
             textColumns: textColumns,
           );
+          for (final column in moneyColumns) {
+            final moneyCell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: r + 1,
+              ),
+            );
+            moneyCell.cellStyle =
+                (moneyCell.cellStyle ?? xls.CellStyle()).copyWith(
+              numberFormat: xls.NumFormat.custom(formatCode: '#,##0.00'),
+            );
+          }
         }
 
         final bytes = excel.save(
@@ -20030,6 +20108,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       // ============================================================
 
       final rhb = <List<dynamic>>[];
+      final rhbByBranch = <String, List<List<dynamic>>>{};
 
       final epfLocal = <List<dynamic>>[];
 
@@ -20228,13 +20307,26 @@ class _AdminDashboardState extends State<AdminDashboard>
         // JUMLAH = NET SALARY
         // ----------------------------------------------------------
 
-        rhb.add([
+        final rhbRow = <dynamic>[
           name,
           exportIc,
           bankAccount,
           net,
-          selectedMonth,
-        ]);
+          '',
+          '',
+          'Salary $selectedMonth',
+        ];
+        rhb.add(rhbRow);
+        final payrollBranchId = employee.isNotEmpty
+            ? _payrollBranchIdFromEmployee(employee)
+            : _normalizeBranchValue(
+                payroll['payroll_branch_id'] ?? payroll['branch_id'],
+              );
+        final branchKey = rhbBranchKey(
+          branchId: payrollBranchId,
+          isForeign: isForeign,
+        );
+        rhbByBranch.putIfAbsent(branchKey, () => <List<dynamic>>[]).add(rhbRow);
 
         // ----------------------------------------------------------
         // EPF
@@ -20307,18 +20399,23 @@ class _AdminDashboardState extends State<AdminDashboard>
       // ============================================================
 
       if (only == null || only == 'rhb') {
-        saveExcel(
-          'RHB_Layout_${monthFile}_$exportStamp.xlsx',
-          'RHB Layout',
-          const [
-            'NAME',
-            'NEW_IC_NO',
-            'BANK_ACCOUNT',
-            'JUMLAH',
-            'SELECTED PAYROLL MONTH',
-          ],
-          rhb,
-        );
+        for (final branchExport in rhbByBranch.entries) {
+          saveExcel(
+            rhbFileName(branchExport.key),
+            'RHB Layout',
+            const [
+              'NAME',
+              'NEW_IC_NO',
+              'BANK_ACCOUNT',
+              'JUMLAH',
+              '',
+              '',
+              'SELECTED PAYROLL MONTH',
+            ],
+            branchExport.value,
+            moneyColumns: const {3},
+          );
+        }
       }
 
       // ============================================================
@@ -20401,8 +20498,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               'SOCSO exported ${socsoLocal.length} local and '
               '${socsoForeign.length} foreign employee(s).'
           : only == 'rhb'
-              ? 'RHB Excel exported for $selectedMonth with '
-                  '${rhb.length} employee(s).'
+              ? '${rhbByBranch.length} branch-wise RHB Excel file(s) exported '
+                  'for $selectedMonth with ${rhb.length} employee(s).'
               : '${only.toUpperCase()} Excel exported for $selectedMonth.');
     } catch (e) {
       _message(
