@@ -1059,6 +1059,81 @@ void main() {
       );
     });
 
+    test('searches six months back for a long-vacation normal salary', () {
+      final history = [
+        (
+          period: DateTime(2026, 3),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+        for (var month = 4; month <= 8; month++)
+          (
+            period: DateTime(2026, month),
+            basicSalary: 900.0,
+            attendanceAllowance: 0.0,
+            serviceAllowance: 0.0,
+            diligenceAllowance: 0.0,
+          ),
+        (
+          period: DateTime(2026, 9),
+          basicSalary: 1700.0,
+          attendanceAllowance: 50.0,
+          serviceAllowance: 100.0,
+          diligenceAllowance: 100.0,
+        ),
+      ];
+
+      final comparison =
+          PayrollCalculationService.payrollIncrementComparisonForMonth(
+        history,
+        DateTime(2026, 9),
+      );
+
+      expect(comparison?.previousPeriod, DateTime(2026, 3));
+      expect(comparison?.currentPeriod, DateTime(2026, 9));
+      expect(comparison?.previousBasicSalary, 1700);
+      expect(comparison?.currentAttendanceAllowance, 50);
+      expect(comparison?.amount, 150);
+    });
+
+    test('does not count return from a five-month vacation as an increment',
+        () {
+      final history = [
+        (
+          period: DateTime(2026, 3),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+        for (var month = 4; month <= 8; month++)
+          (
+            period: DateTime(2026, month),
+            basicSalary: 900.0,
+            attendanceAllowance: 0.0,
+            serviceAllowance: 0.0,
+            diligenceAllowance: 0.0,
+          ),
+        (
+          period: DateTime(2026, 9),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+      ];
+
+      expect(
+        PayrollCalculationService.payrollIncrementForMonth(
+          history,
+          DateTime(2026, 9),
+        ),
+        isNull,
+      );
+    });
+
     test('does not count vacation recovery without a genuine increment', () {
       final history = [
         (

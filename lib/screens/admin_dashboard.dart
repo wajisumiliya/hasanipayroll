@@ -13047,6 +13047,149 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  Future<void> _showPayrollIncrementComparisonDialog({
+    required DateTime month,
+    required List<Map<String, dynamic>> increments,
+  }) async {
+    final comparisons = increments
+        .where((item) => item['previous_period'] is DateTime)
+        .toList();
+
+    String valueChange(
+      Map<String, dynamic> item,
+      String previousKey,
+      String currentKey,
+    ) {
+      final previous = _payrollNumber(item[previousKey]);
+      final current = _payrollNumber(item[currentKey]);
+      final difference = current - previous;
+      final sign = difference > 0 ? '+' : '';
+      return 'RM ${previous.toStringAsFixed(2)}  ->  '
+          'RM ${current.toStringAsFixed(2)}\n'
+          '$sign${difference.toStringAsFixed(2)}';
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Increment Comparison - ${DateFormat('MMMM yyyy').format(month)}',
+        ),
+        content: SizedBox(
+          width: 1180,
+          height: MediaQuery.sizeOf(dialogContext).height * .68,
+          child: comparisons.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No calculated increment comparisons were found for this month.',
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingRowColor: const WidgetStatePropertyAll(
+                          Color(0xFFD9EAF7),
+                        ),
+                        columns: const [
+                          DataColumn(label: Text('Employee')),
+                          DataColumn(label: Text('Branch')),
+                          DataColumn(label: Text('Normal Month -> Current')),
+                          DataColumn(label: Text('GAJI')),
+                          DataColumn(label: Text('ELAUN KEDATANGAN')),
+                          DataColumn(label: Text('ELAUN PERKHIDMATAN')),
+                          DataColumn(label: Text('ELAUN KERAJINAN')),
+                          DataColumn(
+                            label: Text('Increment'),
+                            numeric: true,
+                          ),
+                        ],
+                        rows: comparisons.map((item) {
+                          final previousPeriod =
+                              item['previous_period'] as DateTime;
+                          final currentPeriod =
+                              item['current_period'] as DateTime;
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  '${item['employee_name']}\n${item['employee_id']}',
+                                ),
+                              ),
+                              DataCell(Text(item['branch_name'].toString())),
+                              DataCell(
+                                Text(
+                                  '${DateFormat('MMM yyyy').format(previousPeriod)}'
+                                  '  ->  '
+                                  '${DateFormat('MMM yyyy').format(currentPeriod)}',
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  valueChange(
+                                    item,
+                                    'previous_basic_salary',
+                                    'current_basic_salary',
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  valueChange(
+                                    item,
+                                    'previous_attendance_allowance',
+                                    'current_attendance_allowance',
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  valueChange(
+                                    item,
+                                    'previous_service_allowance',
+                                    'current_service_allowance',
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  valueChange(
+                                    item,
+                                    'previous_diligence_allowance',
+                                    'current_diligence_allowance',
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF087F5B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _payrollPage() {
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
@@ -13276,11 +13419,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               diligenceAllowance: _payrollNumber(record['elaun_kerajinan']),
             );
           }).toList();
-          final calculatedCurrentMonth =
-              PayrollCalculationService.payrollIncrementForMonth(
+          final incrementComparison =
+              PayrollCalculationService.payrollIncrementComparisonForMonth(
             history,
             currentPeriod,
           );
+          final calculatedCurrentMonth = incrementComparison?.amount;
           final incDetails =
               salaryDefaultByEmployee[employeeId]?['inc_details'];
           final defaultCurrentMonthAmount =
@@ -13312,6 +13456,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                     : employeeId,
             'branch_name': branchNames[attendanceBranch] ?? attendanceBranch,
             'increment_amount': incrementAmount,
+            if (incrementComparison != null) ...{
+              'previous_period': incrementComparison.previousPeriod,
+              'current_period': incrementComparison.currentPeriod,
+              'previous_basic_salary': incrementComparison.previousBasicSalary,
+              'current_basic_salary': incrementComparison.currentBasicSalary,
+              'previous_attendance_allowance':
+                  incrementComparison.previousAttendanceAllowance,
+              'current_attendance_allowance':
+                  incrementComparison.currentAttendanceAllowance,
+              'previous_service_allowance':
+                  incrementComparison.previousServiceAllowance,
+              'current_service_allowance':
+                  incrementComparison.currentServiceAllowance,
+              'previous_diligence_allowance':
+                  incrementComparison.previousDiligenceAllowance,
+              'current_diligence_allowance':
+                  incrementComparison.currentDiligenceAllowance,
+            },
           });
         }
         monthlyIncrements.sort((a, b) {
@@ -13412,6 +13574,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                       label: Text(
                         'Increment List (${monthlyIncrements.length})',
                       ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: monthlyIncrements.isEmpty
+                          ? null
+                          : () => _showPayrollIncrementComparisonDialog(
+                                month: selectedPayrollMonth,
+                                increments: monthlyIncrements,
+                              ),
+                      icon: const Icon(Icons.compare_arrows_outlined),
+                      label: const Text('Compare Increments'),
                     ),
                     DropdownButton<String>(
                       value: selectedPayrollBranchId,
@@ -18284,7 +18456,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     final incDetails = defaultIncrementDetails?.toString().trim() ?? '';
     // Compare GAJI + ELAUN KEDATANGAN + ELAUN PERKHIDMATAN + ELAUN KERAJINAN
-    // with the highest normal total in the previous three months. Lower or
+    // with the highest normal total in the previous six months. Lower or
     // missing vacation months are skipped by the shared calculation rule.
     final payrollHistory = service.employeePayroll(employeeId);
     final difference = PayrollCalculationService.payrollIncrementForMonth(

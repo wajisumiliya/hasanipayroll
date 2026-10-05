@@ -219,7 +219,7 @@ class PayrollCalculationService {
   /// Returns the genuine increment for [currentPeriod] using the four salary
   /// fields printed in KENAIKAN TERAKHIR.
   ///
-  /// The highest total from the previous three calendar months is used as the
+  /// The highest total from the previous six calendar months is used as the
   /// normal baseline. This skips missing, vacation, unpaid, or partial-pay
   /// months without treating the employee's return to normal pay as a new
   /// increment. Only the company's valid RM50 increment steps, from RM50 to
@@ -235,7 +235,41 @@ class PayrollCalculationService {
             })>
         history,
     DateTime currentPeriod, {
-    int lookbackMonths = 3,
+    int lookbackMonths = 6,
+  }) {
+    return payrollIncrementComparisonForMonth(
+      history,
+      currentPeriod,
+      lookbackMonths: lookbackMonths,
+    )?.amount;
+  }
+
+  /// Returns the exact previous-normal and current values used for an
+  /// increment, allowing Admin to verify which salary fields changed.
+  static ({
+    DateTime previousPeriod,
+    DateTime currentPeriod,
+    double previousBasicSalary,
+    double currentBasicSalary,
+    double previousAttendanceAllowance,
+    double currentAttendanceAllowance,
+    double previousServiceAllowance,
+    double currentServiceAllowance,
+    double previousDiligenceAllowance,
+    double currentDiligenceAllowance,
+    double amount,
+  })? payrollIncrementComparisonForMonth(
+    List<
+            ({
+              DateTime period,
+              double basicSalary,
+              double attendanceAllowance,
+              double serviceAllowance,
+              double diligenceAllowance,
+            })>
+        history,
+    DateTime currentPeriod, {
+    int lookbackMonths = 6,
   }) {
     int monthKey(DateTime value) => value.year * 12 + value.month;
     double incrementBase(
@@ -276,21 +310,43 @@ class PayrollCalculationService {
     final current = byMonth[currentKey];
     if (current == null || lookbackMonths < 1) return null;
 
-    final previousTotals = <double>[];
+    ({
+      DateTime period,
+      double basicSalary,
+      double attendanceAllowance,
+      double serviceAllowance,
+      double diligenceAllowance,
+    })? normalPrevious;
     for (var monthsAgo = 1; monthsAgo <= lookbackMonths; monthsAgo++) {
       final previous = byMonth[currentKey - monthsAgo];
-      if (previous != null) previousTotals.add(incrementBase(previous));
+      if (previous != null &&
+          (normalPrevious == null ||
+              incrementBase(previous) > incrementBase(normalPrevious))) {
+        normalPrevious = previous;
+      }
     }
-    if (previousTotals.isEmpty) return null;
+    if (normalPrevious == null) return null;
 
-    final normalPreviousTotal = previousTotals.reduce(
-      (highest, value) => value > highest ? value : highest,
-    );
     final difference = _roundMoney(
-      incrementBase(current) - normalPreviousTotal,
+      incrementBase(current) - incrementBase(normalPrevious),
     );
     if (!isValidPayrollIncrementAmount(difference)) return null;
-    return difference.roundToDouble();
+    return (
+      previousPeriod: DateTime(
+        normalPrevious.period.year,
+        normalPrevious.period.month,
+      ),
+      currentPeriod: currentMonth,
+      previousBasicSalary: normalPrevious.basicSalary,
+      currentBasicSalary: current.basicSalary,
+      previousAttendanceAllowance: normalPrevious.attendanceAllowance,
+      currentAttendanceAllowance: current.attendanceAllowance,
+      previousServiceAllowance: normalPrevious.serviceAllowance,
+      currentServiceAllowance: current.serviceAllowance,
+      previousDiligenceAllowance: normalPrevious.diligenceAllowance,
+      currentDiligenceAllowance: current.diligenceAllowance,
+      amount: difference.roundToDouble(),
+    );
   }
 
   /// Finds the latest genuine allowance increment.
