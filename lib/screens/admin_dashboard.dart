@@ -19707,11 +19707,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           selectedPayrollMonth,
         ),
       );
-      payrollRows.sort(
-        (a, b) => _normalizeBranchValue(a['employee_id'])
-            .compareTo(_normalizeBranchValue(b['employee_id'])),
-      );
-
       if (payrollRows.isEmpty) {
         _message(
           'No generated payroll found for $selectedMonth.',
@@ -19754,6 +19749,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           employeeMap[id] = employee;
         }
       }
+      payrollRows.sort(
+        (a, b) => _comparePayrollExportRecords(a, b, employeeMap),
+      );
 
       final salaryDefaultsResponse = await SupabaseService.client
           .from('employee_salary_defaults')
@@ -20339,29 +20337,33 @@ class _AdminDashboardState extends State<AdminDashboard>
         // JUMLAH = NET SALARY
         // ----------------------------------------------------------
 
-        final rhbIc = icDigitCount < 12 ? '' : exportIc;
-        final rhbShortIc =
-            icDigitCount < 12 ? ic.replaceAll('-', '').trim() : '';
-        final rhbRow = <dynamic>[
-          name,
-          rhbIc,
-          bankAccount,
-          net,
-          '',
-          rhbShortIc,
-          'Salary $selectedMonth',
-        ];
-        rhb.add(rhbRow);
-        final payrollBranchId = employee.isNotEmpty
-            ? _payrollBranchIdFromEmployee(employee)
-            : _normalizeBranchValue(
-                payroll['payroll_branch_id'] ?? payroll['branch_id'],
-              );
-        final branchKey = rhbBranchKey(
-          branchId: payrollBranchId,
-          isForeign: isForeign,
-        );
-        rhbByBranch.putIfAbsent(branchKey, () => <List<dynamic>>[]).add(rhbRow);
+        if (bankAccount.isNotEmpty) {
+          final rhbIc = icDigitCount < 12 ? '' : exportIc;
+          final rhbShortIc =
+              icDigitCount < 12 ? ic.replaceAll('-', '').trim() : '';
+          final rhbRow = <dynamic>[
+            name,
+            rhbIc,
+            bankAccount,
+            net,
+            '',
+            rhbShortIc,
+            'Salary $selectedMonth',
+          ];
+          rhb.add(rhbRow);
+          final payrollBranchId = employee.isNotEmpty
+              ? _payrollBranchIdFromEmployee(employee)
+              : _normalizeBranchValue(
+                  payroll['payroll_branch_id'] ?? payroll['branch_id'],
+                );
+          final branchKey = rhbBranchKey(
+            branchId: payrollBranchId,
+            isForeign: isForeign,
+          );
+          rhbByBranch
+              .putIfAbsent(branchKey, () => <List<dynamic>>[])
+              .add(rhbRow);
+        }
 
         // ----------------------------------------------------------
         // EPF
@@ -20437,7 +20439,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         for (final branchExport in rhbByBranch.entries) {
           saveExcel(
             rhbFileName(branchExport.key),
-            'RHB Layout',
+            'SALARY',
             const [
               'NAME',
               'NEW_IC_NO',
