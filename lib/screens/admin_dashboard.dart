@@ -20032,6 +20032,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         List<String> headers,
         List<List<dynamic>> rows, {
         Set<int> moneyColumns = const <int>{},
+        bool includeHeader = true,
+        double? rowHeight,
+        double? columnWidth,
+        String? fontFamily,
+        int? fontSize,
       }) {
         final excel = xls.Excel.createExcel();
 
@@ -20056,33 +20061,60 @@ class _AdminDashboardState extends State<AdminDashboard>
               index,
         };
 
-        writeRow(
-          sheet,
-          0,
-          headers,
-        );
-        for (var column = 0; column < headers.length; column++) {
-          final headerCell = sheet.cell(
-            xls.CellIndex.indexByColumnRow(
-              columnIndex: column,
-              rowIndex: 0,
-            ),
-          );
-          headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
+        if (columnWidth != null) {
+          for (var column = 0; column < headers.length; column++) {
+            sheet.setColumnWidth(column, columnWidth);
+          }
         }
 
-        for (var r = 0; r < rows.length; r++) {
+        if (includeHeader) {
           writeRow(
             sheet,
-            r + 1,
+            0,
+            headers,
+          );
+          for (var column = 0; column < headers.length; column++) {
+            final headerCell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(
+                columnIndex: column,
+                rowIndex: 0,
+              ),
+            );
+            headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
+          }
+        }
+
+        final firstDataRow = includeHeader ? 1 : 0;
+        for (var r = 0; r < rows.length; r++) {
+          final rowIndex = firstDataRow + r;
+          writeRow(
+            sheet,
+            rowIndex,
             rows[r],
             textColumns: textColumns,
           );
+          if (rowHeight != null) {
+            sheet.setRowHeight(rowIndex, rowHeight);
+          }
+          if (fontFamily != null || fontSize != null) {
+            for (var column = 0; column < headers.length; column++) {
+              final cell = sheet.cell(
+                xls.CellIndex.indexByColumnRow(
+                  columnIndex: column,
+                  rowIndex: rowIndex,
+                ),
+              );
+              cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+                fontFamilyVal: fontFamily,
+                fontSizeVal: fontSize,
+              );
+            }
+          }
           for (final column in moneyColumns) {
             final moneyCell = sheet.cell(
               xls.CellIndex.indexByColumnRow(
                 columnIndex: column,
-                rowIndex: r + 1,
+                rowIndex: rowIndex,
               ),
             );
             moneyCell.cellStyle =
@@ -20417,6 +20449,11 @@ class _AdminDashboardState extends State<AdminDashboard>
             ],
             branchExport.value,
             moneyColumns: const {3},
+            includeHeader: false,
+            rowHeight: 15,
+            columnWidth: 19.57,
+            fontFamily: 'Calibri',
+            fontSize: 11,
           );
         }
       }
