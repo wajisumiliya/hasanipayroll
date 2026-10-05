@@ -18624,7 +18624,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     final incDetails = defaultIncrementDetails?.toString().trim() ?? '';
     // Compare GAJI + ELAUN KEDATANGAN + ELAUN PERKHIDMATAN + ELAUN KERAJINAN
-    // with the highest normal total in the previous six months. Lower or
+    // with the highest normal total in the previous seven months. Lower or
     // missing vacation months are skipped by the shared calculation rule.
     final payrollHistory = service.employeePayroll(employeeId);
     final difference = PayrollCalculationService.payrollIncrementForMonth(

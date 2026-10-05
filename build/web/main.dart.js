@@ -136445,7 +136445,7 @@ if(p==null)p=""
 o=r.Gx(a)
 r=A.U(o).i("N<1,+attendanceAllowance,basicSalary,diligenceAllowance,period,serviceAllowance(J,J,J,ap,J)>")
 r=A.F(new A.N(o,new A.b31(),r),r.i("am.E"))
-r=A.bKn(r,s,6)
+r=A.bKn(r,s,7)
 n=r==null?j:r.a[0]
 if(n!=null){m=B.e.b3(B.h.j(B.h.a8(A.a6(s),100)),2,"0")
 l=B.o.a7(n,0)
@@ -141387,7 +141387,7 @@ c1=c1==null?d6:J.p(c1)
 c2=A.dJ(c1==null?"":c1)
 if(f.length===0||c2==null)continue
 c3=A.F(new A.ek(new A.T(b3,new A.b22(g,f,c2),c),new A.b1J(g),r),b6)
-c4=A.bKn(c3,c2,6)
+c4=A.bKn(c3,c2,7)
 c1=c4==null
 c5=c1?d6:c4.a[0]
 c6=j.h(0,f)

@@ -219,7 +219,7 @@ class PayrollCalculationService {
   /// Returns the genuine increment for [currentPeriod] using the four salary
   /// fields printed in KENAIKAN TERAKHIR.
   ///
-  /// The highest total from the previous six calendar months is used as the
+  /// The highest total from the previous seven calendar months is used as the
   /// normal baseline. This skips missing, vacation, unpaid, or partial-pay
   /// months without treating the employee's return to normal pay as a new
   /// increment. Only the company's valid RM50 increment steps, from RM50 to
@@ -235,7 +235,7 @@ class PayrollCalculationService {
             })>
         history,
     DateTime currentPeriod, {
-    int lookbackMonths = 6,
+    int lookbackMonths = 7,
   }) {
     return payrollIncrementComparisonForMonth(
       history,
@@ -269,7 +269,7 @@ class PayrollCalculationService {
             })>
         history,
     DateTime currentPeriod, {
-    int lookbackMonths = 6,
+    int lookbackMonths = 7,
   }) {
     int monthKey(DateTime value) => value.year * 12 + value.month;
     double incrementBase(
@@ -361,7 +361,7 @@ class PayrollCalculationService {
   static ({DateTime period, double amount})? latestStableAllowanceIncrement(
     List<({DateTime period, double amount})> history, {
     int stableMonths = 3,
-    int lookbackMonths = 6,
+    int lookbackMonths = 7,
   }) {
     bool sameAmount(double a, double b) => (a - b).abs() <= 0.004;
     int monthKey(DateTime value) => value.year * 12 + value.month;
@@ -415,7 +415,7 @@ class PayrollCalculationService {
             })>
         history, {
     int stableMonths = 3,
-    int lookbackMonths = 6,
+    int lookbackMonths = 7,
   }) {
     // Treat Attendance + Service as one increment value. Otherwise an older
     // increase from one allowance can be counted again in a later month.
