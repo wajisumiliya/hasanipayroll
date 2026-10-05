@@ -11702,13 +11702,10 @@ class _AdminDashboardState extends State<AdminDashboard>
               });
               try {
                 final unpaidDeduction = number('unpaid_deduction');
-                final salaryDeduction =
-                    number('late_deduction') + unpaidDeduction;
                 final result = await AttendancePayrollService
                     .calculateStatutoryContributions(
                   employeeId: selectedId,
                   basicSalary: number('basic_salary'),
-                  salaryDeduction: salaryDeduction,
                   unpaidDeduction: unpaidDeduction,
                 );
                 if (revision != statutoryRevision || !dialogContext.mounted) {

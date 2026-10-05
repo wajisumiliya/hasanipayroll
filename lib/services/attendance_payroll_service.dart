@@ -12,7 +12,7 @@ import 'payroll_calculation_service.dart';
 /// 3. cuti_umum uses the selected PH category: PH x1 when worked, PH-OFF has
 ///    no additional pay, PH-SPL x2 when worked, and PH-GUNTI gives a replacement
 ///    OFF instead of additional public-holiday pay.
-/// 4. Statutory wage = basic_salary - cuti_umum.
+/// 4. For local staff, statutory wage = basic_salary - unpaid_deduction.
 /// 5. If employee_salary_defaults.epf_category = "normal":
 ///      EPF employee = statutory wage x 2%
 ///      EPF employer = statutory wage x 2%
@@ -34,7 +34,7 @@ import 'payroll_calculation_service.dart';
 /// STATUTORY CALCULATION
 ///
 /// basic_salary
-///      - cuti_umum
+///      - unpaid_deduction (CUTI TANPA GAJI)
 ///      = statutory_wage
 ///
 /// statutory_wage -> EPF schedule
@@ -69,7 +69,6 @@ class AttendancePayrollService {
   static Future<Map<String, double>> calculateStatutoryContributions({
     required String employeeId,
     required double basicSalary,
-    required double salaryDeduction,
     required double unpaidDeduction,
   }) async {
     final salaryDefault = await _getSalaryDefault(employeeId);
@@ -79,25 +78,31 @@ class AttendancePayrollService {
       );
     }
 
-    final statutoryWage = _roundMoney(basicSalary - salaryDeduction);
-    if (statutoryWage < 0) {
-      throw Exception('Salary deductions cannot exceed the basic salary.');
-    }
-
     final epfCategory = _normalizeCategory(salaryDefault['epf_category']);
     final eisApplicable = _isApplicable(salaryDefault['eis_applicable']);
     final epfEnabled = _enabledByDefault(salaryDefault['epf_enabled']);
     final eisEnabled = _enabledByDefault(salaryDefault['eis_enabled']);
     final socsoEnabled = _enabledByDefault(salaryDefault['socso_enabled']);
     final socsoCategory = _socsoCategory(salaryDefault['socso_category']);
-    final contributionEligibilityWage =
-        _roundMoney(basicSalary - unpaidDeduction);
+    final foreignMarker = _text(salaryDefault['address']).toUpperCase();
+    final isForeignEmployee =
+        foreignMarker.contains('FRN') || foreignMarker.contains('FOREIGN');
+    final localStatutoryWage = PayrollCalculationService.localStatutoryWage(
+      basicSalary: basicSalary,
+      unpaidDeduction: unpaidDeduction,
+    );
+    if (localStatutoryWage < 0) {
+      throw Exception('Unpaid deduction cannot exceed the basic salary.');
+    }
+    final statutoryWage =
+        isForeignEmployee ? _roundMoney(basicSalary) : localStatutoryWage;
+    final contributionEligibilityWage = localStatutoryWage;
     final contributionsApplicable = contributionEligibilityWage >= 500;
 
-    // Foreign employees (EIS not applicable) calculate EPF and SOCSO from the
-    // full basic salary. EIS-applicable employees use the adjusted wage.
-    final epfWage = eisApplicable ? statutoryWage : _roundMoney(basicSalary);
-    final socsoWage = eisApplicable ? statutoryWage : _roundMoney(basicSalary);
+    // Local EPF, SOCSO and SIP/EIS all use basic salary less CUTI TANPA GAJI.
+    // Preserve the established full-basic calculation for foreign employees.
+    final epfWage = statutoryWage;
+    final socsoWage = statutoryWage;
 
     final _ContributionRow epf;
     if (!contributionsApplicable || !epfEnabled) {
@@ -579,16 +584,23 @@ class AttendancePayrollService {
     // ------------------------------------------------------------------------
     // 3. STATUTORY WAGE
     // ------------------------------------------------------------------------
-    // Per the agreed rule:
-    // basic_salary - cuti_umum = statutory wage.
+    // Local staff rule:
+    // basic_salary - unpaid_deduction = statutory wage for EPF, SOCSO and SIP.
+    // Foreign staff retain their existing contribution basis.
     // ------------------------------------------------------------------------
 
-    final statutoryWage = basicSalary - cutiUmum;
+    final localStatutoryWage = PayrollCalculationService.localStatutoryWage(
+      basicSalary: basicSalary,
+      unpaidDeduction: unpaidDeduction,
+    );
+    final statutoryWage = isForeignEmployee
+        ? _roundMoney(basicSalary - cutiUmum)
+        : localStatutoryWage;
 
     if (statutoryWage < 0) {
       throw Exception(
         'Statutory wage cannot be negative. '
-        'Basic salary: $basicSalary, Cuti Umum: $cutiUmum',
+        'Basic salary: $basicSalary, unpaid deduction: $unpaidDeduction',
       );
     }
 
@@ -600,11 +612,10 @@ class AttendancePayrollService {
         _roundMoney(basicSalary - unpaidDeduction);
     final contributionsApplicable = contributionEligibilityWage >= 500;
 
-    // Foreign employees (EIS not applicable) calculate EPF and SOCSO from
-    // basic salary only. EIS-applicable employees use the adjusted statutory
-    // wage. All contributions are zero below the RM500 eligibility threshold.
-    final epfWage = eisApplicable ? statutoryWage : basicSalary;
-    final socsoWage = eisApplicable ? statutoryWage : basicSalary;
+    // Local EPF, SOCSO and SIP/EIS all use basic salary less CUTI TANPA GAJI.
+    // Foreign EPF and SOCSO retain their existing full-basic calculation.
+    final epfWage = isForeignEmployee ? basicSalary : statutoryWage;
+    final socsoWage = isForeignEmployee ? basicSalary : statutoryWage;
     final _ContributionRow epf;
 
     if (!contributionsApplicable || !epfEnabled) {

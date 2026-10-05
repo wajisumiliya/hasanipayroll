@@ -371,6 +371,27 @@ void main() {
       );
     });
 
+    test('local EPF SOCSO and SIP wage is basic less unpaid deduction', () {
+      expect(
+        PayrollCalculationService.localStatutoryWage(
+          basicSalary: 1700,
+          unpaidDeduction: 56.67,
+        ),
+        1643.33,
+      );
+    });
+
+    test('local statutory wage is unaffected when unpaid deduction is zero',
+        () {
+      expect(
+        PayrollCalculationService.localStatutoryWage(
+          basicSalary: 1700,
+          unpaidDeduction: 0,
+        ),
+        1700,
+      );
+    });
+
     test('FW salary is not double counted with allowances and PH pay', () {
       final gross = PayrollCalculationService.grossEarnings(
         basicSalary: 1700,

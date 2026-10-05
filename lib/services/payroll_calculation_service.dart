@@ -32,6 +32,15 @@ class PayrollCalculationService {
     return basicSalary / calendarDays;
   }
 
+  /// Wage used to calculate a local employee's EPF, SOCSO and SIP/EIS.
+  /// Only CUTI TANPA GAJI reduces the basic salary for statutory purposes.
+  static double localStatutoryWage({
+    required double basicSalary,
+    required double unpaidDeduction,
+  }) {
+    return _roundMoney(basicSalary - unpaidDeduction);
+  }
+
   /// Existing normal-day rate used for short-hours/late deductions.
   /// This remains separate from the calendar-day UNPAID leave rule.
   static double shortageDailyRate({
