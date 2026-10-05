@@ -19673,23 +19673,44 @@ class _AdminDashboardState extends State<AdminDashboard>
       // LOAD PAYROLL
       // ============================================================
 
-      final response = await SupabaseService.client
-          .from('payroll')
-          .select()
-          .order('employee_id');
+      final monthStart = DateTime(
+        selectedPayrollMonth.year,
+        selectedPayrollMonth.month,
+        1,
+      );
+      final nextMonth = DateTime(
+        selectedPayrollMonth.year,
+        selectedPayrollMonth.month + 1,
+        1,
+      );
+      final payrollRows = <Map<String, dynamic>>[];
+      const payrollPageSize = 1000;
+      for (var offset = 0;; offset += payrollPageSize) {
+        final response = await SupabaseService.client
+            .from('payroll')
+            .select()
+            .gte('period', DateFormat('yyyy-MM-dd').format(monthStart))
+            .lt('period', DateFormat('yyyy-MM-dd').format(nextMonth))
+            .order('employee_id')
+            .range(offset, offset + payrollPageSize - 1);
+        final page = List<Map<String, dynamic>>.from(response);
+        payrollRows.addAll(page);
+        if (page.length < payrollPageSize) break;
+      }
 
-      final payrollRows = List<Map<String, dynamic>>.from(response)
-          .where(
-            (row) => _payrollPeriodMatchesMonth(
-              row['period'],
-              selectedPayrollMonth,
-            ),
-          )
-          .toList()
-        ..sort(
-          (a, b) => _normalizeBranchValue(a['employee_id'])
-              .compareTo(_normalizeBranchValue(b['employee_id'])),
-        );
+      // Keep this defensive check for legacy period representations while the
+      // database query ensures historical rows cannot consume Supabase's row
+      // limit before the selected month is reached.
+      payrollRows.removeWhere(
+        (row) => !_payrollPeriodMatchesMonth(
+          row['period'],
+          selectedPayrollMonth,
+        ),
+      );
+      payrollRows.sort(
+        (a, b) => _normalizeBranchValue(a['employee_id'])
+            .compareTo(_normalizeBranchValue(b['employee_id'])),
+      );
 
       if (payrollRows.isEmpty) {
         _message(
@@ -20379,7 +20400,10 @@ class _AdminDashboardState extends State<AdminDashboard>
               'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
               'SOCSO exported ${socsoLocal.length} local and '
               '${socsoForeign.length} foreign employee(s).'
-          : '${only.toUpperCase()} Excel exported for $selectedMonth.');
+          : only == 'rhb'
+              ? 'RHB Excel exported for $selectedMonth with '
+                  '${rhb.length} employee(s).'
+              : '${only.toUpperCase()} Excel exported for $selectedMonth.');
     } catch (e) {
       _message(
         'RHB / statutory Excel export failed: $e',
