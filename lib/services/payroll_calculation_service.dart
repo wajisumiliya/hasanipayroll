@@ -327,8 +327,24 @@ class PayrollCalculationService {
     }
     if (normalPrevious == null) return null;
 
+    // A return month can still be partially paid. Count genuine increases in
+    // each field, but never let vacation-related reductions cancel them.
+    double positiveDifference(double currentValue, double previousValue) =>
+        (currentValue - previousValue).clamp(0.0, double.infinity);
     final difference = _roundMoney(
-      incrementBase(current) - incrementBase(normalPrevious),
+      positiveDifference(current.basicSalary, normalPrevious.basicSalary) +
+          positiveDifference(
+            current.attendanceAllowance,
+            normalPrevious.attendanceAllowance,
+          ) +
+          positiveDifference(
+            current.serviceAllowance,
+            normalPrevious.serviceAllowance,
+          ) +
+          positiveDifference(
+            current.diligenceAllowance,
+            normalPrevious.diligenceAllowance,
+          ),
     );
     if (!isValidPayrollIncrementAmount(difference)) return null;
     return (

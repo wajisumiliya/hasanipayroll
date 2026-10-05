@@ -1133,6 +1133,44 @@ void main() {
       );
     });
 
+    test('detects an increment when the return month is still partial', () {
+      final history = [
+        (
+          period: DateTime(2026, 4),
+          basicSalary: 1700.0,
+          attendanceAllowance: 100.0,
+          serviceAllowance: 50.0,
+          diligenceAllowance: 50.0,
+        ),
+        for (var month = 5; month <= 8; month++)
+          (
+            period: DateTime(2026, month),
+            basicSalary: 900.0,
+            attendanceAllowance: 0.0,
+            serviceAllowance: 0.0,
+            diligenceAllowance: 0.0,
+          ),
+        (
+          period: DateTime(2026, 9),
+          basicSalary: 1700.0,
+          attendanceAllowance: 0.0,
+          serviceAllowance: 250.0,
+          diligenceAllowance: 0.0,
+        ),
+      ];
+
+      final comparison =
+          PayrollCalculationService.payrollIncrementComparisonForMonth(
+        history,
+        DateTime(2026, 9),
+      );
+
+      expect(comparison?.previousPeriod, DateTime(2026, 4));
+      expect(comparison?.previousServiceAllowance, 50);
+      expect(comparison?.currentServiceAllowance, 250);
+      expect(comparison?.amount, 200);
+    });
+
     test('does not count vacation recovery without a genuine increment', () {
       final history = [
         (
