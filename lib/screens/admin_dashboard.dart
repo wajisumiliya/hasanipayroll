@@ -6599,6 +6599,9 @@ class _AdminDashboardState extends State<AdminDashboard>
       'PCB (RM)': makeSalary('pcb'),
       'Zakat (RM)': makeSalary('zakat'),
     };
+    final incrementDetails = TextEditingController(
+      text: salaryDefault['inc_details']?.toString() ?? '',
+    );
     var epfCategory = salaryDefault['epf_category']?.toString().trim() ?? '';
     if (!const {'normal', 'normal1'}.contains(epfCategory)) {
       epfCategory = 'normal1';
@@ -6682,6 +6685,18 @@ class _AdminDashboardState extends State<AdminDashboard>
                             border: const OutlineInputBorder(),
                           ),
                         )),
+                    TextField(
+                      controller: incrementDetails,
+                      enabled: !saving,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Increment Details (inc_details)',
+                        hintText: 'Example: SEPT-26/150',
+                        helperText:
+                            'KENAIKAN TERAKHIR value. Leave empty when not applicable.',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                     DropdownButtonFormField<String>(
                       initialValue: epfCategory,
                       decoration: const InputDecoration(
@@ -6989,6 +7004,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'elaun_makanan': salaryValues['Elaun Makanan (RM)'],
                             'pcb': salaryValues['PCB (RM)'],
                             'zakat': salaryValues['Zakat (RM)'],
+                            'inc_details': incrementDetails.text.trim().isEmpty
+                                ? null
+                                : incrementDetails.text.trim().toUpperCase(),
                             'epf_category': epfCategory,
                             'eis_applicable': eisApplicable,
                             'epf_enabled': epfEnabled,
@@ -7042,6 +7060,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       for (final item in salaryFields.values) {
         item.dispose();
       }
+      incrementDetails.dispose();
     });
   }
 

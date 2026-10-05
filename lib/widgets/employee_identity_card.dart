@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../models/payroll.dart';
+import 'employee_photo.dart';
 
 class EmployeeIdentityCard extends StatefulWidget {
   final Employee employee;
@@ -295,36 +296,23 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(11.5),
-          child: employee.photoUrl.trim().isEmpty
-              ? Container(
-                  color: const Color(0xFFE9EAEC),
-                  alignment: Alignment.center,
-                  child: Text(
-                    employee.name.trim().isEmpty
-                        ? '?'
-                        : employee.name.trim()[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Color(0xFF17191D),
-                      fontSize: 46,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                )
-              : Image.network(
-                  employee.photoUrl,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                  errorBuilder: (_, __, ___) => const ColoredBox(
-                    color: Color(0xFFE9EAEC),
-                    child: Center(
-                      child: Icon(
-                        Icons.person_rounded,
-                        color: Color(0xFF17191D),
-                        size: 52,
-                      ),
-                    ),
-                  ),
+          child: EmployeePhotoImage(
+            photoUrl: employee.photoUrl,
+            fallbackBuilder: (_) => Container(
+              color: const Color(0xFFE9EAEC),
+              alignment: Alignment.center,
+              child: Text(
+                employee.name.trim().isEmpty
+                    ? '?'
+                    : employee.name.trim()[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Color(0xFF17191D),
+                  fontSize: 46,
+                  fontWeight: FontWeight.w900,
                 ),
+              ),
+            ),
+          ),
         ),
       );
 
@@ -861,14 +849,10 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: employee.photoUrl.trim().isEmpty
-            ? fallback()
-            : Image.network(
-                employee.photoUrl,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                errorBuilder: (_, __, ___) => fallback(),
-              ),
+        child: EmployeePhotoImage(
+          photoUrl: employee.photoUrl,
+          fallbackBuilder: (_) => fallback(),
+        ),
       ),
     );
   }
