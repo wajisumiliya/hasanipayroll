@@ -12,6 +12,7 @@ import '../models/payroll.dart';
 import '../services/app_service.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
+import '../services/notification_presenter.dart';
 import 'employee_ot_request_page.dart';
 import 'employee_leave_request_page.dart';
 import 'login_screen.dart';
@@ -92,7 +93,15 @@ class _EmployeePortalState extends State<EmployeePortal>
             column: 'employee_id',
             value: employeeId,
           ),
-          callback: (_) {
+          callback: (payload) {
+            final title =
+                payload.newRecord['title']?.toString() ?? 'Hasani Payroll';
+            final body = payload.newRecord['body']?.toString() ?? '';
+            if (body.isNotEmpty) {
+              unawaited(
+                NotificationPresenter.show(title: title, body: body),
+              );
+            }
             _notificationRealtimeDebounce?.cancel();
             _notificationRealtimeDebounce = Timer(
               const Duration(milliseconds: 500),
@@ -337,9 +346,11 @@ class _EmployeePortalState extends State<EmployeePortal>
                               child: Icon(
                                 type == 'payslip' || type == 'payroll'
                                     ? Icons.receipt_long_outlined
-                                    : title.toLowerCase().contains('leave')
-                                        ? Icons.flight_takeoff_outlined
-                                        : Icons.more_time_outlined,
+                                    : type == 'increment'
+                                        ? Icons.trending_up_outlined
+                                        : title.toLowerCase().contains('leave')
+                                            ? Icons.flight_takeoff_outlined
+                                            : Icons.more_time_outlined,
                                 color: const Color(0xFF08255F),
                               ),
                             ),
@@ -362,12 +373,13 @@ class _EmployeePortalState extends State<EmployeePortal>
                               if (!mounted || !sheetContext.mounted) return;
                               Navigator.pop(sheetContext);
                               item['is_read'] = true;
-                              final destination =
-                                  type == 'payslip' || type == 'payroll'
-                                      ? 1
-                                      : title.toLowerCase().contains('leave')
-                                          ? 3
-                                          : 6;
+                              final destination = type == 'payslip' ||
+                                      type == 'payroll' ||
+                                      type == 'increment'
+                                  ? 1
+                                  : title.toLowerCase().contains('leave')
+                                      ? 3
+                                      : 6;
                               _selectTab(destination);
                             },
                           );

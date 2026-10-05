@@ -1133,12 +1133,19 @@ void main() {
       );
     });
 
-    test('detects an increment when the return month is still partial', () {
+    test('uses each field high for a genuine partial-return increment', () {
       final history = [
+        (
+          period: DateTime(2026, 3),
+          basicSalary: 1700.0,
+          attendanceAllowance: 100.0,
+          serviceAllowance: 100.0,
+          diligenceAllowance: 50.0,
+        ),
         (
           period: DateTime(2026, 4),
           basicSalary: 1700.0,
-          attendanceAllowance: 100.0,
+          attendanceAllowance: 200.0,
           serviceAllowance: 50.0,
           diligenceAllowance: 50.0,
         ),
@@ -1166,9 +1173,9 @@ void main() {
       );
 
       expect(comparison?.previousPeriod, DateTime(2026, 4));
-      expect(comparison?.previousServiceAllowance, 50);
+      expect(comparison?.previousServiceAllowance, 100);
       expect(comparison?.currentServiceAllowance, 250);
-      expect(comparison?.amount, 200);
+      expect(comparison?.amount, 150);
     });
 
     test('does not count vacation recovery without a genuine increment', () {

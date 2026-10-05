@@ -12098,16 +12098,26 @@ class _AdminDashboardState extends State<AdminDashboard>
       final now = DateTime.now().toUtc().toIso8601String();
       await SupabaseService.client.from('payroll').update({
         'is_published': true,
+        'release_at': now,
         'published_at': now,
         'published_by': service.currentUser?.username,
         'updated_at': now,
       }).eq('id', record.id);
       await service.loadPayrollFromSupabase();
+      var notificationWarning = '';
+      try {
+        await NotificationService.sendPayslipAvailable(
+          employeeId: record.employeeId,
+          period: record.period,
+        );
+      } catch (_) {
+        notificationWarning = ' Notification delivery needs attention.';
+      }
       if (!mounted) return;
       setState(() {});
       _message(
-        '${DateFormat('MMMM yyyy').format(record.period)} payslip approved. '
-        'Employees can view it on the 5th at 9:00 PM Malaysia time.',
+        '${DateFormat('MMMM yyyy').format(record.period)} payslip published '
+        'and released to the employee.$notificationWarning',
       );
     } catch (error) {
       if (mounted) _message('Unable to publish payslip: $error');
@@ -13124,7 +13134,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   headers: const [
                     'EMPLOYEE',
                     'ID',
-                    'NORMAL MONTH -> CURRENT',
+                    'NORMAL BASELINE (7M) -> CURRENT',
                     'GAJI',
                     'ELAUN KEDATANGAN',
                     'ELAUN PERKHIDMATAN',
@@ -13137,7 +13147,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     return [
                       item['employee_name'].toString(),
                       item['employee_id'].toString(),
-                      '${DateFormat('MMM-yy').format(previousPeriod)} -> '
+                      '7M BASELINE (REF ${DateFormat('MMM-yy').format(previousPeriod)}) -> '
                           '${DateFormat('MMM-yy').format(currentPeriod)}',
                       comparisonValue(
                         item,
@@ -13255,7 +13265,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                         columns: const [
                           DataColumn(label: Text('Employee')),
                           DataColumn(label: Text('Branch')),
-                          DataColumn(label: Text('Normal Month -> Current')),
+                          DataColumn(
+                            label: Text('Normal Baseline (7M) -> Current'),
+                          ),
                           DataColumn(label: Text('GAJI')),
                           DataColumn(label: Text('ELAUN KEDATANGAN')),
                           DataColumn(label: Text('ELAUN PERKHIDMATAN')),
@@ -13280,7 +13292,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                               DataCell(Text(item['branch_name'].toString())),
                               DataCell(
                                 Text(
-                                  '${DateFormat('MMM yyyy').format(previousPeriod)}'
+                                  '7-month baseline '
+                                  '(ref ${DateFormat('MMM yyyy').format(previousPeriod)})'
                                   '  ->  '
                                   '${DateFormat('MMM yyyy').format(currentPeriod)}',
                                 ),
@@ -13354,6 +13367,204 @@ class _AdminDashboardState extends State<AdminDashboard>
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showSchedulePayslipPublicationDialog({
+    required DateTime month,
+    required int payrollCount,
+    required List<Map<String, dynamic>> increments,
+  }) async {
+    final malaysiaNowUtcFields =
+        DateTime.now().toUtc().add(const Duration(hours: 8));
+    final malaysiaNow = DateTime(
+      malaysiaNowUtcFields.year,
+      malaysiaNowUtcFields.month,
+      malaysiaNowUtcFields.day,
+      malaysiaNowUtcFields.hour,
+      malaysiaNowUtcFields.minute,
+    );
+    final standardRelease = DateTime(month.year, month.month + 1, 5, 21);
+    var releaseTime = standardRelease.isAfter(malaysiaNow)
+        ? standardRelease
+        : malaysiaNow.add(const Duration(minutes: 2));
+    var saving = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setModalState) {
+          Future<void> chooseDate() async {
+            final selected = await showDatePicker(
+              context: dialogContext,
+              initialDate: releaseTime,
+              firstDate: DateTime(
+                malaysiaNow.year,
+                malaysiaNow.month,
+                malaysiaNow.day,
+              ),
+              lastDate: DateTime(malaysiaNow.year + 2, 12, 31),
+              helpText: 'Select Payslip Release Date (Malaysia)',
+            );
+            if (selected == null) return;
+            setModalState(() {
+              releaseTime = DateTime(
+                selected.year,
+                selected.month,
+                selected.day,
+                releaseTime.hour,
+                releaseTime.minute,
+              );
+            });
+          }
+
+          Future<void> chooseTime() async {
+            final selected = await showTimePicker(
+              context: dialogContext,
+              initialTime: TimeOfDay.fromDateTime(releaseTime),
+              helpText: 'Select Payslip Release Time (Malaysia)',
+            );
+            if (selected == null) return;
+            setModalState(() {
+              releaseTime = DateTime(
+                releaseTime.year,
+                releaseTime.month,
+                releaseTime.day,
+                selected.hour,
+                selected.minute,
+              );
+            });
+          }
+
+          Future<void> scheduleRelease() async {
+            final releaseUtc = DateTime.utc(
+              releaseTime.year,
+              releaseTime.month,
+              releaseTime.day,
+              releaseTime.hour,
+              releaseTime.minute,
+            ).subtract(const Duration(hours: 8));
+            if (releaseUtc.isBefore(
+              DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
+            )) {
+              _message('Choose a release time that has not passed.');
+              return;
+            }
+
+            setModalState(() => saving = true);
+            try {
+              final incrementEmployees = increments
+                  .map(
+                    (item) => {
+                      'employee_id': item['employee_id']?.toString().trim(),
+                      'increment_amount':
+                          _payrollNumber(item['increment_amount']),
+                    },
+                  )
+                  .where(
+                    (item) =>
+                        item['employee_id']?.toString().isNotEmpty == true &&
+                        _payrollNumber(item['increment_amount']) > 0,
+                  )
+                  .toList();
+              await SupabaseService.client.rpc(
+                'schedule_monthly_payslip_release',
+                params: {
+                  'p_payroll_month': DateFormat('yyyy-MM-dd')
+                      .format(DateTime(month.year, month.month)),
+                  'p_release_at': releaseUtc.toIso8601String(),
+                  'p_increment_employees': incrementEmployees,
+                },
+              );
+              await service.loadPayrollMonthFromSupabase(month);
+              if (!mounted || !dialogContext.mounted) return;
+              Navigator.of(dialogContext).pop();
+              setState(() {});
+              _message(
+                '$payrollCount payslips scheduled for '
+                '${DateFormat('dd MMM yyyy, hh:mm a').format(releaseTime)} '
+                'Malaysia time. ${incrementEmployees.length} increment '
+                'employee(s) will receive an additional notification.',
+              );
+            } catch (error) {
+              if (dialogContext.mounted) {
+                setModalState(() => saving = false);
+              }
+              if (mounted) {
+                _message('Unable to schedule payslip publication: $error');
+              }
+            }
+          }
+
+          return AlertDialog(
+            title: const Text('Publish Payslips'),
+            content: SizedBox(
+              width: 500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    DateFormat('MMMM yyyy').format(month),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('$payrollCount employee payslip(s) will be published.'),
+                  Text(
+                    '${increments.length} increment employee(s) will also '
+                    'receive an increment notification.',
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Employees cannot view the payslip before this Malaysia '
+                    'release time. Both notifications are released together.',
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 10,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: saving ? null : chooseDate,
+                        icon: const Icon(Icons.calendar_month_outlined),
+                        label:
+                            Text(DateFormat('dd MMM yyyy').format(releaseTime)),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: saving ? null : chooseTime,
+                        icon: const Icon(Icons.schedule_outlined),
+                        label: Text(DateFormat('hh:mm a').format(releaseTime)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed:
+                    saving ? null : () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton.icon(
+                onPressed: saving ? null : scheduleRelease,
+                icon: saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.publish_outlined),
+                label: Text(saving ? 'Scheduling...' : 'Confirm Publish'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -13550,20 +13761,12 @@ class _AdminDashboardState extends State<AdminDashboard>
             _normalizeBranchValue(employee['employee_id']): employee,
         };
         final incrementPayrollRecords = payrollRecords.where((record) {
-          if (!_payrollPeriodMatchesMonth(
+          return _payrollPeriodMatchesMonth(
             record['period'],
             selectedPayrollMonth,
-          )) {
-            return false;
-          }
-          if (selectedPayrollBranchId == null) return true;
-          final employeeId = _normalizeBranchValue(record['employee_id']);
-          final attendanceBranch = attendanceBranchByEmployee[employeeId] ??
-              employeeBranchById[employeeId] ??
-              _normalizeBranchValue(record['branch_id']);
-          return attendanceBranch == selectedPayrollBranchId;
+          );
         }).toList();
-        final monthlyIncrements = <Map<String, dynamic>>[];
+        final allMonthlyIncrements = <Map<String, dynamic>>[];
         for (final current in incrementPayrollRecords) {
           final employeeId = _normalizeBranchValue(current['employee_id']);
           final currentPeriod =
@@ -13616,13 +13819,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           final attendanceBranch = attendanceBranchByEmployee[employeeId] ??
               employeeBranchById[employeeId] ??
               _normalizeBranchValue(current['branch_id']);
-          monthlyIncrements.add({
+          allMonthlyIncrements.add({
             'employee_id': employeeId,
             'employee_name':
                 employee['name']?.toString().trim().isNotEmpty == true
                     ? employee['name'].toString().trim()
                     : employeeId,
             'branch_name': branchNames[attendanceBranch] ?? attendanceBranch,
+            'branch_id': attendanceBranch,
             'increment_amount': incrementAmount,
             if (incrementComparison != null) ...{
               'previous_period': incrementComparison.previousPeriod,
@@ -13644,7 +13848,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             },
           });
         }
-        monthlyIncrements.sort((a, b) {
+        allMonthlyIncrements.sort((a, b) {
           final branchComparison = a['branch_name']
               .toString()
               .toLowerCase()
@@ -13656,6 +13860,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                   .toLowerCase()
                   .compareTo(b['employee_name'].toString().toLowerCase());
         });
+        final monthlyIncrements = selectedPayrollBranchId == null
+            ? allMonthlyIncrements
+            : allMonthlyIncrements
+                .where(
+                  (item) => item['branch_id'] == selectedPayrollBranchId,
+                )
+                .toList();
 
         double totalPayroll = 0;
         for (final payroll in visiblePayrollRecords) {
@@ -13732,6 +13943,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                       label: Text(
                         DateFormat('MMMM yyyy').format(selectedPayrollMonth),
                       ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: incrementPayrollRecords.isEmpty
+                          ? null
+                          : () => _showSchedulePayslipPublicationDialog(
+                                month: selectedPayrollMonth,
+                                payrollCount: incrementPayrollRecords.length,
+                                increments: allMonthlyIncrements,
+                              ),
+                      icon: const Icon(Icons.publish_outlined),
+                      label: const Text('Publish Payslips'),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => _showPayrollIncrementListDialog(

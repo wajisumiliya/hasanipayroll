@@ -219,11 +219,11 @@ class PayrollCalculationService {
   /// Returns the genuine increment for [currentPeriod] using the four salary
   /// fields printed in KENAIKAN TERAKHIR.
   ///
-  /// The highest total from the previous seven calendar months is used as the
-  /// normal baseline. This skips missing, vacation, unpaid, or partial-pay
-  /// months without treating the employee's return to normal pay as a new
-  /// increment. Only the company's valid RM50 increment steps, from RM50 to
-  /// RM1,000, are accepted.
+  /// The highest normal value of each field from the previous seven calendar
+  /// months is used as its baseline. This skips missing, vacation, unpaid, or
+  /// partial-pay values and avoids choosing a single month whose allowance mix
+  /// may not represent the employee's genuine pre-increment salary. Only the
+  /// company's valid RM50 increment steps, from RM50 to RM1,000, are accepted.
   static double? payrollIncrementForMonth(
     List<
             ({
@@ -317,33 +317,65 @@ class PayrollCalculationService {
       double serviceAllowance,
       double diligenceAllowance,
     })? normalPrevious;
+    final previousEntries = <({
+      DateTime period,
+      double basicSalary,
+      double attendanceAllowance,
+      double serviceAllowance,
+      double diligenceAllowance,
+    })>[];
     for (var monthsAgo = 1; monthsAgo <= lookbackMonths; monthsAgo++) {
       final previous = byMonth[currentKey - monthsAgo];
-      if (previous != null &&
-          (normalPrevious == null ||
-              incrementBase(previous) > incrementBase(normalPrevious))) {
-        normalPrevious = previous;
+      if (previous != null) {
+        previousEntries.add(previous);
+        if (normalPrevious == null ||
+            incrementBase(previous) > incrementBase(normalPrevious)) {
+          normalPrevious = previous;
+        }
       }
     }
     if (normalPrevious == null) return null;
+
+    double highestPrevious(
+      double Function(
+        ({
+          DateTime period,
+          double basicSalary,
+          double attendanceAllowance,
+          double serviceAllowance,
+          double diligenceAllowance,
+        }) entry,
+      ) valueOf,
+    ) =>
+        previousEntries
+            .map(valueOf)
+            .reduce((highest, value) => value > highest ? value : highest);
+
+    final previousBasicSalary = highestPrevious((entry) => entry.basicSalary);
+    final previousAttendanceAllowance =
+        highestPrevious((entry) => entry.attendanceAllowance);
+    final previousServiceAllowance =
+        highestPrevious((entry) => entry.serviceAllowance);
+    final previousDiligenceAllowance =
+        highestPrevious((entry) => entry.diligenceAllowance);
 
     // A return month can still be partially paid. Count genuine increases in
     // each field, but never let vacation-related reductions cancel them.
     double positiveDifference(double currentValue, double previousValue) =>
         (currentValue - previousValue).clamp(0.0, double.infinity);
     final difference = _roundMoney(
-      positiveDifference(current.basicSalary, normalPrevious.basicSalary) +
+      positiveDifference(current.basicSalary, previousBasicSalary) +
           positiveDifference(
             current.attendanceAllowance,
-            normalPrevious.attendanceAllowance,
+            previousAttendanceAllowance,
           ) +
           positiveDifference(
             current.serviceAllowance,
-            normalPrevious.serviceAllowance,
+            previousServiceAllowance,
           ) +
           positiveDifference(
             current.diligenceAllowance,
-            normalPrevious.diligenceAllowance,
+            previousDiligenceAllowance,
           ),
     );
     if (!isValidPayrollIncrementAmount(difference)) return null;
@@ -353,13 +385,13 @@ class PayrollCalculationService {
         normalPrevious.period.month,
       ),
       currentPeriod: currentMonth,
-      previousBasicSalary: normalPrevious.basicSalary,
+      previousBasicSalary: previousBasicSalary,
       currentBasicSalary: current.basicSalary,
-      previousAttendanceAllowance: normalPrevious.attendanceAllowance,
+      previousAttendanceAllowance: previousAttendanceAllowance,
       currentAttendanceAllowance: current.attendanceAllowance,
-      previousServiceAllowance: normalPrevious.serviceAllowance,
+      previousServiceAllowance: previousServiceAllowance,
       currentServiceAllowance: current.serviceAllowance,
-      previousDiligenceAllowance: normalPrevious.diligenceAllowance,
+      previousDiligenceAllowance: previousDiligenceAllowance,
       currentDiligenceAllowance: current.diligenceAllowance,
       amount: difference.roundToDouble(),
     );
