@@ -13047,6 +13047,164 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  Future<void> _printPayrollIncrementComparison({
+    required DateTime month,
+    required List<Map<String, dynamic>> increments,
+  }) async {
+    final comparisons = increments
+        .where((item) => item['previous_period'] is DateTime)
+        .toList();
+    if (comparisons.isEmpty) {
+      _message('No calculated increment comparisons are available to print.');
+      return;
+    }
+
+    final printedAt = DateTime.now();
+    final logo = await _loadHasaniBooksPdfLogo();
+    final document = pw.Document();
+    final groupedByBranch = <String, List<Map<String, dynamic>>>{};
+    for (final item in comparisons) {
+      final branch = item['branch_name']?.toString().trim() ?? '';
+      groupedByBranch
+          .putIfAbsent(branch.isEmpty ? 'UNASSIGNED BRANCH' : branch, () => [])
+          .add(item);
+    }
+    final orderedBranches = groupedByBranch.keys.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    String comparisonValue(
+      Map<String, dynamic> item,
+      String previousKey,
+      String currentKey,
+    ) {
+      final previous = _payrollNumber(item[previousKey]);
+      final current = _payrollNumber(item[currentKey]);
+      final difference = current - previous;
+      final sign = difference > 0 ? '+' : '';
+      return '${previous.toStringAsFixed(2)} -> ${current.toStringAsFixed(2)}\n'
+          '($sign${difference.toStringAsFixed(2)})';
+    }
+
+    document.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.fromLTRB(24, 24, 24, 26),
+        header: (_) => pw.Column(
+          children: [
+            _brandedPdfHeader(
+              'EMPLOYEE INCREMENT COMPARISON',
+              month,
+              printedAt,
+              logo,
+            ),
+            pw.SizedBox(height: 10),
+          ],
+        ),
+        footer: (_) => _brandedPdfFooter(printedAt),
+        build: (_) => orderedBranches
+            .expand<pw.Widget>(
+              (branch) => [
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  color: PdfColors.blue100,
+                  child: pw.Text(
+                    branch.toUpperCase(),
+                    style: pw.TextStyle(
+                      color: PdfColors.blue900,
+                      fontSize: 13,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+                pw.TableHelper.fromTextArray(
+                  headers: const [
+                    'EMPLOYEE',
+                    'ID',
+                    'NORMAL MONTH -> CURRENT',
+                    'GAJI',
+                    'ELAUN KEDATANGAN',
+                    'ELAUN PERKHIDMATAN',
+                    'ELAUN KERAJINAN',
+                    'INCREMENT',
+                  ],
+                  data: groupedByBranch[branch]!.map((item) {
+                    final previousPeriod = item['previous_period'] as DateTime;
+                    final currentPeriod = item['current_period'] as DateTime;
+                    return [
+                      item['employee_name'].toString(),
+                      item['employee_id'].toString(),
+                      '${DateFormat('MMM-yy').format(previousPeriod)} -> '
+                          '${DateFormat('MMM-yy').format(currentPeriod)}',
+                      comparisonValue(
+                        item,
+                        'previous_basic_salary',
+                        'current_basic_salary',
+                      ),
+                      comparisonValue(
+                        item,
+                        'previous_attendance_allowance',
+                        'current_attendance_allowance',
+                      ),
+                      comparisonValue(
+                        item,
+                        'previous_service_allowance',
+                        'current_service_allowance',
+                      ),
+                      comparisonValue(
+                        item,
+                        'previous_diligence_allowance',
+                        'current_diligence_allowance',
+                      ),
+                      'RM ${_payrollNumber(item['increment_amount']).toStringAsFixed(2)}',
+                    ];
+                  }).toList(),
+                  columnWidths: const {
+                    0: pw.FlexColumnWidth(1.8),
+                    1: pw.FlexColumnWidth(.9),
+                    2: pw.FlexColumnWidth(1.25),
+                    3: pw.FlexColumnWidth(1.15),
+                    4: pw.FlexColumnWidth(1.25),
+                    5: pw.FlexColumnWidth(1.25),
+                    6: pw.FlexColumnWidth(1.25),
+                    7: pw.FlexColumnWidth(.9),
+                  },
+                  headerStyle: pw.TextStyle(
+                    fontSize: 7,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  headerDecoration:
+                      const pw.BoxDecoration(color: PdfColors.grey200),
+                  cellStyle: const pw.TextStyle(fontSize: 7),
+                  cellAlignment: pw.Alignment.center,
+                  cellPadding: const pw.EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 5,
+                  ),
+                  border: pw.TableBorder.all(
+                    color: PdfColors.grey500,
+                    width: .5,
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+              ],
+            )
+            .toList(),
+      ),
+    );
+
+    await Printing.layoutPdf(
+      name: 'Increment_Comparison_${DateFormat('yyyy_MM').format(month)}.pdf',
+      format: PdfPageFormat.a4.landscape,
+      dynamicLayout: false,
+      forceCustomPrintPaper: true,
+      onLayout: (_) => document.save(),
+    );
+  }
+
   Future<void> _showPayrollIncrementComparisonDialog({
     required DateTime month,
     required List<Map<String, dynamic>> increments,
@@ -13181,6 +13339,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
         ),
         actions: [
+          FilledButton.icon(
+            onPressed: comparisons.isEmpty
+                ? null
+                : () => _printPayrollIncrementComparison(
+                      month: month,
+                      increments: increments,
+                    ),
+            icon: const Icon(Icons.print_outlined),
+            label: const Text('Print A4 Landscape'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Close'),
