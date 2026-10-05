@@ -20307,13 +20307,16 @@ class _AdminDashboardState extends State<AdminDashboard>
         // JUMLAH = NET SALARY
         // ----------------------------------------------------------
 
+        final rhbIc = icDigitCount < 12 ? '' : exportIc;
+        final rhbShortIc =
+            icDigitCount < 12 ? ic.replaceAll('-', '').trim() : '';
         final rhbRow = <dynamic>[
           name,
-          exportIc,
+          rhbIc,
           bankAccount,
           net,
           '',
-          '',
+          rhbShortIc,
           'Salary $selectedMonth',
         ];
         rhb.add(rhbRow);
