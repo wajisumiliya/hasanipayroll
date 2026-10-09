@@ -31,6 +31,7 @@ void main() {
       department: 'Operations',
       section: 'Retail',
       branchId: 'SUNGAI PETANI',
+      isForeignEmployee: false,
       month: DateTime(2026, 9),
       days: days,
     );

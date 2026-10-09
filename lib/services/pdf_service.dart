@@ -40,7 +40,9 @@ class PdfService {
         0, (sum, record) => sum + _overtimeHours(record));
     final isForeignEmployee = _isForeignAddress(employee.address);
     final requiredWorkMinutes = isForeignEmployee ? 630 : 450;
-    final unpaidMinutes = monthlyAttendance.fold<int>(0, (sum, record) {
+    // Payslip UNPAID hours combine explicit unpaid-day hours and the
+    // late/short hours used for the local employee deduction.
+    final unpaidAndLateMinutes = monthlyAttendance.fold<int>(0, (sum, record) {
       if (_unpaid(record)) return sum + requiredWorkMinutes;
       // Foreign employees are not governed by the working-hours shortage
       // rule. Only attendance explicitly marked UNPAID is shown here.
@@ -49,7 +51,7 @@ class PdfService {
       final shortage = requiredWorkMinutes - _workMinutes(record);
       return sum + (shortage > 0 ? shortage : 0);
     });
-    final unpaidHours = unpaidMinutes / 60.0;
+    final unpaidHours = unpaidAndLateMinutes / 60.0;
 
     final income = <String, double>{
       'BASIC PAY': p.basicSalary,
@@ -443,6 +445,14 @@ class PdfService {
   }
 
   static int _workMinutes(AttendanceRecord record) {
+    final fullDay = _timeRangeMinutes(record.checkIn, record.checkOut);
+    if (fullDay > 0) {
+      final recordedBreaks =
+          _timeRangeMinutes(record.morningIn, record.morningOut) +
+              _timeRangeMinutes(record.afternoonIn, record.afternoonOut) +
+              _timeRangeMinutes(record.overtimeIn, record.overtimeOut);
+      return (fullDay - recordedBreaks).clamp(0, 24 * 60);
+    }
     final morning = _timeRangeMinutes(record.morningIn, record.morningOut);
     final afternoon =
         _timeRangeMinutes(record.afternoonIn, record.afternoonOut);
@@ -460,6 +470,9 @@ class PdfService {
   }
 
   static double _overtimeHours(AttendanceRecord record) {
+    if (record.approvedOtMinutes > 0) {
+      return record.approvedOtMinutes / 60.0;
+    }
     if (!record.otAuthorized) return 0;
     final start = _minutes(record.overtimeIn);
     final end = _minutes(record.overtimeOut);

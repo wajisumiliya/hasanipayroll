@@ -673,6 +673,7 @@ class AttendanceRecord {
   final String overtimeOut;
 
   final bool otAuthorized;
+  final int approvedOtMinutes;
 
   final String branchId;
 
@@ -690,6 +691,7 @@ class AttendanceRecord {
     this.overtimeIn = '',
     this.overtimeOut = '',
     this.otAuthorized = false,
+    this.approvedOtMinutes = 0,
     this.branchId = '',
   });
 
@@ -739,6 +741,7 @@ class AttendanceRecord {
     String? overtimeIn,
     String? overtimeOut,
     bool? otAuthorized,
+    int? approvedOtMinutes,
     String? branchId,
   }) {
     return AttendanceRecord(
@@ -755,6 +758,7 @@ class AttendanceRecord {
       overtimeIn: overtimeIn ?? this.overtimeIn,
       overtimeOut: overtimeOut ?? this.overtimeOut,
       otAuthorized: otAuthorized ?? this.otAuthorized,
+      approvedOtMinutes: approvedOtMinutes ?? this.approvedOtMinutes,
       branchId: branchId ?? this.branchId,
     );
   }
@@ -782,6 +786,7 @@ class AttendanceRecord {
       'overtimeIn': overtimeIn,
       'overtimeOut': overtimeOut,
       'otAuthorized': otAuthorized,
+      'approvedOtMinutes': approvedOtMinutes,
 
       'branchId': branchId,
     };
@@ -840,6 +845,9 @@ class AttendanceRecord {
         json['otAuthorized'] ?? json['ot_authorized'],
         defaultValue: false,
       ),
+      approvedOtMinutes: _doubleValue(
+        json['approvedOtMinutes'] ?? json['approved_ot_minutes'],
+      ).round(),
       branchId: _stringValue(
         json['branchId'] ?? json['branch_id'],
       ),

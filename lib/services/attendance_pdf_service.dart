@@ -54,6 +54,7 @@ class AttendancePdfService {
     required String department,
     required String section,
     required String branchId,
+    required bool isForeignEmployee,
     required DateTime month,
     required List<AttendancePrintDay> days,
   }) async {
@@ -72,6 +73,14 @@ class AttendancePdfService {
     final netTotal = days.fold<int>(0, (sum, day) => sum + day.netMinutes);
     final otTotal = days.fold<int>(0, (sum, day) => sum + day.overtimeMinutes);
     final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
+    final offDays = days
+        .where((day) => day.status.trim().toUpperCase() == 'OFF')
+        .length;
+    final assignedTotal = _assignedMinutes(
+      daysInMonth: days.length,
+      offDays: offDays,
+      isForeignEmployee: isForeignEmployee,
+    );
 
     document.addPage(
       pw.Page(
@@ -102,6 +111,9 @@ class AttendancePdfService {
                       PdfColors.black),
                   pw.SizedBox(width: 5),
                   _summary('LATE HOURS', 'After roster start', lateTotal,
+                      PdfColors.black),
+                  pw.SizedBox(width: 5),
+                  _summary('ASSIGNED HOURS', 'Monthly target', assignedTotal,
                       PdfColors.black),
                 ],
               ),
@@ -449,4 +461,18 @@ class AttendancePdfService {
       value.trim().isEmpty ? '-' : value.trim();
   static String _duration(int minutes) =>
       '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
+
+  static int _assignedMinutes({
+    required int daysInMonth,
+    required int offDays,
+    required bool isForeignEmployee,
+  }) {
+    if (isForeignEmployee &&
+        offDays == 2 &&
+        (daysInMonth == 30 || daysInMonth == 31)) {
+      return (288 * 60) + 40;
+    }
+    final dailyMinutes = isForeignEmployee ? 630 : 450;
+    return (daysInMonth - offDays).clamp(0, daysInMonth) * dailyMinutes;
+  }
 }

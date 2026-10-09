@@ -1099,14 +1099,26 @@ class AppService extends ChangeNotifier {
       branchId:
           data['branch_id']?.toString() ?? data['branchId']?.toString() ?? '',
       date: _supabaseDate(
-            data['date'],
+            data['date'] ?? data['attendance_date'],
           ) ??
           DateTime.now(),
-      checkIn:
-          data['check_in']?.toString() ?? data['checkIn']?.toString() ?? '-',
-      checkOut:
-          data['check_out']?.toString() ?? data['checkOut']?.toString() ?? '-',
+      checkIn: data['working_in']?.toString() ??
+          data['check_in']?.toString() ??
+          data['checkIn']?.toString() ??
+          '-',
+      checkOut: data['working_out']?.toString() ??
+          data['check_out']?.toString() ??
+          data['checkOut']?.toString() ??
+          '-',
       status: data['status']?.toString() ?? 'Present',
+      morningIn: data['morning_in']?.toString() ?? '',
+      morningOut: data['morning_out']?.toString() ?? '',
+      afternoonIn: data['afternoon_in']?.toString() ?? '',
+      afternoonOut: data['afternoon_out']?.toString() ?? '',
+      overtimeIn: data['overtime_in']?.toString() ?? '',
+      overtimeOut: data['overtime_out']?.toString() ?? '',
+      otAuthorized: data['ot_authorized'] == true,
+      approvedOtMinutes: _doubleValue(data['approved_ot_minutes']).round(),
     );
   }
 

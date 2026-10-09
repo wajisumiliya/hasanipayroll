@@ -984,6 +984,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         department: _department(),
         section: _section(),
         branchId: widget.branchId,
+        isForeignEmployee: !_isLocalStaff,
         month: widget.month,
         days: days,
       );

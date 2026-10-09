@@ -462,6 +462,7 @@ class AttendancePayrollService {
     int publicHolidaySpecialDays = 0;
     int publicHolidayReplacementDays = 0;
     int approvedOtDays = 0;
+    int foreignWorkedOffDays = 0;
 
     for (final row in attendance) {
       final workMinutes = _attendanceNetMinutes(row);
@@ -483,6 +484,10 @@ class AttendancePayrollService {
           const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GUNTI'}
               .contains(attendanceStatus);
       final worked = workMinutes > 0;
+
+      if (isForeignEmployee && attendanceStatus == 'OFF' && worked) {
+        foreignWorkedOffDays++;
+      }
 
       // --------------------------------------------------------------
       // UNPAID DAY
@@ -575,6 +580,10 @@ class AttendancePayrollService {
       unpaidDailySalary * unpaidDays,
     );
 
+    if (isForeignEmployee && foreignWorkedOffDays > 0) {
+      totalOvertimeAmount +=
+          (basicSalary / 28.0) * foreignWorkedOffDays;
+    }
     final overtimeAmount = PayrollCalculationService.roundPayrollAmount(
       totalOvertimeAmount,
     );
@@ -750,6 +759,7 @@ class AttendancePayrollService {
               'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
               'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
               'Approved OT days: $approvedOtDays. '
+              'Foreign worked OFF days: $foreignWorkedOffDays. '
               'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
               'Public holidays worked: $publicHolidayWorkedDays. '
               'Public holiday off days: $publicHolidayOffDays. '
