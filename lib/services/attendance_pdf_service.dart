@@ -73,6 +73,11 @@ class AttendancePdfService {
     final netTotal = days.fold<int>(0, (sum, day) => sum + day.netMinutes);
     final otTotal = days.fold<int>(0, (sum, day) => sum + day.overtimeMinutes);
     final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
+    final unpaidTotal = days.where((day) {
+          final status = day.status.trim().toUpperCase();
+          return status == 'UNPAID' || status == 'UNPAID LEAVE';
+        }).length *
+        450;
     final offDays = days
         .where((day) => day.status.trim().toUpperCase() == 'OFF')
         .length;
@@ -99,21 +104,24 @@ class AttendancePdfService {
               pw.SizedBox(height: 8),
               pw.Row(
                 children: [
+                  _summary('ASSIGNED HOURS', 'Monthly target', assignedTotal,
+                      PdfColors.black),
+                  pw.SizedBox(width: 5),
                   _summary(
                       'GROSS WORK', 'Check-out - Check-in', workTotal, _blue),
                   pw.SizedBox(width: 5),
                   _summary(
                       'BREAK HOURS', 'All recorded breaks', breakTotal, _red),
                   pw.SizedBox(width: 5),
-                  _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
-                  pw.SizedBox(width: 5),
-                  _summary('APPROVED OT', 'Authorized overtime', otTotal,
-                      PdfColors.black),
-                  pw.SizedBox(width: 5),
                   _summary('LATE HOURS', 'After roster start', lateTotal,
                       PdfColors.black),
                   pw.SizedBox(width: 5),
-                  _summary('ASSIGNED HOURS', 'Monthly target', assignedTotal,
+                  _summary('UNPAID HOURS', '7:30 per unpaid day', unpaidTotal,
+                      PdfColors.black),
+                  pw.SizedBox(width: 5),
+                  _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
+                  pw.SizedBox(width: 5),
+                  _summary('APPROVED OT', 'Authorized overtime', otTotal,
                       PdfColors.black),
                 ],
               ),

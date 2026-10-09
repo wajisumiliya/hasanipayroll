@@ -32,26 +32,54 @@ class PdfService {
     final month = DateFormat('MMMM, yyyy').format(p.period);
     final monthlyAttendance = attendance
         .where((record) =>
-            record.employeeId == p.employeeId &&
+            record.employeeId.trim().toUpperCase() ==
+                p.employeeId.trim().toUpperCase() &&
             record.date.year == p.period.year &&
             record.date.month == p.period.month)
         .toList();
-    final overtimeHours = monthlyAttendance.fold<double>(
+    var overtimeHours = monthlyAttendance.fold<double>(
         0, (sum, record) => sum + _overtimeHours(record));
     final isForeignEmployee = _isForeignAddress(employee.address);
     final requiredWorkMinutes = isForeignEmployee ? 630 : 450;
-    // Payslip UNPAID hours combine explicit unpaid-day hours and the
-    // late/short hours used for the local employee deduction.
-    final unpaidAndLateMinutes = monthlyAttendance.fold<int>(0, (sum, record) {
-      if (_unpaid(record)) return sum + requiredWorkMinutes;
-      // Foreign employees are not governed by the working-hours shortage
-      // rule. Only attendance explicitly marked UNPAID is shown here.
-      if (isForeignEmployee) return sum;
-      if (!_worked(record)) return sum;
+    final calendarDays = DateTime(p.period.year, p.period.month + 1, 0).day;
+    final unpaidDailyRate =
+        p.basicSalary > 0 ? p.basicSalary / calendarDays : 0.0;
+    final payrollUnpaidDays = unpaidDailyRate > 0
+        ? (p.unpaidLeave / unpaidDailyRate).round().clamp(0, calendarDays)
+        : 0;
+    final attendanceUnpaidDays =
+        monthlyAttendance.where(_unpaid).length.clamp(0, calendarDays);
+    final unpaidDays = payrollUnpaidDays > attendanceUnpaidDays
+        ? payrollUnpaidDays
+        : attendanceUnpaidDays;
+
+    final attendanceLateMinutes = monthlyAttendance.fold<int>(0, (sum, record) {
+      if (isForeignEmployee || _unpaid(record) || !_worked(record)) return sum;
       final shortage = requiredWorkMinutes - _workMinutes(record);
       return sum + (shortage > 0 ? shortage : 0);
     });
+    final shortageHourlyRate = !isForeignEmployee && p.basicSalary > 0
+        ? (p.basicSalary / 26.0) / (requiredWorkMinutes / 60.0)
+        : 0.0;
+    final payrollLateMinutes = shortageHourlyRate > 0
+        ? ((p.lateDeduction / shortageHourlyRate) * 60).round()
+        : 0;
+    final lateMinutes = payrollLateMinutes > 0
+        ? payrollLateMinutes
+        : attendanceLateMinutes;
+    final unpaidAndLateMinutes =
+        (unpaidDays * requiredWorkMinutes) + lateMinutes;
     final unpaidHours = unpaidAndLateMinutes / 60.0;
+
+    // Older cached attendance could omit approval minutes. When payroll has
+    // a local OT amount, retain a monetary fallback so the payslip never shows
+    // zero hours for paid overtime.
+    if (overtimeHours <= 0 && !isForeignEmployee && p.overtime > 0) {
+      final hourlyOtRate = p.basicSalary > 0
+          ? (p.basicSalary / 26.0 / (requiredWorkMinutes / 60.0)) * 1.5
+          : 0.0;
+      if (hourlyOtRate > 0) overtimeHours = p.overtime / hourlyOtRate;
+    }
 
     final income = <String, double>{
       'BASIC PAY': p.basicSalary,
@@ -470,8 +498,12 @@ class PdfService {
   }
 
   static double _overtimeHours(AttendanceRecord record) {
-    if (record.approvedOtMinutes > 0) {
-      return record.approvedOtMinutes / 60.0;
+    final approvedMinutes = record.approvedOtMinutes;
+    if (approvedMinutes != null) {
+      return approvedMinutes > 0 ? approvedMinutes / 60.0 : 0;
+    }
+    if (record.overtimeMinutes > 0) {
+      return record.overtimeMinutes / 60.0;
     }
     if (!record.otAuthorized) return 0;
     final start = _minutes(record.overtimeIn);

@@ -673,7 +673,8 @@ class AttendanceRecord {
   final String overtimeOut;
 
   final bool otAuthorized;
-  final int approvedOtMinutes;
+  final int? approvedOtMinutes;
+  final int overtimeMinutes;
 
   final String branchId;
 
@@ -691,7 +692,8 @@ class AttendanceRecord {
     this.overtimeIn = '',
     this.overtimeOut = '',
     this.otAuthorized = false,
-    this.approvedOtMinutes = 0,
+    this.approvedOtMinutes,
+    this.overtimeMinutes = 0,
     this.branchId = '',
   });
 
@@ -742,6 +744,7 @@ class AttendanceRecord {
     String? overtimeOut,
     bool? otAuthorized,
     int? approvedOtMinutes,
+    int? overtimeMinutes,
     String? branchId,
   }) {
     return AttendanceRecord(
@@ -759,6 +762,7 @@ class AttendanceRecord {
       overtimeOut: overtimeOut ?? this.overtimeOut,
       otAuthorized: otAuthorized ?? this.otAuthorized,
       approvedOtMinutes: approvedOtMinutes ?? this.approvedOtMinutes,
+      overtimeMinutes: overtimeMinutes ?? this.overtimeMinutes,
       branchId: branchId ?? this.branchId,
     );
   }
@@ -787,6 +791,7 @@ class AttendanceRecord {
       'overtimeOut': overtimeOut,
       'otAuthorized': otAuthorized,
       'approvedOtMinutes': approvedOtMinutes,
+      'overtimeMinutes': overtimeMinutes,
 
       'branchId': branchId,
     };
@@ -845,8 +850,14 @@ class AttendanceRecord {
         json['otAuthorized'] ?? json['ot_authorized'],
         defaultValue: false,
       ),
-      approvedOtMinutes: _doubleValue(
-        json['approvedOtMinutes'] ?? json['approved_ot_minutes'],
+      approvedOtMinutes:
+          json['approvedOtMinutes'] != null || json['approved_ot_minutes'] != null
+              ? _doubleValue(
+                  json['approvedOtMinutes'] ?? json['approved_ot_minutes'],
+                ).round()
+              : null,
+      overtimeMinutes: _doubleValue(
+        json['overtimeMinutes'] ?? json['overtime_minutes'],
       ).round(),
       branchId: _stringValue(
         json['branchId'] ?? json['branch_id'],

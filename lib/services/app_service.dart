@@ -1118,7 +1118,10 @@ class AppService extends ChangeNotifier {
       overtimeIn: data['overtime_in']?.toString() ?? '',
       overtimeOut: data['overtime_out']?.toString() ?? '',
       otAuthorized: data['ot_authorized'] == true,
-      approvedOtMinutes: _doubleValue(data['approved_ot_minutes']).round(),
+      approvedOtMinutes: data['approved_ot_minutes'] == null
+          ? null
+          : _doubleValue(data['approved_ot_minutes']).round(),
+      overtimeMinutes: _doubleValue(data['overtime_minutes']).round(),
     );
   }
 

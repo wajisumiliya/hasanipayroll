@@ -12881,6 +12881,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<void> _viewAdminPayslip(
       Employee employee, PayrollRecord payroll) async {
     try {
+      await service.loadAttendanceFromSupabase();
       final bytes = await PdfService.buildPayslip(
         employee: employee,
         p: payroll,

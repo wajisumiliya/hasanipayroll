@@ -3078,6 +3078,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     }
 
     try {
+      await service.loadAttendanceFromSupabase();
       final bytes = await PdfService.buildPayslip(
         employee: employee!,
         p: payroll,
