@@ -29,6 +29,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
   DateTime _generatedDate = DateUtils.dateOnly(DateTime.now());
   bool _busy = false;
   String _search = '';
+  final TextEditingController _searchController = TextEditingController();
   Future<List<Map<String, dynamic>>>? _future;
   RealtimeChannel? _realtimeChannel;
   Timer? _realtimeReloadTimer;
@@ -81,6 +82,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
     if (channel != null) {
       SupabaseService.client.removeChannel(channel);
     }
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -263,6 +265,32 @@ class _EaFormsPageState extends State<EaFormsPage> {
     }
   }
 
+  Future<void> _confirmGenerateAll() async {
+    if (_busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Generate and publish $_year EA forms?'),
+        content: const Text(
+          'This will regenerate every eligible employee EA form from completed '
+          'payroll records and notify employees when publishing finishes.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.publish_outlined),
+            label: const Text('Generate and publish'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _generateAll();
+  }
+
   Future<void> _openPdf(Map<String, dynamic> form) async {
     final bytes = await EaFormPdfService.build(form);
     final id = form['employee_id'] ?? 'employee';
@@ -275,6 +303,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
   @override
   Widget build(BuildContext context) {
     final years = List.generate(8, (index) => DateTime.now().year - index);
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _future,
       builder: (context, snapshot) {
@@ -322,34 +351,57 @@ class _EaFormsPageState extends State<EaFormsPage> {
                     onPressed: _busy ? null : _selectGeneratedDate,
                     icon: const Icon(Icons.calendar_month_outlined),
                     label: Text(
-                      'Generated date: '
+                      'EA date: '
                       '${DateFormat('dd/MM/yyyy').format(_generatedDate)}',
                     ),
                   ),
                 ),
               if (widget.isAdmin)
                 FilledButton.icon(
-                  onPressed: _busy ? null : _generateAll,
+                  onPressed: _busy ? null : _confirmGenerateAll,
                   icon: _busy
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.auto_awesome_outlined),
-                  label: Text(_busy ? 'Generating...' : 'Generate & publish'),
+                  label: Text(
+                    _busy ? 'Generating...' : 'Generate and publish',
+                  ),
                 ),
               if (widget.isAdmin)
                 SizedBox(
-                  width: 280,
+                  width: 320,
                   child: TextField(
-                    decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search),
-                        hintText: 'Search employee',
-                        border: OutlineInputBorder()),
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: 'Search employee or ID',
+                      suffixIcon: _search.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Clear search',
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _search = '');
+                              },
+                              icon: const Icon(Icons.close),
+                            ),
+                      border: const OutlineInputBorder(),
+                    ),
                     onChanged: (value) => setState(() => _search = value),
                   ),
                 ),
             ]),
+            if (_busy) ...[
+              const SizedBox(height: 12),
+              const LinearProgressIndicator(),
+              const SizedBox(height: 6),
+              Text(
+                'Generating and publishing $_year EA forms…',
+                style: const TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+            ],
             const SizedBox(height: 18),
             if (snapshot.connectionState == ConnectionState.waiting)
               const Center(
@@ -363,34 +415,138 @@ class _EaFormsPageState extends State<EaFormsPage> {
                       child: Text(
                           'Unable to load EA forms. Apply the EA form database migration first.\n\n${snapshot.error}')))
             else if (rows.isEmpty)
-              const Card(
-                  child: Padding(
-                      padding: EdgeInsets.all(28),
-                      child: Center(
-                          child: Text(
-                              'No EA forms have been generated for this year.'))))
-            else
-              ...rows.map((row) {
-                final data = Map<String, dynamic>.from(
-                    row['form_data'] as Map? ?? const {});
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                        child: Icon(Icons.description_outlined)),
-                    title: Text(
-                        '${data['employee_name'] ?? row['employee_id']}',
-                        style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text(
-                        'EA ${row['tax_year']} • ${row['employee_id']} • Published ${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${row['generated_at']}')?.toLocal() ?? DateTime.now())}'),
-                    trailing: FilledButton.tonalIcon(
-                      onPressed: () => _openPdf(row),
-                      icon: const Icon(Icons.picture_as_pdf_outlined),
-                      label: const Text('View PDF'),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        const Icon(Icons.description_outlined,
+                            size: 42, color: Colors.black38),
+                        const SizedBox(height: 10),
+                        Text(
+                          _search.isEmpty
+                              ? 'No EA forms have been generated for $_year.'
+                              : 'No EA forms match this search.',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        if (_search.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          TextButton.icon(
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _search = '');
+                            },
+                            icon: const Icon(Icons.close),
+                            label: const Text('Clear search'),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                );
-              }),
+                ),
+              )
+            else
+              ...[
+                Row(
+                  children: [
+                    Text(
+                      '$_year EA forms',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F7EF),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${rows.length} published',
+                        style: const TextStyle(
+                          color: Color(0xFF188653),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ...rows.map((row) {
+                  final data = Map<String, dynamic>.from(
+                      row['form_data'] as Map? ?? const {});
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xFFF0F2F6),
+                        foregroundColor: Color(0xFF1B2234),
+                        child: Icon(Icons.description_outlined),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${data['employee_name'] ?? row['employee_id']}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F7EF),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              'Published',
+                              style: TextStyle(
+                                color: Color(0xFF188653),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        '${row['employee_id']} · ${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${row['generated_at']}')?.toLocal() ?? DateTime.now())}',
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                      trailing: compact
+                          ? IconButton(
+                              tooltip: 'View PDF',
+                              onPressed: () => _openPdf(row),
+                              icon:
+                                  const Icon(Icons.picture_as_pdf_outlined),
+                            )
+                          : OutlinedButton.icon(
+                              onPressed: () => _openPdf(row),
+                              icon:
+                                  const Icon(Icons.picture_as_pdf_outlined),
+                              label: const Text('View PDF'),
+                            ),
+                    ),
+                  );
+                }),
+              ],
           ],
         );
       },

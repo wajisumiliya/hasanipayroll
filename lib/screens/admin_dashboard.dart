@@ -248,7 +248,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   String? _adminEmployeeBranchFilter;
   String _attendanceEmployeeSearch = '';
   String _payslipEmployeeSearch = '';
-  bool _payslipShowActiveEmployees = true;
+  bool? _payslipShowActiveEmployees = true;
   String _attendanceSubmissionFilter = 'submitted';
   DateTime _attendanceStatusDate = DateTime.now();
   String _attendanceStatusFilter = 'OFF';
@@ -4543,8 +4543,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               const SizedBox(height: 16),
               _panel(
                 _adminEmployeeBranchFilter == null
-                    ? 'Employee List'
-                    : '${_adminEmployeeBranchFilter!} • Employees',
+                    ? 'Employee List · ${employees.length}'
+                    : '${_adminEmployeeBranchFilter!} · ${employees.length} employees',
                 employees.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.all(30),
@@ -4572,6 +4572,18 @@ class _AdminDashboardState extends State<AdminDashboard>
 
                               final String designation =
                                   employee['designation']?.toString() ?? '';
+                              final active = _isActive(employee);
+                              final metadata = <String>[
+                                employeeId,
+                                department,
+                                branchId,
+                                if (designation.isNotEmpty &&
+                                    designation.toLowerCase() !=
+                                        department.toLowerCase())
+                                  designation,
+                              ]
+                                  .where((item) => item.trim().isNotEmpty)
+                                  .join(' · ');
 
                               return Card(
                                 elevation: 0,
@@ -4579,29 +4591,73 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   bottom: 8,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
+                                  borderRadius: BorderRadius.circular(12),
                                   side: const BorderSide(
-                                    color: _midnight,
-                                    width: 1.8,
+                                    color: Color(0xFFE2E5EB),
                                   ),
                                 ),
                                 child: ListTile(
+                                  dense: true,
+                                  visualDensity:
+                                      const VisualDensity(vertical: -1),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 3,
+                                  ),
                                   leading: EmployeePhoto(
                                     name: name,
                                     photoUrl: employee['photo_url']?.toString(),
                                     radius: 22,
                                   ),
-                                  title: Text(
-                                    name.isEmpty ? 'Unnamed Employee' : name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          name.isEmpty
+                                              ? 'Unnamed Employee'
+                                              : name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: active
+                                              ? const Color(0xFFE8F7EF)
+                                              : const Color(0xFFFFECEC),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          active ? 'Active' : 'Resigned',
+                                          style: TextStyle(
+                                            color: active
+                                                ? const Color(0xFF188653)
+                                                : const Color(0xFFBE3030),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   subtitle: Text(
-                                    '$employeeId • '
-                                    '$department • '
-                                    '$branchId'
-                                    '${designation.isEmpty ? '' : ' • $designation'}',
+                                    metadata,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFF6F7785),
+                                      fontSize: 11.5,
+                                    ),
                                   ),
                                   trailing: compactEmployeeView
                                       ? PopupMenuButton<String>(
@@ -4676,9 +4732,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             ),
                                           ],
                                         )
-                                      : Wrap(
+                                      : Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            // VIEW
                                             IconButton(
                                               tooltip: 'View',
                                               icon: const Icon(
@@ -4690,8 +4746,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                 );
                                               },
                                             ),
-
-                                            // EDIT
                                             IconButton(
                                               tooltip: 'Edit',
                                               icon: const Icon(
@@ -4703,39 +4757,56 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                     employee);
                                               },
                                             ),
-                                            IconButton(
-                                              tooltip: 'Transfer staff',
-                                              icon: const Icon(Icons.swap_horiz,
-                                                  color: Colors.orange),
-                                              onPressed: () =>
-                                                  _showTransferEmployee(
-                                                      employee),
-                                            ),
-
-                                            IconButton(
-                                              tooltip:
-                                                  'Create/reset application login',
-                                              icon: const Icon(
-                                                Icons.manage_accounts_outlined,
-                                                color: Colors.purple,
-                                              ),
-                                              onPressed: () =>
-                                                  _createOrResetApplicationLogin(
-                                                      employee),
-                                            ),
-                                            // DELETE
-                                            IconButton(
-                                              tooltip: 'Delete',
-                                              icon: const Icon(
-                                                Icons.delete_outline,
-                                                color: Colors.red,
-                                              ),
-                                              onPressed: () {
-                                                _confirmSupabaseEmployeeDelete(
-                                                  employeeId,
-                                                  name,
-                                                );
+                                            PopupMenuButton<String>(
+                                              tooltip: 'More actions',
+                                              icon: const Icon(Icons.more_horiz),
+                                              onSelected: (action) {
+                                                switch (action) {
+                                                  case 'transfer':
+                                                    _showTransferEmployee(
+                                                        employee);
+                                                    break;
+                                                  case 'login':
+                                                    _createOrResetApplicationLogin(
+                                                        employee);
+                                                    break;
+                                                  case 'delete':
+                                                    _confirmSupabaseEmployeeDelete(
+                                                        employeeId, name);
+                                                    break;
+                                                }
                                               },
+                                              itemBuilder: (_) => const [
+                                                PopupMenuItem(
+                                                  value: 'transfer',
+                                                  child: ListTile(
+                                                    leading: Icon(
+                                                        Icons.swap_horiz),
+                                                    title: Text('Transfer'),
+                                                  ),
+                                                ),
+                                                PopupMenuItem(
+                                                  value: 'login',
+                                                  child: ListTile(
+                                                    leading: Icon(Icons
+                                                        .manage_accounts_outlined),
+                                                    title: Text(
+                                                        'Application login'),
+                                                  ),
+                                                ),
+                                                PopupMenuDivider(),
+                                                PopupMenuItem(
+                                                  value: 'delete',
+                                                  child: ListTile(
+                                                    leading: Icon(
+                                                        Icons.delete_outline,
+                                                        color: Colors.red),
+                                                    title: Text('Delete',
+                                                        style: TextStyle(
+                                                            color: Colors.red)),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
@@ -4885,34 +4956,17 @@ class _AdminDashboardState extends State<AdminDashboard>
           borderRadius: BorderRadius.circular(26),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            height: 50,
+            height: 44,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              gradient: selected
-                  ? const LinearGradient(
-                      colors: [Color(0xFF121626), Color(0xFF2D354B)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : const LinearGradient(
-                      colors: [Color(0xFFF5F1E5), Color(0xFFE9E1CC)],
-                    ),
+              color: selected ? _midnight : const Color(0xFFF8F7F3),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(
                 color: selected
-                    ? const Color(0xFFD6B24F)
-                    : const Color(0xFFD3C7A5),
+                    ? _midnight
+                    : const Color(0xFFD9DDE5),
                 width: 1,
               ),
-              boxShadow: selected
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x3DD6B24F),
-                        blurRadius: 12,
-                        offset: Offset(0, 6),
-                      ),
-                    ]
-                  : null,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -4934,8 +4988,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: selected ? Colors.white : const Color(0xFF252418),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: allBranches ? 0 : .25,
                       height: 1,
                       shadows: selected
@@ -8838,7 +8892,9 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         final branches = snapshot.data ?? [];
         return RefreshIndicator(
-          onRefresh: () async => setState(() {}),
+          onRefresh: () async => setState(() {
+            _attendanceBranchesFuture = null;
+          }),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
@@ -8854,22 +8910,41 @@ class _AdminDashboardState extends State<AdminDashboard>
                   'Select a branch to view submitted employee attendance. Admin can edit submitted attendance.',
                   style: TextStyle(color: Colors.black54),
                 ),
-                const SizedBox(height: 14),
-                _monthYearSelector(
-                  value: selectedAttendanceMonth,
-                  onChanged: (value) =>
-                      setState(() => selectedAttendanceMonth = value),
-                ),
-                const SizedBox(height: 16),
-                if (branches.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(child: Text('No branches found.')),
-                  )
-                else
-                  _responsiveBranchButtonRow(
-                    spacing: 8,
-                    buttons: branches.map((branch) {
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .72),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFD9DDE6)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Choose period and branch',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _monthYearSelector(
+                        value: selectedAttendanceMonth,
+                        onChanged: (value) =>
+                            setState(() => selectedAttendanceMonth = value),
+                      ),
+                      const SizedBox(height: 16),
+                      if (branches.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Center(child: Text('No branches found.')),
+                        )
+                      else
+                        _responsiveBranchButtonRow(
+                          spacing: 8,
+                          buttons: branches.map((branch) {
                       final id = (branch['id'] ?? branch['branch_id'] ?? '')
                           .toString();
                       final name =
@@ -8886,8 +8961,38 @@ class _AdminDashboardState extends State<AdminDashboard>
                           });
                         },
                       );
-                    }).toList(),
+                          }).toList(),
+                        ),
+                    ],
                   ),
+                ),
+                if (branches.isNotEmpty) ...[
+                  const SizedBox(height: 40),
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.touch_app_outlined,
+                          size: 40,
+                          color: Colors.black38,
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Select a branch to view attendance',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Submitted, pending and overtime records will appear here.',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -9142,7 +9247,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             (branch['name'] ?? branch['branch_name'] ?? branchId).toString();
 
         return RefreshIndicator(
-          onRefresh: () async => setState(() {}),
+          onRefresh: () async => setState(() {
+            _refreshAdminAttendanceCache();
+          }),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
@@ -9153,7 +9260,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   onPressed: () =>
                       setState(() => selectedAttendanceBranchId = null),
                   icon: const Icon(Icons.arrow_back),
-                  label: const Text('All Branches'),
+                  label: const Text('Back to branches'),
                 ),
                 const SizedBox(height: 8),
                 Text(branchName,
@@ -9161,12 +9268,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                         fontSize: 28, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
                 Text(
-                  '${filteredEmployees.length} '
-                  '${switch (_attendanceSubmissionFilter) {
-                    'pending' => 'pending attendance',
-                    'ot' => 'employee(s) with OT',
-                    _ => 'submitted attendance',
-                  }} shown',
+                  '$submittedCount of ${employees.length} attendance records submitted'
+                  '${search.isEmpty ? '' : ' • ${filteredEmployees.length} matching'}',
                   style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
@@ -9207,11 +9310,19 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ],
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.end,
-                  children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .68),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFD9DDE6)),
+                  ),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    children: [
                     _monthYearSelector(
                       value: selectedAttendanceMonth,
                       onChanged: (value) => setState(() {
@@ -9224,39 +9335,55 @@ class _AdminDashboardState extends State<AdminDashboard>
                           .clamp(220.0, 300.0),
                       child: TextField(
                         controller: _attendanceEmployeeSearchController,
-                        onSubmitted: (value) =>
+                        onChanged: (value) =>
                             setState(() => _attendanceEmployeeSearch = value),
                         decoration: InputDecoration(
                           labelText: 'Search employee',
                           hintText: 'Name or employee ID',
                           isDense: true,
                           prefixIcon: const Icon(Icons.search, size: 20),
-                          suffixIcon: IconButton(
-                            tooltip: 'Search',
-                            icon: const Icon(Icons.search),
-                            onPressed: () => setState(() =>
-                                _attendanceEmployeeSearch =
-                                    _attendanceEmployeeSearchController.text),
-                          ),
+                          suffixIcon: _attendanceEmployeeSearch.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear search',
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _attendanceEmployeeSearchController.clear();
+                                    setState(
+                                      () => _attendanceEmployeeSearch = '',
+                                    );
+                                  },
+                                ),
                         ),
                       ),
                     ),
-                    if (_attendanceEmployeeSearch.isNotEmpty)
-                      IconButton(
-                        tooltip: 'Clear search',
-                        onPressed: () {
-                          _attendanceEmployeeSearchController.clear();
-                          setState(() => _attendanceEmployeeSearch = '');
-                        },
-                        icon: const Icon(Icons.clear),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 if (filteredEmployees.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(child: Text('No matching employees found.')),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 54),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          const Icon(Icons.event_busy_outlined, size: 40),
+                          const SizedBox(height: 10),
+                          Text(
+                            search.isNotEmpty
+                                ? 'No employees match your search.'
+                                : _attendanceSubmissionFilter == 'pending'
+                                    ? 'No pending attendance.'
+                                    : _attendanceSubmissionFilter == 'ot'
+                                        ? 'No overtime recorded.'
+                                        : 'No submitted attendance yet.',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   )
                 else
                   GridView.builder(
@@ -9264,10 +9391,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 250,
-                      mainAxisExtent: 112,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
+                      maxCrossAxisExtent: 340,
+                      mainAxisExtent: 132,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
                     ),
                     itemCount: filteredEmployees.length,
                     itemBuilder: (context, index) {
@@ -9291,9 +9418,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                           otMinutesByEmployee[employeeId] ?? 0;
                       final submitted = records
                           .any((r) => _attendanceBool(r['is_submitted']));
-                      final accent = showingOt
-                          ? const Color(0xFF7C3AED)
-                          : (index.isEven ? _midnight : _champagne);
+                       final accent = showingOt
+                           ? const Color(0xFF7C3AED)
+                           : submitted
+                               ? const Color(0xFF238A55)
+                               : const Color(0xFFB87800);
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(18),
@@ -9302,20 +9431,21 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   employee,
                                   otRecords,
                                 )
-                            : () => _openAdminAttendance(
-                                  employee,
-                                  branchId,
-                                ),
+                            : submitted
+                                ? () => _openAdminAttendance(
+                                      employee,
+                                      branchId,
+                                    )
+                                : null,
                         child: Card(
-                          elevation: 2,
-                          color: accent.withValues(alpha: .10),
-                          shadowColor: accent.withValues(alpha: .18),
+                          elevation: 0,
+                          color: Colors.white.withValues(alpha: .82),
                           margin: EdgeInsets.zero,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
                             side: BorderSide(
-                              color: accent,
-                              width: 1.8,
+                              color: const Color(0xFFD5DAE3),
+                              width: 1,
                             ),
                           ),
                           child: Padding(
@@ -9368,17 +9498,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 5),
+                                const SizedBox(height: 7),
                                 Text(
                                   name,
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const SizedBox(height: 5),
+                                const SizedBox(height: 3),
                                 Text(
                                   'Employee ID: $employeeId',
                                   style: const TextStyle(
@@ -9386,7 +9516,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     color: Colors.black54,
                                   ),
                                 ),
-                                const SizedBox(height: 5),
+                                const Spacer(),
                                 Row(
                                   children: [
                                     Icon(
@@ -9408,8 +9538,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         showingOt
                                             ? '${otRecords.length} OT day(s) • ${_attendanceOtHoursText(employeeOtMinutes)}'
                                             : (submitted
-                                                ? 'Branch submitted • Admin can edit'
-                                                : 'Waiting for Branch submission'),
+                                                ? '${records.length} day record(s) • View or edit'
+                                                : 'Waiting for submission'),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
@@ -9418,6 +9548,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         ),
                                       ),
                                     ),
+                                    if (submitted || showingOt)
+                                      const Icon(
+                                        Icons.chevron_right,
+                                        size: 18,
+                                        color: Colors.black45,
+                                      ),
                                   ],
                                 ),
                               ],
@@ -10508,7 +10644,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         .from('employees')
         .select(
           'employee_id,name,branch_id,payroll_branch_id,'
-          'is_active,is_management_staff,is_temp_staff,is_support_staff',
+           'photo_url,is_active,is_management_staff,is_temp_staff,'
+           'is_support_staff,is_other_staff',
         )
         .eq('is_active', true)
         .order('employee_id');
@@ -10592,8 +10729,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                 return AlertDialog(
                   title: const Text('Generate Payroll'),
                   content: SizedBox(
-                    width: 900,
-                    height: 650,
+                    width: 820,
+                    height: 590,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -10615,7 +10752,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   context: context,
                                   initialDate: selectedMonth,
                                   firstDate: DateTime(2020),
-                                  lastDate: DateTime(2100),
+                                  lastDate: DateTime.now(),
                                   helpText: 'Select Payroll Month',
                                 );
 
@@ -10647,8 +10784,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   padding: const EdgeInsets.only(bottom: 8),
                                   gridDelegate:
                                       const SliverGridDelegateWithMaxCrossAxisExtent(
-                                    maxCrossAxisExtent: 280,
-                                    mainAxisExtent: 145,
+                                    maxCrossAxisExtent: 270,
+                                    mainAxisExtent: 124,
                                     crossAxisSpacing: 14,
                                     mainAxisSpacing: 14,
                                   ),
@@ -10687,33 +10824,36 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Container(
-                                                width: 54,
-                                                height: 54,
-                                                decoration: BoxDecoration(
-                                                  gradient: LinearGradient(
-                                                    colors:
-                                                        _payrollBranchColors(
-                                                      branchId,
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    width: 42,
+                                                    height: 42,
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFFF2F5FA,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                        12,
+                                                      ),
+                                                      border: Border.all(
+                                                        color: const Color(
+                                                          0xFFD9DDE6,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.storefront_outlined,
+                                                      color: Color(0xFF173A70),
                                                     ),
                                                   ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color:
-                                                          _payrollBranchColors(
-                                                        branchId,
-                                                      ).last.withValues(
-                                                                alpha: .28,
-                                                              ),
-                                                      blurRadius: 12,
-                                                      offset:
-                                                          const Offset(0, 5),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: _hasaniBranchLogo(47),
+                                                  const Spacer(),
+                                                  const Icon(
+                                                    Icons.chevron_right,
+                                                    color: Colors.black45,
+                                                  ),
+                                                ],
                                               ),
                                               const Spacer(),
                                               Text(
@@ -10728,7 +10868,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                '${branchEmployees.length} employee(s) • Select to generate',
+                                                '${branchEmployees.length} employees • Review readiness',
                                                 style: const TextStyle(
                                                   color: Colors.black54,
                                                   fontSize: 12,
@@ -10814,8 +10954,12 @@ class _AdminDashboardState extends State<AdminDashboard>
     required DateTime month,
   }) async {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    final today = DateTime.now();
+    final isCurrentMonth =
+        month.year == today.year && month.month == today.month;
+    final requiredDayCount = isCurrentMonth ? today.day : daysInMonth;
     final requiredDays = {
-      for (var day = 1; day <= daysInMonth; day++) day,
+      for (var day = 1; day <= requiredDayCount; day++) day,
     };
     List<Map<String, dynamic>> attendanceRows;
     try {
@@ -10878,6 +11022,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final selectedIds = <String>{};
     bool selectAll = false;
     bool overwriteExisting = true;
+    final expandedMissingIds = <String>{};
 
     await showDialog<void>(
       context: context,
@@ -10888,12 +11033,23 @@ class _AdminDashboardState extends State<AdminDashboard>
                 .map((e) => _normalizeBranchValue(e['employee_id']))
                 .where((id) => id.isNotEmpty && readyIds.contains(id))
                 .toSet();
+            final displayEmployees = [...employees]
+              ..sort((a, b) {
+                final aId = _normalizeBranchValue(a['employee_id']);
+                final bId = _normalizeBranchValue(b['employee_id']);
+                final aReady = readyIds.contains(aId);
+                final bReady = readyIds.contains(bId);
+                if (aReady != bReady) return aReady ? -1 : 1;
+                return (a['name'] ?? aId)
+                    .toString()
+                    .compareTo((b['name'] ?? bId).toString());
+              });
 
             return AlertDialog(
               title: Text('Generate Payroll • $branchName'),
               content: SizedBox(
-                width: 760,
-                height: 620,
+                width: 720,
+                height: 650,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -10935,7 +11091,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                           child: Text(
                             '${readyIds.length} ready • '
                             '${employees.length - readyIds.length} need follow-up • '
-                            '$daysInMonth submitted days required',
+                            '$requiredDayCount submitted days required'
+                            '${isCurrentMonth ? ' through ${DateFormat('d MMM').format(today)}' : ''}',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -10958,7 +11115,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           },
                         ),
                         const Text(
-                          'Select all employees',
+                          'Select all ready employees',
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                         const Spacer(),
@@ -10972,11 +11129,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                               child: Text('No employees in this branch.'),
                             )
                           : ListView.separated(
-                              itemCount: employees.length,
+                              itemCount: displayEmployees.length,
                               separatorBuilder: (_, __) =>
                                   const Divider(height: 1),
                               itemBuilder: (context, index) {
-                                final employee = employees[index];
+                                final employee = displayEmployees[index];
                                 final employeeId = _normalizeBranchValue(
                                   employee['employee_id'],
                                 );
@@ -11004,11 +11161,25 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             ? 'Support Staff'
                                             : 'Other Staff';
 
-                                return CheckboxListTile(
-                                  value: checked,
-                                  onChanged: !attendanceReady
+                                final missingDatesExpanded =
+                                    expandedMissingIds.contains(employeeId);
+
+                                return InkWell(
+                                  onTap: attendanceReady
                                       ? null
-                                      : (value) {
+                                      : () => setSelectionState(() {
+                                            if (missingDatesExpanded) {
+                                              expandedMissingIds
+                                                  .remove(employeeId);
+                                            } else {
+                                              expandedMissingIds.add(employeeId);
+                                            }
+                                          }),
+                                  child: CheckboxListTile(
+                                    value: checked,
+                                    onChanged: !attendanceReady
+                                        ? null
+                                        : (value) {
                                           setSelectionState(() {
                                             if (value == true) {
                                               selectedIds.add(employeeId);
@@ -11023,22 +11194,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                                               selectAll = true;
                                             }
                                           });
-                                        },
-                                  title: Text(
+                                          },
+                                    title: Text(
                                     name,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  subtitle: Text(
+                                    subtitle: Text(
                                     attendanceExempt
                                         ? '$employeeId • Attendance not required '
                                             '($attendanceExemptLabel)'
                                         : attendanceReady
-                                            ? '$employeeId • Attendance complete ($daysInMonth/$daysInMonth)'
-                                            : '$employeeId • Missing ${missing.length} day(s): '
-                                                '${missing.map((day) => day.toString().padLeft(2, '0')).join(', ')}',
-                                    maxLines: 2,
+                                             ? '$employeeId • Attendance complete ($requiredDayCount/$requiredDayCount)'
+                                             : missingDatesExpanded
+                                                 ? '$employeeId • Missing ${missing.length} day(s): '
+                                                     '${missing.map((day) => day.toString().padLeft(2, '0')).join(', ')}'
+                                                 : '$employeeId • Missing ${missing.length} day(s) • Tap to view dates',
+                                    maxLines: missingDatesExpanded ? 4 : 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: attendanceReady
@@ -11047,7 +11220,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  secondary: Stack(
+                                    secondary: Stack(
                                     clipBehavior: Clip.none,
                                     children: [
                                       EmployeePhoto(
@@ -11083,6 +11256,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         ),
                                       ),
                                     ],
+                                    ),
                                   ),
                                 );
                               },
@@ -11115,6 +11289,35 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ? null
                       : () async {
                           final ids = selectedIds.toList();
+                          final confirmed = await showDialog<bool>(
+                            context: selectionContext,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Confirm payroll generation'),
+                              content: Text(
+                                'Generate payroll for ${ids.length} employee(s) '
+                                'in $branchName for '
+                                '${DateFormat('MMMM yyyy').format(month)}?\n\n'
+                                '${overwriteExisting ? 'Existing payroll records for the selected employees will be replaced.' : 'Existing payroll records will be kept.'}',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Review selection'),
+                                ),
+                                FilledButton.icon(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  icon: const Icon(Icons.calculate_outlined),
+                                  label: Text(
+                                    'Generate ${ids.length} payroll',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed != true ||
+                              !selectionContext.mounted) {
+                            return;
+                          }
                           Navigator.of(selectionContext).pop();
                           await _generateSelectedPayroll(
                             month: month,
@@ -11494,6 +11697,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     String? statutoryInfo;
     bool calculatingStatutory = false;
     int statutoryRevision = 0;
+    bool hasUnsavedChanges = false;
+    DateTime? lastSavedAt;
 
     double number(String key) =>
         double.tryParse(controllers[key]!.text.trim().replaceAll(',', '')) ?? 0;
@@ -11543,6 +11748,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                 storedRecord =
                     rows.isEmpty ? null : Map<String, dynamic>.from(rows.first);
                 fillControllers(storedRecord);
+                hasUnsavedChanges = false;
+                lastSavedAt = DateTime.tryParse(
+                  storedRecord?['updated_at']?.toString() ?? '',
+                )?.toLocal();
               } catch (e) {
                 error = 'Unable to load payroll: $e';
                 fillControllers(null);
@@ -11553,7 +11762,32 @@ class _AdminDashboardState extends State<AdminDashboard>
               }
             }
 
+            Future<bool> confirmDiscardChanges() async {
+              if (!hasUnsavedChanges) return true;
+              final discard = await showDialog<bool>(
+                context: dialogContext,
+                builder: (context) => AlertDialog(
+                  title: const Text('Discard unsaved changes?'),
+                  content: const Text(
+                    'The payroll values you changed have not been saved.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Keep editing'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Discard changes'),
+                    ),
+                  ],
+                ),
+              );
+              return discard == true;
+            }
+
             Future<void> chooseMonth() async {
+              if (!await confirmDiscardChanges()) return;
               final picked = await showDatePicker(
                 context: dialogContext,
                 initialDate: month,
@@ -11565,6 +11799,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               setDialogState(() {
                 month = DateTime(picked.year, picked.month);
                 storedRecord = null;
+                hasUnsavedChanges = false;
                 error = null;
                 success = null;
                 fillControllers(null);
@@ -11639,6 +11874,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                 setDialogState(() {
                   storedRecord = Map<String, dynamic>.from(record);
                   saving = false;
+                  hasUnsavedChanges = false;
+                  lastSavedAt = DateTime.now();
                   success =
                       'Payroll saved for $employeeId - ${DateFormat('MMMM yyyy').format(month)}. You can select another employee or use Previous/Next.';
                 });
@@ -11673,6 +11910,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   );
 
             Future<void> selectAdjacentEmployee(int direction) async {
+              if (!await confirmDiscardChanges()) return;
               final nextIndex = selectedEmployeeIndex + direction;
               if (nextIndex < 0 || nextIndex >= filteredEmployees.length) {
                 return;
@@ -11681,6 +11919,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 employeeId =
                     filteredEmployees[nextIndex]['employee_id']?.toString();
                 storedRecord = null;
+                hasUnsavedChanges = false;
                 error = null;
                 success = null;
                 fillControllers(null);
@@ -11739,21 +11978,18 @@ class _AdminDashboardState extends State<AdminDashboard>
 
             final earnings = totalFor('Earnings');
             final deductions = totalFor('Deductions');
+            final employerContributions = totalFor('Employer Contributions');
             final net = earnings - deductions;
-            final dialogWidth = (MediaQuery.sizeOf(dialogContext).width - 60)
-                .clamp(680.0, 1600.0)
+            final dialogWidth = (MediaQuery.sizeOf(dialogContext).width - 80)
+                .clamp(280.0, 1180.0)
                 .toDouble();
-            final amountFieldWidth = dialogWidth >= 1350
-                ? (dialogWidth - 48) / 5
-                : dialogWidth >= 1050
-                    ? (dialogWidth - 36) / 4
-                    : dialogWidth >= 760
-                        ? (dialogWidth - 24) / 3
-                        : (dialogWidth - 12) / 2;
 
-            Widget amountField((String, String, String) field) {
+            Widget amountField(
+              (String, String, String) field,
+              double width,
+            ) {
               return SizedBox(
-                width: amountFieldWidth,
+                width: width,
                 child: TextField(
                   controller: controllers[field.$1],
                   enabled: employeeId != null && !loading && !saving,
@@ -11761,6 +11997,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (_) {
                     setDialogState(() {
+                      hasUnsavedChanges = true;
                       success = null;
                       if (field.$1 == 'socso_employee' ||
                           field.$1 == 'eis_employee') {
@@ -11809,9 +12046,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                   decoration: InputDecoration(
                     labelText: field.$2,
                     prefixText: 'RM ',
-                    helperText: automaticContributionFields.contains(field.$1)
-                        ? 'Auto-calculated; editable'
-                        : null,
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -11821,41 +12055,117 @@ class _AdminDashboardState extends State<AdminDashboard>
             Widget fieldGroup(String title) {
               final groupFields =
                   fields.where((field) => field.$3 == title).toList();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: groupFields.map(amountField).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .72),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFD9DDE6)),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth >= 820
+                        ? 3
+                        : constraints.maxWidth >= 520
+                            ? 2
+                            : 1;
+                    final fieldWidth =
+                        (constraints.maxWidth - ((columns - 1) * 12)) / columns;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (title == 'Deductions') ...[
+                          const SizedBox(height: 5),
+                          const Text(
+                            'EPF, SOCSO and EIS are calculated automatically and remain editable.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF65738A),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: groupFields
+                              .map((field) => amountField(field, fieldWidth))
+                              .toList(),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               );
             }
 
-            return AlertDialog(
-              title: const Row(
-                children: [
-                  Icon(Icons.edit_note_outlined),
-                  SizedBox(width: 10),
-                  Text('Edit Payroll'),
-                ],
-              ),
-              content: SizedBox(
-                width: dialogWidth,
-                height: (MediaQuery.sizeOf(dialogContext).height * .78)
-                    .clamp(420.0, 920.0)
-                    .toDouble(),
-                child: SingleChildScrollView(
+            Widget summaryItem(
+              String label,
+              double value,
+              IconData icon, {
+              bool emphasized = false,
+            }) {
+              return Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  color: emphasized
+                      ? const Color(0xFFE7F6EC)
+                      : const Color(0xFFF5F6F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: emphasized
+                        ? const Color(0xFF9DD5AE)
+                        : const Color(0xFFD9DDE6),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 18),
+                    const SizedBox(width: 8),
+                    Text('$label  ', style: const TextStyle(fontSize: 12)),
+                    Text(
+                      _money(value),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return PopScope(
+              canPop: !saving && !hasUnsavedChanges,
+              onPopInvokedWithResult: (didPop, result) async {
+                if (didPop || saving) return;
+                if (await confirmDiscardChanges() && dialogContext.mounted) {
+                  setDialogState(() => hasUnsavedChanges = false);
+                  Navigator.pop(dialogContext);
+                }
+              },
+              child: AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.edit_note_outlined),
+                    SizedBox(width: 10),
+                    Text('Edit Payroll'),
+                  ],
+                ),
+                content: SizedBox(
+                  width: dialogWidth,
+                  height: (MediaQuery.sizeOf(dialogContext).height * .70)
+                      .clamp(360.0, 760.0)
+                      .toDouble(),
+                  child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -11887,11 +12197,14 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   .toList(),
                               onChanged: loading || saving
                                   ? null
-                                  : (value) {
+                                  : (value) async {
+                                      if (!await confirmDiscardChanges()) return;
+                                      if (!dialogContext.mounted) return;
                                       setDialogState(() {
                                         branchId = value;
                                         employeeId = null;
                                         storedRecord = null;
+                                        hasUnsavedChanges = false;
                                         error = null;
                                         success = null;
                                         statutoryInfo = null;
@@ -11913,8 +12226,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                               key: ValueKey('$branchId-$employeeId'),
                               initialValue: employeeId,
                               isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Employee (ID A-Z)',
+                              decoration: InputDecoration(
+                                labelText: selectedEmployeeIndex < 0
+                                    ? 'Employee (ID A-Z)'
+                                    : 'Employee ${selectedEmployeeIndex + 1} of ${filteredEmployees.length}',
                                 border: OutlineInputBorder(),
                               ),
                               items: filteredEmployees.map((employee) {
@@ -11930,10 +12245,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                               }).toList(),
                               onChanged: loading || saving
                                   ? null
-                                  : (value) {
+                                  : (value) async {
+                                      if (!await confirmDiscardChanges()) return;
+                                      if (!dialogContext.mounted) return;
                                       setDialogState(() {
                                         employeeId = value;
                                         storedRecord = null;
+                                        hasUnsavedChanges = false;
                                         error = null;
                                         success = null;
                                         statutoryInfo = null;
@@ -11978,11 +12296,28 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 : Colors.green.shade50,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(
-                            storedRecord == null
-                                ? 'No payroll exists for this month. Saving will create it.'
-                                : 'Existing payroll loaded from the database.',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          child: Row(
+                            children: [
+                              Icon(
+                                storedRecord == null
+                                    ? Icons.add_circle_outline
+                                    : Icons.cloud_done_outlined,
+                                size: 19,
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  storedRecord == null
+                                      ? 'No payroll exists for this month. Saving will create it.'
+                                      : lastSavedAt == null
+                                          ? 'Existing payroll loaded from the database.'
+                                          : 'Saved ${DateFormat('dd MMM yyyy, hh:mm a').format(lastSavedAt!)}.',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         if (calculatingStatutory || statutoryInfo != null) ...[
@@ -12021,6 +12356,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                           controller: remarksController,
                           enabled: !saving,
                           maxLines: 2,
+                          onChanged: (_) => setDialogState(() {
+                            hasUnsavedChanges = true;
+                            success = null;
+                          }),
                           decoration: const InputDecoration(
                             labelText: 'Remarks',
                             border: OutlineInputBorder(),
@@ -12031,16 +12370,30 @@ class _AdminDashboardState extends State<AdminDashboard>
                           spacing: 12,
                           runSpacing: 12,
                           children: [
-                            Chip(label: Text('Gross: ${_money(earnings)}')),
-                            Chip(
-                                label:
-                                    Text('Deductions: ${_money(deductions)}')),
-                            Chip(
-                              label: Text('Net Pay: ${_money(net)}'),
-                              backgroundColor: Colors.green.shade50,
+                            summaryItem(
+                              'Gross',
+                              earnings,
+                              Icons.trending_up_outlined,
+                            ),
+                            summaryItem(
+                              'Deductions',
+                              deductions,
+                              Icons.trending_down_outlined,
+                            ),
+                            summaryItem(
+                              'Employer',
+                              employerContributions,
+                              Icons.business_outlined,
+                            ),
+                            summaryItem(
+                              'Net Pay',
+                              net,
+                              Icons.account_balance_wallet_outlined,
+                              emphasized: true,
                             ),
                           ],
                         ),
+                        const SizedBox(height: 24),
                       ],
                       if (success != null) ...[
                         const SizedBox(height: 14),
@@ -12075,28 +12428,38 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: saving ? null : () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton.icon(
-                  onPressed: employeeId == null ||
-                          loading ||
-                          saving ||
-                          calculatingStatutory
-                      ? null
-                      : savePayroll,
-                  icon: saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: Text(saving ? 'Saving...' : 'Save Payroll'),
-                ),
-              ],
+                actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
+                actions: [
+                  TextButton(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            if (await confirmDiscardChanges() &&
+                                dialogContext.mounted) {
+                              setDialogState(() => hasUnsavedChanges = false);
+                              Navigator.pop(dialogContext);
+                            }
+                          },
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: employeeId == null ||
+                            loading ||
+                            saving ||
+                            calculatingStatutory
+                        ? null
+                        : savePayroll,
+                    icon: saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(saving ? 'Saving...' : 'Save Payroll'),
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -12147,11 +12510,14 @@ class _AdminDashboardState extends State<AdminDashboard>
     final employees = service.allEmployees.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final query = _payslipEmployeeSearch.trim().toLowerCase();
-    final statusEmployees = employees
-        .where(
-          (employee) => employee.isActive == _payslipShowActiveEmployees,
-        )
-        .toList();
+    final statusEmployees = _payslipShowActiveEmployees == null
+        ? employees
+        : employees
+            .where(
+              (employee) =>
+                  employee.isActive == _payslipShowActiveEmployees,
+            )
+            .toList();
     final filteredEmployees = query.isEmpty
         ? statusEmployees
         : statusEmployees.where((employee) {
@@ -12174,6 +12540,11 @@ class _AdminDashboardState extends State<AdminDashboard>
     final activeYear = years.contains(selectedEmployeePayslipYear)
         ? selectedEmployeePayslipYear
         : (years.isEmpty ? null : years.first);
+    final employeeStatusLabel = switch (_payslipShowActiveEmployees) {
+      true => 'active ',
+      false => 'inactive ',
+      null => '',
+    };
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -12195,10 +12566,48 @@ class _AdminDashboardState extends State<AdminDashboard>
             runSpacing: 8,
             children: [
               FilterChip(
-                selected: _payslipShowActiveEmployees,
-                avatar: const Icon(Icons.check_circle_outline, size: 18),
+                selected: _payslipShowActiveEmployees == null,
+                avatar: Icon(
+                  Icons.people_outline,
+                  size: 18,
+                  color: _payslipShowActiveEmployees == null
+                      ? Colors.white
+                      : _midnight,
+                ),
+                label: Text('All (${employees.length})'),
+                selectedColor: _midnight,
+                checkmarkColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: _payslipShowActiveEmployees == null
+                      ? Colors.white
+                      : _midnight,
+                  fontWeight: FontWeight.w700,
+                ),
+                onSelected: (_) => setState(() {
+                  _payslipShowActiveEmployees = null;
+                  selectedPayslipEmployeeId = null;
+                  selectedEmployeePayslipYear = null;
+                }),
+              ),
+              FilterChip(
+                selected: _payslipShowActiveEmployees == true,
+                avatar: Icon(
+                  Icons.check_circle_outline,
+                  size: 18,
+                  color: _payslipShowActiveEmployees == true
+                      ? Colors.white
+                      : _midnight,
+                ),
                 label: Text(
                   'Active (${employees.where((employee) => employee.isActive).length})',
+                ),
+                selectedColor: _midnight,
+                checkmarkColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: _payslipShowActiveEmployees == true
+                      ? Colors.white
+                      : _midnight,
+                  fontWeight: FontWeight.w700,
                 ),
                 onSelected: (_) => setState(() {
                   _payslipShowActiveEmployees = true;
@@ -12207,10 +12616,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                 }),
               ),
               FilterChip(
-                selected: !_payslipShowActiveEmployees,
-                avatar: const Icon(Icons.person_off_outlined, size: 18),
+                selected: _payslipShowActiveEmployees == false,
+                avatar: Icon(
+                  Icons.person_off_outlined,
+                  size: 18,
+                  color: _payslipShowActiveEmployees == false
+                      ? Colors.white
+                      : _midnight,
+                ),
                 label: Text(
                   'Inactive (${employees.where((employee) => !employee.isActive).length})',
+                ),
+                selectedColor: _midnight,
+                checkmarkColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: _payslipShowActiveEmployees == false
+                      ? Colors.white
+                      : _midnight,
+                  fontWeight: FontWeight.w700,
                 ),
                 onSelected: (_) => setState(() {
                   _payslipShowActiveEmployees = false;
@@ -12221,63 +12644,48 @@ class _AdminDashboardState extends State<AdminDashboard>
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _payslipEmployeeSearchController,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    labelText: 'Search employee',
-                    hintText: 'Name, employee ID, department or branch',
-                    prefixIcon: const Icon(Icons.person_search_outlined),
-                    suffixIcon: _payslipEmployeeSearch.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Clear search',
-                            onPressed: () {
-                              _payslipEmployeeSearchController.clear();
-                              setState(() => _payslipEmployeeSearch = '');
-                            },
-                            icon: const Icon(Icons.close),
-                          ),
-                    border: const OutlineInputBorder(),
+          TextField(
+            controller: _payslipEmployeeSearchController,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              labelText: 'Search employee',
+              hintText: 'Name, employee ID, department or branch',
+              prefixIcon: const Icon(Icons.person_search_outlined),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_payslipEmployeeSearch.isNotEmpty)
+                    IconButton(
+                      tooltip: 'Clear search',
+                      onPressed: () {
+                        _payslipEmployeeSearchController.clear();
+                        setState(() => _payslipEmployeeSearch = '');
+                      },
+                      icon: const Icon(Icons.close),
+                    ),
+                  IconButton(
+                    tooltip: 'Refresh employees and payroll',
+                    onPressed: () async {
+                      await service.loadEmployeesFromSupabase();
+                      await service.loadPayrollFromSupabase();
+                      if (mounted) setState(() {});
+                    },
+                    icon: const Icon(Icons.refresh),
                   ),
-                  onSubmitted: (value) =>
-                      setState(() => _payslipEmployeeSearch = value),
-                ),
+                ],
               ),
-              const SizedBox(width: 10),
-              FilledButton.icon(
-                onPressed: () => setState(() {
-                  _payslipEmployeeSearch =
-                      _payslipEmployeeSearchController.text;
-                  selectedPayslipEmployeeId = null;
-                  selectedEmployeePayslipYear = null;
-                }),
-                icon: const Icon(Icons.search),
-                label: const Text('Search'),
-                style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.outlined(
-                tooltip: 'Refresh employees and payroll',
-                onPressed: () async {
-                  await service.loadEmployeesFromSupabase();
-                  await service.loadPayrollFromSupabase();
-                  if (mounted) setState(() {});
-                },
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (value) => setState(() {
+              _payslipEmployeeSearch = value;
+              selectedPayslipEmployeeId = null;
+              selectedEmployeePayslipYear = null;
+            }),
           ),
           const SizedBox(height: 16),
           if (selectedEmployee == null) ...[
             Text(
-              '${filteredEmployees.length} employees',
+              '${filteredEmployees.length} ${employeeStatusLabel}employees',
               style: const TextStyle(
                 color: Colors.black54,
                 fontWeight: FontWeight.w700,
@@ -12285,20 +12693,38 @@ class _AdminDashboardState extends State<AdminDashboard>
             ),
             const SizedBox(height: 10),
             if (filteredEmployees.isEmpty)
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Text('No employees match this search.'),
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.search_off_outlined,
+                          size: 40, color: Colors.black38),
+                      const SizedBox(height: 10),
+                      const Text('No employees match this search.'),
+                      if (_payslipEmployeeSearch.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: () {
+                            _payslipEmployeeSearchController.clear();
+                            setState(() => _payslipEmployeeSearch = '');
+                          },
+                          icon: const Icon(Icons.close),
+                          label: const Text('Clear search'),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               )
             else
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final columns = constraints.maxWidth >= 1050
+                  final columns = constraints.maxWidth >= 1440
                       ? 4
-                      : constraints.maxWidth >= 720
+                      : constraints.maxWidth >= 900
                           ? 3
-                          : constraints.maxWidth >= 440
+                          : constraints.maxWidth >= 560
                               ? 2
                               : 1;
                   return GridView.builder(
@@ -12309,24 +12735,25 @@ class _AdminDashboardState extends State<AdminDashboard>
                       crossAxisCount: columns,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
-                      mainAxisExtent: 92,
+                      mainAxisExtent: 100,
                     ),
                     itemBuilder: (context, index) {
                       final employee = filteredEmployees[index];
                       final payslipCount =
                           service.employeePayroll(employee.employeeId).length;
                       return InkWell(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                         onTap: () => setState(() {
                           selectedPayslipEmployeeId = employee.employeeId;
                           selectedEmployeePayslipYear = null;
                         }),
                         child: Container(
-                          padding: const EdgeInsets.all(11),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: .78),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.black12),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border:
+                                Border.all(color: const Color(0xFFE2E5EB)),
                           ),
                           child: Row(
                             children: [
@@ -12334,7 +12761,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 name: employee.name,
                                 photoUrl: employee.photoUrl,
                                 radius: 24,
-                                borderColor: _midnight,
+                                borderColor: const Color(0xFFD9DDE5),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -12344,10 +12771,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   children: [
                                     Text(
                                       employee.name,
-                                      maxLines: 1,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
+                                        fontSize: 13,
+                                        height: 1.1,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     Text(
@@ -12359,12 +12788,23 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         fontSize: 11,
                                       ),
                                     ),
-                                    Text(
-                                      '$payslipCount payslips',
-                                      style: const TextStyle(
-                                        color: _midnight,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
+                                    const SizedBox(height: 3),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0F2F6),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        '$payslipCount payslips',
+                                        style: const TextStyle(
+                                          color: _midnight,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -14111,64 +14551,43 @@ class _AdminDashboardState extends State<AdminDashboard>
                       icon: const Icon(Icons.compare_arrows_outlined),
                       label: const Text('Compare Increments'),
                     ),
-                    DropdownButton<String>(
-                      value: selectedPayrollBranchId,
-                      hint: const Text('All Branches'),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('All Branches'),
+                    if (visiblePayrollRecords.isNotEmpty) ...[
+                      OutlinedButton.icon(
+                        onPressed: () => _exportPayrollBranchesPdf(
+                          visiblePayrollRecords,
+                          branchNames,
                         ),
-                        ...branchIds.map(
-                          (id) => DropdownMenuItem<String>(
-                            value: id,
-                            child: Text(branchNames[id] ?? id),
-                          ),
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                        label: Text(
+                          selectedPayrollBranchId == null
+                              ? 'Save All Branches PDF'
+                              : 'Save Branch PDF',
                         ),
-                      ],
-                      onChanged: (value) {
-                        setState(() => selectedPayrollBranchId = value);
-                      },
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: visiblePayrollRecords.isEmpty
-                          ? null
-                          : () => _exportPayrollBranchesPdf(
-                                visiblePayrollRecords,
-                                branchNames,
-                              ),
-                      icon: const Icon(Icons.picture_as_pdf_outlined),
-                      label: Text(
-                        selectedPayrollBranchId == null
-                            ? 'Save All Branches PDF'
-                            : 'Save Branch PDF',
                       ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: visiblePayrollRecords.isEmpty
-                          ? null
-                          : () {
-                              if (selectedPayrollBranchId == null) {
-                                _exportPayrollAllBranchesExcel(
-                                  visiblePayrollRecords,
-                                  branchNames,
-                                );
-                              } else {
-                                _exportPayrollBranchExcel(
-                                  visiblePayrollRecords,
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          if (selectedPayrollBranchId == null) {
+                            _exportPayrollAllBranchesExcel(
+                              visiblePayrollRecords,
+                              branchNames,
+                            );
+                          } else {
+                            _exportPayrollBranchExcel(
+                              visiblePayrollRecords,
+                              selectedPayrollBranchId!,
+                              branchNames[selectedPayrollBranchId!] ??
                                   selectedPayrollBranchId!,
-                                  branchNames[selectedPayrollBranchId!] ??
-                                      selectedPayrollBranchId!,
-                                );
-                              }
-                            },
-                      icon: const Icon(Icons.table_view_outlined),
-                      label: Text(
-                        selectedPayrollBranchId == null
-                            ? 'Export All Branches Excel'
-                            : 'Export Branch Excel',
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.table_view_outlined),
+                        label: Text(
+                          selectedPayrollBranchId == null
+                              ? 'Export All Branches Excel'
+                              : 'Export Branch Excel',
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 26),
@@ -14178,7 +14597,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: _hasaniOuterBorder(2),
+                    border: Border.all(color: const Color(0xFFE2E5EB)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -14206,24 +14625,33 @@ class _AdminDashboardState extends State<AdminDashboard>
                       else
                         _responsiveBranchButtonRow(
                           spacing: 8,
-                          buttons: branchIds.map((branchId) {
-                            final branchEmployees =
-                                branchGroups[branchId] ?? [];
-                            return _employeeBranchFilterButton(
-                              label: branchNames[branchId] ?? branchId,
-                              selected: selectedPayrollBranchId == branchId,
-                              onTap: () async {
-                                setState(
-                                    () => selectedPayrollBranchId = branchId);
-                                await _showPayrollEmployeeSelection(
-                                  branchName: branchNames[branchId] ?? branchId,
-                                  employees: branchEmployees,
-                                  month: selectedPayrollMonth,
-                                );
-                                if (mounted) setState(() {});
-                              },
-                            );
-                          }).toList(),
+                          buttons: [
+                            _employeeBranchFilterButton(
+                              label: 'All Branches',
+                              selected: selectedPayrollBranchId == null,
+                              onTap: () => setState(
+                                  () => selectedPayrollBranchId = null),
+                            ),
+                            ...branchIds.map((branchId) {
+                              final branchEmployees =
+                                  branchGroups[branchId] ?? [];
+                              return _employeeBranchFilterButton(
+                                label: branchNames[branchId] ?? branchId,
+                                selected: selectedPayrollBranchId == branchId,
+                                onTap: () async {
+                                  setState(
+                                      () => selectedPayrollBranchId = branchId);
+                                  await _showPayrollEmployeeSelection(
+                                    branchName:
+                                        branchNames[branchId] ?? branchId,
+                                    employees: branchEmployees,
+                                    month: selectedPayrollMonth,
+                                  );
+                                  if (mounted) setState(() {});
+                                },
+                              );
+                            }),
+                          ],
                         ),
                     ],
                   ),
@@ -14231,7 +14659,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                 const SizedBox(height: 24),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final cardWidth = (constraints.maxWidth - 32) / 3;
+                    final columns = constraints.maxWidth >= 900
+                        ? 3
+                        : constraints.maxWidth >= 520
+                            ? 2
+                            : 1;
+                    final cardWidth =
+                        (constraints.maxWidth - (16 * (columns - 1))) / columns;
                     return Wrap(
                       spacing: 16,
                       runSpacing: 16,
@@ -14274,7 +14708,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: _hasaniOuterBorder(2),
+                    border: Border.all(color: const Color(0xFFE2E5EB)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -14287,12 +14721,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Payroll records stored in Supabase.',
-                        style: TextStyle(color: Colors.black54),
+                      Text(
+                        '${DateFormat('MMMM yyyy').format(selectedPayrollMonth)} · '
+                        '${selectedPayrollBranchId == null ? 'All branches' : branchNames[selectedPayrollBranchId] ?? selectedPayrollBranchId}',
+                        style: const TextStyle(color: Colors.black54),
                       ),
                       const SizedBox(height: 20),
-                      if (payrollRecords.isEmpty)
+                      if (visiblePayrollRecords.isEmpty)
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
@@ -14304,20 +14739,33 @@ class _AdminDashboardState extends State<AdminDashboard>
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey.shade200),
                           ),
-                          child: const Column(
+                          child: Column(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.payments_outlined,
                                 size: 48,
                                 color: Colors.black38,
                               ),
-                              SizedBox(height: 12),
+                              const SizedBox(height: 12),
                               Text(
-                                'No payroll records yet',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                                'No payroll records for ${DateFormat('MMMM yyyy').format(selectedPayrollMonth)}',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
                                 ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Select a branch and generate payroll to get started.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.black54),
+                              ),
+                              const SizedBox(height: 16),
+                              FilledButton.icon(
+                                onPressed:
+                                    _showGenerateAttendancePayrollDialog,
+                                icon: const Icon(Icons.calculate_outlined),
+                                label: const Text('Generate Payroll'),
                               ),
                             ],
                           ),
@@ -14346,44 +14794,25 @@ class _AdminDashboardState extends State<AdminDashboard>
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, color.withValues(alpha: .08)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: .55), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: .12),
-            blurRadius: 12,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E5EB)),
       ),
       child: Row(
         children: [
           Container(
-            width: 54,
-            height: 54,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                color.withValues(alpha: .95),
-                Color.lerp(color, Colors.black, .18)!,
-              ]),
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: .28),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              color: color.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(
               icon,
-              color: Colors.white,
-              size: 28,
+              color: color,
+              size: 23,
             ),
           ),
           const SizedBox(width: 14),
@@ -14403,7 +14832,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   value,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -20767,25 +21196,35 @@ class _AdminDashboardState extends State<AdminDashboard>
     Widget child,
   ) {
     final isDashboard = selectedPage == 0;
-    final panelStyle = switch (title) {
-      'Payroll Management' => const (
-          Icons.account_balance_wallet_rounded,
-          Color(0xFFD6B24F)
-        ),
-      'Payroll Report' => const (Icons.analytics_rounded, Color(0xFF7C3AED)),
-      'Settings' => const (Icons.settings_rounded, Color(0xFFD6B24F)),
-      'Quick actions' => const (Icons.bolt_rounded, Color(0xFFD6B24F)),
-      'System status' => const (Icons.monitor_heart_rounded, Color(0xFF8B7740)),
-      'Employee List' => const (Icons.groups_rounded, Color(0xFFD6B24F)),
-      _ => const (Icons.dashboard_customize_rounded, Color(0xFF1B2234)),
-    };
+    final isEmployeeList = title.startsWith('Employee List') ||
+        title.toLowerCase().contains(' employees');
+    final neutralSurface = isDashboard || isEmployeeList;
+    final panelStyle = isEmployeeList
+        ? const (Icons.groups_rounded, Color(0xFFD6B24F))
+        : switch (title) {
+            'Payroll Management' => const (
+                Icons.account_balance_wallet_rounded,
+                Color(0xFFD6B24F)
+              ),
+            'Payroll Report' =>
+              const (Icons.analytics_rounded, Color(0xFF7C3AED)),
+            'Settings' =>
+              const (Icons.settings_rounded, Color(0xFFD6B24F)),
+            'Quick actions' =>
+              const (Icons.bolt_rounded, Color(0xFFD6B24F)),
+            'System status' =>
+              const (Icons.monitor_heart_rounded, Color(0xFF8B7740)),
+            'Employee List' =>
+              const (Icons.groups_rounded, Color(0xFFD6B24F)),
+            _ => const (Icons.dashboard_customize_rounded, Color(0xFF1B2234)),
+          };
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(isDashboard ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: isDashboard ? .82 : 1),
         borderRadius: BorderRadius.circular(14),
-        border: isDashboard
+        border: neutralSurface
             ? Border.all(color: const Color(0xFFE2E5EB))
             : _hasaniOuterBorder(2),
         boxShadow: const [
@@ -20802,14 +21241,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           Row(
             children: [
               Container(
-                width: isDashboard ? 36 : 42,
-                height: isDashboard ? 36 : 42,
+                width: neutralSurface ? 36 : 42,
+                height: neutralSurface ? 36 : 42,
                 decoration: BoxDecoration(
                   color: panelStyle.$2.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(panelStyle.$1,
-                    color: panelStyle.$2, size: isDashboard ? 20 : 23),
+                    color: panelStyle.$2, size: neutralSurface ? 20 : 23),
               ),
               const SizedBox(width: 11),
               Expanded(
@@ -20823,7 +21262,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             ],
           ),
-          SizedBox(height: isDashboard ? 14 : 18),
+          SizedBox(height: neutralSurface ? 14 : 18),
           child,
         ],
       ),
