@@ -110,13 +110,21 @@ class _AdminDashboardState extends State<AdminDashboard>
       canvasColor: _warmSurface,
       dividerColor: _warmBorder.withValues(alpha: .65),
       cardTheme: const CardThemeData(
-        color: _warmSurface,
+        color: Colors.white,
         surfaceTintColor: Colors.transparent,
-        shadowColor: Color(0x24121626),
+        shadowColor: Color(0x12000000),
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          side: BorderSide(color: Color(0xFFE2E5EB)),
+        ),
       ),
       dialogTheme: const DialogThemeData(
         backgroundColor: _warmSurface,
         surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
         titleTextStyle: TextStyle(
           color: _midnight,
           fontSize: 20,
@@ -128,21 +136,24 @@ class _AdminDashboardState extends State<AdminDashboard>
         fillColor: const Color(0xFFFFFDF8),
         labelStyle: const TextStyle(color: Color(0xFF655E4D)),
         hintStyle: const TextStyle(color: Color(0xFF8C8576)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _warmBorder),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFD9DDE5)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: _champagne, width: 1.8),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _champagne, width: 1.5),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: _midnight,
           foregroundColor: Colors.white,
+          minimumSize: const Size(0, 44),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),
@@ -150,8 +161,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         style: OutlinedButton.styleFrom(
           foregroundColor: _midnight,
           side: const BorderSide(color: _champagne),
+          minimumSize: const Size(0, 44),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),
@@ -659,10 +671,10 @@ class _AdminDashboardState extends State<AdminDashboard>
             child: IgnorePointer(
               child: Center(
                 child: Opacity(
-                  opacity: .09,
+                  opacity: .025,
                   child: FractionallySizedBox(
-                    widthFactor: .92,
-                    heightFactor: .78,
+                    widthFactor: .72,
+                    heightFactor: .60,
                     child: Image.asset(
                       'assets/hasani_books_logo.jpg',
                       fit: BoxFit.contain,
@@ -2388,20 +2400,16 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 16 : 20),
+      padding: EdgeInsets.all(compact ? 16 : 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFAF8F1), Color(0xFFF0EBDD)],
-        ),
-        borderRadius: BorderRadius.circular(26),
-        border: _hasaniOuterBorder(2.2),
-        boxShadow: [
+        color: Colors.white.withValues(alpha: .92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E5EB)),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .07),
-            blurRadius: 18,
-            offset: const Offset(0, 7),
+            color: Color(0x0A000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -2767,7 +2775,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showEmployeeDetails('$label Employees', employees),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
             width: 122,
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
@@ -2878,27 +2886,13 @@ class _AdminDashboardState extends State<AdminDashboard>
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  accent.withValues(alpha: .075),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: accent.withValues(alpha: .7)),
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: .10),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E5EB)),
             ),
             child: Row(
               children: [
@@ -2906,28 +2900,14 @@ class _AdminDashboardState extends State<AdminDashboard>
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        accent.withValues(alpha: .92),
-                        Color.lerp(accent, Colors.black, .16)!,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accent.withValues(alpha: .25),
-                        blurRadius: 9,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    color: accent.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(11),
                   ),
                   padding: assetName == null
                       ? EdgeInsets.zero
                       : const EdgeInsets.all(3),
                   child: assetName == null
-                      ? Icon(icon, color: Colors.white, size: 23)
+                      ? Icon(icon, color: accent, size: 23)
                       : Image.asset(
                           assetName,
                           fit: assetName == 'assets/dashboard_epf_kwsp.png'
@@ -2938,7 +2918,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   ? Alignment.centerLeft
                                   : Alignment.center,
                           errorBuilder: (_, __, ___) =>
-                              Icon(icon, color: Colors.white, size: 21),
+                              Icon(icon, color: accent, size: 21),
                         ),
                 ),
                 const SizedBox(width: 10),
@@ -6629,7 +6609,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           title: const Text('Edit Employee - All Information'),
           content: SizedBox(
               width: (MediaQuery.sizeOf(dialogContext).width - 80)
-                  .clamp(320.0, 1500.0)
+                  .clamp(320.0, 1180.0)
                   .toDouble(),
               height: (MediaQuery.sizeOf(dialogContext).height * .78)
                   .clamp(360.0, 900.0)
@@ -10085,20 +10065,13 @@ class _AdminDashboardState extends State<AdminDashboard>
             }
             _showDashboardReport(title);
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: .035),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: accent, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: .11),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E5EB)),
             ),
             child: Row(
               children: [
@@ -10117,7 +10090,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             assetName != null
                         ? Colors.white
                         : accent.withValues(alpha: .14),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   padding: const EdgeInsets.all(2),
                   child: ClipRRect(
@@ -19595,12 +19568,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                           horizontal: .5,
                           vertical: 14,
                         ),
-                        alignment: entry.key < 2
+                        alignment: entry.key == 0
                             ? pw.Alignment.centerLeft
-                            : pw.Alignment.centerRight,
+                            : pw.Alignment.center,
                         child: pw.Text(
                           entry.value,
                           maxLines: 1,
+                          textAlign: entry.key == 0
+                              ? pw.TextAlign.left
+                              : pw.TextAlign.center,
                           style: pw.TextStyle(
                             fontSize: 7.2,
                             fontWeight: bold
