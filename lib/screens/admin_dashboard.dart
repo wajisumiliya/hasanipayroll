@@ -18779,7 +18779,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             if (report == 'EPF' || report == 'EIS') ...[
                               OutlinedButton.icon(
                                 onPressed: () => _printStatutoryReport(
-                                    report, month, headers, rows),
+                                    report, month, rows),
                                 icon: const Icon(Icons.print_outlined),
                                 label: const Text('Print Landscape A4'),
                               ),
@@ -18789,7 +18789,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                               onPressed: () async {
                                 if (report == 'EPF' || report == 'EIS') {
                                   await _exportStatutoryReportExcel(
-                                      report, month, headers, rows);
+                                      report, month, rows);
                                 } else {
                                   setState(() => selectedPayrollMonth = month);
                                   await _exportRhbLayout(
@@ -18874,21 +18874,13 @@ class _AdminDashboardState extends State<AdminDashboard>
       );
 
   Future<void> _printStatutoryReport(String report, DateTime month,
-      List<String> headers, List<List<dynamic>> rows) async {
-    final printedAt = DateTime.now();
-    final logo = await _loadHasaniBooksPdfLogo();
+      List<List<dynamic>> rows) async {
     final document = pw.Document();
     document.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4.landscape,
-      margin: const pw.EdgeInsets.fromLTRB(18, 12, 18, 24),
-      header: (_) => pw.Column(children: [
-        _brandedPdfHeader(report, month, printedAt, logo),
-        pw.SizedBox(height: 10),
-      ]),
-      footer: (_) => _brandedPdfFooter(printedAt),
+      margin: const pw.EdgeInsets.all(12),
       build: (_) => [
         pw.TableHelper.fromTextArray(
-          headers: headers,
           data: rows
               .map((row) => row
                   .map((value) => value is num
@@ -18896,9 +18888,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                       : value.toString())
                   .toList())
               .toList(),
-          headerStyle:
-              pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-          headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
           cellStyle: const pw.TextStyle(fontSize: 7.5),
           cellPadding: const pw.EdgeInsets.all(4),
           border: pw.TableBorder.all(color: PdfColors.grey500, width: .35),
@@ -19105,52 +19094,21 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<void> _exportStatutoryReportExcel(String report, DateTime month,
-      List<String> headers, List<List<dynamic>> rows) async {
-    final printedAt = DateTime.now();
+      List<List<dynamic>> rows) async {
     final excel = xls.Excel.createExcel();
     final defaultName = excel.getDefaultSheet();
     if (defaultName != null) excel.rename(defaultName, report);
     final sheet = excel[report];
-    final lastColumn = headers.length - 1;
-
-    sheet.merge(
-      xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
-      xls.CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 0),
-    );
-    final titleCell =
-        sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0));
-    titleCell.value = xls.TextCellValue(
-        'HASANI BOOKS    $report - ${DateFormat('MMMM yyyy').format(month)}    Print Date: ${DateFormat('dd/MM/yyyy').format(printedAt)}');
-    titleCell.cellStyle = xls.CellStyle(bold: true, fontSize: 14);
-
-    for (var column = 0; column < headers.length; column++) {
-      final cell = sheet.cell(
-          xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 2));
-      cell.value = xls.TextCellValue(headers[column]);
-      cell.cellStyle = _excelHeaderStyle(cell.cellStyle);
-    }
     for (var row = 0; row < rows.length; row++) {
       for (var column = 0; column < rows[row].length; column++) {
         final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
-            columnIndex: column, rowIndex: row + 3));
+            columnIndex: column, rowIndex: row));
         final value = rows[row][column];
         cell.value = value is num
             ? xls.DoubleCellValue(value.toDouble())
             : xls.TextCellValue(value.toString());
       }
     }
-    final footerRow = rows.length + 5;
-    sheet.merge(
-      xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: footerRow),
-      xls.CellIndex.indexByColumnRow(
-          columnIndex: lastColumn, rowIndex: footerRow),
-    );
-    final footerCell = sheet.cell(
-        xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: footerRow));
-    footerCell.value = xls.TextCellValue(
-        'Prepared by Admin | ${DateFormat('dd/MM/yyyy hh:mm a').format(printedAt)}');
-    footerCell.cellStyle = xls.CellStyle(bold: true);
-
     final output = excel.encode();
     if (output == null) throw Exception('Excel file could not be generated.');
     await FileSaver.instance.saveFile(
@@ -20539,6 +20497,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             ...epfLocal,
             ...epfForeign,
           ],
+          includeHeader: false,
         );
       }
 
@@ -20560,6 +20519,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             ...eisLocal,
             ...eisForeign,
           ],
+          includeHeader: false,
         );
       }
 
@@ -20581,6 +20541,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             ...socsoLocal,
             ...socsoForeign,
           ],
+          includeHeader: false,
         );
       }
 
