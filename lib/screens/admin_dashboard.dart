@@ -2301,29 +2301,31 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                       ),
                     ] else
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 3, child: _dashboardActionDock()),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 2,
-                            child: _dashboardPulsePanel(
-                              employees: employees.length,
-                              activeEmployees: activeEmployees,
-                              payrollRecords: periodPayroll.length,
-                              departments: departments,
-                              onDepartmentsTap: () =>
-                                  _showDepartmentFlow(employees),
-                              onPayrollTap: () => _showPayrollFlow(
-                                employees,
-                                periodPayroll,
-                                title: 'Payroll Records',
-                                metric: 'generate',
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(flex: 3, child: _dashboardActionDock()),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 2,
+                              child: _dashboardPulsePanel(
+                                employees: employees.length,
+                                activeEmployees: activeEmployees,
+                                payrollRecords: periodPayroll.length,
+                                departments: departments,
+                                onDepartmentsTap: () =>
+                                    _showDepartmentFlow(employees),
+                                onPayrollTap: () => _showPayrollFlow(
+                                  employees,
+                                  periodPayroll,
+                                  title: 'Payroll Records',
+                                  metric: 'generate',
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                   ],
                 ),
@@ -3122,14 +3124,14 @@ class _AdminDashboardState extends State<AdminDashboard>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 5,
-          height: 45,
+          width: 4,
+          height: 38,
           decoration: BoxDecoration(
             color: const Color(0xFFD6B24F),
             borderRadius: BorderRadius.circular(8),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3137,12 +3139,14 @@ class _AdminDashboardState extends State<AdminDashboard>
               title,
               style: const TextStyle(
                 color: Color(0xFF252418),
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 3),
-            Text(subtitle, style: const TextStyle(color: Color(0xFF64739A))),
+            const SizedBox(height: 2),
+            Text(subtitle,
+                style: const TextStyle(
+                    color: Color(0xFF64739A), fontSize: 12.5)),
           ],
         ),
       ],
@@ -3158,8 +3162,11 @@ class _AdminDashboardState extends State<AdminDashboard>
     required List<Map<String, dynamic>> birthdays,
     required List<Map<String, dynamic>> anniversaries,
   }) {
-    Widget metrics() => LayoutBuilder(builder: (context, constraints) {
-          final width = (constraints.maxWidth - 10) / 2;
+    Widget metrics({required bool stacked}) =>
+        LayoutBuilder(builder: (context, constraints) {
+          final width = stacked
+              ? constraints.maxWidth
+              : (constraints.maxWidth - 10) / 2;
           return Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -3202,14 +3209,18 @@ class _AdminDashboardState extends State<AdminDashboard>
       anniversaries: anniversaries,
     );
     if (compact) {
-      return Column(children: [metrics(), const SizedBox(height: 12), events]);
+      return Column(children: [
+        metrics(stacked: false),
+        const SizedBox(height: 12),
+        events
+      ]);
     }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: metrics()),
+        Expanded(flex: 9, child: metrics(stacked: true)),
         const SizedBox(width: 16),
-        Expanded(child: events),
+        Expanded(flex: 11, child: events),
       ],
     );
   }
@@ -3225,50 +3236,31 @@ class _AdminDashboardState extends State<AdminDashboard>
   }) {
     return SizedBox(
       width: width,
-      height: 108,
+      height: 72,
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.white, color.withValues(alpha: .09)],
-              ),
-              border: Border.all(color: color.withValues(alpha: .65)),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: .10),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              color: Colors.white.withValues(alpha: .88),
+              border: Border.all(color: const Color(0xFFE2E5EB)),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(children: [
               Container(
-                width: 62,
-                height: 62,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    color.withValues(alpha: .95),
-                    Color.lerp(color, Colors.black, .18)!,
-                  ]),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: .24),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+                  color: color.withValues(alpha: .11),
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(icon, color: Colors.white, size: 34),
+                child: Icon(icon, color: color, size: 22),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3279,33 +3271,25 @@ class _AdminDashboardState extends State<AdminDashboard>
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             color: _midnight,
-                            fontSize: 25,
+                            fontSize: 20,
                             fontWeight: FontWeight.w900)),
                     Text(title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             color: _midnight,
-                            fontSize: 14,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w800)),
                     Text(detail,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 10, color: Colors.black54)),
+                            fontSize: 10, color: Color(0xFF788195))),
                   ],
                 ),
               ),
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .10),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child:
-                    Icon(Icons.arrow_forward_rounded, color: color, size: 20),
-              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: color.withValues(alpha: .72), size: 22),
             ]),
           ),
         ),
@@ -3325,27 +3309,22 @@ class _AdminDashboardState extends State<AdminDashboard>
               ? 'Tomorrow'
               : 'In $days days';
       return Container(
-        constraints: const BoxConstraints(minHeight: 78),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        constraints: const BoxConstraints(minHeight: 113),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.white, color.withValues(alpha: .08)],
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: .45)),
+          color: Colors.white.withValues(alpha: .88),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E5EB)),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                color.withValues(alpha: .95),
-                Color.lerp(color, Colors.black, .18)!,
-              ]),
-              borderRadius: BorderRadius.circular(13),
+              color: color.withValues(alpha: .11),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: Colors.white, size: 25),
+            child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -3710,33 +3689,27 @@ class _AdminDashboardState extends State<AdminDashboard>
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(13),
+      borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  accent.withValues(alpha: .95),
-                  Color.lerp(accent, Colors.black, .15)!,
-                ]),
-                borderRadius: BorderRadius.circular(13),
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: .20),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: accent.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: Colors.white, size: 23),
+              child: Icon(icon, color: accent, size: 20),
             ),
-            const SizedBox(width: 11),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(label, style: const TextStyle(color: Colors.black54)),
+              child: Text(label,
+                  style: const TextStyle(
+                      color: Color(0xFF596273),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600)),
             ),
             Text(
               value,
@@ -6576,8 +6549,21 @@ class _AdminDashboardState extends State<AdminDashboard>
         TextEditingController(text: employee[key]?.toString() ?? '');
     TextEditingController makeSalary(String key) =>
         TextEditingController(text: salaryDefault[key]?.toString() ?? '0');
+    final isForeignEmployee =
+        '${employee['address'] ?? ''} ${salaryDefault['address'] ?? ''}'
+            .toUpperCase()
+            .contains('FRN');
+    final existingName = employee['name']?.toString().trim() ?? '';
+    final firstName = TextEditingController(
+      text: employee['first_name']?.toString().trim().isNotEmpty == true
+          ? employee['first_name'].toString().trim()
+          : existingName,
+    );
+    final lastName = TextEditingController(
+      text: employee['last_name']?.toString().trim() ?? '',
+    );
     final fields = <String, TextEditingController>{
-      'Name': make('name'),
+      if (!isForeignEmployee) 'Name': make('name'),
       'Designation': make('designation'),
       'Department': make('department'),
       'Email': make('email'),
@@ -6656,6 +6642,29 @@ class _AdminDashboardState extends State<AdminDashboard>
                         enabled: false,
                         decoration:
                             const InputDecoration(labelText: 'Employee ID')),
+                    if (isForeignEmployee) ...[
+                      TextField(
+                        controller: firstName,
+                        enabled: !saving,
+                        maxLines: 1,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'First Name',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      TextField(
+                        controller: lastName,
+                        enabled: !saving,
+                        maxLines: 1,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Last Name',
+                          helperText: 'Printed first on EPF and SOCSO reports.',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                     ...fields.entries.map((field) => TextField(
                         controller: field.value,
                         enabled: !saving,
@@ -6941,6 +6950,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                 onPressed: saving
                     ? null
                     : () async {
+                        if (isForeignEmployee &&
+                            (firstName.text.trim().isEmpty ||
+                                lastName.text.trim().isEmpty)) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'First Name and Last Name are required for FRN employees.'),
+                            ),
+                          );
+                          return;
+                        }
                         final salaryValues = <String, double>{};
                         for (final field in salaryFields.entries) {
                           final value = double.tryParse(
@@ -6965,9 +6985,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                               isActive: active,
                             );
                           }
+                          final savedFirstName = firstName.text.trim();
+                          final savedLastName = lastName.text.trim();
                           await SupabaseService.updateEmployee(
                               employee['employee_id'], {
-                            'name': fields['Name']!.text.trim(),
+                            'name': isForeignEmployee
+                                ? '$savedFirstName $savedLastName'.trim()
+                                : fields['Name']!.text.trim(),
+                            'first_name':
+                                isForeignEmployee ? savedFirstName : null,
+                            'last_name':
+                                isForeignEmployee ? savedLastName : null,
                             'designation': fields['Designation']!.text.trim(),
                             'department': fields['Department']!.text.trim(),
                             'email': fields['Email']!.text.trim(),
@@ -7061,6 +7089,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         item.dispose();
       }
       incrementDetails.dispose();
+      firstName.dispose();
+      lastName.dispose();
     });
   }
 
@@ -18526,6 +18556,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           ? defaultAddress
           : firstText(employee, const ['address', 'Address', 'ADDRESS']);
       final isForeign = address.toUpperCase().contains('FRN');
+      final firstName = firstText(employee, const ['first_name', 'firstName']);
+      final lastName = firstText(employee, const ['last_name', 'lastName']);
+      final statutoryName = isForeign &&
+              firstName.isNotEmpty &&
+              lastName.isNotEmpty
+          ? '$lastName $firstName'
+          : name;
       final icDigits = rawIc.replaceAll(RegExp(r'[^0-9]'), '');
       final digitsOnly = RegExp(r'^\d+$').hasMatch(rawIc);
       final exportIc = !isForeign && digitsOnly && rawIc.length < 12
@@ -18553,7 +18590,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           epfEmployee + epfEmployer > 0 && (!isForeign || epfNo.isNotEmpty);
       if (report == 'EPF' && eligibleForEpf) {
         row = [
-          name,
+          statutoryName,
           exportIc,
           epfNo,
           epfEmployee,
@@ -18568,7 +18605,13 @@ class _AdminDashboardState extends State<AdminDashboard>
         final eligible = total > 0 &&
             (isForeign ? socsoNo.isNotEmpty : icDigits.length == 12);
         if (eligible) {
-          row = [name, identifier, socsoEmployee, socsoEmployer, total];
+          row = [
+            statutoryName,
+            identifier,
+            socsoEmployee,
+            socsoEmployer,
+            total
+          ];
         }
       } else if (report == 'EIS' && eisEmployee + eisEmployer > 0) {
         row = [
@@ -20235,6 +20278,18 @@ class _AdminDashboardState extends State<AdminDashboard>
         final icDigits = ic.replaceAll(RegExp(r'[^0-9]'), '');
         final icDigitCount = icDigits.length;
         final isForeign = address.trim().toUpperCase().contains('FRN');
+        final firstName = value(
+          employee,
+          const ['first_name', 'firstName'],
+        );
+        final lastName = value(
+          employee,
+          const ['last_name', 'lastName'],
+        );
+        final statutoryName =
+            isForeign && firstName.isNotEmpty && lastName.isNotEmpty
+                ? '$lastName $firstName'
+                : name;
         final isDigitsOnly = RegExp(r'^\d+$').hasMatch(ic);
         final exportIc = !isForeign && isDigitsOnly && ic.length < 12
             ? ic.padLeft(12, '0')
@@ -20376,7 +20431,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             epfEmployee + epfEmployer > 0 && (!isForeign || epfNo.isNotEmpty);
         if (eligibleForEpfExport) {
           final epfRow = <dynamic>[
-            name,
+            statutoryName,
             '',
             '',
             exportIc,
@@ -20419,7 +20474,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             (isForeign ? socsoNo.isNotEmpty : icDigitCount == 12);
         if (eligibleForSocsoExport) {
           final socsoRow = <dynamic>[
-            name,
+            statutoryName,
             socsoIdentifier,
             '',
             socsoTotal,
@@ -20789,11 +20844,13 @@ class _AdminDashboardState extends State<AdminDashboard>
     };
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isDashboard ? 16 : 20),
       decoration: BoxDecoration(
-        color: isDashboard ? Colors.transparent : Colors.white,
-        borderRadius: BorderRadius.circular(isDashboard ? 18 : 14),
-        border: _hasaniOuterBorder(2),
+        color: Colors.white.withValues(alpha: isDashboard ? .82 : 1),
+        borderRadius: BorderRadius.circular(14),
+        border: isDashboard
+            ? Border.all(color: const Color(0xFFE2E5EB))
+            : _hasaniOuterBorder(2),
         boxShadow: const [
           BoxShadow(
             color: Color(0x08000000),
@@ -20808,37 +20865,28 @@ class _AdminDashboardState extends State<AdminDashboard>
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: isDashboard ? 36 : 42,
+                height: isDashboard ? 36 : 42,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    panelStyle.$2.withValues(alpha: .95),
-                    Color.lerp(panelStyle.$2, Colors.black, .18)!,
-                  ]),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: panelStyle.$2.withValues(alpha: .22),
-                      blurRadius: 9,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: panelStyle.$2.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(panelStyle.$1, color: Colors.white, size: 23),
+                child: Icon(panelStyle.$1,
+                    color: panelStyle.$2, size: isDashboard ? 20 : 23),
               ),
               const SizedBox(width: 11),
               Expanded(
                 child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: isDashboard ? 14 : 18),
           child,
         ],
       ),
@@ -20941,50 +20989,37 @@ class _AdminDashboardState extends State<AdminDashboard>
     };
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(11),
       child: Container(
-        width: 150,
-        height: 132,
-        padding: const EdgeInsets.all(14),
+        width: 140,
+        height: 92,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.white, palette.$1.withValues(alpha: .07)],
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: palette.$1.withValues(alpha: .24)),
-          boxShadow: [
-            BoxShadow(
-              color: palette.$1.withValues(alpha: .10),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: const Color(0xFFF8F9FB),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: const Color(0xFFE2E5EB)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 55,
-              height: 55,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [palette.$1, palette.$2]),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.$1.withValues(alpha: .30),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
+                color: palette.$1.withValues(alpha: .13),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: Colors.white, size: 29),
+              child: Icon(icon, color: palette.$2, size: 21),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 7),
             Text(
               title,
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF343B49),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
