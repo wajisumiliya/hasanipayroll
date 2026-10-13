@@ -4485,11 +4485,19 @@ class _AdminDashboardState extends State<AdminDashboard>
             );
           }
           final now = DateTime.now();
+          // A month's payslip is due on the 5th of the following month.
+          // Before that date it must not be reported as missing.
+          final latestDueMonth = DateTime(
+            now.year,
+            now.month - (now.day >= 5 ? 1 : 2),
+          );
           final firstYear = records
               .map((record) => record.period.year)
               .reduce((a, b) => a < b ? a : b);
           final monthsByYear = <int, Set<int>>{};
           for (final record in records) {
+            final netAmount = record.storedNetSalary ?? record.netPay;
+            if (netAmount <= 0) continue;
             monthsByYear
                 .putIfAbsent(record.period.year, () => <int>{})
                 .add(record.period.month);
@@ -4502,7 +4510,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                 for (var year = firstYear; year <= now.year; year++) ...[
                   if (year > firstYear) const SizedBox(width: 6),
                   Builder(builder: (context) {
-                    final lastExpectedMonth = year == now.year ? now.month : 12;
+                    final lastExpectedMonth = year < latestDueMonth.year
+                        ? 12
+                        : year == latestDueMonth.year
+                            ? latestDueMonth.month
+                            : 0;
                     final available = monthsByYear[year] ?? const <int>{};
                     final missing = [
                       for (var month = 1;
@@ -4510,20 +4522,25 @@ class _AdminDashboardState extends State<AdminDashboard>
                           month++)
                         if (!available.contains(month)) month,
                     ];
-                    final complete = missing.isEmpty;
+                    final notDue = lastExpectedMonth == 0;
+                    final complete = !notDue && missing.isEmpty;
                     return Container(
                       constraints: const BoxConstraints(minWidth: 62),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 4),
                       decoration: BoxDecoration(
-                        color: complete
-                            ? const Color(0xFFE8F7EF)
-                            : const Color(0xFFFFF5DE),
+                        color: notDue
+                            ? const Color(0xFFF1F3F6)
+                            : complete
+                                ? const Color(0xFFE8F7EF)
+                                : const Color(0xFFFFF5DE),
                         borderRadius: BorderRadius.circular(7),
                         border: Border.all(
-                          color: complete
-                              ? const Color(0xFFB9E2CB)
-                              : const Color(0xFFE9CA82),
+                          color: notDue
+                              ? const Color(0xFFD5DAE3)
+                              : complete
+                                  ? const Color(0xFFB9E2CB)
+                                  : const Color(0xFFE9CA82),
                         ),
                       ),
                       child: Column(
@@ -4534,14 +4551,18 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w800)),
                           Text(
-                            complete
-                                ? 'Complete'
-                                : 'Missing ${missingMonthRanges(missing)}',
+                            notDue
+                                ? 'Not due yet'
+                                : complete
+                                    ? 'Complete'
+                                    : 'Missing ${missingMonthRanges(missing)}',
                             style: TextStyle(
                               fontSize: 8.5,
-                              color: complete
-                                  ? const Color(0xFF188653)
-                                  : const Color(0xFF9A6A16),
+                              color: notDue
+                                  ? const Color(0xFF6F7785)
+                                  : complete
+                                      ? const Color(0xFF188653)
+                                      : const Color(0xFF9A6A16),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -7599,6 +7620,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 .upsert(salaryDefaultsPayload,
                                     onConflict: 'employee_id');
                           }
+                          await service.loadEmployeesFromSupabase();
                           if (!mounted) return;
                           Navigator.pop(dialogContext);
                           setState(() => _adminEmployeesFuture = null);
@@ -11148,10 +11170,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         .from('employees')
         .select(
           'employee_id,name,branch_id,payroll_branch_id,'
-           'photo_url,is_active,is_management_staff,is_temp_staff,'
+           'photo_url,is_active,employment_status,is_management_staff,is_temp_staff,'
            'is_support_staff,is_other_staff',
         )
         .eq('is_active', true)
+        .neq('employment_status', 'vacation')
         .order('employee_id');
 
     await showDialog<void>(

@@ -396,6 +396,7 @@ class SupabaseService {
           .from('employees')
           .select()
           .eq('is_active', true)
+          .neq('employment_status', 'vacation')
           .order('name', ascending: true);
 
       return _mapList(response);
@@ -458,11 +459,15 @@ class SupabaseService {
       }..remove('');
 
       if (wanted.isEmpty) {
-        return await getEmployees();
+        return activeOnly ? getActiveEmployees() : getEmployees();
       }
 
       var query = client.from('employees').select();
-      if (activeOnly) query = query.eq('is_active', true);
+      if (activeOnly) {
+        query = query
+            .eq('is_active', true)
+            .neq('employment_status', 'vacation');
+      }
       final response = await query.order('name', ascending: true);
 
       return _mapList(response).where((employee) {
@@ -529,6 +534,7 @@ class SupabaseService {
           .select()
           .eq('branch_id', branchId.trim())
           .eq('is_active', true)
+          .neq('employment_status', 'vacation')
           .neq('is_management_staff', true)
           .neq('is_temp_staff', true)
           .neq('is_support_staff', true)
@@ -567,6 +573,7 @@ class SupabaseService {
           .select()
           .eq('department', department.trim())
           .eq('is_active', true)
+          .neq('employment_status', 'vacation')
           .order('name', ascending: true);
 
       return _mapList(response);
@@ -593,7 +600,9 @@ class SupabaseService {
       }
 
       if (activeOnly == true) {
-        query = query.eq('is_active', true);
+        query = query
+            .eq('is_active', true)
+            .neq('employment_status', 'vacation');
       }
 
       final response = await query.order(

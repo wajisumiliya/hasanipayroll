@@ -949,6 +949,37 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     setState(() => printingAttendance = true);
 
     try {
+      double? approvedOtAmount;
+      double? lateDeductionAmount;
+      double? unpaidDeductionAmount;
+      try {
+        final periodStart = DateTime(widget.month.year, widget.month.month);
+        final periodEnd = DateTime(widget.month.year, widget.month.month + 1);
+        String dateText(DateTime value) =>
+            '${value.year.toString().padLeft(4, '0')}-'
+            '${value.month.toString().padLeft(2, '0')}-01';
+        final payroll = await SupabaseService.client
+            .from('payroll')
+            .select('overtime,late_deduction,unpaid_deduction')
+            .eq('employee_id', _employeeId())
+            .gte('period', dateText(periodStart))
+            .lt('period', dateText(periodEnd))
+            .maybeSingle();
+        double amount(dynamic value) {
+          if (value is num) return value.toDouble();
+          return double.tryParse(value?.toString() ?? '') ?? 0;
+        }
+
+        if (payroll != null) {
+          approvedOtAmount = amount(payroll['overtime']);
+          lateDeductionAmount = amount(payroll['late_deduction']);
+          unpaidDeductionAmount = amount(payroll['unpaid_deduction']);
+        }
+      } catch (_) {
+        // Attendance can still be printed before payroll is generated or on
+        // older schemas. In that case the report keeps the duration only.
+      }
+
       final days = List<AttendancePrintDay>.generate(daysInMonth, (index) {
         final day = index + 1;
         final c = controllers[index];
@@ -987,6 +1018,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         isForeignEmployee: !_isLocalStaff,
         month: widget.month,
         days: days,
+        approvedOtAmount: approvedOtAmount,
+        lateDeductionAmount: lateDeductionAmount,
+        unpaidDeductionAmount: unpaidDeductionAmount,
       );
       await Printing.layoutPdf(
         name:

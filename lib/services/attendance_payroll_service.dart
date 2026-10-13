@@ -319,6 +319,8 @@ class AttendancePayrollService {
   }) async {
     final employeeId = _normalizeId(employee['employee_id']);
     final employeeName = _text(employee['name']);
+    final employmentStatus =
+        _text(employee['employment_status']).trim().toLowerCase();
     final isManagementStaff = _toBool(employee['is_management_staff']);
     final isTempStaff = _toBool(employee['is_temp_staff']);
     final isSupportStaff = _toBool(employee['is_support_staff']);
@@ -331,6 +333,15 @@ class AttendancePayrollService {
         employeeName: employeeName,
         generated: false,
         message: 'Employee ID is missing.',
+      );
+    }
+
+    if (employmentStatus == 'vacation') {
+      return PayrollGenerationItem(
+        employeeId: employeeId,
+        employeeName: employeeName,
+        generated: false,
+        message: 'Payroll is not generated while the employee is on vacation.',
       );
     }
 
@@ -886,7 +897,7 @@ class AttendancePayrollService {
         .from('employees')
         .select(
           'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,'
-          'payroll_branch_id,is_active,is_management_staff,is_temp_staff,'
+          'payroll_branch_id,is_active,employment_status,is_management_staff,is_temp_staff,'
           'is_support_staff',
         )
         .inFilter('employee_id', employeeIds);

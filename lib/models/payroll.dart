@@ -492,6 +492,7 @@ class Employee {
   final DateTime? joiningDate;
   final DateTime? birthday;
   final bool isActive;
+  final String employmentStatus;
   final bool isManagementStaff;
   final bool isTempStaff;
   final bool isSupportStaff;
@@ -516,6 +517,7 @@ class Employee {
     this.joiningDate,
     this.birthday,
     this.isActive = true,
+    this.employmentStatus = 'active',
     this.isManagementStaff = false,
     this.isTempStaff = false,
     this.isSupportStaff = false,
@@ -544,6 +546,7 @@ class Employee {
     DateTime? joiningDate,
     DateTime? birthday,
     bool? isActive,
+    String? employmentStatus,
     bool? isManagementStaff,
     bool? isTempStaff,
     bool? isSupportStaff,
@@ -567,6 +570,10 @@ class Employee {
       joiningDate: joiningDate ?? this.joiningDate,
       birthday: birthday ?? this.birthday,
       isActive: isActive ?? this.isActive,
+      employmentStatus: employmentStatus ??
+          (isActive == null
+              ? this.employmentStatus
+              : (isActive ? 'active' : 'resigned')),
       isManagementStaff: isManagementStaff ?? this.isManagementStaff,
       isTempStaff: isTempStaff ?? this.isTempStaff,
       isSupportStaff: isSupportStaff ?? this.isSupportStaff,
@@ -597,6 +604,7 @@ class Employee {
       'joiningDate': joiningDate?.toIso8601String(),
       'birthday': birthday?.toIso8601String(),
       'isActive': isActive,
+      'employmentStatus': employmentStatus,
       'isManagementStaff': isManagementStaff,
       'isTempStaff': isTempStaff,
       'isSupportStaff': isSupportStaff,
@@ -630,6 +638,12 @@ class Employee {
         json['isActive'],
         defaultValue: true,
       ),
+      employmentStatus: _stringValue(
+        json['employmentStatus'] ?? json['employment_status'],
+        defaultValue: _boolValue(json['isActive'], defaultValue: true)
+            ? 'active'
+            : 'resigned',
+      ).toLowerCase(),
       isManagementStaff: _boolValue(
         json['isManagementStaff'] ?? json['is_management_staff'],
       ),

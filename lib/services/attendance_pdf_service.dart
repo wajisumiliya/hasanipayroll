@@ -57,6 +57,9 @@ class AttendancePdfService {
     required bool isForeignEmployee,
     required DateTime month,
     required List<AttendancePrintDay> days,
+    double? approvedOtAmount,
+    double? lateDeductionAmount,
+    double? unpaidDeductionAmount,
   }) async {
     final document = pw.Document();
     pw.MemoryImage? logo;
@@ -113,16 +116,31 @@ class AttendancePdfService {
                   _summary(
                       'BREAK HOURS', 'All recorded breaks', breakTotal, _red),
                   pw.SizedBox(width: 5),
-                  _summary('LATE HOURS', 'After roster start', lateTotal,
-                      PdfColors.black),
+                  _summary(
+                    'LATE HOURS',
+                    'After roster start',
+                    lateTotal,
+                    PdfColors.black,
+                    lateDeductionAmount,
+                  ),
                   pw.SizedBox(width: 5),
-                  _summary('UNPAID HOURS', '7:30 per unpaid day', unpaidTotal,
-                      PdfColors.black),
+                  _summary(
+                    'UNPAID HOURS',
+                    '7:30 per unpaid day',
+                    unpaidTotal,
+                    PdfColors.black,
+                    unpaidDeductionAmount,
+                  ),
                   pw.SizedBox(width: 5),
                   _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
                   pw.SizedBox(width: 5),
-                  _summary('APPROVED OT', 'Authorized overtime', otTotal,
-                      PdfColors.black),
+                  _summary(
+                    'APPROVED OT',
+                    'Authorized overtime',
+                    otTotal,
+                    PdfColors.black,
+                    approvedOtAmount,
+                  ),
                 ],
               ),
               pw.SizedBox(height: 8),
@@ -308,8 +326,8 @@ class AttendancePdfService {
             ]),
       );
 
-  static pw.Widget _summary(
-          String label, String description, int minutes, PdfColor color) =>
+  static pw.Widget _summary(String label, String description, int minutes,
+          PdfColor color, [double? amount]) =>
       pw.Expanded(
         child: pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 6),
@@ -330,9 +348,13 @@ class AttendancePdfService {
                     style: const pw.TextStyle(
                         fontSize: 4.5, color: PdfColors.black)),
                 pw.SizedBox(height: 2),
-                pw.Text(_duration(minutes),
+                pw.Text(
+                    amount == null
+                        ? _duration(minutes)
+                        : '${_duration(minutes)} / RM ${amount.toStringAsFixed(2)}',
+                    maxLines: 1,
                     style: pw.TextStyle(
-                        fontSize: 10,
+                        fontSize: amount == null ? 10 : 7,
                         fontWeight: pw.FontWeight.bold,
                         color: color)),
               ]),

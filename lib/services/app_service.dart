@@ -750,6 +750,11 @@ class AppService extends ChangeNotifier {
       isActive: _supabaseBool(
         data['is_active'] ?? data['isActive'],
       ),
+      employmentStatus: (data['employment_status'] ??
+              (data['is_active'] == false ? 'resigned' : 'active'))
+          .toString()
+          .trim()
+          .toLowerCase(),
       isManagementStaff: _supabaseBool(
         data['is_management_staff'] ?? data['isManagementStaff'],
       ),
@@ -3910,6 +3915,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           ? null
           : _dateOnlyString(employee.birthday!),
       'is_active': employee.isActive,
+      'employment_status': employee.employmentStatus,
       'is_management_staff': employee.isManagementStaff,
       'is_temp_staff': employee.isTempStaff,
       'is_support_staff': employee.isSupportStaff,
