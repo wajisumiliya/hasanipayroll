@@ -23,6 +23,7 @@ import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
 import '../widgets/employee_aquarium_card.dart';
 import '../widgets/premium_portal_sidebar.dart';
+import '../utils/app_reload.dart';
 
 class EmployeePortal extends StatefulWidget {
   const EmployeePortal({super.key});
@@ -536,7 +537,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final portal = constraints.maxWidth >= 900 ? _desktop() : _mobile();
+          final portal = constraints.maxWidth >= 1024 ? _desktop() : _mobile();
           return _showBirthdayCelebration && tab == 0
               ? _birthdayDashboardFrame(portal)
               : portal;
@@ -591,8 +592,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                       ),
                     ),
                   Positioned(
-                    top: size.width >= 900 ? 88 : 74,
-                    left: size.width >= 900 ? 280 : 18,
+                    top: size.width >= 1024 ? 88 : 74,
+                    left: size.width >= 1024 ? 280 : 18,
                     right: 18,
                     child: Center(
                       child: Transform.scale(
@@ -954,6 +955,7 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   Widget _mobile() {
     final dailyTheme = _dailyTheme;
+    final narrowPhone = MediaQuery.sizeOf(context).width < 430;
     final mobilePages =
         _isLocalEmployee ? const [0, 1, 2, 6, 3] : const [0, 1, 2, 6];
     final selectedMobileIndex =
@@ -970,12 +972,37 @@ class _EmployeePortalState extends State<EmployeePortal>
         actions: [
           _notificationButton(color: Colors.white),
           _financialVisibilityButton(),
-          const AppReloadButton(color: Colors.white),
-          IconButton(
-            onPressed: logout,
-            tooltip: 'Logout',
-            icon: const Icon(Icons.logout),
-          ),
+          if (!narrowPhone) const AppReloadButton(color: Colors.white),
+          if (!narrowPhone)
+            IconButton(
+              onPressed: logout,
+              tooltip: 'Logout',
+              icon: const Icon(Icons.logout),
+            )
+          else
+            PopupMenuButton<String>(
+              tooltip: 'More options',
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'reload') {
+                  unawaited(reloadLatestApp());
+                } else if (value == 'bank') {
+                  _selectTab(4);
+                } else if (value == 'password') {
+                  _selectTab(5);
+                } else if (value == 'logout') {
+                  logout();
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'reload', child: Text('Refresh')),
+                PopupMenuItem(value: 'bank', child: Text('Bank Information')),
+                PopupMenuItem(
+                    value: 'password', child: Text('Change Password')),
+                PopupMenuDivider(),
+                PopupMenuItem(value: 'logout', child: Text('Logout')),
+              ],
+            ),
         ],
       ),
       body: DecoratedBox(
@@ -1161,7 +1188,7 @@ class _EmployeePortalState extends State<EmployeePortal>
         return _dashboard();
 
       case 1:
-        return MediaQuery.sizeOf(context).width < 900
+        return MediaQuery.sizeOf(context).width < 1024
             ? _mobilePayrollDocuments()
             : _payslips();
 
@@ -1197,7 +1224,9 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget _dashboard() {
     if (records.isEmpty) {
       return SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(
+          MediaQuery.sizeOf(context).width < 600 ? 12 : 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1872,74 +1901,72 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget _salary(
     PayrollRecord payroll,
   ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: tab == 0
-            ? Border.all(color: _dailyTheme.accent.withValues(alpha: .38))
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 15,
+    return LayoutBuilder(builder: (context, constraints) {
+      final compact = constraints.maxWidth < 380;
+      final metrics = [
+        _metric(
+            'Gross Earnings', payroll.totalEarnings, const Color(0xFF08255F)),
+        _metric('Total Deductions', payroll.totalDeductions, Colors.red),
+        _metric('Net Pay', payroll.netPay, const Color(0xFF13B66B), big: true),
+      ];
+      return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: tab == 0
+                ? Border.all(color: _dailyTheme.accent.withValues(alpha: .38))
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 15,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
+          child: Column(
             children: [
-              Expanded(
-                child: Text(
-                  DateFormat('MMMM yyyy').format(payroll.period),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      DateFormat('MMMM yyyy').format(payroll.period),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
-                ),
+                  FilledButton.tonal(
+                    onPressed: () => _pdf(payroll),
+                    child: const Text(
+                      'View Payslip',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ],
               ),
-              FilledButton.tonal(
-                onPressed: () => _pdf(payroll),
-                child: const Text(
-                  'View Payslip',
-                  style: TextStyle(fontSize: 11),
-                ),
-              ),
+              const SizedBox(height: 14),
+              if (compact)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 12,
+                  children: metrics
+                      .map((metric) => SizedBox(
+                            width: (constraints.maxWidth - 42) / 2,
+                            child: metric,
+                          ))
+                      .toList(),
+                )
+              else
+                Row(
+                    children: metrics
+                        .map((metric) => Expanded(child: metric))
+                        .toList()),
             ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _metric(
-                  'Gross Earnings',
-                  payroll.totalEarnings,
-                  const Color(0xFF08255F),
-                ),
-              ),
-              Expanded(
-                child: _metric(
-                  'Total Deductions',
-                  payroll.totalDeductions,
-                  Colors.red,
-                ),
-              ),
-              Expanded(
-                child: _metric(
-                  'Net Pay',
-                  payroll.netPay,
-                  const Color(0xFF13B66B),
-                  big: true,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+          ));
+    });
   }
 
   Widget _metric(
@@ -2507,7 +2534,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             LayoutBuilder(
               builder: (context, constraints) {
                 final columns = compact
-                    ? 3
+                    ? (constraints.maxWidth < 360 ? 2 : 3)
                     : constraints.maxWidth >= 1100
                         ? 6
                         : constraints.maxWidth >= 700
@@ -2684,15 +2711,17 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   Widget _attendance() {
     final currentEmployee = employee!;
+    final compact = MediaQuery.sizeOf(context).width < 600;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(compact ? 12 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'My Attendance',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+            style: TextStyle(
+                fontSize: compact ? 24 : 28, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -2703,7 +2732,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           Card(
             elevation: 0,
             child: Padding(
-              padding: const EdgeInsets.all(22),
+              padding: EdgeInsets.all(compact ? 14 : 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2748,17 +2777,33 @@ class _EmployeePortalState extends State<EmployeePortal>
                     ],
                   ),
                   const Divider(height: 30),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_month_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          DateFormat('MMMM yyyy').format(_attendanceMonth),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      OutlinedButton.icon(
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final narrow = constraints.maxWidth < 360;
+                      final month = Row(
+                        mainAxisSize:
+                            narrow ? MainAxisSize.min : MainAxisSize.max,
+                        children: [
+                          const Icon(Icons.calendar_month_outlined, size: 20),
+                          const SizedBox(width: 8),
+                          if (narrow)
+                            Text(
+                              DateFormat('MMM yyyy').format(_attendanceMonth),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700),
+                            )
+                          else
+                            Expanded(
+                              child: Text(
+                                DateFormat('MMMM yyyy')
+                                    .format(_attendanceMonth),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                        ],
+                      );
+                      final changeButton = OutlinedButton.icon(
                         onPressed: () async {
                           final picked = await showDatePicker(
                             context: context,
@@ -2776,8 +2821,18 @@ class _EmployeePortalState extends State<EmployeePortal>
                         },
                         icon: const Icon(Icons.edit_calendar_outlined),
                         label: const Text('Change'),
-                      ),
-                    ],
+                      );
+                      if (narrow) {
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [month, changeButton],
+                        );
+                      }
+                      return Row(
+                          children: [Expanded(child: month), changeButton]);
+                    },
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
@@ -2959,74 +3014,80 @@ class _EmployeePortalState extends State<EmployeePortal>
   // =============================================================
 
   Widget _bankInformation() {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Bank Information',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Salary payment information',
-            style: TextStyle(
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.account_balance,
-                    ),
-                    title: const Text('Bank Code'),
-                    subtitle: Text(
-                      _privateText(employee!.bankCode),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.credit_card,
-                    ),
-                    title: const Text(
-                      'Bank Account Number',
-                    ),
-                    subtitle: Text(
-                      _privateText(employee!.bankAccount),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.badge),
-                    title: const Text('Employee ID'),
-                    subtitle: Text(
-                      employee!.employeeId,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+      padding: EdgeInsets.all(compact ? 12 : 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bank Information',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              const Text(
+                'Salary payment information',
+                style: TextStyle(
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.account_balance,
+                        ),
+                        title: const Text('Bank Code'),
+                        subtitle: Text(
+                          _privateText(employee!.bankCode),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.credit_card,
+                        ),
+                        title: const Text(
+                          'Bank Account Number',
+                        ),
+                        subtitle: Text(
+                          _privateText(employee!.bankAccount),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(Icons.badge),
+                        title: const Text('Employee ID'),
+                        subtitle: Text(
+                          employee!.employeeId,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -3256,75 +3317,81 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Change Password'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: currentController,
-              obscureText: hideCurrent,
-              decoration: _passwordDecoration(
-                label: 'Current Password',
-                hidden: hideCurrent,
-                onToggle: () {
-                  setState(() {
-                    hideCurrent = !hideCurrent;
-                  });
-                },
-              ),
+        padding: EdgeInsets.all(compact ? 12 : 20),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 620),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: currentController,
+                  obscureText: hideCurrent,
+                  decoration: _passwordDecoration(
+                    label: 'Current Password',
+                    hidden: hideCurrent,
+                    onToggle: () {
+                      setState(() {
+                        hideCurrent = !hideCurrent;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: newController,
+                  obscureText: hideNew,
+                  decoration: _passwordDecoration(
+                    label: 'New Password',
+                    hidden: hideNew,
+                    onToggle: () {
+                      setState(() {
+                        hideNew = !hideNew;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: confirmController,
+                  obscureText: hideConfirm,
+                  decoration: _passwordDecoration(
+                    label: 'Confirm New Password',
+                    hidden: hideConfirm,
+                    onToggle: () {
+                      setState(() {
+                        hideConfirm = !hideConfirm;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: isUpdating ? null : updatePassword,
+                    child: isUpdating
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Update Password',
+                          ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: newController,
-              obscureText: hideNew,
-              decoration: _passwordDecoration(
-                label: 'New Password',
-                hidden: hideNew,
-                onToggle: () {
-                  setState(() {
-                    hideNew = !hideNew;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: confirmController,
-              obscureText: hideConfirm,
-              decoration: _passwordDecoration(
-                label: 'Confirm New Password',
-                hidden: hideConfirm,
-                onToggle: () {
-                  setState(() {
-                    hideConfirm = !hideConfirm;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: isUpdating ? null : updatePassword,
-                child: isUpdating
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Update Password',
-                      ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

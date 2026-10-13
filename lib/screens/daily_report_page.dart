@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
@@ -244,35 +245,55 @@ class _DailyReportPageState extends State<DailyReportPage> {
     required String label,
   }) async {
     final controller = TextEditingController();
+    String? error;
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        icon: const Icon(Icons.lock_outline, color: blue),
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          obscureText: true,
-          keyboardType: TextInputType.number,
-          maxLength: 4,
-          decoration: InputDecoration(labelText: label, counterText: ''),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          void submit() {
               final value = controller.text.trim();
               if (RegExp(r'^\d{4}$').hasMatch(value)) {
                 Navigator.pop(dialogContext, value);
+              } else {
+                setDialogState(() => error = 'Enter exactly four digits.');
               }
-            },
-            child: const Text('Continue'),
-          ),
-        ],
+          }
+
+          return AlertDialog(
+            icon: const Icon(Icons.lock_outline, color: blue),
+            title: Text(title),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              obscureText: true,
+              obscuringCharacter: '●',
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              maxLength: 4,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onSubmitted: (_) => submit(),
+              onChanged: (_) {
+                if (error != null) setDialogState(() => error = null);
+              },
+              decoration: InputDecoration(
+                labelText: label,
+                counterText: '',
+                errorText: error,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: submit,
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
       ),
     );
     controller.dispose();

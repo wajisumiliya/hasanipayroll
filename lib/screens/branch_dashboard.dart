@@ -45,6 +45,7 @@ class _BranchPortalState extends State<BranchPortal>
   DateTime selectedAttendanceDate = DateTime.now();
 
   Future<List<Map<String, dynamic>>>? _employeesFuture;
+  Future<List<Map<String, dynamic>>>? _allEmployeesFuture;
   String? _employeesFutureBranchId;
   Future<List<Map<String, dynamic>>>? _attendanceMonthFuture;
   String? _attendanceMonthFutureKey;
@@ -52,7 +53,11 @@ class _BranchPortalState extends State<BranchPortal>
   String? _attendanceDateFutureKey;
   final TextEditingController _employeeSearchController =
       TextEditingController();
+  final TextEditingController _attendanceSearchController =
+      TextEditingController();
   String _employeeSearch = '';
+  String _attendanceSearch = '';
+  String _employeeStatusFilter = 'all';
   late final AnimationController _celebrationController;
 
   @override
@@ -68,6 +73,7 @@ class _BranchPortalState extends State<BranchPortal>
   void dispose() {
     _celebrationController.dispose();
     _employeeSearchController.dispose();
+    _attendanceSearchController.dispose();
     super.dispose();
   }
 
@@ -145,6 +151,19 @@ class _BranchPortalState extends State<BranchPortal>
     return _employeesFuture!;
   }
 
+  Future<List<Map<String, dynamic>>> _liveAllBranchEmployees() {
+    final resolvedBranchId = branch?.branchId ?? branchId;
+    return _allEmployeesFuture ??= SupabaseService.getEmployeesByBranch(
+      resolvedBranchId,
+      frnOnly: isFrnSession,
+      aliases: [
+        branch?.branchName,
+        service.currentUser?.displayName,
+        service.currentUser?.username,
+      ],
+    );
+  }
+
   Future<List<Map<String, dynamic>>> _branchMonthAttendance() {
     final resolvedBranchId = branch?.branchId ?? branchId;
     final key =
@@ -183,6 +202,7 @@ class _BranchPortalState extends State<BranchPortal>
 
   void _refreshEmployees() {
     _employeesFuture = null;
+    _allEmployeesFuture = null;
     _employeesFutureBranchId = null;
 
     if (mounted) {
@@ -874,7 +894,7 @@ class _BranchPortalState extends State<BranchPortal>
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -894,7 +914,7 @@ class _BranchPortalState extends State<BranchPortal>
                   'Branch Operations',
                   style: TextStyle(
                     color: Color(0xFF20242D),
-                    fontSize: 30,
+                    fontSize: 27,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -.8,
                   ),
@@ -904,7 +924,7 @@ class _BranchPortalState extends State<BranchPortal>
                   '$branchDisplayName · Live attendance overview',
                   style: const TextStyle(color: Colors.black54),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 _branchPeriodSelector(),
                 const SizedBox(height: 14),
                 Wrap(
@@ -912,7 +932,7 @@ class _BranchPortalState extends State<BranchPortal>
                   runSpacing: 12,
                   children: [
                     _statCard(
-                      'Employees',
+                      'Attendance Employees',
                       totalEmployees.toString(),
                       Icons.people,
                       const Color(0xFF315AD9),
@@ -1837,6 +1857,26 @@ class _BranchPortalState extends State<BranchPortal>
     return value?.toString().toLowerCase() == 'true';
   }
 
+  String _liveEmploymentStatus(Map<String, dynamic> employee) {
+    final status = employee['employment_status']
+        ?.toString()
+        .trim()
+        .toLowerCase();
+    if (const {'active', 'vacation', 'transferred', 'resigned'}
+        .contains(status)) {
+      return status!;
+    }
+    return _liveIsActive(employee) ? 'active' : 'resigned';
+  }
+
+  String _liveEmploymentStatusLabel(Map<String, dynamic> employee) =>
+      switch (_liveEmploymentStatus(employee)) {
+        'vacation' => 'Vacation',
+        'transferred' => 'Transferred',
+        'resigned' => 'Resigned',
+        _ => 'Active',
+      };
+
   // ==========================================================================
   // ATTENDANCE PAGE
   // ==========================================================================
@@ -1880,7 +1920,20 @@ class _BranchPortalState extends State<BranchPortal>
           );
         }
 
-        final liveEmployees = snapshot.data ?? [];
+        final allAttendanceEmployees = snapshot.data ?? [];
+        final attendanceQuery = _attendanceSearch.trim().toLowerCase();
+        final liveEmployees = attendanceQuery.isEmpty
+            ? allAttendanceEmployees
+            : allAttendanceEmployees.where((employee) {
+                return [
+                  employee['employee_id'],
+                  employee['name'],
+                  employee['department'],
+                  employee['designation'],
+                ].any((value) =>
+                    value?.toString().toLowerCase().contains(attendanceQuery) ==
+                    true);
+              }).toList();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -1896,7 +1949,7 @@ class _BranchPortalState extends State<BranchPortal>
               ),
               const SizedBox(height: 8),
               Text(
-                '${liveEmployees.length} employees for $branchDisplayName',
+                '${allAttendanceEmployees.length} attendance employees for $branchDisplayName',
                 style: const TextStyle(
                   color: Colors.black54,
                 ),
@@ -1972,7 +2025,30 @@ class _BranchPortalState extends State<BranchPortal>
                 ],
               ),
               const SizedBox(height: 10),
-              _dailyAttendanceSummary(liveEmployees),
+              _dailyAttendanceSummary(allAttendanceEmployees),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _attendanceSearchController,
+                onChanged: (value) =>
+                    setState(() => _attendanceSearch = value),
+                decoration: InputDecoration(
+                  hintText: 'Search attendance employee by name, ID or department',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _attendanceSearch.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            _attendanceSearchController.clear();
+                            setState(() => _attendanceSearch = '');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
               _panel(
                 'Select Employee',
@@ -2266,7 +2342,7 @@ class _BranchPortalState extends State<BranchPortal>
 
   Widget _employeesPage() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _liveBranchEmployees(),
+      future: _liveAllBranchEmployees(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -2306,9 +2382,27 @@ class _BranchPortalState extends State<BranchPortal>
 
         final allEmployees = snapshot.data ?? [];
         final search = _employeeSearch.trim().toLowerCase();
+        final statusCounts = <String, int>{
+          'all': allEmployees.length,
+          for (final status in const [
+            'active',
+            'vacation',
+            'transferred',
+            'resigned'
+          ])
+            status: allEmployees
+                .where((employee) => _liveEmploymentStatus(employee) == status)
+                .length,
+        };
+        final statusEmployees = _employeeStatusFilter == 'all'
+            ? allEmployees
+            : allEmployees
+                .where((employee) =>
+                    _liveEmploymentStatus(employee) == _employeeStatusFilter)
+                .toList();
         final liveEmployees = (search.isEmpty
-            ? List<Map<String, dynamic>>.from(allEmployees)
-            : allEmployees.where((employee) {
+            ? List<Map<String, dynamic>>.from(statusEmployees)
+            : statusEmployees.where((employee) {
                 return [
                   employee['employee_id'],
                   employee['name'],
@@ -2362,6 +2456,42 @@ class _BranchPortalState extends State<BranchPortal>
                 ),
               ),
               const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: const [
+                  ('all', 'All', Icons.people_outline),
+                  ('active', 'Active', Icons.check_circle_outline),
+                  ('vacation', 'Vacation', Icons.beach_access_outlined),
+                  ('transferred', 'Transferred', Icons.swap_horiz),
+                  ('resigned', 'Resigned', Icons.person_off_outlined),
+                ].map((filter) {
+                  final selected = _employeeStatusFilter == filter.$1;
+                  return FilterChip(
+                    selected: selected,
+                    showCheckmark: false,
+                    selectedColor: const Color(0xFF173A78),
+                    avatar: Icon(filter.$3,
+                        size: 17,
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF526078)),
+                    label: Text(
+                      '${filter.$2} (${statusCounts[filter.$1] ?? 0})',
+                    ),
+                    labelStyle: TextStyle(
+                      color: selected
+                          ? Colors.white
+                          : const Color(0xFF39445A),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    onSelected: (_) => setState(
+                      () => _employeeStatusFilter = filter.$1,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _employeeSearchController,
                 onChanged: (value) => setState(() => _employeeSearch = value),
@@ -2409,9 +2539,13 @@ class _BranchPortalState extends State<BranchPortal>
                             final department =
                                 employee['department']?.toString() ?? '';
 
-                            final active = _liveIsActive(
-                              employee,
-                            );
+                            final status = _liveEmploymentStatus(employee);
+                            final statusColor = switch (status) {
+                              'vacation' => const Color(0xFFE08A00),
+                              'transferred' => const Color(0xFF3567B7),
+                              'resigned' => const Color(0xFFC13B3B),
+                              _ => const Color(0xFF168653),
+                            };
 
                             return ListTile(
                               leading: EmployeePhoto(
@@ -2441,10 +2575,14 @@ class _BranchPortalState extends State<BranchPortal>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Chip(
-                                    label: Text(active ? 'Active' : 'Inactive'),
-                                    backgroundColor: active
-                                        ? const Color(0xFFE7F7EF)
-                                        : Colors.black12,
+                                    label:
+                                        Text(_liveEmploymentStatusLabel(employee)),
+                                    labelStyle: TextStyle(color: statusColor),
+                                    backgroundColor:
+                                        statusColor.withValues(alpha: .10),
+                                    side: BorderSide(
+                                      color: statusColor.withValues(alpha: .35),
+                                    ),
                                   ),
                                   IconButton(
                                     tooltip: 'View employee identity',
@@ -2487,7 +2625,13 @@ class _BranchPortalState extends State<BranchPortal>
   ) async {
     final name = employee['name']?.toString().trim() ?? '';
     final employeeId = _liveEmployeeId(employee);
-    final active = _liveIsActive(employee);
+    final statusLabel = _liveEmploymentStatusLabel(employee);
+    final statusColor = switch (_liveEmploymentStatus(employee)) {
+      'vacation' => const Color(0xFFE08A00),
+      'transferred' => const Color(0xFF3567B7),
+      'resigned' => const Color(0xFFE45A5A),
+      _ => const Color(0xFF2EAF6D),
+    };
     final category = employee['is_management_staff'] == true
         ? 'Management Staff'
         : employee['is_temp_staff'] == true
@@ -2549,11 +2693,10 @@ class _BranchPortalState extends State<BranchPortal>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color:
-                    active ? const Color(0xFF2EAF6D) : const Color(0xFFE45A5A),
+                color: statusColor,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(active ? 'ACTIVE' : 'INACTIVE',
+              child: Text(statusLabel.toUpperCase(),
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -2604,7 +2747,7 @@ class _BranchPortalState extends State<BranchPortal>
                 _branchIdentityDetail('Joining Date', employee['joining_date']),
                 _branchIdentityDetail('Branch', employee['branch_id']),
                 _branchIdentityDetail('Employee Category', category),
-                _branchIdentityDetail('Active', active ? 'Yes' : 'No'),
+                _branchIdentityDetail('Status', statusLabel),
               ],
             ),
           ),
@@ -2658,7 +2801,9 @@ class _BranchPortalState extends State<BranchPortal>
     final address = TextEditingController(
       text: employee?['address']?.toString() ?? '',
     );
-    var active = employee == null || _liveIsActive(employee);
+    final employmentStatus = employee == null
+        ? 'pending approval'
+        : _liveEmploymentStatusLabel(employee);
     var joiningDate = DateTime.tryParse(
           employee?['joining_date']?.toString() ?? '',
         ) ??
@@ -2688,17 +2833,40 @@ class _BranchPortalState extends State<BranchPortal>
                     ),
                     const SizedBox(height: 12),
                   ] else ...[
-                    const Text(
-                      'Admin will verify this information and assign the Employee ID after approval.',
-                      style: TextStyle(color: Colors.black54),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2F6FC),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Admin will verify this information and assign the Employee ID after approval.',
+                        style: TextStyle(color: Color(0xFF526078)),
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                   ],
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Personal Information',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 10),
                   _branchEmployeeField(name, 'Full Name *', enabled: !saving),
                   _branchEmployeeField(designation, 'Designation',
                       enabled: !saving),
-                  _branchEmployeeField(department, 'Department',
+                  _branchEmployeeField(department, 'Department *',
                       enabled: !saving),
+                  const SizedBox(height: 4),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Contact & Payment Details',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 10),
                   _branchEmployeeField(email, 'Email', enabled: !saving),
                   _branchEmployeeField(newIcNo, 'New IC No.', enabled: !saving),
                   _branchEmployeeField(bankCode, 'Bank Code', enabled: !saving),
@@ -2706,6 +2874,13 @@ class _BranchPortalState extends State<BranchPortal>
                       enabled: !saving),
                   _branchEmployeeField(phone, 'Phone', enabled: !saving),
                   _branchEmployeeField(address, 'Address', enabled: !saving),
+                  const Divider(height: 26),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Employment Details',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w800)),
+                  ),
                   const SizedBox(height: 6),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -2728,16 +2903,12 @@ class _BranchPortalState extends State<BranchPortal>
                           },
                   ),
                   if (editing)
-                    SwitchListTile(
+                    ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Active employee'),
-                      subtitle: Text(active
-                          ? 'Employee is visible as active'
-                          : 'Employee is marked inactive'),
-                      value: active,
-                      onChanged: saving
-                          ? null
-                          : (value) => setDialogState(() => active = value),
+                      leading: const Icon(Icons.info_outline),
+                      title: const Text('Employment Status'),
+                      subtitle: const Text('Managed by the administrator'),
+                      trailing: Chip(label: Text(employmentStatus)),
                     ),
                   if (error != null)
                     Padding(
@@ -2760,11 +2931,14 @@ class _BranchPortalState extends State<BranchPortal>
                   : () async {
                       final id = employeeId.text.trim().toUpperCase();
                       final employeeName = name.text.trim();
-                      if ((editing && id.isEmpty) || employeeName.isEmpty) {
+                      final employeeDepartment = department.text.trim();
+                      if ((editing && id.isEmpty) ||
+                          employeeName.isEmpty ||
+                          employeeDepartment.isEmpty) {
                         setDialogState(() {
                           error = editing
-                              ? 'Employee ID and full name are required.'
-                              : 'Full name is required.';
+                              ? 'Employee ID, full name and department are required.'
+                              : 'Full name and department are required.';
                         });
                         return;
                       }
@@ -2777,7 +2951,7 @@ class _BranchPortalState extends State<BranchPortal>
                       final values = <String, dynamic>{
                         'name': employeeName,
                         'designation': designation.text.trim(),
-                        'department': department.text.trim(),
+                        'department': employeeDepartment,
                         'email': email.text.trim(),
                         'new_ic_no': newIcNo.text.trim(),
                         'bank_code': bankCode.text.trim(),
@@ -2786,7 +2960,6 @@ class _BranchPortalState extends State<BranchPortal>
                         'address': address.text.trim(),
                         'joining_date':
                             DateFormat('yyyy-MM-dd').format(joiningDate),
-                        'is_active': active,
                       };
 
                       try {

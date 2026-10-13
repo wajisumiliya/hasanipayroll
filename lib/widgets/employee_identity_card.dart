@@ -24,6 +24,19 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   static int _visibleSecureCards = 0;
 
   Employee get employee => widget.employee;
+  String get _statusLabel => switch (employee.employmentStatus) {
+        'vacation' => 'VACATION',
+        'transferred' => 'TRANSFERRED',
+        'resigned' => 'RESIGNED',
+        _ => employee.isActive ? 'ACTIVE' : 'INACTIVE',
+      };
+  Color get _statusColor => switch (employee.employmentStatus) {
+        'vacation' => const Color(0xFFE8A11B),
+        'transferred' => const Color(0xFF5792E8),
+        'resigned' => const Color(0xFFE45A5A),
+        _ =>
+          employee.isActive ? const Color(0xFF59C984) : const Color(0xFF9CA3AF),
+      };
   String get _branch {
     final value = employee.branchId.trim();
     if (value.isEmpty) return '-';
@@ -69,7 +82,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final cardWidth = constraints.maxWidth.clamp(320.0, 460.0);
+      final cardWidth = constraints.maxWidth.clamp(0.0, 460.0);
       return Center(
         child: SizedBox(
           width: cardWidth,
@@ -223,9 +236,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                                   color: const Color(0xFF111315),
                                   borderRadius: BorderRadius.circular(99),
                                   border: Border.all(
-                                    color: employee.isActive
-                                        ? const Color(0xFF59C984)
-                                        : const Color(0xFF9CA3AF),
+                                    color: _statusColor,
                                   ),
                                 ),
                                 child: Row(
@@ -235,15 +246,13 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                                       width: 5,
                                       height: 5,
                                       decoration: BoxDecoration(
-                                        color: employee.isActive
-                                            ? const Color(0xFF59C984)
-                                            : const Color(0xFF9CA3AF),
+                                        color: _statusColor,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      employee.isActive ? 'ACTIVE' : 'INACTIVE',
+                                      _statusLabel,
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 8.2,
@@ -475,8 +484,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                         margin: const EdgeInsets.only(top: 7),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color:
-                              employee.isActive ? red : const Color(0xFF6B7280),
+                          color: _statusColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -489,9 +497,7 @@ class _EmployeeIdentityCardState extends State<EmployeeIdentityCard> {
                             ),
                             const SizedBox(width: 7),
                             Text(
-                              employee.isActive
-                                  ? 'ACTIVE EMPLOYEE'
-                                  : 'INACTIVE EMPLOYEE',
+                              '$_statusLabel EMPLOYEE',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
