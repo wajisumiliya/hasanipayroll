@@ -1774,6 +1774,8 @@ class AppService extends ChangeNotifier {
     Employee employee, {
     required String branchId,
     required Map<String, dynamic> salaryDefaults,
+    String employmentStatus = 'active',
+    String? payrollBranchId,
   }) async {
     final cleanId = employee.employeeId.trim();
 
@@ -1796,11 +1798,10 @@ class AppService extends ChangeNotifier {
     );
 
     try {
-      await _supabase.from('employees').insert(
-            _employeeToSupabase(
-              employeeWithBranch,
-            ),
-          );
+      final employeePayload = _employeeToSupabase(employeeWithBranch)
+        ..['employment_status'] = employmentStatus
+        ..['payroll_branch_id'] = payrollBranchId;
+      await _supabase.from('employees').insert(employeePayload);
 
       try {
         final salaryPayload = <String, dynamic>{

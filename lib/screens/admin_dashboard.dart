@@ -4450,6 +4450,111 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
+        String missingMonthRanges(List<int> months) {
+          if (months.isEmpty) return 'Complete';
+          final ranges = <String>[];
+          var start = months.first;
+          var end = start;
+          for (final month in months.skip(1)) {
+            if (month == end + 1) {
+              end = month;
+              continue;
+            }
+            ranges.add(start == end
+                ? start.toString().padLeft(2, '0')
+                : '${start.toString().padLeft(2, '0')}–${end.toString().padLeft(2, '0')}');
+            start = end = month;
+          }
+          ranges.add(start == end
+              ? start.toString().padLeft(2, '0')
+              : '${start.toString().padLeft(2, '0')}–${end.toString().padLeft(2, '0')}');
+          return ranges.join(', ');
+        }
+
+        Widget payrollCoverage(String employeeId) {
+          final records = service.employeePayroll(employeeId);
+          if (records.isEmpty) {
+            return const Text(
+              'No payroll / payslip',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF9A6A16),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+              ),
+            );
+          }
+          final now = DateTime.now();
+          final firstYear = records
+              .map((record) => record.period.year)
+              .reduce((a, b) => a < b ? a : b);
+          final monthsByYear = <int, Set<int>>{};
+          for (final record in records) {
+            monthsByYear
+                .putIfAbsent(record.period.year, () => <int>{})
+                .add(record.period.month);
+          }
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var year = firstYear; year <= now.year; year++) ...[
+                  if (year > firstYear) const SizedBox(width: 6),
+                  Builder(builder: (context) {
+                    final lastExpectedMonth = year == now.year ? now.month : 12;
+                    final available = monthsByYear[year] ?? const <int>{};
+                    final missing = [
+                      for (var month = 1;
+                          month <= lastExpectedMonth;
+                          month++)
+                        if (!available.contains(month)) month,
+                    ];
+                    final complete = missing.isEmpty;
+                    return Container(
+                      constraints: const BoxConstraints(minWidth: 62),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: complete
+                            ? const Color(0xFFE8F7EF)
+                            : const Color(0xFFFFF5DE),
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(
+                          color: complete
+                              ? const Color(0xFFB9E2CB)
+                              : const Color(0xFFE9CA82),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('$year',
+                              style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800)),
+                          Text(
+                            complete
+                                ? 'Complete'
+                                : 'Missing ${missingMonthRanges(missing)}',
+                            style: TextStyle(
+                              fontSize: 8.5,
+                              color: complete
+                                  ? const Color(0xFF188653)
+                                  : const Color(0xFF9A6A16),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          );
+        }
+
         // ----------------------------------------------------------
         // DATA
         // ----------------------------------------------------------
@@ -4710,6 +4815,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   title: Row(
                                     children: [
                                       Expanded(
+                                        flex: 3,
                                         child: Text(
                                           name.isEmpty
                                               ? 'Unnamed Employee'
@@ -4722,6 +4828,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                                           ),
                                         ),
                                       ),
+                                      if (!compactEmployeeView) ...[
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 5,
+                                          child: payrollCoverage(employeeId),
+                                        ),
+                                      ],
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
@@ -4748,14 +4861,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       ),
                                     ],
                                   ),
-                                  subtitle: Text(
-                                    metadata,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color(0xFF6F7785),
-                                      fontSize: 11.5,
-                                    ),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        metadata,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFF6F7785),
+                                          fontSize: 11.5,
+                                        ),
+                                      ),
+                                      if (compactEmployeeView) ...[
+                                        const SizedBox(height: 5),
+                                        payrollCoverage(employeeId),
+                                      ],
+                                    ],
                                   ),
                                   trailing: compactEmployeeView
                                       ? PopupMenuButton<String>(
@@ -5240,10 +5363,11 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     String branchId =
         service.branches.isNotEmpty ? service.branches.first.id : '';
+    String payrollBranchId = '';
 
     DateTime joiningDate = DateTime.now();
     DateTime? birthday;
-    bool active = true;
+    String employmentStatus = 'active';
     bool managementStaff = false;
     bool tempStaff = false;
     bool supportStaff = false;
@@ -5254,6 +5378,56 @@ class _AdminDashboardState extends State<AdminDashboard>
     bool eisEnabled = true;
     bool socsoEnabled = true;
     String socsoCategory = 'type1';
+    bool saving = false;
+
+    Widget sectionHeading(IconData icon, String title, String subtitle) =>
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 20, color: const Color(0xFF173A78)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700)),
+                    Text(subtitle,
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF6F7785))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+    Widget settingSwitch({
+      required IconData icon,
+      required Color color,
+      required String label,
+      required String subtitle,
+      required bool value,
+      required ValueChanged<bool>? onChanged,
+    }) =>
+        Container(
+          constraints: const BoxConstraints(minHeight: 72),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .55),
+            border: Border.all(color: const Color(0xFFCED3DD)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: SwitchListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            secondary: Icon(icon, color: color, size: 20),
+            title: Text(label),
+            subtitle: Text(subtitle, maxLines: 2),
+            value: value,
+            onChanged: onChanged,
+          ),
+        );
 
     showDialog(
       context: context,
@@ -5272,11 +5446,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
+                      sectionHeading(
+                        Icons.badge_outlined,
+                        'Personal Information',
+                        'Identity and contact details for the employee.',
+                      ),
                       _responsiveFormGrid(children: [
-                        _dialogField(employeeId, 'Employee ID'),
-                        _dialogField(name, 'Full Name'),
+                        _dialogField(employeeId, 'Employee ID *'),
+                        _dialogField(name, 'Full Name *'),
                         _dialogField(designation, 'Designation'),
-                        _dialogField(department, 'Department'),
+                        _dialogField(department, 'Department *'),
                         _dialogField(email, 'Email'),
                         _dialogField(ic, 'New IC No'),
                         _dialogField(bank, 'Bank Code'),
@@ -5287,16 +5466,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                         _dialogField(address, 'Address'),
                       ]),
                       const Divider(height: 28),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Default Salary',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                      sectionHeading(
+                        Icons.payments_outlined,
+                        'Salary & Statutory Settings',
+                        'Default payroll amounts and contribution settings.',
                       ),
-                      const SizedBox(height: 12),
                       _responsiveFormGrid(children: [
-                        _dialogField(basicSalary, 'Basic Salary (RM)',
+                        _dialogField(basicSalary, 'Basic Salary (RM) *',
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true)),
                         _dialogField(fwSalary, 'FW Salary (RM)',
@@ -5318,89 +5494,94 @@ class _AdminDashboardState extends State<AdminDashboard>
                         _dialogField(zakat, 'Zakat (RM)',
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true)),
+                        DropdownButtonFormField<String>(
+                          initialValue: epfCategory,
+                          decoration: const InputDecoration(
+                            labelText: 'EPF Category',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'normal1',
+                              child: Text('Normal 1 (statutory schedule)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'normal',
+                              child: Text('Normal (2% employee + employer)'),
+                            ),
+                          ],
+                          onChanged: saving
+                              ? null
+                              : (value) => setDialogState(
+                                  () => epfCategory = value ?? 'normal1'),
+                        ),
+                        DropdownButtonFormField<String>(
+                          initialValue: socsoCategory,
+                          decoration: const InputDecoration(
+                            labelText: 'SOCSO Category',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'type1',
+                              child: Text('Type 1 - Employer + Employee'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'type2',
+                              child: Text('Type 2 - Employer Only'),
+                            ),
+                          ],
+                          onChanged: saving || !socsoEnabled
+                              ? null
+                              : (value) => setDialogState(
+                                  () => socsoCategory = value ?? 'type1'),
+                        ),
+                        settingSwitch(
+                          icon: Icons.account_balance_wallet,
+                          color: const Color(0xFF3957C5),
+                          label: 'EPF Enabled',
+                          subtitle: 'Employee and employer contributions.',
+                          value: epfEnabled,
+                          onChanged: saving
+                              ? null
+                              : (value) =>
+                                  setDialogState(() => epfEnabled = value),
+                        ),
+                        settingSwitch(
+                          icon: Icons.health_and_safety,
+                          color: const Color(0xFF16A36A),
+                          label: 'SOCSO Enabled',
+                          subtitle: 'Calculate using the selected category.',
+                          value: socsoEnabled,
+                          onChanged: saving
+                              ? null
+                              : (value) =>
+                                  setDialogState(() => socsoEnabled = value),
+                        ),
+                        settingSwitch(
+                          icon: Icons.verified_user,
+                          color: const Color(0xFFFF8A34),
+                          label: 'EIS Enabled',
+                          subtitle: 'Employee and employer contributions.',
+                          value: eisEnabled,
+                          onChanged: saving
+                              ? null
+                              : (value) =>
+                                  setDialogState(() => eisEnabled = value),
+                        ),
                       ]),
-                      DropdownButtonFormField<String>(
-                        initialValue: epfCategory,
-                        decoration: const InputDecoration(
-                          labelText: 'EPF Category',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'normal1',
-                            child: Text('Normal 1 (statutory schedule)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'normal',
-                            child: Text('Normal (2% employee + employer)'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() => epfCategory = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 5),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        secondary: const Icon(Icons.account_balance_wallet,
-                            color: Color(0xFF3957C5)),
-                        title: const Text('EPF Enabled'),
-                        subtitle: const Text(
-                            'Calculate employee and employer EPF contributions.'),
-                        value: epfEnabled,
-                        onChanged: (value) =>
-                            setDialogState(() => epfEnabled = value),
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        secondary: const Icon(Icons.health_and_safety,
-                            color: Color(0xFF16A36A)),
-                        title: const Text('SOCSO Enabled'),
-                        subtitle: const Text(
-                            'Calculate SOCSO using the selected category.'),
-                        value: socsoEnabled,
-                        onChanged: (value) =>
-                            setDialogState(() => socsoEnabled = value),
-                      ),
-                      DropdownButtonFormField<String>(
-                        initialValue: socsoCategory,
-                        decoration: const InputDecoration(
-                          labelText: 'SOCSO Category',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'type1',
-                            child: Text('Type 1 - Employer + Employee'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'type2',
-                            child: Text('Type 2 - Employer Only'),
-                          ),
-                        ],
-                        onChanged: socsoEnabled
-                            ? (value) => setDialogState(
-                                () => socsoCategory = value ?? 'type1')
-                            : null,
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        secondary: const Icon(Icons.verified_user,
-                            color: Color(0xFFFF8A34)),
-                        title: const Text('EIS Enabled'),
-                        subtitle: const Text(
-                            'Calculate employee and employer EIS contributions.'),
-                        value: eisEnabled,
-                        onChanged: (value) =>
-                            setDialogState(() => eisEnabled = value),
+                      const Divider(height: 28),
+                      sectionHeading(
+                        Icons.work_outline,
+                        'Employment Details',
+                        'Branch assignment, dates and initial status.',
                       ),
                       if (service.branches.isNotEmpty)
                         DropdownButtonFormField<String>(
                           initialValue: branchId,
                           decoration: const InputDecoration(
-                            labelText: 'Branch',
+                            labelText: 'Branch *',
+                            border: OutlineInputBorder(),
                           ),
                           items: service.branches.map(
                             (branch) {
@@ -5420,6 +5601,34 @@ class _AdminDashboardState extends State<AdminDashboard>
                             });
                           },
                         ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: payrollBranchId,
+                        decoration: const InputDecoration(
+                          labelText: 'Payroll Branch',
+                          helperText:
+                              'Used for payroll only. Leave unchanged to use the attendance branch.',
+                          helperMaxLines: 2,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: '',
+                            child: Text('Same as attendance branch'),
+                          ),
+                          ...service.branches.map(
+                            (branch) => DropdownMenuItem<String>(
+                              value: branch.id,
+                              child: Text(branch.name),
+                            ),
+                          ),
+                        ],
+                        onChanged: saving
+                            ? null
+                            : (value) => setDialogState(
+                                  () => payrollBranchId = value ?? '',
+                                ),
+                      ),
                       const SizedBox(height: 15),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -5466,17 +5675,51 @@ class _AdminDashboardState extends State<AdminDashboard>
                           }
                         },
                       ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Active Employee',
+                      const SizedBox(height: 12),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Employment Status',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: const [
+                            ('active', 'Active', Color(0xFF168653), Icons.check_circle_outline),
+                            ('vacation', 'Vacation', Color(0xFFE08A00), Icons.beach_access_outlined),
+                            ('transferred', 'Transferred', Color(0xFF3567B7), Icons.swap_horiz),
+                            ('resigned', 'Resigned', Color(0xFFC13B3B), Icons.person_off_outlined),
+                          ].map((option) {
+                            final selected = employmentStatus == option.$1;
+                            return ChoiceChip(
+                              avatar: Icon(option.$4,
+                                  size: 18,
+                                  color:
+                                      selected ? Colors.white : option.$3),
+                              label: Text(option.$2),
+                              selected: selected,
+                              selectedColor: option.$3,
+                              labelStyle: TextStyle(
+                                color: selected ? Colors.white : option.$3,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              side: BorderSide(color: option.$3),
+                              onSelected: saving
+                                  ? null
+                                  : (_) => setDialogState(
+                                      () => employmentStatus = option.$1),
+                            );
+                          }).toList(),
                         ),
-                        value: active,
-                        onChanged: (value) {
-                          setDialogState(() {
-                            active = value;
-                          });
-                        },
+                      ),
+                      const Divider(height: 28),
+                      sectionHeading(
+                        Icons.groups_outlined,
+                        'Staff Classification',
+                        'Choose at most one special payroll classification.',
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
@@ -5548,19 +5791,23 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
+                  onPressed: saving ? null : () {
                     Navigator.pop(dialogContext);
                   },
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: () async {
+                  onPressed: saving ? null : () async {
                     final id = employeeId.text.trim();
                     final employeeName = name.text.trim();
+                    final employeeDepartment = department.text.trim();
 
-                    if (id.isEmpty || employeeName.isEmpty) {
+                    if (id.isEmpty ||
+                        employeeName.isEmpty ||
+                        employeeDepartment.isEmpty ||
+                        branchId.trim().isEmpty) {
                       _message(
-                        'Employee ID and name are required.',
+                        'Employee ID, full name, department and branch are required.',
                       );
                       return;
                     }
@@ -5605,6 +5852,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                       return;
                     }
 
+                    setDialogState(() => saving = true);
+                    final active = employmentStatus == 'active' ||
+                        employmentStatus == 'vacation';
                     final result = await service.addEmployee(
                       Employee(
                         employeeId: id,
@@ -5628,6 +5878,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                         isOtherStaff: otherStaff,
                       ),
                       branchId: branchId,
+                      employmentStatus: employmentStatus,
+                      payrollBranchId:
+                          payrollBranchId.isEmpty ? null : payrollBranchId,
                       salaryDefaults: {
                         'basic_salary': parsedBasicSalary!,
                         'fw_salary': parsedFwSalary!,
@@ -5647,13 +5900,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                     );
 
                     if (!dialogContext.mounted) return;
+                    if (result.toLowerCase().startsWith('failed')) {
+                      setDialogState(() => saving = false);
+                      _message(result);
+                      return;
+                    }
                     Navigator.pop(dialogContext);
                     if (!mounted) return;
+                    setState(() => _adminEmployeesFuture = null);
                     _message(result);
                   },
-                  child: const Text(
-                    'Save Employee',
-                  ),
+                  child: Text(saving ? 'Adding...' : 'Add Employee'),
                 ),
               ],
             );
