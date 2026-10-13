@@ -1571,6 +1571,24 @@ class _AdminDashboardState extends State<AdminDashboard>
     return value?.toString().toLowerCase() == 'true';
   }
 
+  String _employmentStatus(Map<String, dynamic> employee) {
+    final status = employee['employment_status']?.toString().trim().toLowerCase();
+    if (const {'active', 'resigned', 'transferred', 'vacation'}
+        .contains(status)) {
+      return status!;
+    }
+    return _isActive(employee) ? 'active' : 'resigned';
+  }
+
+  String _employmentStatusLabel(Map<String, dynamic> employee) {
+    return switch (_employmentStatus(employee)) {
+      'resigned' => 'Resigned',
+      'transferred' => 'Transferred',
+      'vacation' => 'Vacation',
+      _ => 'Active',
+    };
+  }
+
   double _number(dynamic value) {
     if (value == null) return 0;
     if (value is num) return value.toDouble();
@@ -4638,7 +4656,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                               BorderRadius.circular(20),
                                         ),
                                         child: Text(
-                                          active ? 'Active' : 'Resigned',
+                                          _employmentStatusLabel(employee),
                                           style: TextStyle(
                                             color: active
                                                 ? const Color(0xFF188653)
@@ -6644,7 +6662,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         DateTime.tryParse(employee['joining_date']?.toString() ?? '');
     DateTime? birthday =
         DateTime.tryParse(employee['birthday']?.toString() ?? '');
-    var active = _isActive(employee);
+    var employmentStatus = _employmentStatus(employee);
     var managementStaff = employee['is_management_staff'] == true ||
         employee['is_management_staff']?.toString().toLowerCase() == 'true';
     var tempStaff = employee['is_temp_staff'] == true ||
@@ -6888,20 +6906,41 @@ class _AdminDashboardState extends State<AdminDashboard>
                               () => payrollBranchId = value ?? '',
                             ),
                   ),
-                  CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: active,
-                      title:
-                          Text(active ? 'Status: Active' : 'Status: Resigned'),
-                      subtitle: Text(
-                        active
-                            ? 'Employee access and records remain active.'
-                            : 'All employee data will be permanently deleted 90 days after saving.',
-                      ),
-                      onChanged: saving
-                          ? null
-                          : (value) =>
-                              setDialogState(() => active = value ?? false)),
+                  DropdownButtonFormField<String>(
+                    initialValue: employmentStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Employment Status',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(
+                          value: 'resigned', child: Text('Resigned')),
+                      DropdownMenuItem(
+                          value: 'transferred', child: Text('Transferred')),
+                      DropdownMenuItem(
+                          value: 'vacation', child: Text('Vacation')),
+                    ],
+                    onChanged: saving
+                        ? null
+                        : (value) => setDialogState(
+                              () => employmentStatus = value ?? 'active',
+                            ),
+                  ),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      employmentStatus == 'resigned'
+                          ? 'All employee data will be permanently deleted 90 days after saving.'
+                          : employmentStatus == 'vacation'
+                              ? 'Employee remains active while on vacation.'
+                              : employmentStatus == 'transferred'
+                                  ? 'Employee access is inactive; records are retained.'
+                                  : 'Employee access and records remain active.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     value: managementStaff,
@@ -7013,6 +7052,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                         }
                         setDialogState(() => saving = true);
                         try {
+                          final active = employmentStatus == 'active' ||
+                              employmentStatus == 'vacation';
                           if (active != _isActive(employee)) {
                             await service.updateEmployeeActiveStatus(
                               employeeId: employee['employee_id'],
@@ -7045,6 +7086,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'birthday':
                                 birthday?.toIso8601String().split('T').first,
                             'is_active': active,
+                            'employment_status': employmentStatus,
                             'is_management_staff': managementStaff,
                             'is_temp_staff': tempStaff,
                             'is_support_staff': supportStaff,
