@@ -19467,6 +19467,8 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     final local = <List<dynamic>>[];
     final foreign = <List<dynamic>>[];
+    final missingLocal = <List<dynamic>>[];
+    final missingForeign = <List<dynamic>>[];
     for (final payroll in payrollRows) {
       final id = _normalizeBranchValue(payroll['employee_id']);
       final employee = employees[id] ?? <String, dynamic>{};
@@ -19515,13 +19517,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           _number(payroll['eis_employer'] ?? payroll['eisEmployer']);
 
       List<dynamic>? row;
-      final eligibleForEpf =
-          epfEmployee + epfEmployer > 0 && (!isForeign || epfNo.isNotEmpty);
-      if (report == 'EPF' && eligibleForEpf) {
+      var missingAccount = false;
+      if (report == 'EPF' && epfEmployee + epfEmployer > 0) {
+        missingAccount = epfNo.isEmpty;
         row = [
           statutoryName,
           exportIc,
-          epfNo,
+          missingAccount ? 'MISSING EPF NO' : epfNo,
           epfEmployee,
           epfEmployer,
           _payrollTotalEarnings(payroll)
@@ -19531,12 +19533,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         final identifier = isForeign && socsoNo.isNotEmpty
             ? socsoNo.replaceAll('-', '')
             : exportIc;
-        final eligible = total > 0 &&
-            (isForeign ? socsoNo.isNotEmpty : icDigits.length == 12);
-        if (eligible) {
+        if (total > 0) {
+          missingAccount = isForeign ? socsoNo.isEmpty : icDigits.length != 12;
           row = [
             statutoryName,
-            identifier,
+            missingAccount ? 'MISSING SOCSO NO / VALID IC' : identifier,
             socsoEmployee,
             socsoEmployer,
             total
@@ -19552,7 +19553,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         ];
       }
       if (row != null) {
-        (isForeign ? foreign : local).add(row);
+        final target = missingAccount
+            ? (isForeign ? missingForeign : missingLocal)
+            : (isForeign ? foreign : local);
+        target.add(row);
       }
     }
     int byName(List<dynamic> a, List<dynamic> b) => a.first
@@ -19561,6 +19565,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         .compareTo(b.first.toString().toLowerCase());
     local.sort(byName);
     foreign.sort(byName);
+    missingLocal.sort(byName);
+    missingForeign.sort(byName);
     final headers = report == 'EPF'
         ? <String>[
             'NAME',
@@ -19587,7 +19593,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               ];
     return {
       'headers': headers,
-      'rows': [...local, ...foreign]
+      'rows': [...local, ...foreign],
+      'missingRows': [...missingLocal, ...missingForeign],
     };
   }
 
@@ -19659,7 +19666,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                             snapshot.data?['headers'] ?? const []);
                         final rows = List<List<dynamic>>.from(
                             snapshot.data?['rows'] ?? const []);
-                        if (rows.isEmpty) {
+                        final missingRows = List<List<dynamic>>.from(
+                            snapshot.data?['missingRows'] ?? const []);
+                        if (rows.isEmpty && missingRows.isEmpty) {
                           return Center(
                               child: Text(
                                   'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
@@ -19668,47 +19677,52 @@ class _AdminDashboardState extends State<AdminDashboard>
                           Expanded(
                             child: Scrollbar(
                               child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: SingleChildScrollView(
-                                  child: DataTable(
-                                    headingRowColor: WidgetStatePropertyAll(
-                                        Colors.grey.shade100),
-                                    columns: headers
-                                        .map((header) => DataColumn(
-                                              label: Text(header,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w700)),
-                                            ))
-                                        .toList(),
-                                    rows: rows
-                                        .map((row) => DataRow(
-                                              cells: row
-                                                  .map((value) => DataCell(Text(
-                                                        value is num
-                                                            ? NumberFormat(
-                                                                    '#,##0.00')
-                                                                .format(value)
-                                                            : value.toString(),
-                                                      )))
-                                                  .toList(),
-                                            ))
-                                        .toList(),
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (rows.isNotEmpty) ...[
+                                      Text('Employees with valid details (${rows.length})',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w700)),
+                                      const SizedBox(height: 6),
+                                      SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: _statutoryDataTable(headers, rows),
+                                      ),
+                                    ],
+                                    if (missingRows.isNotEmpty) ...[
+                                      const SizedBox(height: 18),
+                                      Text(
+                                        '$report deducted but account/identifier is missing (${missingRows.length})',
+                                        style: const TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w800),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: _statutoryDataTable(
+                                            headers, missingRows),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(height: 12),
                           Row(children: [
-                            Text('${rows.length} employee(s)',
+                            Text('${rows.length + missingRows.length} employee(s)'
+                                '${missingRows.isEmpty ? '' : ' • ${missingRows.length} missing details'}',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w700)),
                             const Spacer(),
-                            if (report == 'EPF' || report == 'EIS') ...[
+                            if (report == 'EPF' ||
+                                report == 'SOCSO' ||
+                                report == 'EIS') ...[
                               OutlinedButton.icon(
                                 onPressed: () => _printStatutoryReport(
-                                    report, month, rows),
+                                    report, month, headers, rows, missingRows),
                                 icon: const Icon(Icons.print_outlined),
                                 label: const Text('Print Landscape A4'),
                               ),
@@ -19739,6 +19753,28 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         ),
       ),
+    );
+  }
+
+  DataTable _statutoryDataTable(
+      List<String> headers, List<List<dynamic>> rows) {
+    return DataTable(
+      headingRowColor: WidgetStatePropertyAll(Colors.grey.shade100),
+      columns: headers
+          .map((header) => DataColumn(
+                label: Text(header,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+              ))
+          .toList(),
+      rows: rows
+          .map((row) => DataRow(
+                cells: row
+                    .map((value) => DataCell(Text(value is num
+                        ? NumberFormat('#,##0.00').format(value)
+                        : value.toString())))
+                    .toList(),
+              ))
+          .toList(),
     );
   }
 
@@ -19802,25 +19838,42 @@ class _AdminDashboardState extends State<AdminDashboard>
         ),
       );
 
-  Future<void> _printStatutoryReport(String report, DateTime month,
-      List<List<dynamic>> rows) async {
+  Future<void> _printStatutoryReport(
+      String report,
+      DateTime month,
+      List<String> headers,
+      List<List<dynamic>> rows,
+      List<List<dynamic>> missingRows) async {
     final document = pw.Document();
+    List<List<String>> printableRows(List<List<dynamic>> source) => [
+          headers,
+          ...source.map((row) => row
+              .map((value) => value is num
+                  ? NumberFormat('#,##0.00').format(value)
+                  : value.toString())
+              .toList()),
+        ];
     document.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4.landscape,
       margin: const pw.EdgeInsets.all(12),
       build: (_) => [
-        pw.TableHelper.fromTextArray(
-          data: rows
-              .map((row) => row
-                  .map((value) => value is num
-                      ? NumberFormat('#,##0.00').format(value)
-                      : value.toString())
-                  .toList())
-              .toList(),
-          cellStyle: const pw.TextStyle(fontSize: 7.5),
-          cellPadding: const pw.EdgeInsets.all(4),
-          border: pw.TableBorder.all(color: PdfColors.grey500, width: .35),
-        ),
+        pw.Text('$report Employee Details - ${DateFormat('MMMM yyyy').format(month)}',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 10),
+        if (rows.isNotEmpty) ...[
+          pw.Text('Employees with valid details (${rows.length})',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          _statutoryPdfTable(printableRows(rows)),
+        ],
+        if (missingRows.isNotEmpty) ...[
+          pw.SizedBox(height: 14),
+          pw.Text('$report deducted but account/identifier is missing (${missingRows.length})',
+              style: pw.TextStyle(
+                  color: PdfColors.red, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          _statutoryPdfTable(printableRows(missingRows)),
+        ],
       ],
     ));
     await Printing.layoutPdf(
@@ -19829,6 +19882,17 @@ class _AdminDashboardState extends State<AdminDashboard>
       onLayout: (_) => document.save(),
     );
   }
+
+  pw.Widget _statutoryPdfTable(List<List<String>> rows) =>
+      pw.TableHelper.fromTextArray(
+        data: rows,
+        headerCount: 1,
+        headerStyle:
+            pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold),
+        cellStyle: const pw.TextStyle(fontSize: 7.5),
+        cellPadding: const pw.EdgeInsets.all(4),
+        border: pw.TableBorder.all(color: PdfColors.grey500, width: .35),
+      );
 
   xls.CellStyle _excelHeaderStyle([xls.CellStyle? current]) {
     final border = xls.Border(
