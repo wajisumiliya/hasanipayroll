@@ -1089,7 +1089,14 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadAttendanceFromSupabase() async {
     try {
-      final response = await _supabase.from('attendance').select();
+      // Filter employee attendance on the server to reduce data transfer.
+      final employeeId = _currentUser?.employeeId?.trim() ?? '';
+      final response = _currentUser?.isEmployee == true && employeeId.isNotEmpty
+          ? await _supabase
+              .from('attendance')
+              .select()
+              .eq('employee_id', employeeId)
+          : await _supabase.from('attendance').select();
 
       attendance.clear();
 
