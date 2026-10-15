@@ -640,9 +640,18 @@ class AppService extends ChangeNotifier {
       final salaryDefaultAddresses = <String, String>{};
 
       try {
-        final salaryDefaults = await _supabase
-            .from('employee_salary_defaults')
-            .select('employee_id,address');
+        // Employee sessions only need their own salary-default address.
+        // Admin and branch sessions retain the full address lookup.
+        final signedInEmployeeId = _currentUser?.employeeId?.trim() ?? '';
+        final salaryDefaults =
+            _currentUser?.isEmployee == true && signedInEmployeeId.isNotEmpty
+                ? await _supabase
+                    .from('employee_salary_defaults')
+                    .select('employee_id,address')
+                    .eq('employee_id', signedInEmployeeId)
+                : await _supabase
+                    .from('employee_salary_defaults')
+                    .select('employee_id,address');
         for (final row in salaryDefaults) {
           final employeeId = row['employee_id']?.toString().trim() ?? '';
           final address = row['address']?.toString().trim() ?? '';
@@ -1069,7 +1078,14 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadAttendanceFromSupabase() async {
     try {
-      final response = await _supabase.from('attendance').select();
+      // Filter employee attendance on the server to reduce data transfer.
+      final employeeId = _currentUser?.employeeId?.trim() ?? '';
+      final response = _currentUser?.isEmployee == true && employeeId.isNotEmpty
+          ? await _supabase
+              .from('attendance')
+              .select()
+              .eq('employee_id', employeeId)
+          : await _supabase.from('attendance').select();
 
       attendance.clear();
 
@@ -1528,12 +1544,16 @@ class AppService extends ChangeNotifier {
       // Employees only need their own published payroll. Admin and branch
       // dashboards retain complete history for reports and exports.
       final signedInEmployeeId = _currentUser?.employeeId?.trim() ?? '';
-      if (_currentUser?.isEmployee == true && signedInEmployeeId.isNotEmpty) {
-        await loadCurrentEmployeePayrollFromSupabase(signedInEmployeeId);
-      } else {
-        await loadPayrollFromSupabase();
-      }
-      await loadAttendanceFromSupabase();
+      // Payroll and attendance are independent after employees have loaded.
+      // Fetch both concurrently to shorten admin/branch dashboard startup.
+      final payrollLoad =
+          _currentUser?.isEmployee == true && signedInEmployeeId.isNotEmpty
+              ? loadCurrentEmployeePayrollFromSupabase(signedInEmployeeId)
+              : loadPayrollFromSupabase();
+      await Future.wait<void>([
+        payrollLoad,
+        loadAttendanceFromSupabase(),
+      ]);
     } catch (_) {}
 
     notifyListeners();
