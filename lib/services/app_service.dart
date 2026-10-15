@@ -1545,7 +1545,15 @@ class AppService extends ChangeNotifier {
 
     try {
       await loadEmployeesFromSupabase();
-      await loadPayrollFromSupabase();
+      // Employees only need their own published payroll. Admin and branch
+      // dashboards retain complete history for reports and exports.
+      final signedInEmployeeId = _currentUser?.employeeId?.trim() ?? '';
+      if (_currentUser?.isEmployee == true &&
+          signedInEmployeeId.isNotEmpty) {
+        await loadCurrentEmployeePayrollFromSupabase(signedInEmployeeId);
+      } else {
+        await loadPayrollFromSupabase();
+      }
       await loadAttendanceFromSupabase();
     } catch (_) {}
 
