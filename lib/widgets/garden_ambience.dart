@@ -80,13 +80,13 @@ class _GardenAmbiencePainter extends CustomPainter {
       final spread = 11.0 + i * 6;
       final path = Path()
         ..moveTo(fountainX, fountainY + 8)
-        ..quadraticBezierTo(
-            fountainX + spread, fountainY - 34 - i * 2, fountainX + spread * 1.5, fountainY + 8);
+        ..quadraticBezierTo(fountainX + spread, fountainY - 34 - i * 2,
+            fountainX + spread * 1.5, fountainY + 8);
       canvas.drawPath(path, spray);
       final mirror = Path()
         ..moveTo(fountainX, fountainY + 8)
-        ..quadraticBezierTo(
-            fountainX - spread, fountainY - 34 - i * 2, fountainX - spread * 1.5, fountainY + 8);
+        ..quadraticBezierTo(fountainX - spread, fountainY - 34 - i * 2,
+            fountainX - spread * 1.5, fountainY + 8);
       canvas.drawPath(mirror, spray);
     }
   }

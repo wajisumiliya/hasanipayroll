@@ -158,8 +158,7 @@ class EmployeeGardenProgress {
         visitsUntilNextUnlock:
             int.tryParse('${json['visits_until_next_unlock'] ?? 4}') ?? 4,
         featureAwarded: json['feature_awarded'] == true,
-        neglectedCount:
-            int.tryParse('${json['neglected_count'] ?? 0}') ?? 0,
+        neglectedCount: int.tryParse('${json['neglected_count'] ?? 0}') ?? 0,
         plantDates: (json['plant_dates'] is List
                 ? json['plant_dates'] as List
                 : const [])

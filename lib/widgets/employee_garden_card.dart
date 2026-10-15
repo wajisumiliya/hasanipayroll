@@ -101,8 +101,7 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
               ),
             ),
           ),
-          if (!healthy)
-            Container(color: const Color(0x303A5266)),
+          if (!healthy) Container(color: const Color(0x303A5266)),
           GardenAmbience(
             animation: _ambience,
             healthy: healthy,
@@ -182,8 +181,7 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                 ),
               ),
               FilledButton.icon(
-                onPressed:
-                    widget.availableCare > 0 && !_caring ? _care : null,
+                onPressed: widget.availableCare > 0 && !_caring ? _care : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFE3BC5A),
                   foregroundColor: const Color(0xFF1C2418),
@@ -208,10 +206,12 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
               spacing: 7,
               runSpacing: 7,
               children: [
-                _feature(Icons.local_florist_rounded, 'Flower beds', level >= 1),
+                _feature(
+                    Icons.local_florist_rounded, 'Flower beds', level >= 1),
                 _feature(Icons.route_rounded, 'Stone path', level >= 2),
                 _feature(Icons.chair_alt_rounded, 'Bench', level >= 3),
-                _feature(Icons.flutter_dash_rounded, 'Birds', widget.streak >= 3),
+                _feature(
+                    Icons.flutter_dash_rounded, 'Birds', widget.streak >= 3),
                 _feature(Icons.home_work_outlined, 'Gazebo', level >= 5),
               ],
             ),
@@ -233,8 +233,8 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                       '${math.max(8, widget.milestones)}', 'Plants'),
                   _metric(Icons.local_fire_department_rounded,
                       '${widget.streak}', 'Login streak'),
-                  _metric(Icons.water_rounded,
-                      healthy ? 'Flowing' : 'Quiet', 'Fountain'),
+                  _metric(Icons.water_rounded, healthy ? 'Flowing' : 'Quiet',
+                      'Fountain'),
                   _metric(Icons.light_mode_rounded,
                       widget.streak >= 4 ? 'Unlocked' : 'Growing', 'Lighting'),
                 ]),
@@ -272,8 +272,7 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w900)),
                 Text(label,
-                    style:
-                        const TextStyle(color: Colors.white60, fontSize: 9)),
+                    style: const TextStyle(color: Colors.white60, fontSize: 9)),
               ],
             ),
           ),

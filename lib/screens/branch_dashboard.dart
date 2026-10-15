@@ -1247,8 +1247,7 @@ class _BranchPortalState extends State<BranchPortal>
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w900)),
                 Text(label,
-                    style:
-                        const TextStyle(color: Colors.white60, fontSize: 9)),
+                    style: const TextStyle(color: Colors.white60, fontSize: 9)),
               ],
             ),
           ),
