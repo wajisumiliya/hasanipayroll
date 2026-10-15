@@ -784,7 +784,12 @@ class _AquariumPainter extends CustomPainter {
       final ageDays = i < fishBirthDates.length
           ? DateTime.now().difference(fishBirthDates[i]).inDays.clamp(0, 90)
           : (i < 3 ? 45 : (i == 3 ? 18 : 1));
-      final naturalGrowth = .43 + (ageDays / 45).clamp(0.0, 1.0) * .72;
+      // Slots 1-4 are guppies, 5-6 fighter fish, 7-8 goldfish and 9-10
+      // smaller mixed fish. The three named species stay visually prominent.
+      final isLargeSpecies = i < 8;
+      final naturalGrowth = isLargeSpecies
+          ? .88 + (ageDays / 45).clamp(0.0, 1.0) * .30
+          : .48 + (ageDays / 45).clamp(0.0, 1.0) * .16;
       final scale = growth * naturalGrowth;
       canvas.save();
       canvas.translate(x, y);
@@ -794,12 +799,34 @@ class _AquariumPainter extends CustomPainter {
         const Rect.fromLTWH(-15, 7, 31, 6),
         Paint()..color = Colors.black.withValues(alpha: .10),
       );
-      _drawBettaFish(
-        canvas,
-        colors[i % colors.length],
-        progress * math.pi * 2,
-        i,
-      );
+      if (i < 4) {
+        _drawGuppyFish(
+          canvas,
+          colors[i % colors.length],
+          progress * math.pi * 2,
+          i,
+        );
+      } else if (i < 6) {
+        _drawBettaFish(
+          canvas,
+          i.isEven ? const Color(0xFF306BFF) : const Color(0xFFE83B68),
+          progress * math.pi * 2,
+          i,
+        );
+      } else if (i < 8) {
+        _drawGoldfish(
+          canvas,
+          progress * math.pi * 2,
+          i,
+        );
+      } else {
+        _drawSmallFish(
+          canvas,
+          i.isEven ? const Color(0xFF31D6C4) : const Color(0xFFFFD34E),
+          progress * math.pi * 2,
+          i,
+        );
+      }
       canvas.restore();
     }
 
@@ -1025,6 +1052,111 @@ class _AquariumPainter extends CustomPainter {
         const Offset(8, -2), 1.7, Paint()..color = const Color(0xFF04192E));
     canvas.drawCircle(
         const Offset(8.5, -2.5), .55, Paint()..color = Colors.white);
+  }
+
+  void _drawGuppyFish(Canvas canvas, Color color, double time, int fishIndex) {
+    final wave = math.sin(time * 5.8 + fishIndex * 1.31);
+    final dark = Color.lerp(color, const Color(0xFF142858), .35)!;
+    final light = Color.lerp(color, Colors.white, .38)!;
+    final tail = Path()
+      ..moveTo(-10, -4)
+      ..quadraticBezierTo(-25, -16 - wave * 2, -31, -11)
+      ..quadraticBezierTo(-25, 0, -32, 12 + wave * 2)
+      ..quadraticBezierTo(-21, 16, -10, 4)
+      ..close();
+    canvas.drawPath(
+      tail,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [dark, color, light],
+        ).createShader(const Rect.fromLTWH(-33, -17, 24, 34)),
+    );
+    canvas.drawOval(
+      const Rect.fromLTWH(-13, -7, 29, 14),
+      Paint()
+        ..shader = LinearGradient(colors: [dark, color, light]).createShader(
+          const Rect.fromLTWH(-13, -7, 29, 14),
+        ),
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(-5, -6)
+        ..quadraticBezierTo(1, -14 - wave, 8, -5)
+        ..close(),
+      Paint()..color = light.withValues(alpha: .72),
+    );
+    for (var spot = 0; spot < 3; spot++) {
+      canvas.drawCircle(
+        Offset(-6.0 + spot * 5, 1.5 * (spot.isEven ? -1 : 1)),
+        1.4,
+        Paint()..color = dark.withValues(alpha: .75),
+      );
+    }
+    canvas.drawCircle(
+        const Offset(10, -2), 1.7, Paint()..color = const Color(0xFF06182B));
+    canvas.drawCircle(
+        const Offset(10.5, -2.5), .55, Paint()..color = Colors.white);
+  }
+
+  void _drawGoldfish(Canvas canvas, double time, int fishIndex) {
+    final wave = math.sin(time * 5.2 + fishIndex);
+    const orange = Color(0xFFFF9418);
+    const gold = Color(0xFFFFD348);
+    final tail = Path()
+      ..moveTo(-11, -4)
+      ..quadraticBezierTo(-27, -16 - wave * 2, -29, -7)
+      ..quadraticBezierTo(-24, 0, -29, 9 + wave * 2)
+      ..quadraticBezierTo(-22, 16, -10, 4)
+      ..close();
+    canvas.drawPath(
+      tail,
+      Paint()
+        ..shader = const LinearGradient(colors: [orange, gold]).createShader(
+          const Rect.fromLTWH(-30, -17, 21, 34),
+        ),
+    );
+    canvas.drawOval(
+      const Rect.fromLTWH(-14, -10, 31, 20),
+      Paint()
+        ..shader = const RadialGradient(colors: [gold, orange]).createShader(
+          const Rect.fromLTWH(-14, -10, 31, 20),
+        ),
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(-5, -8)
+        ..quadraticBezierTo(1, -16, 8, -8)
+        ..close(),
+      Paint()..color = gold.withValues(alpha: .8),
+    );
+    canvas.drawCircle(
+        const Offset(10, -3), 1.9, Paint()..color = const Color(0xFF35200B));
+    canvas.drawCircle(
+        const Offset(10.6, -3.6), .6, Paint()..color = Colors.white);
+  }
+
+  void _drawSmallFish(Canvas canvas, Color color, double time, int fishIndex) {
+    final wave = math.sin(time * 7 + fishIndex);
+    final dark = Color.lerp(color, const Color(0xFF17314A), .42)!;
+    canvas.drawPath(
+      Path()
+        ..moveTo(-8, 0)
+        ..lineTo(-18, -7 - wave)
+        ..lineTo(-18, 7 + wave)
+        ..close(),
+      Paint()..color = dark,
+    );
+    canvas.drawOval(
+      const Rect.fromLTWH(-10, -5, 23, 10),
+      Paint()
+        ..shader = LinearGradient(colors: [dark, color]).createShader(
+          const Rect.fromLTWH(-10, -5, 23, 10),
+        ),
+    );
+    canvas.drawCircle(
+        const Offset(8, -1.5), 1.3, Paint()..color = const Color(0xFF07131F));
+    canvas.drawCircle(
+        const Offset(8.4, -1.9), .4, Paint()..color = Colors.white);
   }
 
   @override

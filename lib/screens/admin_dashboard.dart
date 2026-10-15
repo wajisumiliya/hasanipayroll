@@ -3484,6 +3484,11 @@ class _AdminDashboardState extends State<AdminDashboard>
               'Import CSV', Icons.file_upload_outlined, () => changePage(4)),
           _actionButton(
               'Reports', Icons.insights_outlined, () => changePage(6)),
+          _actionButton(
+            'OPT. STAT',
+            Icons.rule_folder_outlined,
+            _selectMissingStatutoryReportMonth,
+          ),
           _actionButton('Notifications', Icons.notifications_active_outlined,
               _showNotificationComposer),
         ],
@@ -19549,6 +19554,11 @@ class _AdminDashboardState extends State<AdminDashboard>
           firstText(employee, const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo']);
       final socsoNo = firstText(
           employee, const ['socso_no', 'socsoNo', 'socso_number', 'SOCSO_NO']);
+      final localIcIdentifier =
+          !isForeign && icDigits.length == 12 ? exportIc : '';
+      final epfIdentifier = epfNo.isNotEmpty ? epfNo : localIcIdentifier;
+      final socsoIdentifier =
+          socsoNo.isNotEmpty ? socsoNo.replaceAll('-', '') : localIcIdentifier;
       final epfEmployee =
           _number(payroll['epf_employee'] ?? payroll['epfEmployee']);
       final epfEmployer =
@@ -19565,25 +19575,22 @@ class _AdminDashboardState extends State<AdminDashboard>
       List<dynamic>? row;
       var missingAccount = false;
       if (report == 'EPF' && epfEmployee + epfEmployer > 0) {
-        missingAccount = epfNo.isEmpty;
+        missingAccount = epfIdentifier.isEmpty;
         row = [
           statutoryName,
           exportIc,
-          missingAccount ? 'MISSING EPF NO' : epfNo,
+          missingAccount ? 'MISSING EPF NO / VALID IC' : epfIdentifier,
           epfEmployee,
           epfEmployer,
           _payrollTotalEarnings(payroll)
         ];
       } else if (report == 'SOCSO') {
         final total = socsoEmployee + socsoEmployer;
-        final identifier = isForeign && socsoNo.isNotEmpty
-            ? socsoNo.replaceAll('-', '')
-            : exportIc;
         if (total > 0) {
-          missingAccount = isForeign ? socsoNo.isEmpty : icDigits.length != 12;
+          missingAccount = socsoIdentifier.isEmpty;
           row = [
             statutoryName,
-            missingAccount ? 'MISSING SOCSO NO / VALID IC' : identifier,
+            missingAccount ? 'MISSING SOCSO NO / VALID IC' : socsoIdentifier,
             socsoEmployee,
             socsoEmployer,
             total
@@ -19814,6 +19821,157 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectMissingStatutoryReportMonth() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedPayrollMonth,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      helpText: 'Select missing EPF/SOCSO report month',
+    );
+    if (picked == null || !mounted) return;
+    final month = DateTime(picked.year, picked.month);
+    await _showCombinedMissingStatutoryReport(month);
+  }
+
+  Future<void> _showCombinedMissingStatutoryReport(DateTime month) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        child: SizedBox(
+          width: 1120,
+          height: MediaQuery.sizeOf(context).height * .82,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                      'Missing EPF & SOCSO - ${DateFormat('MMMM yyyy').format(month)}',
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.close),
+                  ),
+                ]),
+                const SizedBox(height: 6),
+                const Text(
+                  'Local staff use their valid 12-digit IC when an EPF or SOCSO number is unavailable.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 14),
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: Future.wait([
+                      _loadStatutoryReport('EPF', month),
+                      _loadStatutoryReport('SOCSO', month),
+                    ]),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                              'Unable to load missing statutory details: ${snapshot.error}'),
+                        );
+                      }
+                      final epfRows = List<List<dynamic>>.from(
+                          snapshot.data?[0]['missingRows'] ?? const []);
+                      final socsoRows = List<List<dynamic>>.from(
+                          snapshot.data?[1]['missingRows'] ?? const []);
+                      final epfDisplayRows = epfRows
+                          .map(
+                              (row) => [row[0], row[1], row[3], row[4], row[5]])
+                          .toList();
+                      final socsoDisplayRows = socsoRows
+                          .map((row) => [row[0], row[2], row[3], row[4]])
+                          .toList();
+                      if (epfRows.isEmpty && socsoRows.isEmpty) {
+                        return Center(
+                          child: Text(
+                              'No missing EPF or SOCSO details for ${DateFormat('MMMM yyyy').format(month)}.'),
+                        );
+                      }
+                      return Column(children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Missing EPF (${epfRows.length})',
+                                    style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800)),
+                                const SizedBox(height: 6),
+                                if (epfRows.isEmpty)
+                                  const Text('No missing EPF employees.')
+                                else
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: _statutoryDataTable(const [
+                                      'NAME',
+                                      'IC NO',
+                                      'EMPLOYEE SHARE',
+                                      'EMPLOYER SHARE',
+                                      'TOTAL SALARY',
+                                    ], epfDisplayRows),
+                                  ),
+                                const SizedBox(height: 20),
+                                Text('Missing SOCSO (${socsoRows.length})',
+                                    style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800)),
+                                const SizedBox(height: 6),
+                                if (socsoRows.isEmpty)
+                                  const Text('No missing SOCSO employees.')
+                                else
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: _statutoryDataTable(const [
+                                      'NAME',
+                                      'EMPLOYEE SHARE',
+                                      'EMPLOYER SHARE',
+                                      'TOTAL AMOUNT',
+                                    ], socsoDisplayRows),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Text(
+                            '${epfRows.length} EPF • ${socsoRows.length} SOCSO employee(s)',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const Spacer(),
+                          FilledButton.icon(
+                            onPressed: () =>
+                                _exportMissingStatutoryAccountsExcel(month),
+                            icon: const Icon(Icons.download_outlined),
+                            label:
+                                const Text('Export Missing EPF & SOCSO Excel'),
+                          ),
+                        ]),
+                      ]);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -21404,9 +21562,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         final exportIc = !isForeign && isDigitsOnly && ic.length < 12
             ? ic.padLeft(12, '0')
             : (icDigitCount == 12 ? icDigits : ic.replaceAll('-', ''));
-        final useForeignSocsoNo = isForeign && socsoNo.isNotEmpty;
-        final socsoIdentifier =
-            useForeignSocsoNo ? socsoNo.replaceAll('-', '') : exportIc;
+        final localIcIdentifier =
+            !isForeign && icDigitCount == 12 ? exportIc : '';
+        final socsoIdentifier = socsoNo.isNotEmpty
+            ? socsoNo.replaceAll('-', '')
+            : localIcIdentifier;
 
         // ----------------------------------------------------------
         // BANK ACCOUNT
@@ -21456,6 +21616,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
 
         final epfNo = employeeEpfNo.isNotEmpty ? employeeEpfNo : payrollEpfNo;
+        final epfIdentifier = epfNo.isNotEmpty ? epfNo : localIcIdentifier;
 
         // ----------------------------------------------------------
         // CALCULATE AMOUNTS
@@ -21538,14 +21699,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         // ----------------------------------------------------------
 
         final eligibleForEpfExport =
-            epfEmployee + epfEmployer > 0 && (!isForeign || epfNo.isNotEmpty);
+            epfEmployee + epfEmployer > 0 && epfIdentifier.isNotEmpty;
         if (eligibleForEpfExport) {
           final epfRow = <dynamic>[
             statutoryName,
             '',
             '',
             exportIc,
-            epfNo,
+            epfIdentifier,
             epfEmployee,
             epfEmployer,
             '',
@@ -21580,8 +21741,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         // SOCSO
         // ----------------------------------------------------------
 
-        final eligibleForSocsoExport = socsoTotal > 0 &&
-            (isForeign ? socsoNo.isNotEmpty : icDigitCount == 12);
+        final eligibleForSocsoExport =
+            socsoTotal > 0 && socsoIdentifier.isNotEmpty;
         if (eligibleForSocsoExport) {
           final socsoRow = <dynamic>[
             statutoryName,
@@ -22109,6 +22270,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'Attendance' => const (Color(0xFFFFB52D), Color(0xFFF07A00)),
       'Import CSV' => const (Color(0xFF2DD4D7), Color(0xFF0698AD)),
       'Reports' => const (Color(0xFF9A55FF), Color(0xFF6425E5)),
+      'OPT. STAT' => const (Color(0xFF5B8DEF), Color(0xFF315DB5)),
       _ => const (Color(0xFFFF5570), Color(0xFFE51D43)),
     };
     return InkWell(
