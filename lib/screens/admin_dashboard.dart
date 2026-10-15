@@ -15466,6 +15466,16 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
   }
 
+  double _epfReportSalary(Map<String, dynamic> payroll) {
+    final basicSalary = _payrollNumber(
+      payroll['basic_salary'] ?? payroll['basicSalary'],
+    );
+    final unpaidDeduction = _payrollNumber(
+      payroll['unpaid_deduction'] ?? payroll['unpaidDeduction'],
+    );
+    return math.max(0, basicSalary - unpaidDeduction).toDouble();
+  }
+
 // ============================================================================
 // PAYROLL CSV IMPORT
 // ============================================================================
@@ -19582,7 +19592,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           missingAccount ? 'MISSING EPF NO / VALID IC' : epfIdentifier,
           epfEmployee,
           epfEmployer,
-          _payrollTotalEarnings(payroll)
+          _epfReportSalary(payroll)
         ];
       } else if (report == 'SOCSO') {
         final total = socsoEmployee + socsoEmployer;
@@ -21622,8 +21632,6 @@ class _AdminDashboardState extends State<AdminDashboard>
         // CALCULATE AMOUNTS
         // ----------------------------------------------------------
 
-        final gross = jumlah(payroll);
-
         final net = netSalary(payroll);
 
         final epfEmployee = money(
@@ -21695,7 +21703,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         // ----------------------------------------------------------
         // EPF
         //
-        // JUMLAH = GROSS SALARY
+        // SALARY = BASIC SALARY - UNPAID DEDUCTION
         // ----------------------------------------------------------
 
         final eligibleForEpfExport =
@@ -21710,7 +21718,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             epfEmployee,
             epfEmployer,
             '',
-            gross,
+            _epfReportSalary(payroll),
           ];
           if (isForeign) {
             epfForeign.add(epfRow);
