@@ -832,6 +832,42 @@ class AppService extends ChangeNotifier {
     }
   }
 
+  /// Refresh payroll for the signed-in employee without downloading company history.
+  /// Other dashboard records remain in memory, and only this employee is replaced.
+  Future<void> loadCurrentEmployeePayrollFromSupabase(String employeeId) async {
+    final normalizedId = employeeId.trim();
+    if (normalizedId.isEmpty) return;
+    const pageSize = 1000;
+    final refreshed = <PayrollRecord>[];
+    var offset = 0;
+    while (true) {
+      final batch = await _supabase
+          .from('payroll')
+          .select()
+          .eq('employee_id', normalizedId)
+          .eq('is_published', true)
+          .order('period', ascending: false)
+          .range(offset, offset + pageSize - 1);
+      final page = List<Map<String, dynamic>>.from(batch);
+      for (final row in page) {
+        try {
+          refreshed.add(_payrollFromSupabase(row));
+        } catch (_) {
+          // Ignore malformed records without exposing payroll data.
+        }
+      }
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    payroll.removeWhere(
+      (record) => record.employeeId.trim().toUpperCase() ==
+          normalizedId.toUpperCase(),
+    );
+    payroll.addAll(refreshed);
+    payroll.sort((a, b) => b.period.compareTo(a.period));
+    notifyListeners();
+  }
+
   /// Refreshes only one generated payroll month instead of downloading the
   /// complete payroll history after every batch generation.
   Future<void> loadPayrollMonthFromSupabase(DateTime month) async {

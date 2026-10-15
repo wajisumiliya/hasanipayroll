@@ -159,7 +159,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     if (_payrollLoading || employeeId.isEmpty) return;
     if (mounted) setState(() => _payrollLoading = true);
     try {
-      await service.loadPayrollFromSupabase();
+      await service.loadCurrentEmployeePayrollFromSupabase(employeeId);
       await _maybeShowSalaryIncreaseCelebration();
     } catch (error) {
       debugPrint('Unable to refresh employee payroll: $error');
