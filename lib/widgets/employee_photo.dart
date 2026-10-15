@@ -1,6 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// Share signed URLs between photo widgets for 50 minutes. A signed URL remains
+// valid for 60 minutes; refreshing early avoids displaying expired links.
+final Map<String, ({Future<String?> url, DateTime expiresAt})>
+    _employeePhotoSignedUrlCache = {};
+
+Future<String?> _cachedEmployeePhotoSignedUrl(String path) async {
+  final now = DateTime.now();
+  final existing = _employeePhotoSignedUrlCache[path];
+  if (existing != null && existing.expiresAt.isAfter(now)) {
+    return existing.url;
+  }
+  // Keep the cache bounded for long-running dashboard sessions.
+  _employeePhotoSignedUrlCache.removeWhere(
+    (_, entry) => !entry.expiresAt.isAfter(now),
+  );
+  final future = Supabase.instance.client.storage
+      .from('employee-photos')
+      .createSignedUrl(path, 3600);
+  _employeePhotoSignedUrlCache[path] = (
+    url: future,
+    expiresAt: now.add(const Duration(minutes: 50)),
+  );
+  try {
+    return await future;
+  } catch (_) {
+    _employeePhotoSignedUrlCache.remove(path);
+    return null;
+  }
+}
+
 Future<String?> resolveEmployeePhotoUrl(String? photoUrl) async {
   final raw = photoUrl?.trim() ?? '';
   if (raw.isEmpty) return null;
@@ -35,13 +65,7 @@ Future<String?> resolveEmployeePhotoUrl(String? photoUrl) async {
   );
   if (path.isEmpty) return null;
 
-  try {
-    return await Supabase.instance.client.storage
-        .from('employee-photos')
-        .createSignedUrl(path, 3600);
-  } catch (_) {
-    return null;
-  }
+  return _cachedEmployeePhotoSignedUrl(path);
 }
 
 class EmployeePhotoImage extends StatefulWidget {
