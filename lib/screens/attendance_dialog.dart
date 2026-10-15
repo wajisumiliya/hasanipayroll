@@ -196,26 +196,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     try {
       Map<String, dynamic>? salary;
 
-      // Your project has used both spellings in earlier schema versions.
-      // Prefer epf_catagory, then fall back to epf_category.
-      try {
-        final rows = await SupabaseService.client
-            .from('employee_salary_defaults')
-            .select('eis_applicable,epf_catagory')
-            .eq('employee_id', employeeId)
-            .limit(1);
-        if (rows.isNotEmpty) {
-          salary = Map<String, dynamic>.from(rows.first);
-        }
-      } catch (_) {
-        final rows = await SupabaseService.client
-            .from('employee_salary_defaults')
-            .select('eis_applicable,epf_category')
-            .eq('employee_id', employeeId)
-            .limit(1);
-        if (rows.isNotEmpty) {
-          salary = Map<String, dynamic>.from(rows.first);
-        }
+      // Production schema uses epf_category. Avoid a failing query on every load.
+      final rows = await SupabaseService.client
+          .from('employee_salary_defaults')
+          .select('eis_applicable,epf_category')
+          .eq('employee_id', employeeId)
+          .limit(1);
+      if (rows.isNotEmpty) {
+        salary = Map<String, dynamic>.from(rows.first);
       }
 
       if (salary != null) {
