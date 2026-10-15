@@ -3180,7 +3180,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
             ),
           );
 
-      await loadPayrollFromSupabase();
+      await loadPayrollMonthFromSupabase(record.period);
     } catch (_) {
       rethrow;
     }
