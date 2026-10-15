@@ -63,6 +63,8 @@ flutter:
     - assets/dashboard_hrdf_corp.png
     - assets/payroll_export_template.xlsx
     - assets/payroll_salary_template.xlsx
+    - assets/employee_garden_courtyard.png
+    - assets/branch_botanical_park.png
 
 # ============================================================================
 # APP ICON

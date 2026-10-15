@@ -21,7 +21,7 @@ import 'ea_forms_page.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
-import '../widgets/employee_bookstore_card.dart';
+import '../widgets/employee_garden_card.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../utils/app_reload.dart';
 
@@ -51,7 +51,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   List<Map<String, dynamic>> _notifications = const [];
   bool _notificationsLoading = false;
   bool _payrollLoading = false;
-  bool _aquariumLoading = false;
+  bool _gardenLoading = false;
   bool _checkingSalaryIncrease = false;
 
   @override
@@ -74,7 +74,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     _subscribeToNotifications();
     _subscribeToPayroll();
     unawaited(_refreshPayroll());
-    _refreshAquarium();
+    _refreshGarden();
     _notificationRefreshTimer = Timer.periodic(
       const Duration(minutes: 5),
       (_) => _loadEmployeeNotifications(),
@@ -241,15 +241,15 @@ class _EmployeePortalState extends State<EmployeePortal>
     if (value == 1) unawaited(_refreshPayroll());
   }
 
-  Future<void> _refreshAquarium() async {
-    if (_aquariumLoading) return;
-    setState(() => _aquariumLoading = true);
-    await service.refreshEmployeeAquarium();
-    if (mounted) setState(() => _aquariumLoading = false);
+  Future<void> _refreshGarden() async {
+    if (_gardenLoading) return;
+    setState(() => _gardenLoading = true);
+    await service.refreshEmployeeGarden();
+    if (mounted) setState(() => _gardenLoading = false);
   }
 
-  Future<bool> _feedAquarium() async {
-    final fed = await service.feedEmployeeAquarium();
+  Future<bool> _tendGarden() async {
+    final fed = await service.tendEmployeeGarden();
     if (mounted) setState(() {});
     return fed;
   }
@@ -1230,7 +1230,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             const SizedBox(height: 16),
             _emptyPayroll(),
             const SizedBox(height: 16),
-            _aquariumCard(),
+            _gardenCard(),
           ],
         ),
       );
@@ -1255,7 +1255,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(height: 12),
                 _myWorkdayCard(),
                 const SizedBox(height: 12),
-                _aquariumCard(),
+                _gardenCard(),
               ] else ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1281,7 +1281,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(height: 18),
                 _myWorkdayCard(),
                 const SizedBox(height: 18),
-                _aquariumCard(),
+                _gardenCard(),
               ],
             ],
           ),
@@ -1290,15 +1290,24 @@ class _EmployeePortalState extends State<EmployeePortal>
     );
   }
 
-  Widget _aquariumCard() {
-    final progress = service.employeeAquariumProgress;
-    return EmployeeBookstoreCard(
-      books: progress.totalFeed + progress.fishCount,
-      availableBooks: progress.availableFood,
-      loginStreak: progress.weeklyLogins,
-      loginsUntilUpgrade: progress.loginsUntilNextFish,
-      loading: _aquariumLoading,
-      onAddBook: _feedAquarium,
+  Widget _gardenCard() {
+    final progress = service.employeeGardenProgress;
+    final now = DateTime.now();
+    final attendanceActive = service.employeeAttendance(employeeId).any(
+          (record) =>
+              record.date.year == now.year &&
+              record.date.month == now.month &&
+              record.date.day == now.day &&
+              record.effectiveCheckIn.trim().isNotEmpty,
+        );
+    return EmployeeGardenCard(
+      attendanceActive: attendanceActive,
+      streak: progress.weeklyVisits,
+      milestones: progress.totalCare + progress.gardenLevel,
+      availableCare: progress.availableCare,
+      loginsUntilUpgrade: progress.visitsUntilNextUnlock,
+      loading: _gardenLoading,
+      onCare: _tendGarden,
     );
   }
 

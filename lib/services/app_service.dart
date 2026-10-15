@@ -128,39 +128,40 @@ class FirstLoginOtpState {
   }
 }
 
-class EmployeeAquariumProgress {
-  const EmployeeAquariumProgress({
-    this.totalFeed = 0,
-    this.availableFood = 0,
-    this.fishCount = 5,
-    this.weeklyLogins = 0,
-    this.loginsUntilNextFish = 4,
-    this.fishAwarded = false,
-    this.deadFishCount = 0,
-    this.fishBirthDates = const [],
+class EmployeeGardenProgress {
+  const EmployeeGardenProgress({
+    this.totalCare = 0,
+    this.availableCare = 0,
+    this.gardenLevel = 1,
+    this.weeklyVisits = 0,
+    this.visitsUntilNextUnlock = 4,
+    this.featureAwarded = false,
+    this.neglectedCount = 0,
+    this.plantDates = const [],
   });
 
-  final int totalFeed;
-  final int availableFood;
-  final int fishCount;
-  final int weeklyLogins;
-  final int loginsUntilNextFish;
-  final bool fishAwarded;
-  final int deadFishCount;
-  final List<DateTime> fishBirthDates;
+  final int totalCare;
+  final int availableCare;
+  final int gardenLevel;
+  final int weeklyVisits;
+  final int visitsUntilNextUnlock;
+  final bool featureAwarded;
+  final int neglectedCount;
+  final List<DateTime> plantDates;
 
-  factory EmployeeAquariumProgress.fromJson(Map<String, dynamic> json) =>
-      EmployeeAquariumProgress(
-        totalFeed: int.tryParse('${json['total_feed'] ?? 0}') ?? 0,
-        availableFood: int.tryParse('${json['available_food'] ?? 0}') ?? 0,
-        fishCount: int.tryParse('${json['fish_count'] ?? 5}') ?? 5,
-        weeklyLogins: int.tryParse('${json['weekly_logins'] ?? 0}') ?? 0,
-        loginsUntilNextFish:
-            int.tryParse('${json['logins_until_next_fish'] ?? 4}') ?? 4,
-        fishAwarded: json['fish_awarded'] == true,
-        deadFishCount: int.tryParse('${json['dead_fish_count'] ?? 0}') ?? 0,
-        fishBirthDates: (json['fish_birth_dates'] is List
-                ? json['fish_birth_dates'] as List
+  factory EmployeeGardenProgress.fromJson(Map<String, dynamic> json) =>
+      EmployeeGardenProgress(
+        totalCare: int.tryParse('${json['total_care'] ?? 0}') ?? 0,
+        availableCare: int.tryParse('${json['available_care'] ?? 0}') ?? 0,
+        gardenLevel: int.tryParse('${json['garden_level'] ?? 1}') ?? 1,
+        weeklyVisits: int.tryParse('${json['weekly_visits'] ?? 0}') ?? 0,
+        visitsUntilNextUnlock:
+            int.tryParse('${json['visits_until_next_unlock'] ?? 4}') ?? 4,
+        featureAwarded: json['feature_awarded'] == true,
+        neglectedCount:
+            int.tryParse('${json['neglected_count'] ?? 0}') ?? 0,
+        plantDates: (json['plant_dates'] is List
+                ? json['plant_dates'] as List
                 : const [])
             .map((value) => DateTime.tryParse(value.toString()))
             .whereType<DateTime>()
@@ -266,8 +267,8 @@ class AppService extends ChangeNotifier {
   app_user? _currentUser;
   String? _accessToken;
   String? _branchLoginActivityId;
-  EmployeeAquariumProgress _employeeAquariumProgress =
-      const EmployeeAquariumProgress();
+  EmployeeGardenProgress _employeeGardenProgress =
+      const EmployeeGardenProgress();
 
   app_user? get currentUser => _currentUser;
 
@@ -285,85 +286,64 @@ class AppService extends ChangeNotifier {
 
   String? get currentEmployeeId => _currentUser?.employeeId;
 
-  EmployeeAquariumProgress get employeeAquariumProgress =>
-      _employeeAquariumProgress;
+  EmployeeGardenProgress get employeeGardenProgress => _employeeGardenProgress;
 
-  Future<void> refreshEmployeeAquarium() async {
+  Future<void> refreshEmployeeGarden() async {
     if (_currentUser?.isEmployee != true) return;
     try {
-      final response = await _supabase.rpc('get_employee_aquarium');
+      final response = await _supabase.rpc('get_employee_garden');
       if (response is Map) {
-        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(
+        _employeeGardenProgress = EmployeeGardenProgress.fromJson(
           Map<String, dynamic>.from(response),
         );
         notifyListeners();
       }
     } catch (error) {
-      debugPrint('Employee aquarium load error: $error');
+      debugPrint('Employee garden load error: $error');
     }
   }
 
-  Future<bool> feedEmployeeAquarium() async {
+  Future<bool> tendEmployeeGarden() async {
     if (_currentUser?.isEmployee != true ||
-        _employeeAquariumProgress.availableFood < 1) {
+        _employeeGardenProgress.availableCare < 1) {
       return false;
     }
     try {
-      final response = await _supabase.rpc('feed_employee_aquarium');
+      final response = await _supabase.rpc('tend_employee_garden');
       if (response is Map) {
         final data = Map<String, dynamic>.from(response);
         data.putIfAbsent(
-            'dead_fish_count', () => _employeeAquariumProgress.deadFishCount);
+            'neglected_count', () => _employeeGardenProgress.neglectedCount);
         data.putIfAbsent(
-          'fish_birth_dates',
-          () => _employeeAquariumProgress.fishBirthDates
+          'plant_dates',
+          () => _employeeGardenProgress.plantDates
               .map((date) => date.toIso8601String())
               .toList(),
         );
-        final fed = data['fed'] == true;
-        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(data);
+        final tended = data['tended'] == true;
+        _employeeGardenProgress = EmployeeGardenProgress.fromJson(data);
         notifyListeners();
-        return fed;
+        return tended;
       }
     } catch (error) {
-      debugPrint('Employee aquarium feeding error: $error');
+      debugPrint('Employee garden care error: $error');
     }
     return false;
   }
 
-  Future<bool> cleanEmployeeAquarium() async {
-    if (_currentUser?.isEmployee != true ||
-        _employeeAquariumProgress.deadFishCount < 1) {
-      return false;
-    }
-    try {
-      final response = await _supabase.rpc('clean_employee_aquarium');
-      if (response is Map) {
-        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(
-          Map<String, dynamic>.from(response),
-        );
-        notifyListeners();
-        return true;
-      }
-    } catch (error) {
-      debugPrint('Employee aquarium cleaning error: $error');
-    }
-    return false;
-  }
-
-  Future<void> _recordEmployeeAquariumLogin() async {
+  Future<void> _recordEmployeeGardenVisit() async {
     if (_currentUser?.isEmployee != true) return;
     try {
-      final response = await _supabase.rpc('record_employee_aquarium_login');
+      final response = await _supabase.rpc('record_employee_garden_visit');
       if (response is Map) {
-        _employeeAquariumProgress = EmployeeAquariumProgress.fromJson(
+        _employeeGardenProgress = EmployeeGardenProgress.fromJson(
           Map<String, dynamic>.from(response),
         );
         notifyListeners();
       }
     } catch (error) {
       // Engagement features must never block payroll portal access.
-      debugPrint('Employee aquarium login error: $error');
+      debugPrint('Employee garden visit error: $error');
     }
   }
 
@@ -1313,7 +1293,7 @@ class AppService extends ChangeNotifier {
       await _persistCurrentUser();
       notifyListeners();
       await _loadDataForCurrentUser();
-      await _recordEmployeeAquariumLogin();
+      await _recordEmployeeGardenVisit();
 
       if (_currentUser?.isBranch == true) {
         try {
@@ -1513,7 +1493,7 @@ class AppService extends ChangeNotifier {
       await _persistCurrentUser();
       notifyListeners();
       await _loadDataForCurrentUser();
-      await _recordEmployeeAquariumLogin();
+      await _recordEmployeeGardenVisit();
       return null;
     } catch (_) {
       return 'Unable to complete first login. Please try again.';
@@ -1580,7 +1560,7 @@ class AppService extends ChangeNotifier {
 
     _currentUser = null;
     _accessToken = null;
-    _employeeAquariumProgress = const EmployeeAquariumProgress();
+    _employeeGardenProgress = const EmployeeGardenProgress();
     _supabase.rest.setAuth(null);
     await _supabase.realtime.setAuth(null);
     await _clearStoredUser();
