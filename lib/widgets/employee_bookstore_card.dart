@@ -43,7 +43,7 @@ class _EmployeeBookstoreCardState extends State<EmployeeBookstoreCard> {
         : ((4 - widget.loginsUntilUpgrade) / 4).clamp(0.0, 1.0);
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 350),
+      constraints: const BoxConstraints(minHeight: 320),
       decoration: BoxDecoration(
         color: const Color(0xFF0E223B),
         borderRadius: BorderRadius.circular(24),
@@ -96,6 +96,8 @@ class _EmployeeBookstoreCardState extends State<EmployeeBookstoreCard> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFE4BA59),
                     foregroundColor: const Color(0xFF241703),
+                    disabledBackgroundColor: const Color(0xFF263F5D),
+                    disabledForegroundColor: Colors.white70,
                   ),
                   icon: _adding || widget.loading
                       ? const SizedBox.square(
@@ -111,7 +113,7 @@ class _EmployeeBookstoreCardState extends State<EmployeeBookstoreCard> {
             ),
           ),
           SizedBox(
-            height: 190,
+            height: 175,
             width: double.infinity,
             child: CustomPaint(
               painter: _BookstorePainter(
@@ -191,11 +193,50 @@ class _BookstorePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final wall = Paint()..color = const Color(0xFFF3E5C6);
+    final wall = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFF4D8), Color(0xFFEAD2A5)],
+      ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, wall);
     canvas.drawRect(
         Rect.fromLTWH(0, size.height * .77, size.width, size.height * .23),
-        Paint()..color = const Color(0xFFB97A45));
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [Color(0xFF8A542D), Color(0xFFC4874E)],
+          ).createShader(Rect.fromLTWH(
+              0, size.height * .77, size.width, size.height * .23)));
+
+    // Architectural details make the scene feel like a real, warm shop rather
+    // than a flat collection of shelves.
+    final window = RRect.fromRectAndRadius(
+      Rect.fromLTWH(size.width * .69, 15, size.width * .25, 68),
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(window, Paint()..color = const Color(0xFF173957));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * .705, 25, size.width * .22, 48),
+        const Radius.circular(5),
+      ),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF9DD7E7), Color(0xFFFFE2A0)],
+        ).createShader(
+            Rect.fromLTWH(size.width * .705, 25, size.width * .22, 48)),
+    );
+    canvas.drawLine(Offset(size.width * .815, 25),
+        Offset(size.width * .815, 73), Paint()..color = Colors.white70);
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(size.width * .52, size.height * .83),
+          width: size.width * .28,
+          height: 25),
+      Paint()..color = const Color(0xFF173957).withValues(alpha: .72),
+    );
     final shelfPaint = Paint()..color = const Color(0xFF704321);
     final shelfWidth = size.width * .58;
     final left = size.width * .055;
@@ -232,6 +273,26 @@ class _BookstorePainter extends CustomPainter {
       canvas.drawLine(Offset(x + 2, y + 4), Offset(x + width - 2, y + 4),
           Paint()..color = Colors.white54);
     }
+    final chairCenter = Offset(size.width * .57, size.height * .62);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: chairCenter, width: 50, height: 48),
+        const Radius.circular(14),
+      ),
+      Paint()..color = const Color(0xFF315E50),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(chairCenter.dx - 21, chairCenter.dy + 18, 5, 18),
+      Paint()..color = const Color(0xFF65401F),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(chairCenter.dx + 16, chairCenter.dy + 18, 5, 18),
+      Paint()..color = const Color(0xFF65401F),
+    );
+    canvas.drawCircle(Offset(size.width * .64, size.height * .69), 17,
+        Paint()..color = const Color(0xFF744623));
+    canvas.drawCircle(Offset(size.width * .64, size.height * .69), 13,
+        Paint()..color = const Color(0xFFD9B86D));
     final counter = Rect.fromLTWH(
         size.width * .72, size.height * .47, size.width * .23, 67);
     canvas.drawRRect(RRect.fromRectAndRadius(counter, const Radius.circular(6)),
@@ -256,6 +317,22 @@ class _BookstorePainter extends CustomPainter {
         Paint()..color = const Color(0xFFFFD56A));
     canvas.drawCircle(Offset(size.width * .91, 27), 7,
         Paint()..color = const Color(0xFFFFF0B7));
+
+    // A small plant adds a softer focal point beside the service counter.
+    final plantX = size.width * .965;
+    canvas.drawRect(Rect.fromLTWH(plantX - 7, size.height * .59, 14, 23),
+        Paint()..color = const Color(0xFFB96F42));
+    for (var i = 0; i < 5; i++) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(
+              plantX + (i - 2) * 5, size.height * .55 - (i.isOdd ? 5 : 0)),
+          width: 13,
+          height: 22,
+        ),
+        Paint()..color = const Color(0xFF4E875A),
+      );
+    }
   }
 
   @override

@@ -527,8 +527,6 @@ class _BranchPortalState extends State<BranchPortal>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _branchCommandCentre(),
-          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -876,7 +874,6 @@ class _BranchPortalState extends State<BranchPortal>
   // ==========================================================================
 
   Widget _dashboardPage() {
-    final totalEmployees = employees.length;
     final monthlyAttendance = attendance
         .where((record) =>
             record.date.year == attendanceMonth.year &&
@@ -894,77 +891,9 @@ class _BranchPortalState extends State<BranchPortal>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFF243B8F), width: 1.6),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x12000000),
-                  blurRadius: 18,
-                  offset: Offset(0, 7),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Branch Operations',
-                  style: TextStyle(
-                    color: Color(0xFF20242D),
-                    fontSize: 27,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -.8,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '$branchDisplayName · Live attendance overview',
-                  style: const TextStyle(color: Colors.black54),
-                ),
-                const SizedBox(height: 14),
-                _branchPeriodSelector(),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _statCard(
-                      'Attendance Employees',
-                      totalEmployees.toString(),
-                      Icons.people,
-                      const Color(0xFF315AD9),
-                    ),
-                    _statCard(
-                      'Late',
-                      lateRecords.length.toString(),
-                      Icons.schedule,
-                      Colors.orange,
-                      onTap: () => _showMonthlyAttendanceDetails(
-                        title: 'Late Employees',
-                        records: lateRecords,
-                        late: true,
-                      ),
-                    ),
-                    _statCard(
-                      'Absent',
-                      absentRecords.length.toString(),
-                      Icons.cancel,
-                      Colors.red,
-                      onTap: () => _showMonthlyAttendanceDetails(
-                        title: 'Absent Employees',
-                        records: absentRecords,
-                        late: false,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          _branchCommandCentre(
+            monthlyLate: lateRecords,
+            monthlyAbsent: absentRecords,
           ),
           const SizedBox(height: 24),
           _branchCelebrationPanels(),
@@ -977,7 +906,10 @@ class _BranchPortalState extends State<BranchPortal>
     );
   }
 
-  Widget _branchCommandCentre() {
+  Widget _branchCommandCentre({
+    required List<AttendanceRecord> monthlyLate,
+    required List<AttendanceRecord> monthlyAbsent,
+  }) {
     final today = todayAttendance;
     final total = employees.length;
     final presentIds = today
@@ -1023,18 +955,20 @@ class _BranchPortalState extends State<BranchPortal>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('BRANCH COMMAND CENTRE',
+                  const Text('BRANCH COMMAND CENTRE',
                       style: TextStyle(
                           color: Color(0xFFFFD56A),
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.1)),
-                  Text('Live operations and payroll readiness',
-                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text(
+                      '$branchDisplayName · Live operations and payroll readiness',
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),
@@ -1056,6 +990,15 @@ class _BranchPortalState extends State<BranchPortal>
               ]),
             ),
           ]),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: _branchPeriodSelector(),
+          ),
           const SizedBox(height: 16),
           Wrap(spacing: 10, runSpacing: 10, children: [
             _commandMetric(Icons.how_to_reg_rounded, '${presentIds.length}',
@@ -1077,6 +1020,39 @@ class _BranchPortalState extends State<BranchPortal>
               backgroundColor: Colors.white12,
             ),
           ),
+          const SizedBox(height: 12),
+          Wrap(spacing: 9, runSpacing: 9, children: [
+            OutlinedButton.icon(
+              onPressed: monthlyLate.isEmpty
+                  ? null
+                  : () => _showMonthlyAttendanceDetails(
+                        title: 'Late Employees',
+                        records: monthlyLate,
+                        late: true,
+                      ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFFD56A),
+                side: const BorderSide(color: Colors.white24),
+              ),
+              icon: const Icon(Icons.schedule_rounded, size: 17),
+              label: Text('Monthly late ${monthlyLate.length}'),
+            ),
+            OutlinedButton.icon(
+              onPressed: monthlyAbsent.isEmpty
+                  ? null
+                  : () => _showMonthlyAttendanceDetails(
+                        title: 'Absent Employees',
+                        records: monthlyAbsent,
+                        late: false,
+                      ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFF8B9B),
+                side: const BorderSide(color: Colors.white24),
+              ),
+              icon: const Icon(Icons.person_off_outlined, size: 17),
+              label: Text('Monthly absent ${monthlyAbsent.length}'),
+            ),
+          ]),
         ],
       ),
     );
@@ -1118,63 +1094,146 @@ class _BranchPortalState extends State<BranchPortal>
     final stockedShelves = math.max(1, (total / 4).ceil());
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBF2),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFBF2), Color(0xFFF4E4BE)],
+        ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFE4C675)),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x12000000), blurRadius: 16, offset: Offset(0, 7)),
+        ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 116,
-            height: 116,
-            decoration: BoxDecoration(
-              color: const Color(0xFF183451),
-              borderRadius: BorderRadius.circular(18),
+          Row(children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFF183451),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.storefront_rounded,
+                  color: Color(0xFFFFD56A)),
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                const Icon(Icons.storefront_rounded,
-                    color: Color(0xFFFFD56A), size: 72),
-                Positioned(
-                  bottom: 12,
-                  child: Text('$stockedShelves SHELVES',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('BRANCH BOOKSTORE NETWORK',
+                      style: TextStyle(
+                          color: Color(0xFF132D4A),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900)),
+                  Text('$branchDisplayName · Team progress visualised',
+                      style:
+                          const TextStyle(color: Colors.black54, fontSize: 11)),
+                ],
+              ),
+            ),
+            _networkBadge('$todayPresent', 'CUSTOMERS'),
+            const SizedBox(width: 8),
+            _networkBadge('$total', 'TEAM BOOKS'),
+          ]),
+          const SizedBox(height: 18),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final visibleShelves = math.min(stockedShelves, 9);
+              final width = math.max(
+                  104.0,
+                  (constraints.maxWidth - (visibleShelves - 1) * 9) /
+                      visibleShelves);
+              return Wrap(
+                spacing: 9,
+                runSpacing: 9,
+                children: List.generate(
+                  visibleShelves,
+                  (index) => _networkShelf(width, index),
                 ),
-              ],
-            ),
+              );
+            },
           ),
-          const SizedBox(width: 18),
+          const SizedBox(height: 12),
+          Text(
+            '$stockedShelves active shelves earned from $total employees. Attendance brings customers into the branch store.',
+            style: const TextStyle(
+                color: Color(0xFF526272),
+                fontSize: 11,
+                fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _networkBadge(String value, String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .72),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFD7BE82)),
+        ),
+        child: Column(children: [
+          Text(value,
+              style: const TextStyle(
+                  color: Color(0xFF173957),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900)),
+          Text(label,
+              style: const TextStyle(
+                  color: Color(0xFF6E7780),
+                  fontSize: 8,
+                  fontWeight: FontWeight.w700)),
+        ]),
+      );
+
+  Widget _networkShelf(double width, int index) {
+    const colors = [
+      Color(0xFFC95757),
+      Color(0xFF315F91),
+      Color(0xFFD19A38),
+      Color(0xFF438166),
+      Color(0xFF79518E),
+    ];
+    return Container(
+      width: width,
+      height: 72,
+      padding: const EdgeInsets.fromLTRB(8, 9, 8, 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFF8C572F),
+        borderRadius: BorderRadius.circular(9),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x22000000), blurRadius: 5, offset: Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('BRANCH BOOKSTORE NETWORK',
-                    style: TextStyle(
-                        color: Color(0xFF132D4A),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900)),
-                const SizedBox(height: 5),
-                Text(
-                  '$branchDisplayName has $stockedShelves active shelves representing $total employees.',
-                  style: const TextStyle(color: Colors.black54),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(
+                6,
+                (book) => Expanded(
+                  child: Container(
+                    height: 28.0 + ((index + book) % 4) * 4,
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    decoration: BoxDecoration(
+                      color: colors[(index + book) % colors.length],
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(2)),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Wrap(spacing: 18, runSpacing: 8, children: [
-                  Text('$todayPresent customers today',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text('$total team books',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                ]),
-              ],
+              ),
             ),
           ),
+          Container(height: 5, color: const Color(0xFF5E351D)),
         ],
       ),
     );

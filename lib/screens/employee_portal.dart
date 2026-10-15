@@ -1224,13 +1224,13 @@ class _EmployeePortalState extends State<EmployeePortal>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _myWorkdayCard(),
-            const SizedBox(height: 16),
             _welcome(),
             const SizedBox(height: 16),
-            _aquariumCard(),
-            const SizedBox(height: 24),
+            _myWorkdayCard(),
+            const SizedBox(height: 16),
             _emptyPayroll(),
+            const SizedBox(height: 16),
+            _aquariumCard(),
           ],
         ),
       );
@@ -1246,30 +1246,24 @@ class _EmployeePortalState extends State<EmployeePortal>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _myWorkdayCard(),
-              const SizedBox(height: 16),
               if (compact) ...[
                 _welcome(),
-                const SizedBox(height: 12),
-                _aquariumCard(),
                 const SizedBox(height: 12),
                 _salary(payroll),
                 const SizedBox(height: 12),
                 _quickAccessPanel(),
-              ] else
+                const SizedBox(height: 12),
+                _myWorkdayCard(),
+                const SizedBox(height: 12),
+                _aquariumCard(),
+              ] else ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Align(
                         alignment: Alignment.topLeft,
-                        child: Column(
-                          children: [
-                            _welcome(),
-                            const SizedBox(height: 16),
-                            _aquariumCard(),
-                          ],
-                        ),
+                        child: _welcome(),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -1284,6 +1278,11 @@ class _EmployeePortalState extends State<EmployeePortal>
                     ),
                   ],
                 ),
+                const SizedBox(height: 18),
+                _myWorkdayCard(),
+                const SizedBox(height: 18),
+                _aquariumCard(),
+              ],
             ],
           ),
         );
