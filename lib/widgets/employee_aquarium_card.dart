@@ -125,7 +125,9 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                     builder: (_, __) => CustomPaint(
                         painter: _AquariumPainter(
                             employeeId: widget.employeeId,
-                            fishCount: widget.fishCount.clamp(2, 10),
+                            // Fixed collection: 4 guppies, 2 fighters,
+                            // 2 goldfish and 2 other small fish.
+                            fishCount: 10,
                             fishBirthDates: widget.fishBirthDates,
                             deadFishCount: widget.deadFishCount,
                             nightMode: _nightMode,
@@ -207,35 +209,25 @@ class _EmployeeAquariumCardState extends State<EmployeeAquariumCard>
                     ]),
                     SizedBox(height: compact ? 128 : 148),
                     Wrap(spacing: 8, runSpacing: 8, children: [
-                      _stat(Icons.set_meal_rounded, '${widget.fishCount}',
-                          'Fish'),
+                      _stat(Icons.set_meal_rounded, '10', 'Fish'),
                       _stat(Icons.restaurant_rounded, '${widget.totalFeed}',
                           'Eaten'),
                       _stat(Icons.inventory_2_rounded,
                           '${widget.availableFood}', 'Food ready'),
-                      _stat(
-                          Icons.login_rounded,
-                          widget.fishCount >= 10
-                              ? 'MAX'
-                              : '${widget.weeklyLogins % 4} / 4',
-                          'Login cycle'),
+                      _stat(Icons.login_rounded, 'MAX', 'Login cycle'),
                     ]),
                     const SizedBox(height: 13),
                     ClipRRect(
                         borderRadius: BorderRadius.circular(20),
                         child: LinearProgressIndicator(
-                            value: widget.fishCount >= 10
-                                ? 1
-                                : (widget.weeklyLogins % 4) / 4,
+                            value: 1,
                             minHeight: 7,
                             color: const Color(0xFFFFD95A),
                             backgroundColor: Colors.white24)),
                     const SizedBox(height: 7),
-                    Text(
-                        widget.fishCount >= 10
-                            ? 'Aquarium complete — maximum 10 fish reached!'
-                            : '${widget.loginsUntilNextFish} more login${widget.loginsUntilNextFish == 1 ? '' : 's'} to welcome a new fish',
-                        style: const TextStyle(
+                    const Text(
+                        'Aquarium complete — 4 guppies, 2 fighter fish, 2 goldfish and 2 small fish.',
+                        style: TextStyle(
                             color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w700)),

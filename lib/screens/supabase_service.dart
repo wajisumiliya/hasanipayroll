@@ -464,9 +464,8 @@ class SupabaseService {
 
       var query = client.from('employees').select();
       if (activeOnly) {
-        query = query
-            .eq('is_active', true)
-            .neq('employment_status', 'vacation');
+        query =
+            query.eq('is_active', true).neq('employment_status', 'vacation');
       }
       final response = await query.order('name', ascending: true);
 
@@ -600,9 +599,8 @@ class SupabaseService {
       }
 
       if (activeOnly == true) {
-        query = query
-            .eq('is_active', true)
-            .neq('employment_status', 'vacation');
+        query =
+            query.eq('is_active', true).neq('employment_status', 'vacation');
       }
 
       final response = await query.order(

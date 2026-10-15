@@ -1858,10 +1858,8 @@ class _BranchPortalState extends State<BranchPortal>
   }
 
   String _liveEmploymentStatus(Map<String, dynamic> employee) {
-    final status = employee['employment_status']
-        ?.toString()
-        .trim()
-        .toLowerCase();
+    final status =
+        employee['employment_status']?.toString().trim().toLowerCase();
     if (const {'active', 'vacation', 'transferred', 'resigned'}
         .contains(status)) {
       return status!;
@@ -2029,10 +2027,10 @@ class _BranchPortalState extends State<BranchPortal>
               const SizedBox(height: 12),
               TextField(
                 controller: _attendanceSearchController,
-                onChanged: (value) =>
-                    setState(() => _attendanceSearch = value),
+                onChanged: (value) => setState(() => _attendanceSearch = value),
                 decoration: InputDecoration(
-                  hintText: 'Search attendance employee by name, ID or department',
+                  hintText:
+                      'Search attendance employee by name, ID or department',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _attendanceSearch.isEmpty
                       ? null
@@ -2473,16 +2471,13 @@ class _BranchPortalState extends State<BranchPortal>
                     selectedColor: const Color(0xFF173A78),
                     avatar: Icon(filter.$3,
                         size: 17,
-                        color: selected
-                            ? Colors.white
-                            : const Color(0xFF526078)),
+                        color:
+                            selected ? Colors.white : const Color(0xFF526078)),
                     label: Text(
                       '${filter.$2} (${statusCounts[filter.$1] ?? 0})',
                     ),
                     labelStyle: TextStyle(
-                      color: selected
-                          ? Colors.white
-                          : const Color(0xFF39445A),
+                      color: selected ? Colors.white : const Color(0xFF39445A),
                       fontWeight: FontWeight.w700,
                     ),
                     onSelected: (_) => setState(
@@ -2575,8 +2570,8 @@ class _BranchPortalState extends State<BranchPortal>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Chip(
-                                    label:
-                                        Text(_liveEmploymentStatusLabel(employee)),
+                                    label: Text(
+                                        _liveEmploymentStatusLabel(employee)),
                                     labelStyle: TextStyle(color: statusColor),
                                     backgroundColor:
                                         statusColor.withValues(alpha: .10),

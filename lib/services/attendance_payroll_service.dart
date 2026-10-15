@@ -592,8 +592,7 @@ class AttendancePayrollService {
     );
 
     if (isForeignEmployee && foreignWorkedOffDays > 0) {
-      totalOvertimeAmount +=
-          (basicSalary / 28.0) * foreignWorkedOffDays;
+      totalOvertimeAmount += (basicSalary / 28.0) * foreignWorkedOffDays;
     }
     final overtimeAmount = PayrollCalculationService.roundPayrollAmount(
       totalOvertimeAmount,

@@ -252,12 +252,12 @@ class _DailyReportPageState extends State<DailyReportPage> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           void submit() {
-              final value = controller.text.trim();
-              if (RegExp(r'^\d{4}$').hasMatch(value)) {
-                Navigator.pop(dialogContext, value);
-              } else {
-                setDialogState(() => error = 'Enter exactly four digits.');
-              }
+            final value = controller.text.trim();
+            if (RegExp(r'^\d{4}$').hasMatch(value)) {
+              Navigator.pop(dialogContext, value);
+            } else {
+              setDialogState(() => error = 'Enter exactly four digits.');
+            }
           }
 
           return AlertDialog(

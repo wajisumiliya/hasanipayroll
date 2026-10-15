@@ -64,9 +64,8 @@ class PdfService {
     final payrollLateMinutes = shortageHourlyRate > 0
         ? ((p.lateDeduction / shortageHourlyRate) * 60).round()
         : 0;
-    final lateMinutes = payrollLateMinutes > 0
-        ? payrollLateMinutes
-        : attendanceLateMinutes;
+    final lateMinutes =
+        payrollLateMinutes > 0 ? payrollLateMinutes : attendanceLateMinutes;
     final unpaidAndLateMinutes =
         (unpaidDays * requiredWorkMinutes) + lateMinutes;
     final unpaidHours = unpaidAndLateMinutes / 60.0;

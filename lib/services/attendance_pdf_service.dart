@@ -81,9 +81,8 @@ class AttendancePdfService {
           return status == 'UNPAID' || status == 'UNPAID LEAVE';
         }).length *
         450;
-    final offDays = days
-        .where((day) => day.status.trim().toUpperCase() == 'OFF')
-        .length;
+    final offDays =
+        days.where((day) => day.status.trim().toUpperCase() == 'OFF').length;
     final assignedTotal = _assignedMinutes(
       daysInMonth: days.length,
       offDays: offDays,
@@ -326,8 +325,9 @@ class AttendancePdfService {
             ]),
       );
 
-  static pw.Widget _summary(String label, String description, int minutes,
-          PdfColor color, [double? amount]) =>
+  static pw.Widget _summary(
+          String label, String description, int minutes, PdfColor color,
+          [double? amount]) =>
       pw.Expanded(
         child: pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 6),

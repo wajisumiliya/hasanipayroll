@@ -864,12 +864,12 @@ class AttendanceRecord {
         json['otAuthorized'] ?? json['ot_authorized'],
         defaultValue: false,
       ),
-      approvedOtMinutes:
-          json['approvedOtMinutes'] != null || json['approved_ot_minutes'] != null
-              ? _doubleValue(
-                  json['approvedOtMinutes'] ?? json['approved_ot_minutes'],
-                ).round()
-              : null,
+      approvedOtMinutes: json['approvedOtMinutes'] != null ||
+              json['approved_ot_minutes'] != null
+          ? _doubleValue(
+              json['approvedOtMinutes'] ?? json['approved_ot_minutes'],
+            ).round()
+          : null,
       overtimeMinutes: _doubleValue(
         json['overtimeMinutes'] ?? json['overtime_minutes'],
       ).round(),

@@ -446,107 +446,104 @@ class _EaFormsPageState extends State<EaFormsPage> {
                   ),
                 ),
               )
-            else
-              ...[
-                Row(
-                  children: [
-                    Text(
-                      '$_year EA forms',
+            else ...[
+              Row(
+                children: [
+                  Text(
+                    '$_year EA forms',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F7EF),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${rows.length} published',
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF188653),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F7EF),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${rows.length} published',
-                        style: const TextStyle(
-                          color: Color(0xFF188653),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...rows.map((row) {
+                final data = Map<String, dynamic>.from(
+                    row['form_data'] as Map? ?? const {});
+                return Card(
+                  elevation: 0,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 4,
+                    ),
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFF0F2F6),
+                      foregroundColor: Color(0xFF1B2234),
+                      child: Icon(Icons.description_outlined),
+                    ),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${data['employee_name'] ?? row['employee_id']}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ...rows.map((row) {
-                  final data = Map<String, dynamic>.from(
-                      row['form_data'] as Map? ?? const {});
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 4,
-                      ),
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFF0F2F6),
-                        foregroundColor: Color(0xFF1B2234),
-                        child: Icon(Icons.description_outlined),
-                      ),
-                      title: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${data['employee_name'] ?? row['employee_id']}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F7EF),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'Published',
+                            style: TextStyle(
+                              color: Color(0xFF188653),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F7EF),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Published',
-                              style: TextStyle(
-                                color: Color(0xFF188653),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        '${row['employee_id']} · ${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${row['generated_at']}')?.toLocal() ?? DateTime.now())}',
-                        style: const TextStyle(color: Colors.black54),
-                      ),
-                      trailing: compact
-                          ? IconButton(
-                              tooltip: 'View PDF',
-                              onPressed: () => _openPdf(row),
-                              icon:
-                                  const Icon(Icons.picture_as_pdf_outlined),
-                            )
-                          : OutlinedButton.icon(
-                              onPressed: () => _openPdf(row),
-                              icon:
-                                  const Icon(Icons.picture_as_pdf_outlined),
-                              label: const Text('View PDF'),
-                            ),
+                        ),
+                      ],
                     ),
-                  );
-                }),
-              ],
+                    subtitle: Text(
+                      '${row['employee_id']} · ${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${row['generated_at']}')?.toLocal() ?? DateTime.now())}',
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                    trailing: compact
+                        ? IconButton(
+                            tooltip: 'View PDF',
+                            onPressed: () => _openPdf(row),
+                            icon: const Icon(Icons.picture_as_pdf_outlined),
+                          )
+                        : OutlinedButton.icon(
+                            onPressed: () => _openPdf(row),
+                            icon: const Icon(Icons.picture_as_pdf_outlined),
+                            label: const Text('View PDF'),
+                          ),
+                  ),
+                );
+              }),
+            ],
           ],
         );
       },
