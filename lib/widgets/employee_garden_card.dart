@@ -57,8 +57,8 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
     setState(() => _caring = false);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(cared
-          ? 'Garden tended — today’s care has been saved.'
-          : 'Garden care is not available yet.'),
+          ? 'Terrarium energized — today’s charge has been saved.'
+          : 'Terrarium energy is not available yet.'),
     ));
   }
 
@@ -81,12 +81,12 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFB99A4B), width: 1.5),
+          border: Border.all(color: const Color(0xFF55DDE0), width: 1.3),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x30000000),
-                blurRadius: 24,
-                offset: Offset(0, 11)),
+                color: Color(0x5534DDE1),
+                blurRadius: 28,
+                offset: Offset(0, 12)),
           ],
         ),
         child: Stack(
@@ -99,7 +99,7 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
               child: Transform.scale(
                 scale: 1.05,
                 child: Image.asset(
-                  'assets/employee_garden_courtyard.png',
+                  'assets/employee_crystal_terrarium.png',
                   fit: BoxFit.cover,
                   alignment: Alignment.center,
                 ),
@@ -112,32 +112,19 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: healthy
-                      ? const [Color(0x16000000), Color(0xB8001424)]
-                      : const [Color(0x66434B53), Color(0xD8192732)],
+                      ? const [Color(0x18020D1B), Color(0xC4061524)]
+                      : const [Color(0x66394963), Color(0xE20A1322)],
                   stops: const [.38, 1],
                 ),
               ),
             ),
-            if (!healthy) Container(color: const Color(0x303A5266)),
+            if (!healthy) Container(color: const Color(0x4048526E)),
             GardenAmbience(
               animation: _ambience,
               healthy: healthy,
               level: level,
               streak: widget.streak,
             ),
-            if (healthy)
-              AnimatedBuilder(
-                animation: _ambience,
-                builder: (_, child) => Opacity(
-                  opacity: .20 + math.sin(_ambience.value * math.pi * 2) * .05,
-                  child: Transform.translate(
-                    offset: Offset(_pointer.dx * 10, 5 + _pointer.dy * 5),
-                    child: child,
-                  ),
-                ),
-                child: Image.asset('assets/garden_fountain_atmosphere.png',
-                    fit: BoxFit.cover),
-              ),
             AnimatedBuilder(
               animation: _ambience,
               builder: (context, _) {
@@ -195,14 +182,14 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('MY GARDEN COURTYARD',
+                      Text('MY CRYSTAL TERRARIUM',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.1,
                               shadows: [Shadow(blurRadius: 8)])),
-                      Text('Attendance brings the garden to life',
+                      Text('Attendance energizes your living ecosystem',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -214,32 +201,21 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                   onPressed:
                       widget.availableCare > 0 && !_caring ? _care : null,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFE3BC5A),
-                    foregroundColor: const Color(0xFF1C2418),
-                    disabledBackgroundColor: const Color(0xCC233B35),
+                    backgroundColor: const Color(0xFF67E8E5),
+                    foregroundColor: const Color(0xFF071A25),
+                    disabledBackgroundColor: const Color(0xCC183344),
                     disabledForegroundColor: Colors.white70,
                   ),
                   icon: _caring || widget.loading
                       ? const SizedBox.square(
                           dimension: 15,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.water_drop_outlined, size: 18),
+                      : const Icon(Icons.bolt_rounded, size: 18),
                   label: Text(widget.availableCare > 0
-                      ? 'TEND GARDEN ${widget.availableCare}'
-                      : 'GARDEN CARED'),
+                      ? 'CHARGE ${widget.availableCare}'
+                      : 'ENERGIZED'),
                 ),
               ]),
-            ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              transform: Matrix4.translationValues(
-                  _pointer.dx * 25, _pointer.dy * 12, 0),
-              child: Transform.scale(
-                scale: 1.04,
-                alignment: Alignment.bottomCenter,
-                child: Image.asset('assets/garden_foreground_foliage.png',
-                    fit: BoxFit.cover, alignment: Alignment.bottomCenter),
-              ),
             ),
             Positioned(
               left: 18,
@@ -248,13 +224,13 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                 spacing: 7,
                 runSpacing: 7,
                 children: [
+                  _feature(Icons.eco_rounded, 'Moss bed', level >= 1),
+                  _feature(Icons.diamond_rounded, 'Cyan crystal', level >= 2),
+                  _feature(Icons.water_rounded, 'Mist cycle', level >= 3),
                   _feature(
-                      Icons.local_florist_rounded, 'Flower beds', level >= 1),
-                  _feature(Icons.route_rounded, 'Stone path', level >= 2),
-                  _feature(Icons.chair_alt_rounded, 'Bench', level >= 3),
+                      Icons.pets_rounded, 'Lumen hare', widget.streak >= 3),
                   _feature(
-                      Icons.flutter_dash_rounded, 'Birds', widget.streak >= 3),
-                  _feature(Icons.home_work_outlined, 'Gazebo', level >= 5),
+                      Icons.auto_awesome_rounded, 'Violet core', level >= 5),
                 ],
               ),
             ),
@@ -265,22 +241,20 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xE40B1F26),
+                  color: const Color(0xE4071725),
                   borderRadius: BorderRadius.circular(17),
                   border: Border.all(color: Colors.white24),
                 ),
                 child: Column(children: [
                   Wrap(spacing: 8, runSpacing: 8, children: [
-                    _metric(Icons.local_florist_rounded,
-                        '${math.max(8, widget.milestones)}', 'Plants'),
+                    _metric(Icons.diamond_rounded,
+                        '${math.max(8, widget.milestones)}', 'Crystal energy'),
                     _metric(Icons.local_fire_department_rounded,
                         '${widget.streak}', 'Login streak'),
-                    _metric(Icons.water_rounded, healthy ? 'Flowing' : 'Quiet',
-                        'Fountain'),
-                    _metric(
-                        Icons.light_mode_rounded,
-                        widget.streak >= 4 ? 'Unlocked' : 'Growing',
-                        'Lighting'),
+                    _metric(Icons.cloud_rounded, healthy ? 'Balanced' : 'Rain',
+                        'Climate'),
+                    _metric(Icons.light_mode_rounded,
+                        widget.streak >= 4 ? 'Awake' : 'Dormant', 'Creatures'),
                   ]),
                   const SizedBox(height: 10),
                   ClipRRect(
@@ -288,7 +262,7 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 7,
-                      color: const Color(0xFFFFD56A),
+                      color: const Color(0xFF62E9E4),
                       backgroundColor: Colors.white24,
                     ),
                   ),
@@ -305,7 +279,7 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
         width: 132,
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
         child: Row(children: [
-          Icon(icon, color: const Color(0xFFFFD56A), size: 19),
+          Icon(icon, color: const Color(0xFF6CEBE7), size: 19),
           const SizedBox(width: 7),
           Expanded(
             child: Column(
@@ -327,14 +301,14 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
   Widget _feature(IconData icon, String label, bool unlocked) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         decoration: BoxDecoration(
-          color: unlocked ? const Color(0xD91B3B2D) : const Color(0xB9263034),
+          color: unlocked ? const Color(0xD9154251) : const Color(0xB91B2938),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: unlocked ? const Color(0x88FFD978) : Colors.white24),
+              color: unlocked ? const Color(0x996CEBE7) : Colors.white24),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(unlocked ? icon : Icons.lock_outline_rounded,
-              color: unlocked ? const Color(0xFFFFD978) : Colors.white60,
+              color: unlocked ? const Color(0xFF7BF3EE) : Colors.white60,
               size: 14),
           const SizedBox(width: 5),
           Text(label,

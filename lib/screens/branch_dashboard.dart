@@ -1113,11 +1113,11 @@ class _BranchPortalState extends State<BranchPortal>
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFB99A4B), width: 1.5),
+          border: Border.all(color: const Color(0xFF55DDE0), width: 1.3),
           boxShadow: const [
             BoxShadow(
-                color: Color(0x30000000),
-                blurRadius: 24,
+                color: Color(0x5534DDE1),
+                blurRadius: 28,
                 offset: Offset(0, 11)),
           ],
         ),
@@ -1130,7 +1130,7 @@ class _BranchPortalState extends State<BranchPortal>
                   _gardenPointer.dx * -16, _gardenPointer.dy * -9, 0),
               child: Transform.scale(
                 scale: 1.05,
-                child: Image.asset('assets/branch_botanical_park.png',
+                child: Image.asset('assets/employee_crystal_terrarium.png',
                     fit: BoxFit.cover),
               ),
             ),
@@ -1141,35 +1141,19 @@ class _BranchPortalState extends State<BranchPortal>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: healthy
-                      ? const [Color(0x16000000), Color(0xD10A1E24)]
-                      : const [Color(0x75505B66), Color(0xE21A2934)],
+                      ? const [Color(0x18020D1B), Color(0xC9061524)]
+                      : const [Color(0x70404A68), Color(0xE60A1322)],
                   stops: const [.36, 1],
                 ),
               ),
             ),
-            if (!healthy) Container(color: const Color(0x263D5362)),
+            if (!healthy) Container(color: const Color(0x4048526E)),
             GardenAmbience(
               animation: _celebrationController,
               healthy: healthy,
               level: gardenZones.clamp(1, 6),
               streak: thriving ? 5 : (healthy ? 3 : 0),
             ),
-            if (healthy)
-              AnimatedBuilder(
-                animation: _celebrationController,
-                builder: (_, child) => Opacity(
-                  opacity: .16 +
-                      math.sin(_celebrationController.value * math.pi * 2) *
-                          .04,
-                  child: Transform.translate(
-                    offset: Offset(
-                        _gardenPointer.dx * 11, 5 + _gardenPointer.dy * 5),
-                    child: child,
-                  ),
-                ),
-                child: Image.asset('assets/garden_fountain_atmosphere.png',
-                    fit: BoxFit.cover),
-              ),
             Positioned(
               left: 20,
               right: 20,
@@ -1183,22 +1167,22 @@ class _BranchPortalState extends State<BranchPortal>
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: Colors.white24),
                   ),
-                  child: const Icon(Icons.park_rounded,
-                      color: Color(0xFFFFD978), size: 28),
+                  child: const Icon(Icons.diamond_rounded,
+                      color: Color(0xFF75F4EF), size: 28),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('BRANCH BOTANICAL PARK',
+                      const Text('BRANCH CRYSTAL BIOSPHERE',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 19,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1,
                               shadows: [Shadow(blurRadius: 8)])),
-                      Text('$branchDisplayName · Shared team garden',
+                      Text('$branchDisplayName · Shared living ecosystem',
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -1217,25 +1201,14 @@ class _BranchPortalState extends State<BranchPortal>
                   child: Column(children: [
                     Text('$healthScore%',
                         style: const TextStyle(
-                            color: Color(0xFFFFD978),
+                            color: Color(0xFF75F4EF),
                             fontSize: 18,
                             fontWeight: FontWeight.w900)),
-                    const Text('PARK HEALTH',
+                    const Text('BIOSPHERE HEALTH',
                         style: TextStyle(color: Colors.white70, fontSize: 8)),
                   ]),
                 ),
               ]),
-            ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              transform: Matrix4.translationValues(
-                  _gardenPointer.dx * 27, _gardenPointer.dy * 13, 0),
-              child: Transform.scale(
-                scale: 1.04,
-                alignment: Alignment.bottomCenter,
-                child: Image.asset('assets/garden_foreground_foliage.png',
-                    fit: BoxFit.cover, alignment: Alignment.bottomCenter),
-              ),
             ),
             Positioned(
               left: 18,
@@ -1244,7 +1217,7 @@ class _BranchPortalState extends State<BranchPortal>
               child: Container(
                 padding: const EdgeInsets.all(13),
                 decoration: BoxDecoration(
-                  color: const Color(0xE40B1F26),
+                  color: const Color(0xE4071725),
                   borderRadius: BorderRadius.circular(17),
                   border: Border.all(color: Colors.white24),
                 ),
@@ -1252,12 +1225,12 @@ class _BranchPortalState extends State<BranchPortal>
                   Wrap(spacing: 10, runSpacing: 8, children: [
                     _gardenMetric(Icons.groups_rounded,
                         '$todayPresent / $total', 'Present today'),
-                    _gardenMetric(Icons.local_florist_rounded, '$gardenZones',
-                        'Garden zones'),
-                    _gardenMetric(Icons.water_rounded,
-                        healthy ? 'Flowing' : 'Quiet', 'Fountain'),
-                    _gardenMetric(Icons.light_mode_rounded,
-                        thriving ? 'Evening glow' : 'Growing', 'Lighting'),
+                    _gardenMetric(
+                        Icons.diamond_rounded, '$gardenZones', 'Crystal zones'),
+                    _gardenMetric(Icons.cloud_rounded,
+                        healthy ? 'Balanced' : 'Rain', 'Climate'),
+                    _gardenMetric(Icons.pets_rounded,
+                        thriving ? 'Awake' : 'Resting', 'Creatures'),
                   ]),
                   const SizedBox(height: 10),
                   ClipRRect(
@@ -1265,7 +1238,7 @@ class _BranchPortalState extends State<BranchPortal>
                     child: LinearProgressIndicator(
                       value: attendanceRate.clamp(0.0, 1.0),
                       minHeight: 7,
-                      color: const Color(0xFFFFD56A),
+                      color: const Color(0xFF62E9E4),
                       backgroundColor: Colors.white24,
                     ),
                   ),
@@ -1281,7 +1254,7 @@ class _BranchPortalState extends State<BranchPortal>
   Widget _gardenMetric(IconData icon, String value, String label) => SizedBox(
         width: 145,
         child: Row(children: [
-          Icon(icon, color: const Color(0xFFFFD56A), size: 20),
+          Icon(icon, color: const Color(0xFF6CEBE7), size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
