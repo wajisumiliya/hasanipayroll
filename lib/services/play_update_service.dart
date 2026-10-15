@@ -10,7 +10,9 @@ class PlayUpdateService {
   static bool _checking = false;
 
   static Future<void> checkForUpdate(BuildContext context) async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android || _checking) {
+    if (kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android ||
+        _checking) {
       return;
     }
     _checking = true;
