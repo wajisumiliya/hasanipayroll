@@ -660,9 +660,18 @@ class AppService extends ChangeNotifier {
       final salaryDefaultAddresses = <String, String>{};
 
       try {
-        final salaryDefaults = await _supabase
-            .from('employee_salary_defaults')
-            .select('employee_id,address');
+        // Employee sessions only need their own salary-default address.
+        // Admin and branch sessions retain the full address lookup.
+        final signedInEmployeeId = _currentUser?.employeeId?.trim() ?? '';
+        final salaryDefaults =
+            _currentUser?.isEmployee == true && signedInEmployeeId.isNotEmpty
+                ? await _supabase
+                    .from('employee_salary_defaults')
+                    .select('employee_id,address')
+                    .eq('employee_id', signedInEmployeeId)
+                : await _supabase
+                    .from('employee_salary_defaults')
+                    .select('employee_id,address');
         for (final row in salaryDefaults) {
           final employeeId = row['employee_id']?.toString().trim() ?? '';
           final address = row['address']?.toString().trim() ?? '';
