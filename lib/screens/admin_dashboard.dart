@@ -12445,7 +12445,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       record,
                       onConflict: 'employee_id,period',
                     );
-                await service.loadPayrollFromSupabase();
+                await service.loadPayrollMonthFromSupabase(month);
                 selectedPayrollMonth = month;
                 if (!dialogContext.mounted) return;
                 setDialogState(() {
@@ -13067,7 +13067,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'published_by': service.currentUser?.username,
         'updated_at': now,
       }).eq('id', record.id);
-      await service.loadPayrollFromSupabase();
+      await service.loadPayrollMonthFromSupabase(record.period);
       var notificationWarning = '';
       try {
         await NotificationService.sendPayslipAvailable(
