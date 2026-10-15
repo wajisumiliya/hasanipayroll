@@ -1573,7 +1573,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   String _employmentStatus(Map<String, dynamic> employee) {
-    final status = employee['employment_status']?.toString().trim().toLowerCase();
+    final status =
+        employee['employment_status']?.toString().trim().toLowerCase();
     if (const {'active', 'resigned', 'transferred', 'vacation'}
         .contains(status)) {
       return status!;
@@ -3144,8 +3145,8 @@ class _AdminDashboardState extends State<AdminDashboard>
             ),
             const SizedBox(height: 2),
             Text(subtitle,
-                style: const TextStyle(
-                    color: Color(0xFF64739A), fontSize: 12.5)),
+                style:
+                    const TextStyle(color: Color(0xFF64739A), fontSize: 12.5)),
           ],
         ),
       ],
@@ -3163,9 +3164,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   }) {
     Widget metrics({required bool stacked}) =>
         LayoutBuilder(builder: (context, constraints) {
-          final width = stacked
-              ? constraints.maxWidth
-              : (constraints.maxWidth - 10) / 2;
+          final width =
+              stacked ? constraints.maxWidth : (constraints.maxWidth - 10) / 2;
           return Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -4517,9 +4517,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             : 0;
                     final available = monthsByYear[year] ?? const <int>{};
                     final missing = [
-                      for (var month = 1;
-                          month <= lastExpectedMonth;
-                          month++)
+                      for (var month = 1; month <= lastExpectedMonth; month++)
                         if (!available.contains(month)) month,
                     ];
                     final notDue = lastExpectedMonth == 0;
@@ -4548,8 +4546,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         children: [
                           Text('$year',
                               style: const TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w800)),
+                                  fontSize: 10.5, fontWeight: FontWeight.w800)),
                           Text(
                             notDue
                                 ? 'Not due yet'
@@ -4647,8 +4644,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ('vacation', 'Vacation', Icons.beach_access_outlined),
                       ('resigned', 'Resigned', Icons.person_off_outlined),
                     ].map((filter) {
-                      final selected =
-                          _adminEmployeeStatusFilter == filter.$1;
+                      final selected = _adminEmployeeStatusFilter == filter.$1;
                       return FilterChip(
                         avatar: Icon(filter.$3,
                             size: 16,
@@ -4668,9 +4664,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                               : const Color(0xFFD5DAE3),
                         ),
                         labelStyle: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : const Color(0xFF39445A),
+                          color:
+                              selected ? Colors.white : const Color(0xFF39445A),
                           fontWeight: FontWeight.w700,
                         ),
                         onSelected: (_) => setState(
@@ -5001,7 +4996,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             ),
                                             PopupMenuButton<String>(
                                               tooltip: 'More actions',
-                                              icon: const Icon(Icons.more_horiz),
+                                              icon:
+                                                  const Icon(Icons.more_horiz),
                                               onSelected: (action) {
                                                 switch (action) {
                                                   case 'transfer':
@@ -5022,8 +5018,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                 PopupMenuItem(
                                                   value: 'transfer',
                                                   child: ListTile(
-                                                    leading: Icon(
-                                                        Icons.swap_horiz),
+                                                    leading:
+                                                        Icon(Icons.swap_horiz),
                                                     title: Text('Transfer'),
                                                   ),
                                                 ),
@@ -5204,9 +5200,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               color: selected ? _midnight : const Color(0xFFF8F7F3),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(
-                color: selected
-                    ? _midnight
-                    : const Color(0xFFD9DDE5),
+                color: selected ? _midnight : const Color(0xFFD9DDE5),
                 width: 1,
               ),
             ),
@@ -5709,17 +5703,36 @@ class _AdminDashboardState extends State<AdminDashboard>
                           spacing: 8,
                           runSpacing: 8,
                           children: const [
-                            ('active', 'Active', Color(0xFF168653), Icons.check_circle_outline),
-                            ('vacation', 'Vacation', Color(0xFFE08A00), Icons.beach_access_outlined),
-                            ('transferred', 'Transferred', Color(0xFF3567B7), Icons.swap_horiz),
-                            ('resigned', 'Resigned', Color(0xFFC13B3B), Icons.person_off_outlined),
+                            (
+                              'active',
+                              'Active',
+                              Color(0xFF168653),
+                              Icons.check_circle_outline
+                            ),
+                            (
+                              'vacation',
+                              'Vacation',
+                              Color(0xFFE08A00),
+                              Icons.beach_access_outlined
+                            ),
+                            (
+                              'transferred',
+                              'Transferred',
+                              Color(0xFF3567B7),
+                              Icons.swap_horiz
+                            ),
+                            (
+                              'resigned',
+                              'Resigned',
+                              Color(0xFFC13B3B),
+                              Icons.person_off_outlined
+                            ),
                           ].map((option) {
                             final selected = employmentStatus == option.$1;
                             return ChoiceChip(
                               avatar: Icon(option.$4,
                                   size: 18,
-                                  color:
-                                      selected ? Colors.white : option.$3),
+                                  color: selected ? Colors.white : option.$3),
                               label: Text(option.$2),
                               selected: selected,
                               selectedColor: option.$3,
@@ -5812,125 +5825,133 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
               actions: [
                 TextButton(
-                  onPressed: saving ? null : () {
-                    Navigator.pop(dialogContext);
-                  },
+                  onPressed: saving
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+                        },
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: saving ? null : () async {
-                    final id = employeeId.text.trim();
-                    final employeeName = name.text.trim();
-                    final employeeDepartment = department.text.trim();
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final id = employeeId.text.trim();
+                          final employeeName = name.text.trim();
+                          final employeeDepartment = department.text.trim();
 
-                    if (id.isEmpty ||
-                        employeeName.isEmpty ||
-                        employeeDepartment.isEmpty ||
-                        branchId.trim().isEmpty) {
-                      _message(
-                        'Employee ID, full name, department and branch are required.',
-                      );
-                      return;
-                    }
+                          if (id.isEmpty ||
+                              employeeName.isEmpty ||
+                              employeeDepartment.isEmpty ||
+                              branchId.trim().isEmpty) {
+                            _message(
+                              'Employee ID, full name, department and branch are required.',
+                            );
+                            return;
+                          }
 
-                    if (service.findEmployee(id) != null) {
-                      _message(
-                        'Employee ID already exists.',
-                      );
-                      return;
-                    }
+                          if (service.findEmployee(id) != null) {
+                            _message(
+                              'Employee ID already exists.',
+                            );
+                            return;
+                          }
 
-                    double? salaryValue(TextEditingController controller) {
-                      return double.tryParse(
-                        controller.text.trim().replaceAll(',', ''),
-                      );
-                    }
+                          double? salaryValue(
+                              TextEditingController controller) {
+                            return double.tryParse(
+                              controller.text.trim().replaceAll(',', ''),
+                            );
+                          }
 
-                    final parsedBasicSalary = salaryValue(basicSalary);
-                    final parsedFwSalary = salaryValue(fwSalary);
-                    final parsedElaunKedatangan = salaryValue(elaunKedatangan);
-                    final parsedElaunPerkhidmatan =
-                        salaryValue(elaunPerkhidmatan);
-                    final parsedElaunKerajinan = salaryValue(elaunKerajinan);
-                    final parsedElaunMakanan = salaryValue(elaunMakanan);
-                    final parsedZakat = salaryValue(zakat);
-                    final salaryValues = [
-                      parsedBasicSalary,
-                      parsedFwSalary,
-                      parsedElaunKedatangan,
-                      parsedElaunPerkhidmatan,
-                      parsedElaunKerajinan,
-                      parsedElaunMakanan,
-                      parsedZakat,
-                    ];
+                          final parsedBasicSalary = salaryValue(basicSalary);
+                          final parsedFwSalary = salaryValue(fwSalary);
+                          final parsedElaunKedatangan =
+                              salaryValue(elaunKedatangan);
+                          final parsedElaunPerkhidmatan =
+                              salaryValue(elaunPerkhidmatan);
+                          final parsedElaunKerajinan =
+                              salaryValue(elaunKerajinan);
+                          final parsedElaunMakanan = salaryValue(elaunMakanan);
+                          final parsedZakat = salaryValue(zakat);
+                          final salaryValues = [
+                            parsedBasicSalary,
+                            parsedFwSalary,
+                            parsedElaunKedatangan,
+                            parsedElaunPerkhidmatan,
+                            parsedElaunKerajinan,
+                            parsedElaunMakanan,
+                            parsedZakat,
+                          ];
 
-                    if (salaryValues.any(
-                      (value) => value == null || value < 0,
-                    )) {
-                      _message(
-                        'Enter valid non-negative amounts for all salary fields.',
-                      );
-                      return;
-                    }
+                          if (salaryValues.any(
+                            (value) => value == null || value < 0,
+                          )) {
+                            _message(
+                              'Enter valid non-negative amounts for all salary fields.',
+                            );
+                            return;
+                          }
 
-                    setDialogState(() => saving = true);
-                    final active = employmentStatus == 'active' ||
-                        employmentStatus == 'vacation';
-                    final result = await service.addEmployee(
-                      Employee(
-                        employeeId: id,
-                        name: employeeName,
-                        designation: designation.text.trim(),
-                        department: department.text.trim(),
-                        email: email.text.trim(),
-                        newIcNo: ic.text.trim(),
-                        bankCode: bank.text.trim(),
-                        bankAccount: account.text.trim(),
-                        epfNo: epfNo.text.trim(),
-                        socsoNo: socsoNo.text.trim(),
-                        phone: phone.text.trim(),
-                        address: address.text.trim(),
-                        joiningDate: joiningDate,
-                        birthday: birthday,
-                        isActive: active,
-                        isManagementStaff: managementStaff,
-                        isTempStaff: tempStaff,
-                        isSupportStaff: supportStaff,
-                        isOtherStaff: otherStaff,
-                      ),
-                      branchId: branchId,
-                      employmentStatus: employmentStatus,
-                      payrollBranchId:
-                          payrollBranchId.isEmpty ? null : payrollBranchId,
-                      salaryDefaults: {
-                        'basic_salary': parsedBasicSalary!,
-                        'fw_salary': parsedFwSalary!,
-                        'elaun_kedatangan': parsedElaunKedatangan!,
-                        'elaun_perkhidmatan': parsedElaunPerkhidmatan!,
-                        'elaun_kerajinan': parsedElaunKerajinan!,
-                        'elaun_makanan': parsedElaunMakanan!,
-                        'zakat': parsedZakat!,
-                        'epf_category': epfCategory,
-                        'eis_applicable': eisApplicable,
-                        'epf_enabled': epfEnabled,
-                        'eis_enabled': eisEnabled,
-                        'socso_enabled': socsoEnabled,
-                        'socso_category': socsoCategory,
-                        'address': address.text.trim(),
-                      },
-                    );
+                          setDialogState(() => saving = true);
+                          final active = employmentStatus == 'active' ||
+                              employmentStatus == 'vacation';
+                          final result = await service.addEmployee(
+                            Employee(
+                              employeeId: id,
+                              name: employeeName,
+                              designation: designation.text.trim(),
+                              department: department.text.trim(),
+                              email: email.text.trim(),
+                              newIcNo: ic.text.trim(),
+                              bankCode: bank.text.trim(),
+                              bankAccount: account.text.trim(),
+                              epfNo: epfNo.text.trim(),
+                              socsoNo: socsoNo.text.trim(),
+                              phone: phone.text.trim(),
+                              address: address.text.trim(),
+                              joiningDate: joiningDate,
+                              birthday: birthday,
+                              isActive: active,
+                              isManagementStaff: managementStaff,
+                              isTempStaff: tempStaff,
+                              isSupportStaff: supportStaff,
+                              isOtherStaff: otherStaff,
+                            ),
+                            branchId: branchId,
+                            employmentStatus: employmentStatus,
+                            payrollBranchId: payrollBranchId.isEmpty
+                                ? null
+                                : payrollBranchId,
+                            salaryDefaults: {
+                              'basic_salary': parsedBasicSalary!,
+                              'fw_salary': parsedFwSalary!,
+                              'elaun_kedatangan': parsedElaunKedatangan!,
+                              'elaun_perkhidmatan': parsedElaunPerkhidmatan!,
+                              'elaun_kerajinan': parsedElaunKerajinan!,
+                              'elaun_makanan': parsedElaunMakanan!,
+                              'zakat': parsedZakat!,
+                              'epf_category': epfCategory,
+                              'eis_applicable': eisApplicable,
+                              'epf_enabled': epfEnabled,
+                              'eis_enabled': eisEnabled,
+                              'socso_enabled': socsoEnabled,
+                              'socso_category': socsoCategory,
+                              'address': address.text.trim(),
+                            },
+                          );
 
-                    if (!dialogContext.mounted) return;
-                    if (result.toLowerCase().startsWith('failed')) {
-                      setDialogState(() => saving = false);
-                      _message(result);
-                      return;
-                    }
-                    Navigator.pop(dialogContext);
-                    if (!mounted) return;
-                    setState(() => _adminEmployeesFuture = null);
-                    _message(result);
-                  },
+                          if (!dialogContext.mounted) return;
+                          if (result.toLowerCase().startsWith('failed')) {
+                            setDialogState(() => saving = false);
+                            _message(result);
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          if (!mounted) return;
+                          setState(() => _adminEmployeesFuture = null);
+                          _message(result);
+                        },
                   child: Text(saving ? 'Adding...' : 'Add Employee'),
                 ),
               ],
@@ -7329,10 +7350,30 @@ class _AdminDashboardState extends State<AdminDashboard>
                       spacing: 8,
                       runSpacing: 8,
                       children: const [
-                        ('active', 'Active', Color(0xFF168653), Icons.check_circle_outline),
-                        ('vacation', 'Vacation', Color(0xFFE08A00), Icons.beach_access_outlined),
-                        ('transferred', 'Transferred', Color(0xFF3567B7), Icons.swap_horiz),
-                        ('resigned', 'Resigned', Color(0xFFC13B3B), Icons.person_off_outlined),
+                        (
+                          'active',
+                          'Active',
+                          Color(0xFF168653),
+                          Icons.check_circle_outline
+                        ),
+                        (
+                          'vacation',
+                          'Vacation',
+                          Color(0xFFE08A00),
+                          Icons.beach_access_outlined
+                        ),
+                        (
+                          'transferred',
+                          'Transferred',
+                          Color(0xFF3567B7),
+                          Icons.swap_horiz
+                        ),
+                        (
+                          'resigned',
+                          'Resigned',
+                          Color(0xFFC13B3B),
+                          Icons.person_off_outlined
+                        ),
                       ].map((option) {
                         final selected = employmentStatus == option.$1;
                         return ChoiceChip(
@@ -7508,7 +7549,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     color: Color(0xFFC13B3B),
                                     size: 34,
                                   ),
-                                  title: const Text('Mark employee as resigned?'),
+                                  title:
+                                      const Text('Mark employee as resigned?'),
                                   content: const Text(
                                     'The employee account will be disabled and all employee data will be permanently deleted after 90 days.',
                                   ),
@@ -9471,22 +9513,23 @@ class _AdminDashboardState extends State<AdminDashboard>
                         _responsiveBranchButtonRow(
                           spacing: 8,
                           buttons: branches.map((branch) {
-                      final id = (branch['id'] ?? branch['branch_id'] ?? '')
-                          .toString();
-                      final name =
-                          (branch['name'] ?? branch['branch_name'] ?? id)
-                              .toString();
-                      return _employeeBranchFilterButton(
-                        label: name,
-                        selected: false,
-                        onTap: () {
-                          if (id.isEmpty) return;
-                          setState(() {
-                            selectedAttendanceBranchId = id;
-                            _attendanceSubmissionFilter = 'submitted';
-                          });
-                        },
-                      );
+                            final id =
+                                (branch['id'] ?? branch['branch_id'] ?? '')
+                                    .toString();
+                            final name =
+                                (branch['name'] ?? branch['branch_name'] ?? id)
+                                    .toString();
+                            return _employeeBranchFilterButton(
+                              label: name,
+                              selected: false,
+                              onTap: () {
+                                if (id.isEmpty) return;
+                                setState(() {
+                                  selectedAttendanceBranchId = id;
+                                  _attendanceSubmissionFilter = 'submitted';
+                                });
+                              },
+                            );
                           }).toList(),
                         ),
                     ],
@@ -9849,40 +9892,41 @@ class _AdminDashboardState extends State<AdminDashboard>
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.end,
                     children: [
-                    _monthYearSelector(
-                      value: selectedAttendanceMonth,
-                      onChanged: (value) => setState(() {
-                        selectedAttendanceMonth = value;
-                        _refreshAdminAttendanceCache();
-                      }),
-                    ),
-                    SizedBox(
-                      width: (MediaQuery.sizeOf(context).width - 80)
-                          .clamp(220.0, 300.0),
-                      child: TextField(
-                        controller: _attendanceEmployeeSearchController,
-                        onChanged: (value) =>
-                            setState(() => _attendanceEmployeeSearch = value),
-                        decoration: InputDecoration(
-                          labelText: 'Search employee',
-                          hintText: 'Name or employee ID',
-                          isDense: true,
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          suffixIcon: _attendanceEmployeeSearch.isEmpty
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Clear search',
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _attendanceEmployeeSearchController.clear();
-                                    setState(
-                                      () => _attendanceEmployeeSearch = '',
-                                    );
-                                  },
-                                ),
+                      _monthYearSelector(
+                        value: selectedAttendanceMonth,
+                        onChanged: (value) => setState(() {
+                          selectedAttendanceMonth = value;
+                          _refreshAdminAttendanceCache();
+                        }),
+                      ),
+                      SizedBox(
+                        width: (MediaQuery.sizeOf(context).width - 80)
+                            .clamp(220.0, 300.0),
+                        child: TextField(
+                          controller: _attendanceEmployeeSearchController,
+                          onChanged: (value) =>
+                              setState(() => _attendanceEmployeeSearch = value),
+                          decoration: InputDecoration(
+                            labelText: 'Search employee',
+                            hintText: 'Name or employee ID',
+                            isDense: true,
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: _attendanceEmployeeSearch.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Clear search',
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _attendanceEmployeeSearchController
+                                          .clear();
+                                      setState(
+                                        () => _attendanceEmployeeSearch = '',
+                                      );
+                                    },
+                                  ),
+                          ),
                         ),
                       ),
-                    ),
                     ],
                   ),
                 ),
@@ -9944,11 +9988,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                           otMinutesByEmployee[employeeId] ?? 0;
                       final submitted = records
                           .any((r) => _attendanceBool(r['is_submitted']));
-                       final accent = showingOt
-                           ? const Color(0xFF7C3AED)
-                           : submitted
-                               ? const Color(0xFF238A55)
-                               : const Color(0xFFB87800);
+                      final accent = showingOt
+                          ? const Color(0xFF7C3AED)
+                          : submitted
+                              ? const Color(0xFF238A55)
+                              : const Color(0xFFB87800);
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(18),
@@ -11170,8 +11214,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         .from('employees')
         .select(
           'employee_id,name,branch_id,payroll_branch_id,'
-           'photo_url,is_active,employment_status,is_management_staff,is_temp_staff,'
-           'is_support_staff,is_other_staff',
+          'photo_url,is_active,employment_status,is_management_staff,is_temp_staff,'
+          'is_support_staff,is_other_staff',
         )
         .eq('is_active', true)
         .neq('employment_status', 'vacation')
@@ -11560,8 +11604,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 .map((e) => _normalizeBranchValue(e['employee_id']))
                 .where((id) => id.isNotEmpty && readyIds.contains(id))
                 .toSet();
-            final displayEmployees = [...employees]
-              ..sort((a, b) {
+            final displayEmployees = [...employees]..sort((a, b) {
                 final aId = _normalizeBranchValue(a['employee_id']);
                 final bId = _normalizeBranchValue(b['employee_id']);
                 final aReady = readyIds.contains(aId);
@@ -11699,7 +11742,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                               expandedMissingIds
                                                   .remove(employeeId);
                                             } else {
-                                              expandedMissingIds.add(employeeId);
+                                              expandedMissingIds
+                                                  .add(employeeId);
                                             }
                                           }),
                                   child: CheckboxListTile(
@@ -11707,82 +11751,83 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     onChanged: !attendanceReady
                                         ? null
                                         : (value) {
-                                          setSelectionState(() {
-                                            if (value == true) {
-                                              selectedIds.add(employeeId);
-                                            } else {
-                                              selectedIds.remove(employeeId);
-                                              selectAll = false;
-                                            }
+                                            setSelectionState(() {
+                                              if (value == true) {
+                                                selectedIds.add(employeeId);
+                                              } else {
+                                                selectedIds.remove(employeeId);
+                                                selectAll = false;
+                                              }
 
-                                            if (selectedIds.length ==
-                                                    allIds.length &&
-                                                allIds.isNotEmpty) {
-                                              selectAll = true;
-                                            }
-                                          });
+                                              if (selectedIds.length ==
+                                                      allIds.length &&
+                                                  allIds.isNotEmpty) {
+                                                selectAll = true;
+                                              }
+                                            });
                                           },
                                     title: Text(
-                                    name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
+                                      name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                  ),
                                     subtitle: Text(
-                                    attendanceExempt
-                                        ? '$employeeId • Attendance not required '
-                                            '($attendanceExemptLabel)'
-                                        : attendanceReady
-                                             ? '$employeeId • Attendance complete ($requiredDayCount/$requiredDayCount)'
-                                             : missingDatesExpanded
-                                                 ? '$employeeId • Missing ${missing.length} day(s): '
-                                                     '${missing.map((day) => day.toString().padLeft(2, '0')).join(', ')}'
-                                                 : '$employeeId • Missing ${missing.length} day(s) • Tap to view dates',
-                                    maxLines: missingDatesExpanded ? 4 : 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: attendanceReady
-                                          ? const Color(0xFF168653)
-                                          : const Color(0xFFC13B31),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                    secondary: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      EmployeePhoto(
-                                        name: name,
-                                        photoUrl:
-                                            employee['photo_url']?.toString(),
-                                        radius: 23,
-                                        borderColor: attendanceReady
+                                      attendanceExempt
+                                          ? '$employeeId • Attendance not required '
+                                              '($attendanceExemptLabel)'
+                                          : attendanceReady
+                                              ? '$employeeId • Attendance complete ($requiredDayCount/$requiredDayCount)'
+                                              : missingDatesExpanded
+                                                  ? '$employeeId • Missing ${missing.length} day(s): '
+                                                      '${missing.map((day) => day.toString().padLeft(2, '0')).join(', ')}'
+                                                  : '$employeeId • Missing ${missing.length} day(s) • Tap to view dates',
+                                      maxLines: missingDatesExpanded ? 4 : 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: attendanceReady
                                             ? const Color(0xFF168653)
                                             : const Color(0xFFC13B31),
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      Positioned(
-                                        right: -3,
-                                        bottom: -3,
-                                        child: Container(
-                                          width: 18,
-                                          height: 18,
-                                          decoration: BoxDecoration(
-                                            color: attendanceReady
-                                                ? const Color(0xFF168653)
-                                                : const Color(0xFFC13B31),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                                color: Colors.white, width: 2),
-                                          ),
-                                          child: Icon(
-                                            attendanceReady
-                                                ? Icons.check_rounded
-                                                : Icons.priority_high_rounded,
-                                            color: Colors.white,
-                                            size: 11,
+                                    ),
+                                    secondary: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        EmployeePhoto(
+                                          name: name,
+                                          photoUrl:
+                                              employee['photo_url']?.toString(),
+                                          radius: 23,
+                                          borderColor: attendanceReady
+                                              ? const Color(0xFF168653)
+                                              : const Color(0xFFC13B31),
+                                        ),
+                                        Positioned(
+                                          right: -3,
+                                          bottom: -3,
+                                          child: Container(
+                                            width: 18,
+                                            height: 18,
+                                            decoration: BoxDecoration(
+                                              color: attendanceReady
+                                                  ? const Color(0xFF168653)
+                                                  : const Color(0xFFC13B31),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2),
+                                            ),
+                                            child: Icon(
+                                              attendanceReady
+                                                  ? Icons.check_rounded
+                                                  : Icons.priority_high_rounded,
+                                              color: Colors.white,
+                                              size: 11,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
                                     ),
                                   ),
                                 );
@@ -11828,7 +11873,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                               ),
                               actions: [
                                 TextButton(
-                                  onPressed: () => Navigator.pop(context, false),
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
                                   child: const Text('Review selection'),
                                 ),
                                 FilledButton.icon(
@@ -11841,8 +11887,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                               ],
                             ),
                           );
-                          if (confirmed != true ||
-                              !selectionContext.mounted) {
+                          if (confirmed != true || !selectionContext.mounted) {
                             return;
                           }
                           Navigator.of(selectionContext).pop();
@@ -12693,268 +12738,273 @@ class _AdminDashboardState extends State<AdminDashboard>
                       .clamp(360.0, 760.0)
                       .toDouble(),
                   child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Choose a branch, payroll month, and employee. Employees are listed by Employee ID from A to Z. Existing values load automatically; if no record exists, a new one will be created.',
-                      ),
-                      const SizedBox(height: 18),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 280,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: branchId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Branch',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: branchIds
-                                  .map(
-                                    (id) => DropdownMenuItem(
-                                      value: id,
-                                      child: Text(branchNames[id] ?? id),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: loading || saving
-                                  ? null
-                                  : (value) async {
-                                      if (!await confirmDiscardChanges()) return;
-                                      if (!dialogContext.mounted) return;
-                                      setDialogState(() {
-                                        branchId = value;
-                                        employeeId = null;
-                                        storedRecord = null;
-                                        hasUnsavedChanges = false;
-                                        error = null;
-                                        success = null;
-                                        statutoryInfo = null;
-                                        calculatingStatutory = false;
-                                        statutoryRevision++;
-                                        fillControllers(null);
-                                      });
-                                    },
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: loading || saving ? null : chooseMonth,
-                            icon: const Icon(Icons.calendar_month_outlined),
-                            label: Text(DateFormat('MMMM yyyy').format(month)),
-                          ),
-                          SizedBox(
-                            width: 360,
-                            child: DropdownButtonFormField<String>(
-                              key: ValueKey('$branchId-$employeeId'),
-                              initialValue: employeeId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: selectedEmployeeIndex < 0
-                                    ? 'Employee (ID A-Z)'
-                                    : 'Employee ${selectedEmployeeIndex + 1} of ${filteredEmployees.length}',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: filteredEmployees.map((employee) {
-                                final id =
-                                    employee['employee_id']?.toString() ?? '';
-                                final name =
-                                    employee['name']?.toString().trim() ?? '';
-                                return DropdownMenuItem(
-                                  value: id,
-                                  child:
-                                      Text(name.isEmpty ? id : '$id • $name'),
-                                );
-                              }).toList(),
-                              onChanged: loading || saving
-                                  ? null
-                                  : (value) async {
-                                      if (!await confirmDiscardChanges()) return;
-                                      if (!dialogContext.mounted) return;
-                                      setDialogState(() {
-                                        employeeId = value;
-                                        storedRecord = null;
-                                        hasUnsavedChanges = false;
-                                        error = null;
-                                        success = null;
-                                        statutoryInfo = null;
-                                        calculatingStatutory = false;
-                                        statutoryRevision++;
-                                        fillControllers(null);
-                                      });
-                                      loadPayroll();
-                                    },
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed:
-                                loading || saving || selectedEmployeeIndex <= 0
-                                    ? null
-                                    : () => selectAdjacentEmployee(-1),
-                            icon: const Icon(Icons.chevron_left),
-                            label: const Text('Previous'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: loading ||
-                                    saving ||
-                                    selectedEmployeeIndex < 0 ||
-                                    selectedEmployeeIndex >=
-                                        filteredEmployees.length - 1
-                                ? null
-                                : () => selectAdjacentEmployee(1),
-                            icon: const Icon(Icons.chevron_right),
-                            label: const Text('Next'),
-                          ),
-                          if (loading) const CircularProgressIndicator(),
-                        ],
-                      ),
-                      if (employeeId != null && !loading) ...[
-                        const SizedBox(height: 18),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: storedRecord == null
-                                ? Colors.amber.shade50
-                                : Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                storedRecord == null
-                                    ? Icons.add_circle_outline
-                                    : Icons.cloud_done_outlined,
-                                size: 19,
-                              ),
-                              const SizedBox(width: 9),
-                              Expanded(
-                                child: Text(
-                                  storedRecord == null
-                                      ? 'No payroll exists for this month. Saving will create it.'
-                                      : lastSavedAt == null
-                                          ? 'Existing payroll loaded from the database.'
-                                          : 'Saved ${DateFormat('dd MMM yyyy, hh:mm a').format(lastSavedAt!)}.',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (calculatingStatutory || statutoryInfo != null) ...[
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              if (calculatingStatutory) ...[
-                                const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              Expanded(
-                                child: Text(
-                                  calculatingStatutory
-                                      ? 'Checking EPF, SOCSO and EIS tables...'
-                                      : statutoryInfo!,
-                                  style: TextStyle(
-                                    color: Colors.blue.shade800,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        fieldGroup('Earnings'),
-                        fieldGroup('Deductions'),
-                        fieldGroup('Employer Contributions'),
-                        TextField(
-                          controller: remarksController,
-                          enabled: !saving,
-                          maxLines: 2,
-                          onChanged: (_) => setDialogState(() {
-                            hasUnsavedChanges = true;
-                            success = null;
-                          }),
-                          decoration: const InputDecoration(
-                            labelText: 'Remarks',
-                            border: OutlineInputBorder(),
-                          ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Choose a branch, payroll month, and employee. Employees are listed by Employee ID from A to Z. Existing values load automatically; if no record exists, a new one will be created.',
                         ),
                         const SizedBox(height: 18),
                         Wrap(
                           spacing: 12,
                           runSpacing: 12,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            summaryItem(
-                              'Gross',
-                              earnings,
-                              Icons.trending_up_outlined,
+                            SizedBox(
+                              width: 280,
+                              child: DropdownButtonFormField<String>(
+                                initialValue: branchId,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Branch',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: branchIds
+                                    .map(
+                                      (id) => DropdownMenuItem(
+                                        value: id,
+                                        child: Text(branchNames[id] ?? id),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: loading || saving
+                                    ? null
+                                    : (value) async {
+                                        if (!await confirmDiscardChanges())
+                                          return;
+                                        if (!dialogContext.mounted) return;
+                                        setDialogState(() {
+                                          branchId = value;
+                                          employeeId = null;
+                                          storedRecord = null;
+                                          hasUnsavedChanges = false;
+                                          error = null;
+                                          success = null;
+                                          statutoryInfo = null;
+                                          calculatingStatutory = false;
+                                          statutoryRevision++;
+                                          fillControllers(null);
+                                        });
+                                      },
+                              ),
                             ),
-                            summaryItem(
-                              'Deductions',
-                              deductions,
-                              Icons.trending_down_outlined,
+                            OutlinedButton.icon(
+                              onPressed: loading || saving ? null : chooseMonth,
+                              icon: const Icon(Icons.calendar_month_outlined),
+                              label:
+                                  Text(DateFormat('MMMM yyyy').format(month)),
                             ),
-                            summaryItem(
-                              'Employer',
-                              employerContributions,
-                              Icons.business_outlined,
+                            SizedBox(
+                              width: 360,
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey('$branchId-$employeeId'),
+                                initialValue: employeeId,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: selectedEmployeeIndex < 0
+                                      ? 'Employee (ID A-Z)'
+                                      : 'Employee ${selectedEmployeeIndex + 1} of ${filteredEmployees.length}',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: filteredEmployees.map((employee) {
+                                  final id =
+                                      employee['employee_id']?.toString() ?? '';
+                                  final name =
+                                      employee['name']?.toString().trim() ?? '';
+                                  return DropdownMenuItem(
+                                    value: id,
+                                    child:
+                                        Text(name.isEmpty ? id : '$id • $name'),
+                                  );
+                                }).toList(),
+                                onChanged: loading || saving
+                                    ? null
+                                    : (value) async {
+                                        if (!await confirmDiscardChanges())
+                                          return;
+                                        if (!dialogContext.mounted) return;
+                                        setDialogState(() {
+                                          employeeId = value;
+                                          storedRecord = null;
+                                          hasUnsavedChanges = false;
+                                          error = null;
+                                          success = null;
+                                          statutoryInfo = null;
+                                          calculatingStatutory = false;
+                                          statutoryRevision++;
+                                          fillControllers(null);
+                                        });
+                                        loadPayroll();
+                                      },
+                              ),
                             ),
-                            summaryItem(
-                              'Net Pay',
-                              net,
-                              Icons.account_balance_wallet_outlined,
-                              emphasized: true,
+                            OutlinedButton.icon(
+                              onPressed: loading ||
+                                      saving ||
+                                      selectedEmployeeIndex <= 0
+                                  ? null
+                                  : () => selectAdjacentEmployee(-1),
+                              icon: const Icon(Icons.chevron_left),
+                              label: const Text('Previous'),
                             ),
+                            OutlinedButton.icon(
+                              onPressed: loading ||
+                                      saving ||
+                                      selectedEmployeeIndex < 0 ||
+                                      selectedEmployeeIndex >=
+                                          filteredEmployees.length - 1
+                                  ? null
+                                  : () => selectAdjacentEmployee(1),
+                              icon: const Icon(Icons.chevron_right),
+                              label: const Text('Next'),
+                            ),
+                            if (loading) const CircularProgressIndicator(),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                      ],
-                      if (success != null) ...[
-                        const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.green.shade200),
-                          ),
-                          child: Text(
-                            success!,
-                            style: TextStyle(
-                              color: Colors.green.shade800,
-                              fontWeight: FontWeight.w700,
+                        if (employeeId != null && !loading) ...[
+                          const SizedBox(height: 18),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: storedRecord == null
+                                  ? Colors.amber.shade50
+                                  : Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  storedRecord == null
+                                      ? Icons.add_circle_outline
+                                      : Icons.cloud_done_outlined,
+                                  size: 19,
+                                ),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: Text(
+                                    storedRecord == null
+                                        ? 'No payroll exists for this month. Saving will create it.'
+                                        : lastSavedAt == null
+                                            ? 'Existing payroll loaded from the database.'
+                                            : 'Saved ${DateFormat('dd MMM yyyy, hh:mm a').format(lastSavedAt!)}.',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
-                      if (error != null) ...[
-                        const SizedBox(height: 14),
-                        Text(
-                          error!,
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontWeight: FontWeight.w600,
+                          if (calculatingStatutory ||
+                              statutoryInfo != null) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                if (calculatingStatutory) ...[
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    calculatingStatutory
+                                        ? 'Checking EPF, SOCSO and EIS tables...'
+                                        : statutoryInfo!,
+                                    style: TextStyle(
+                                      color: Colors.blue.shade800,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                          fieldGroup('Earnings'),
+                          fieldGroup('Deductions'),
+                          fieldGroup('Employer Contributions'),
+                          TextField(
+                            controller: remarksController,
+                            enabled: !saving,
+                            maxLines: 2,
+                            onChanged: (_) => setDialogState(() {
+                              hasUnsavedChanges = true;
+                              success = null;
+                            }),
+                            decoration: const InputDecoration(
+                              labelText: 'Remarks',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 18),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              summaryItem(
+                                'Gross',
+                                earnings,
+                                Icons.trending_up_outlined,
+                              ),
+                              summaryItem(
+                                'Deductions',
+                                deductions,
+                                Icons.trending_down_outlined,
+                              ),
+                              summaryItem(
+                                'Employer',
+                                employerContributions,
+                                Icons.business_outlined,
+                              ),
+                              summaryItem(
+                                'Net Pay',
+                                net,
+                                Icons.account_balance_wallet_outlined,
+                                emphasized: true,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                        if (success != null) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Text(
+                              success!,
+                              style: TextStyle(
+                                color: Colors.green.shade800,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (error != null) ...[
+                          const SizedBox(height: 14),
+                          Text(
+                            error!,
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
                 actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
                 actions: [
                   TextButton(
@@ -13041,8 +13091,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         ? employees
         : employees
             .where(
-              (employee) =>
-                  employee.isActive == _payslipShowActiveEmployees,
+              (employee) => employee.isActive == _payslipShowActiveEmployees,
             )
             .toList();
     final filteredEmployees = query.isEmpty
@@ -13279,8 +13328,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border:
-                                Border.all(color: const Color(0xFFE2E5EB)),
+                            border: Border.all(color: const Color(0xFFE2E5EB)),
                           ),
                           child: Row(
                             children: [
@@ -15289,8 +15337,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                               ),
                               const SizedBox(height: 16),
                               FilledButton.icon(
-                                onPressed:
-                                    _showGenerateAttendancePayrollDialog,
+                                onPressed: _showGenerateAttendancePayrollDialog,
                                 icon: const Icon(Icons.calculate_outlined),
                                 label: const Text('Generate Payroll'),
                               ),
@@ -19489,11 +19536,10 @@ class _AdminDashboardState extends State<AdminDashboard>
       final isForeign = address.toUpperCase().contains('FRN');
       final firstName = firstText(employee, const ['first_name', 'firstName']);
       final lastName = firstText(employee, const ['last_name', 'lastName']);
-      final statutoryName = isForeign &&
-              firstName.isNotEmpty &&
-              lastName.isNotEmpty
-          ? '$lastName $firstName'
-          : name;
+      final statutoryName =
+          isForeign && firstName.isNotEmpty && lastName.isNotEmpty
+              ? '$lastName $firstName'
+              : name;
       final icDigits = rawIc.replaceAll(RegExp(r'[^0-9]'), '');
       final digitsOnly = RegExp(r'^\d+$').hasMatch(rawIc);
       final exportIc = !isForeign && digitsOnly && rawIc.length < 12
@@ -19616,9 +19662,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                 children: [
                   Row(children: [
                     Expanded(
-                      child: Text(missingAccountOnly
-                          ? '$report Deducted - Missing Account Report'
-                          : '$report Employee Details',
+                      child: Text(
+                          missingAccountOnly
+                              ? '$report Deducted - Missing Account Report'
+                              : '$report Employee Details',
                           style: const TextStyle(
                               fontSize: 24, fontWeight: FontWeight.w800)),
                     ),
@@ -19676,10 +19723,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                         if (displayedRows.isEmpty &&
                             (missingAccountOnly || missingRows.isEmpty)) {
                           return Center(
-                              child: Text(
-                                  missingAccountOnly
-                                      ? 'No employees have $report deductions with missing account details for ${DateFormat('MMMM yyyy').format(month)}.'
-                                      : 'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
+                              child: Text(missingAccountOnly
+                                  ? 'No employees have $report deductions with missing account details for ${DateFormat('MMMM yyyy').format(month)}.'
+                                  : 'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
                         }
                         return Column(children: [
                           Expanded(
@@ -19736,6 +19782,15 @@ class _AdminDashboardState extends State<AdminDashboard>
                               ),
                               const SizedBox(width: 10),
                             ],
+                            if (missingAccountOnly &&
+                                (report == 'EPF' || report == 'SOCSO'))
+                              FilledButton.icon(
+                                onPressed: () =>
+                                    _exportMissingStatutoryAccountsExcel(month),
+                                icon: const Icon(Icons.download_outlined),
+                                label: const Text(
+                                    'Export Missing EPF & SOCSO Excel'),
+                              ),
                             if (!missingAccountOnly)
                               FilledButton.icon(
                                 onPressed: () async {
@@ -19873,7 +19928,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     ));
     await Printing.layoutPdf(
       name:
-          '${report}${missingAccountOnly ? '_MISSING_ACCOUNT' : ''}_${DateFormat('yyyy_MM').format(month)}.pdf',
+          '$report${missingAccountOnly ? '_MISSING_ACCOUNT' : ''}_${DateFormat('yyyy_MM').format(month)}.pdf',
       format: PdfPageFormat.a4.landscape,
       onLayout: (_) => document.save(),
     );
@@ -20082,16 +20137,16 @@ class _AdminDashboardState extends State<AdminDashboard>
         : null;
   }
 
-  Future<void> _exportStatutoryReportExcel(String report, DateTime month,
-      List<List<dynamic>> rows) async {
+  Future<void> _exportStatutoryReportExcel(
+      String report, DateTime month, List<List<dynamic>> rows) async {
     final excel = xls.Excel.createExcel();
     final defaultName = excel.getDefaultSheet();
     if (defaultName != null) excel.rename(defaultName, report);
     final sheet = excel[report];
     for (var row = 0; row < rows.length; row++) {
       for (var column = 0; column < rows[row].length; column++) {
-        final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
-            columnIndex: column, rowIndex: row));
+        final cell = sheet.cell(
+            xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: row));
         final value = rows[row][column];
         cell.value = value is num
             ? xls.DoubleCellValue(value.toDouble())
@@ -20107,6 +20162,111 @@ class _AdminDashboardState extends State<AdminDashboard>
       mimeType: MimeType.microsoftExcel,
     );
     _message('$report Excel exported successfully.');
+  }
+
+  Future<void> _exportMissingStatutoryAccountsExcel(DateTime month) async {
+    try {
+      final reports = await Future.wait([
+        _loadStatutoryReport('EPF', month),
+        _loadStatutoryReport('SOCSO', month),
+      ]);
+      final epfRows = List<List<dynamic>>.from(
+          reports[0]['missingRows'] ?? const <List<dynamic>>[]);
+      final socsoRows = List<List<dynamic>>.from(
+          reports[1]['missingRows'] ?? const <List<dynamic>>[]);
+
+      final excel = xls.Excel.createExcel();
+      final defaultName = excel.getDefaultSheet();
+      if (defaultName != null) excel.rename(defaultName, 'Missing EPF');
+
+      void writeSheet({
+        required String name,
+        required String title,
+        required List<String> headers,
+        required List<List<dynamic>> rows,
+        required Set<int> moneyColumns,
+      }) {
+        final sheet = excel[name];
+        sheet.merge(
+          xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+          xls.CellIndex.indexByColumnRow(
+              columnIndex: headers.length - 1, rowIndex: 0),
+        );
+        final titleCell = sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0));
+        titleCell.value = xls.TextCellValue(title);
+        titleCell.cellStyle = xls.CellStyle(bold: true, fontSize: 14);
+
+        for (var column = 0; column < headers.length; column++) {
+          final headerCell = sheet.cell(
+              xls.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: 2));
+          headerCell.value = xls.TextCellValue(headers[column]);
+          headerCell.cellStyle = _excelHeaderStyle(headerCell.cellStyle);
+          sheet.setColumnWidth(column, column == 0 ? 32 : 20);
+        }
+
+        for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+          for (var column = 0; column < rows[rowIndex].length; column++) {
+            final cell = sheet.cell(xls.CellIndex.indexByColumnRow(
+                columnIndex: column, rowIndex: rowIndex + 3));
+            final value = rows[rowIndex][column];
+            cell.value = value is num
+                ? xls.DoubleCellValue(value.toDouble())
+                : xls.TextCellValue(value.toString());
+            if (moneyColumns.contains(column)) {
+              cell.cellStyle = (cell.cellStyle ?? xls.CellStyle()).copyWith(
+                numberFormat: xls.NumFormat.custom(formatCode: '#,##0.00'),
+              );
+            }
+          }
+        }
+      }
+
+      writeSheet(
+        name: 'Missing EPF',
+        title:
+            'EPF Deducted - Missing Account Report - ${DateFormat('MMMM yyyy').format(month)}',
+        headers: const [
+          'NAME',
+          'IC NO',
+          'EMPLOYEE SHARE',
+          'EMPLOYER SHARE',
+          'TOTAL SALARY',
+        ],
+        rows: epfRows
+            .map((row) => [row[0], row[1], row[3], row[4], row[5]])
+            .toList(),
+        moneyColumns: const {2, 3, 4},
+      );
+      writeSheet(
+        name: 'Missing SOCSO',
+        title:
+            'SOCSO Deducted - Missing Account Report - ${DateFormat('MMMM yyyy').format(month)}',
+        headers: const [
+          'NAME',
+          'EMPLOYEE SHARE',
+          'EMPLOYER SHARE',
+          'TOTAL AMOUNT',
+        ],
+        rows: socsoRows.map((row) => [row[0], row[2], row[3], row[4]]).toList(),
+        moneyColumns: const {1, 2, 3},
+      );
+
+      final output = excel.encode();
+      if (output == null || output.isEmpty) {
+        throw Exception('Missing-account Excel file could not be generated.');
+      }
+      await FileSaver.instance.saveFile(
+        name: 'MISSING_EPF_SOCSO_${DateFormat('yyyy_MM').format(month)}',
+        bytes: Uint8List.fromList(output),
+        ext: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      _message(
+          'Missing EPF and SOCSO Excel exported with ${epfRows.length} EPF and ${socsoRows.length} SOCSO employee(s).');
+    } catch (e) {
+      _message('Missing EPF and SOCSO Excel export failed: $e');
+    }
   }
 
   Future<void> _showDashboardReport(String report) async {
@@ -21793,16 +21953,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                 Icons.account_balance_wallet_rounded,
                 Color(0xFFD6B24F)
               ),
-            'Payroll Report' =>
-              const (Icons.analytics_rounded, Color(0xFF7C3AED)),
-            'Settings' =>
-              const (Icons.settings_rounded, Color(0xFFD6B24F)),
-            'Quick actions' =>
-              const (Icons.bolt_rounded, Color(0xFFD6B24F)),
-            'System status' =>
-              const (Icons.monitor_heart_rounded, Color(0xFF8B7740)),
-            'Employee List' =>
-              const (Icons.groups_rounded, Color(0xFFD6B24F)),
+            'Payroll Report' => const (
+                Icons.analytics_rounded,
+                Color(0xFF7C3AED)
+              ),
+            'Settings' => const (Icons.settings_rounded, Color(0xFFD6B24F)),
+            'Quick actions' => const (Icons.bolt_rounded, Color(0xFFD6B24F)),
+            'System status' => const (
+                Icons.monitor_heart_rounded,
+                Color(0xFF8B7740)
+              ),
+            'Employee List' => const (Icons.groups_rounded, Color(0xFFD6B24F)),
             _ => const (Icons.dashboard_customize_rounded, Color(0xFF1B2234)),
           };
     return Container(
