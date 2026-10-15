@@ -19598,7 +19598,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     };
   }
 
-  Future<void> _showStatutoryReport(String report) async {
+  Future<void> _showStatutoryReport(String report,
+      {bool missingAccountOnly = false}) async {
     var month = selectedPayrollMonth;
     await showDialog<void>(
       context: context,
@@ -19615,7 +19616,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                 children: [
                   Row(children: [
                     Expanded(
-                      child: Text('$report Employee Details',
+                      child: Text(missingAccountOnly
+                          ? '$report Deducted - Missing Account Report'
+                          : '$report Employee Details',
                           style: const TextStyle(
                               fontSize: 24, fontWeight: FontWeight.w800)),
                     ),
@@ -19668,80 +19671,87 @@ class _AdminDashboardState extends State<AdminDashboard>
                             snapshot.data?['rows'] ?? const []);
                         final missingRows = List<List<dynamic>>.from(
                             snapshot.data?['missingRows'] ?? const []);
-                        if (rows.isEmpty && missingRows.isEmpty) {
+                        final displayedRows =
+                            missingAccountOnly ? missingRows : rows;
+                        if (displayedRows.isEmpty &&
+                            (missingAccountOnly || missingRows.isEmpty)) {
                           return Center(
                               child: Text(
-                                  'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
+                                  missingAccountOnly
+                                      ? 'No employees have $report deductions with missing account details for ${DateFormat('MMMM yyyy').format(month)}.'
+                                      : 'No eligible $report payroll details for ${DateFormat('MMMM yyyy').format(month)}.'));
                         }
                         return Column(children: [
                           Expanded(
-                            child: Scrollbar(
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (rows.isNotEmpty) ...[
-                                      Text('Employees with valid details (${rows.length})',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w700)),
-                                      const SizedBox(height: 6),
-                                      SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: _statutoryDataTable(headers, rows),
+                            child: displayedRows.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      'No employees with complete $report account details.\nOpen the separate Missing Account Report below.',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  )
+                                : Scrollbar(
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: _statutoryDataTable(
+                                        headers,
+                                        displayedRows,
                                       ),
-                                    ],
-                                    if (missingRows.isNotEmpty) ...[
-                                      const SizedBox(height: 18),
-                                      Text(
-                                        '$report deducted but account/identifier is missing (${missingRows.length})',
-                                        style: const TextStyle(
-                                            color: Colors.red,
-                                            fontWeight: FontWeight.w800),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: _statutoryDataTable(
-                                            headers, missingRows),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
+                                    ),
+                                  ),
                           ),
                           const SizedBox(height: 12),
                           Row(children: [
-                            Text('${rows.length + missingRows.length} employee(s)'
-                                '${missingRows.isEmpty ? '' : ' • ${missingRows.length} missing details'}',
+                            Text('${displayedRows.length} employee(s)',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w700)),
                             const Spacer(),
+                            if (!missingAccountOnly &&
+                                (report == 'EPF' || report == 'SOCSO')) ...[
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  Navigator.pop(dialogContext);
+                                  await _showStatutoryReport(report,
+                                      missingAccountOnly: true);
+                                },
+                                icon: const Icon(Icons.warning_amber_outlined),
+                                label: Text(
+                                    'Missing Account Report (${missingRows.length})'),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
                             if (report == 'EPF' ||
                                 report == 'SOCSO' ||
                                 report == 'EIS') ...[
                               OutlinedButton.icon(
                                 onPressed: () => _printStatutoryReport(
-                                    report, month, headers, rows, missingRows),
+                                  report,
+                                  month,
+                                  headers,
+                                  displayedRows,
+                                  missingAccountOnly: missingAccountOnly,
+                                ),
                                 icon: const Icon(Icons.print_outlined),
                                 label: const Text('Print Landscape A4'),
                               ),
                               const SizedBox(width: 10),
                             ],
-                            FilledButton.icon(
-                              onPressed: () async {
-                                if (report == 'EPF' || report == 'EIS') {
-                                  await _exportStatutoryReportExcel(
-                                      report, month, rows);
-                                } else {
-                                  setState(() => selectedPayrollMonth = month);
-                                  await _exportRhbLayout(
-                                      only: report.toLowerCase());
-                                }
-                              },
-                              icon: const Icon(Icons.download_outlined),
-                              label: Text('Export $report Excel'),
-                            ),
+                            if (!missingAccountOnly)
+                              FilledButton.icon(
+                                onPressed: () async {
+                                  if (report == 'EPF' || report == 'EIS') {
+                                    await _exportStatutoryReportExcel(
+                                        report, month, rows);
+                                  } else {
+                                    setState(
+                                        () => selectedPayrollMonth = month);
+                                    await _exportRhbLayout(
+                                        only: report.toLowerCase());
+                                  }
+                                },
+                                icon: const Icon(Icons.download_outlined),
+                                label: Text('Export $report Excel'),
+                              ),
                           ]),
                         ]);
                       },
@@ -19838,12 +19848,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         ),
       );
 
-  Future<void> _printStatutoryReport(
-      String report,
-      DateTime month,
-      List<String> headers,
-      List<List<dynamic>> rows,
-      List<List<dynamic>> missingRows) async {
+  Future<void> _printStatutoryReport(String report, DateTime month,
+      List<String> headers, List<List<dynamic>> rows,
+      {bool missingAccountOnly = false}) async {
     final document = pw.Document();
     List<List<String>> printableRows(List<List<dynamic>> source) => [
           headers,
@@ -19857,27 +19864,16 @@ class _AdminDashboardState extends State<AdminDashboard>
       pageFormat: PdfPageFormat.a4.landscape,
       margin: const pw.EdgeInsets.all(12),
       build: (_) => [
-        pw.Text('$report Employee Details - ${DateFormat('MMMM yyyy').format(month)}',
+        pw.Text(
+            '${missingAccountOnly ? '$report Deducted - Missing Account Report' : '$report Employee Details'} - ${DateFormat('MMMM yyyy').format(month)}',
             style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 10),
-        if (rows.isNotEmpty) ...[
-          pw.Text('Employees with valid details (${rows.length})',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 4),
-          _statutoryPdfTable(printableRows(rows)),
-        ],
-        if (missingRows.isNotEmpty) ...[
-          pw.SizedBox(height: 14),
-          pw.Text('$report deducted but account/identifier is missing (${missingRows.length})',
-              style: pw.TextStyle(
-                  color: PdfColors.red, fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 4),
-          _statutoryPdfTable(printableRows(missingRows)),
-        ],
+        _statutoryPdfTable(printableRows(rows)),
       ],
     ));
     await Printing.layoutPdf(
-      name: '${report}_${DateFormat('yyyy_MM').format(month)}.pdf',
+      name:
+          '${report}${missingAccountOnly ? '_MISSING_ACCOUNT' : ''}_${DateFormat('yyyy_MM').format(month)}.pdf',
       format: PdfPageFormat.a4.landscape,
       onLayout: (_) => document.save(),
     );
