@@ -860,8 +860,8 @@ class AppService extends ChangeNotifier {
       offset += pageSize;
     }
     payroll.removeWhere(
-      (record) => record.employeeId.trim().toUpperCase() ==
-          normalizedId.toUpperCase(),
+      (record) =>
+          record.employeeId.trim().toUpperCase() == normalizedId.toUpperCase(),
     );
     payroll.addAll(refreshed);
     payroll.sort((a, b) => b.period.compareTo(a.period));
