@@ -66,6 +66,8 @@ flutter:
     - assets/payroll_salary_template.xlsx
     - assets/employee_garden_courtyard.png
     - assets/branch_botanical_park.png
+    - assets/garden_foreground_foliage.png
+    - assets/garden_fountain_atmosphere.png
 
 # ============================================================================
 # APP ICON

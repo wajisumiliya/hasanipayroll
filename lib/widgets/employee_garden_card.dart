@@ -32,6 +32,7 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ambience;
   bool _caring = false;
+  Offset _pointer = Offset.zero;
 
   @override
   void initState() {
@@ -68,11 +69,17 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
         ? 1.0
         : ((4 - widget.loginsUntilUpgrade) / 4).clamp(0.0, 1.0);
     final level = (widget.milestones ~/ 4 + 1).clamp(1, 6);
-    return Container(
-      width: double.infinity,
-      height: 430,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
+    return MouseRegion(
+      onHover: (event) => setState(() => _pointer = Offset(
+            ((event.localPosition.dx / 900) - .5).clamp(-.5, .5),
+            ((event.localPosition.dy / 430) - .5).clamp(-.5, .5),
+          )),
+      onExit: (_) => setState(() => _pointer = Offset.zero),
+      child: Container(
+        width: double.infinity,
+        height: 430,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFB99A4B), width: 1.5),
         boxShadow: const [
@@ -80,13 +87,21 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
               color: Color(0x30000000), blurRadius: 24, offset: Offset(0, 11)),
         ],
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/employee_garden_courtyard.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            transform: Matrix4.translationValues(
+                _pointer.dx * -14, _pointer.dy * -8, 0),
+            child: Transform.scale(
+              scale: 1.05,
+              child: Image.asset(
+                'assets/employee_garden_courtyard.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
+            ),
           ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 700),
@@ -108,6 +123,19 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
             level: level,
             streak: widget.streak,
           ),
+          if (healthy)
+            AnimatedBuilder(
+              animation: _ambience,
+              builder: (_, child) => Opacity(
+                opacity: .20 + math.sin(_ambience.value * math.pi * 2) * .05,
+                child: Transform.translate(
+                  offset: Offset(_pointer.dx * 10, 5 + _pointer.dy * 5),
+                  child: child,
+                ),
+              ),
+              child: Image.asset('assets/garden_fountain_atmosphere.png',
+                  fit: BoxFit.cover),
+            ),
           AnimatedBuilder(
             animation: _ambience,
             builder: (context, _) {
@@ -199,6 +227,17 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
               ),
             ]),
           ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            transform: Matrix4.translationValues(
+                _pointer.dx * 25, _pointer.dy * 12, 0),
+            child: Transform.scale(
+              scale: 1.04,
+              alignment: Alignment.bottomCenter,
+              child: Image.asset('assets/garden_foreground_foliage.png',
+                  fit: BoxFit.cover, alignment: Alignment.bottomCenter),
+            ),
+          ),
           Positioned(
             left: 18,
             top: 82,
@@ -251,7 +290,8 @@ class _EmployeeGardenCardState extends State<EmployeeGardenCard>
               ]),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

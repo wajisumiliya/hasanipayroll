@@ -60,6 +60,7 @@ class _BranchPortalState extends State<BranchPortal>
   String _attendanceSearch = '';
   String _employeeStatusFilter = 'all';
   late final AnimationController _celebrationController;
+  Offset _gardenPointer = Offset.zero;
 
   @override
   void initState() {
@@ -1100,11 +1101,17 @@ class _BranchPortalState extends State<BranchPortal>
     final thriving = attendanceRate >= .85;
     final gardenZones = math.max(1, (total / 4).ceil());
 
-    return Container(
-      width: double.infinity,
-      height: 390,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
+    return MouseRegion(
+      onHover: (event) => setState(() => _gardenPointer = Offset(
+            ((event.localPosition.dx / 1100) - .5).clamp(-.5, .5),
+            ((event.localPosition.dy / 390) - .5).clamp(-.5, .5),
+          )),
+      onExit: (_) => setState(() => _gardenPointer = Offset.zero),
+      child: Container(
+        width: double.infinity,
+        height: 390,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFB99A4B), width: 1.5),
         boxShadow: const [
@@ -1112,10 +1119,19 @@ class _BranchPortalState extends State<BranchPortal>
               color: Color(0x30000000), blurRadius: 24, offset: Offset(0, 11)),
         ],
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset('assets/branch_botanical_park.png', fit: BoxFit.cover),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            transform: Matrix4.translationValues(
+                _gardenPointer.dx * -16, _gardenPointer.dy * -9, 0),
+            child: Transform.scale(
+              scale: 1.05,
+              child: Image.asset('assets/branch_botanical_park.png',
+                  fit: BoxFit.cover),
+            ),
+          ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 700),
             decoration: BoxDecoration(
@@ -1136,6 +1152,22 @@ class _BranchPortalState extends State<BranchPortal>
             level: gardenZones.clamp(1, 6),
             streak: thriving ? 5 : (healthy ? 3 : 0),
           ),
+          if (healthy)
+            AnimatedBuilder(
+              animation: _celebrationController,
+              builder: (_, child) => Opacity(
+                opacity: .16 +
+                    math.sin(_celebrationController.value * math.pi * 2) *
+                        .04,
+                child: Transform.translate(
+                  offset: Offset(
+                      _gardenPointer.dx * 11, 5 + _gardenPointer.dy * 5),
+                  child: child,
+                ),
+              ),
+              child: Image.asset('assets/garden_fountain_atmosphere.png',
+                  fit: BoxFit.cover),
+            ),
           Positioned(
             left: 20,
             right: 20,
@@ -1192,6 +1224,17 @@ class _BranchPortalState extends State<BranchPortal>
               ),
             ]),
           ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            transform: Matrix4.translationValues(
+                _gardenPointer.dx * 27, _gardenPointer.dy * 13, 0),
+            child: Transform.scale(
+              scale: 1.04,
+              alignment: Alignment.bottomCenter,
+              child: Image.asset('assets/garden_foreground_foliage.png',
+                  fit: BoxFit.cover, alignment: Alignment.bottomCenter),
+            ),
+          ),
           Positioned(
             left: 18,
             right: 18,
@@ -1227,7 +1270,8 @@ class _BranchPortalState extends State<BranchPortal>
               ]),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
