@@ -527,6 +527,8 @@ class _BranchPortalState extends State<BranchPortal>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _branchCommandCentre(),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -967,7 +969,212 @@ class _BranchPortalState extends State<BranchPortal>
           const SizedBox(height: 24),
           _branchCelebrationPanels(),
           const SizedBox(height: 24),
+          _branchBookstoreNetwork(),
+          const SizedBox(height: 24),
           _dashboardAttendanceRegister(),
+        ],
+      ),
+    );
+  }
+
+  Widget _branchCommandCentre() {
+    final today = todayAttendance;
+    final total = employees.length;
+    final presentIds = today
+        .where((record) =>
+            record.effectiveCheckIn.trim().isNotEmpty &&
+            record.status.trim().toLowerCase() != 'absent')
+        .map((record) => record.employeeId.toUpperCase())
+        .toSet();
+    final late = today
+        .where((record) => record.status.trim().toLowerCase() == 'late')
+        .length;
+    final absent = math.max(0, total - presentIds.length);
+    final payrollReady = service
+        .branchPayroll(branchId)
+        .where((record) =>
+            record.period.year == attendanceMonth.year &&
+            record.period.month == attendanceMonth.month)
+        .map((record) => record.employeeId.toUpperCase())
+        .toSet()
+        .length;
+    final attendanceRate = total == 0 ? 0.0 : presentIds.length / total;
+    final punctualityRate = presentIds.isEmpty
+        ? 0.0
+        : ((presentIds.length - late).clamp(0, presentIds.length) /
+            presentIds.length);
+    final healthScore =
+        ((attendanceRate * .65 + punctualityRate * .35) * 100).round();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF101F39), Color(0xFF193C64)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x22000000), blurRadius: 18, offset: Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('BRANCH COMMAND CENTRE',
+                      style: TextStyle(
+                          color: Color(0xFFFFD56A),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1)),
+                  Text('Live operations and payroll readiness',
+                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Column(children: [
+                Text('$healthScore%',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900)),
+                const Text('HEALTH SCORE',
+                    style: TextStyle(color: Colors.white60, fontSize: 9)),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            _commandMetric(Icons.how_to_reg_rounded, '${presentIds.length}',
+                'Present today', const Color(0xFF59D39B)),
+            _commandMetric(Icons.schedule_rounded, '$late', 'Late today',
+                const Color(0xFFFFBC55)),
+            _commandMetric(Icons.person_off_outlined, '$absent', 'Not in yet',
+                const Color(0xFFFF7185)),
+            _commandMetric(Icons.verified_outlined, '$payrollReady / $total',
+                'Payroll ready', const Color(0xFF79A9FF)),
+          ]),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: healthScore / 100,
+              minHeight: 7,
+              color: const Color(0xFFFFD56A),
+              backgroundColor: Colors.white12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _commandMetric(
+      IconData icon, String value, String label, Color color) {
+    return Container(
+      width: 168,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(children: [
+        Icon(icon, color: color, size: 21),
+        const SizedBox(width: 9),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900)),
+          Text(label,
+              style: const TextStyle(color: Colors.white60, fontSize: 10)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _branchBookstoreNetwork() {
+    final total = employees.length;
+    final todayPresent = todayAttendance
+        .where((record) => record.effectiveCheckIn.trim().isNotEmpty)
+        .map((record) => record.employeeId)
+        .toSet()
+        .length;
+    final stockedShelves = math.max(1, (total / 4).ceil());
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF2),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE4C675)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 116,
+            height: 116,
+            decoration: BoxDecoration(
+              color: const Color(0xFF183451),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.storefront_rounded,
+                    color: Color(0xFFFFD56A), size: 72),
+                Positioned(
+                  bottom: 12,
+                  child: Text('$stockedShelves SHELVES',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('BRANCH BOOKSTORE NETWORK',
+                    style: TextStyle(
+                        color: Color(0xFF132D4A),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900)),
+                const SizedBox(height: 5),
+                Text(
+                  '$branchDisplayName has $stockedShelves active shelves representing $total employees.',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 12),
+                Wrap(spacing: 18, runSpacing: 8, children: [
+                  Text('$todayPresent customers today',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text('$total team books',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                ]),
+              ],
+            ),
+          ),
         ],
       ),
     );

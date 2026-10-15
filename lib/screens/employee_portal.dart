@@ -21,7 +21,7 @@ import 'ea_forms_page.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
-import '../widgets/employee_aquarium_card.dart';
+import '../widgets/employee_bookstore_card.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../utils/app_reload.dart';
 
@@ -252,12 +252,6 @@ class _EmployeePortalState extends State<EmployeePortal>
     final fed = await service.feedEmployeeAquarium();
     if (mounted) setState(() {});
     return fed;
-  }
-
-  Future<bool> _cleanAquarium() async {
-    final cleaned = await service.cleanEmployeeAquarium();
-    if (mounted) setState(() {});
-    return cleaned;
   }
 
   Future<void> _loadEmployeeNotifications() async {
@@ -1230,6 +1224,8 @@ class _EmployeePortalState extends State<EmployeePortal>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _myWorkdayCard(),
+            const SizedBox(height: 16),
             _welcome(),
             const SizedBox(height: 16),
             _aquariumCard(),
@@ -1250,6 +1246,8 @@ class _EmployeePortalState extends State<EmployeePortal>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _myWorkdayCard(),
+              const SizedBox(height: 16),
               if (compact) ...[
                 _welcome(),
                 const SizedBox(height: 12),
@@ -1295,18 +1293,137 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   Widget _aquariumCard() {
     final progress = service.employeeAquariumProgress;
-    return EmployeeAquariumCard(
-      employeeId: employeeId,
-      fishCount: progress.fishCount,
-      totalFeed: progress.totalFeed,
-      availableFood: progress.availableFood,
-      weeklyLogins: progress.weeklyLogins,
-      loginsUntilNextFish: progress.loginsUntilNextFish,
-      deadFishCount: progress.deadFishCount,
-      fishBirthDates: progress.fishBirthDates,
+    return EmployeeBookstoreCard(
+      books: progress.totalFeed + progress.fishCount,
+      availableBooks: progress.availableFood,
+      loginStreak: progress.weeklyLogins,
+      loginsUntilUpgrade: progress.loginsUntilNextFish,
       loading: _aquariumLoading,
-      onFeed: _feedAquarium,
-      onClean: _cleanAquarium,
+      onAddBook: _feedAquarium,
+    );
+  }
+
+  Widget _myWorkdayCard() {
+    final now = DateTime.now();
+    final attendance = service.employeeAttendance(employeeId);
+    AttendanceRecord? today;
+    for (final record in attendance) {
+      if (record.date.year == now.year &&
+          record.date.month == now.month &&
+          record.date.day == now.day) {
+        today = record;
+        break;
+      }
+    }
+    final checkedIn = today?.effectiveCheckIn.trim().isNotEmpty == true;
+    final checkedOut = today?.effectiveCheckOut.trim().isNotEmpty == true;
+    final status = checkedOut
+        ? 'Workday completed'
+        : checkedIn
+            ? 'Currently at work'
+            : 'Not checked in';
+    final statusColor = checkedOut
+        ? const Color(0xFF19764A)
+        : checkedIn
+            ? const Color(0xFF2463C7)
+            : const Color(0xFFB76A13);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF102B4A), Color(0xFF183F67)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 7)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('MY WORKDAY',
+                      style: TextStyle(
+                          color: Color(0xFFFFD56A),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1)),
+                  Text('Today at a glance',
+                      style: TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: () => _selectTab(2),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF102B4A),
+              ),
+              icon: const Icon(Icons.schedule_rounded, size: 18),
+              label: const Text('Attendance'),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          Wrap(spacing: 9, runSpacing: 9, children: [
+            _workdayMetric(Icons.circle, status, 'Status', statusColor),
+            _workdayMetric(
+                Icons.login_rounded,
+                today?.effectiveCheckIn.trim().isNotEmpty == true
+                    ? today!.effectiveCheckIn
+                    : '--:--',
+                'Check in',
+                const Color(0xFF56C596)),
+            _workdayMetric(
+                Icons.logout_rounded,
+                today?.effectiveCheckOut.trim().isNotEmpty == true
+                    ? today!.effectiveCheckOut
+                    : '--:--',
+                'Check out',
+                const Color(0xFFFFBE55)),
+            _workdayMetric(Icons.notifications_active_outlined,
+                '$_unreadNotificationCount', 'Unread', const Color(0xFFEE7890)),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _workdayMetric(
+      IconData icon, String value, String label, Color color) {
+    return Container(
+      width: 142,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800)),
+              Text(label,
+                  style: const TextStyle(color: Colors.white60, fontSize: 9)),
+            ],
+          ),
+        ),
+      ]),
     );
   }
 
