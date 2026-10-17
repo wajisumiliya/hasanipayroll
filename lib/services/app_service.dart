@@ -772,7 +772,9 @@ class AppService extends ChangeNotifier {
       while (true) {
         final batch = await _supabase
             .from('payroll')
-            .select()
+            .select(
+              'id,employee_id,period,basic_salary,fw_salary,elaun_kedatangan,elaun_perkhidmatan,elaun_kerajinan,elaun_makanan,overtime,cuti_umum,epf_employee,socso_employee,eis_employee,pcb,zakat,epf_employer,socso_employer,eis_employer,new_ic_no,bank_code,bank_account,remarks,created_at,updated_at,late_deduction,unpaid_deduction,bonus,commission,other_earnings,advance,is_published,published_at,published_by,release_at',
+            )
             .order('period', ascending: false)
             .order('employee_id', ascending: true)
             .range(offset, offset + pageSize - 1);
