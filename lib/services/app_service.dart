@@ -1077,7 +1077,22 @@ class AppService extends ChangeNotifier {
   // LOAD ATTENDANCE
   // ==========================================================================
 
-  Future<void> loadAttendanceFromSupabase() async {
+  Future<void>? _attendanceLoadInFlight;
+
+  // Share simultaneous refreshes instead of issuing duplicate REST requests.
+  Future<void> loadAttendanceFromSupabase() {
+    final existing = _attendanceLoadInFlight;
+    if (existing != null) return existing;
+    final pending = _loadAttendanceFromSupabaseInternal();
+    _attendanceLoadInFlight = pending;
+    return pending.whenComplete(() {
+      if (identical(_attendanceLoadInFlight, pending)) {
+        _attendanceLoadInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _loadAttendanceFromSupabaseInternal() async {
     try {
       // Fetch only the fields used by AttendanceRecord. The attendance table
       // also contains lengthy duration/metadata fields that this model ignores.
