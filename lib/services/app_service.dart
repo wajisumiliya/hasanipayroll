@@ -1077,14 +1077,18 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadAttendanceFromSupabase() async {
     try {
-      // Filter employee attendance on the server to reduce data transfer.
+      // Fetch only the fields used by AttendanceRecord. The attendance table
+      // also contains lengthy duration/metadata fields that this model ignores.
+      // Keep the employee filter and admin/branch visibility unchanged.
+      const attendanceColumns =
+          'id,employee_id,branch_id,attendance_date,check_in,check_out,status,morning_in,morning_out,afternoon_in,afternoon_out,overtime_in,overtime_out,ot_authorized,approved_ot_minutes,overtime_minutes';
       final employeeId = _currentUser?.employeeId?.trim() ?? '';
       final response = _currentUser?.isEmployee == true && employeeId.isNotEmpty
           ? await _supabase
               .from('attendance')
-              .select()
+              .select(attendanceColumns)
               .eq('employee_id', employeeId)
-          : await _supabase.from('attendance').select();
+          : await _supabase.from('attendance').select(attendanceColumns);
 
       attendance.clear();
 
