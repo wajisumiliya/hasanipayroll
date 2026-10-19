@@ -1530,7 +1530,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     // Keep the existing dashboard UI and data shape while reading from Neon.
     // Do not fall back to Supabase: its quota restriction is the reason
     // this dashboard previously failed to load.
-    final results = await service.loadNeonAdminDashboard(selectedDashboardMonth);
+    final results =
+        await service.loadNeonAdminDashboard(selectedDashboardMonth);
 
     var employees = (results['employees'] as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
@@ -14734,7 +14735,10 @@ class _AdminDashboardState extends State<AdminDashboard>
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
         SupabaseService.getBranches(),
-        SupabaseService.database.from('employees').select().order('employee_id'),
+        SupabaseService.database
+            .from('employees')
+            .select()
+            .order('employee_id'),
         SupabaseService.database
             .from('payroll')
             .select()

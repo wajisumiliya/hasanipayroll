@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/payroll.dart';
+import '../screens/supabase_service.dart';
 
 // ============================================================================
 // APP USER
@@ -179,7 +180,9 @@ class AppService extends ChangeNotifier {
 
   static const String _currentUserStorageKey = 'hasani_current_user';
 
-  SupabaseClient get _supabase => Supabase.instance.client;
+  PostgrestClient get _database => SupabaseService.database;
+
+  SupabaseClient get _supabase => SupabaseService.client;
 
   static const String _authApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -265,7 +268,8 @@ class AppService extends ChangeNotifier {
     final data = await _getAuth(
       '/api/admin/dashboard/overview?year=${month.year}&month=${month.month}',
     );
-    if (data['ok'] != true || data['source'] != 'neon' ||
+    if (data['ok'] != true ||
+        data['source'] != 'neon' ||
         data['employees'] is! List ||
         data['payroll'] is! List ||
         data['branches'] is! List) {
@@ -283,6 +287,7 @@ class AppService extends ChangeNotifier {
 
   app_user? _currentUser;
   String? _accessToken;
+  String? _dataAccessToken;
   String? _branchLoginActivityId;
   EmployeeGardenProgress _employeeGardenProgress =
       const EmployeeGardenProgress();
@@ -308,7 +313,7 @@ class AppService extends ChangeNotifier {
   Future<void> refreshEmployeeGarden() async {
     if (_currentUser?.isEmployee != true) return;
     try {
-      final response = await _supabase.rpc('get_employee_garden');
+      final response = await _database.rpc('get_employee_garden');
       if (response is Map) {
         _employeeGardenProgress = EmployeeGardenProgress.fromJson(
           Map<String, dynamic>.from(response),
@@ -326,7 +331,7 @@ class AppService extends ChangeNotifier {
       return false;
     }
     try {
-      final response = await _supabase.rpc('tend_employee_garden');
+      final response = await _database.rpc('tend_employee_garden');
       if (response is Map) {
         final data = Map<String, dynamic>.from(response);
         data.putIfAbsent(
@@ -351,7 +356,7 @@ class AppService extends ChangeNotifier {
   Future<void> _recordEmployeeGardenVisit() async {
     if (_currentUser?.isEmployee != true) return;
     try {
-      final response = await _supabase.rpc('record_employee_garden_visit');
+      final response = await _database.rpc('record_employee_garden_visit');
       if (response is Map) {
         _employeeGardenProgress = EmployeeGardenProgress.fromJson(
           Map<String, dynamic>.from(response),
@@ -554,8 +559,12 @@ class AppService extends ChangeNotifier {
         throw const FormatException('Incomplete session');
       }
       _accessToken = token;
+      _dataAccessToken = session['data_access_token']?.toString();
       _currentUser = app_user.fromJson(Map<String, dynamic>.from(savedUser));
-      _supabase.rest.setAuth(token);
+      if (!SupabaseService.usesNeonDatabase ||
+          _dataAccessToken?.isNotEmpty == true) {
+        _applyDatabaseSession();
+      }
       _supabase.storage.setAuth(token);
       await _supabase.realtime.setAuth(token);
 
@@ -565,11 +574,15 @@ class AppService extends ChangeNotifier {
           await _clearStoredUser();
           _currentUser = null;
           _accessToken = null;
-          _supabase.rest.setAuth(null);
+          SupabaseService.setDatabaseAuth(null);
+          _dataAccessToken = null;
           await _supabase.realtime.setAuth(null);
           notifyListeners();
           return;
         }
+        _dataAccessToken =
+            validation['dataAccessToken']?.toString() ?? _dataAccessToken;
+        _applyDatabaseSession();
         final verified = Map<String, dynamic>.from(validation['user']);
         _currentUser = app_user(
           username: verified['username']?.toString() ?? _currentUser!.username,
@@ -589,15 +602,32 @@ class AppService extends ChangeNotifier {
         // Keep the still-present session during a temporary backend outage.
       }
 
+      _applyDatabaseSession();
       await _loadDataForCurrentUser();
     } catch (_) {
       await _clearStoredUser();
       _currentUser = null;
       _accessToken = null;
-      _supabase.rest.setAuth(null);
+      SupabaseService.setDatabaseAuth(null);
+      _dataAccessToken = null;
       await _supabase.realtime.setAuth(null);
     }
     notifyListeners();
+  }
+
+  void _applyDatabaseSession() {
+    try {
+      SupabaseService.setDatabaseSession(
+        accessToken: _accessToken,
+        dataAccessToken: _dataAccessToken,
+      );
+    } on StateError {
+      _currentUser = null;
+      _accessToken = null;
+      _dataAccessToken = null;
+      SupabaseService.setDatabaseAuth(null);
+      rethrow;
+    }
   }
 
   Future<void> _persistCurrentUser() async {
@@ -610,7 +640,11 @@ class AppService extends ChangeNotifier {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(
       _currentUserStorageKey,
-      jsonEncode({'access_token': token, 'user': user.toJson()}),
+      jsonEncode({
+        'access_token': token,
+        'data_access_token': _dataAccessToken,
+        'user': user.toJson(),
+      }),
     );
   }
 
@@ -625,7 +659,7 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadUsersFromSupabase() async {
     try {
-      final response = await _supabase.from('app_user').select();
+      final response = await _database.from('app_user').select();
 
       users.clear();
 
@@ -655,7 +689,8 @@ class AppService extends ChangeNotifier {
     try {
       final data = await _getAuth('/api/employees');
       if (data['ok'] != true || data['employees'] is! List) {
-        throw Exception(data['message']?.toString() ?? 'Unable to load employees from Neon.');
+        throw Exception(data['message']?.toString() ??
+            'Unable to load employees from Neon.');
       }
 
       employees.clear();
@@ -672,7 +707,8 @@ class AppService extends ChangeNotifier {
         }
       }
 
-      employees.removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
+      employees
+          .removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
       _employeesLoaded = true;
       notifyListeners();
     } catch (error) {
@@ -752,7 +788,8 @@ class AppService extends ChangeNotifier {
         uri,
         headers: {
           'Accept': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 45));
 
@@ -761,8 +798,11 @@ class AppService extends ChangeNotifier {
         final decoded = jsonDecode(response.body);
         if (decoded is Map) data = Map<String, dynamic>.from(decoded);
       }
-      if (response.statusCode < 200 || response.statusCode >= 300 || data['ok'] != true) {
-        throw Exception(data['message']?.toString() ?? 'Unable to load payroll from Neon.');
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          data['ok'] != true) {
+        throw Exception(
+            data['message']?.toString() ?? 'Unable to load payroll from Neon.');
       }
       final rows = data['payroll'] is List ? data['payroll'] as List : const [];
       payroll.clear();
@@ -775,12 +815,15 @@ class AppService extends ChangeNotifier {
         try {
           final row = Map<String, dynamic>.from(raw);
           final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
-              .toString().trim().toUpperCase();
+              .toString()
+              .trim()
+              .toUpperCase();
           if (_currentUser?.isEmployee == true &&
               !(row['is_published'] == true || row['isPublished'] == true)) {
             continue;
           }
-          if (_currentUser?.staffScope != null && !allowedEmployeeIds.contains(employeeId)) {
+          if (_currentUser?.staffScope != null &&
+              !allowedEmployeeIds.contains(employeeId)) {
             continue;
           }
           payroll.add(_payrollFromSupabase(row));
@@ -803,9 +846,11 @@ class AppService extends ChangeNotifier {
   Future<void> loadCurrentEmployeePayrollFromSupabase(String employeeId) async {
     final normalizedId = employeeId.trim();
     if (normalizedId.isEmpty) return;
-    final data = await _getAuth('/api/employees/${Uri.encodeComponent(normalizedId)}/payroll');
+    final data = await _getAuth(
+        '/api/employees/${Uri.encodeComponent(normalizedId)}/payroll');
     if (data['ok'] != true || data['payroll'] is! List) {
-      throw Exception(data['message']?.toString() ?? 'Unable to load employee payroll from Neon.');
+      throw Exception(data['message']?.toString() ??
+          'Unable to load employee payroll from Neon.');
     }
     final refreshed = <PayrollRecord>[];
     for (final raw in data['payroll'] as List) {
@@ -830,7 +875,8 @@ class AppService extends ChangeNotifier {
       '/api/payroll?year=${month.year}&month=${month.month}',
     );
     if (data['ok'] != true || data['payroll'] is! List) {
-      throw Exception(data['message']?.toString() ?? 'Unable to refresh monthly payroll from Neon.');
+      throw Exception(data['message']?.toString() ??
+          'Unable to refresh monthly payroll from Neon.');
     }
     payroll.removeWhere((record) =>
         record.period.year == month.year && record.period.month == month.month);
@@ -842,8 +888,11 @@ class AppService extends ChangeNotifier {
       try {
         final row = Map<String, dynamic>.from(raw);
         final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
-            .toString().trim().toUpperCase();
-        if (_currentUser?.staffScope != null && !allowedEmployeeIds.contains(employeeId)) {
+            .toString()
+            .trim()
+            .toUpperCase();
+        if (_currentUser?.staffScope != null &&
+            !allowedEmployeeIds.contains(employeeId)) {
           continue;
         }
         payroll.add(_payrollFromSupabase(row));
@@ -1046,14 +1095,14 @@ class AppService extends ChangeNotifier {
       var offset = 0;
       while (true) {
         final batch = _currentUser?.isEmployee == true && employeeId.isNotEmpty
-            ? await _supabase
+            ? await _database
                 .from('attendance')
                 .select(attendanceColumns)
                 .eq('employee_id', employeeId)
                 .order('attendance_date')
                 .order('id')
                 .range(offset, offset + pageSize - 1)
-            : await _supabase
+            : await _database
                 .from('attendance')
                 .select(attendanceColumns)
                 .order('attendance_date')
@@ -1279,7 +1328,8 @@ class AppService extends ChangeNotifier {
         _currentUser = null;
         return 'The server did not issue a valid session.';
       }
-      _supabase.rest.setAuth(_accessToken);
+      _dataAccessToken = data['dataAccessToken']?.toString();
+      _applyDatabaseSession();
       _supabase.storage.setAuth(_accessToken!);
       await _supabase.realtime.setAuth(_accessToken);
 
@@ -1295,7 +1345,7 @@ class AppService extends ChangeNotifier {
               getBranch(_currentUser?.branchId ?? enteredUsername)?.id ??
                   _currentUser?.branchId ??
                   enteredUsername;
-          final response = await _supabase
+          final response = await _database
               .from('branch_activity_logs')
               .insert({
                 'branch_id': resolvedBranch,
@@ -1479,7 +1529,8 @@ class AppService extends ChangeNotifier {
         _currentUser = null;
         return 'The server did not issue a valid session.';
       }
-      _supabase.rest.setAuth(_accessToken);
+      _dataAccessToken = data['dataAccessToken']?.toString();
+      _applyDatabaseSession();
       _supabase.storage.setAuth(_accessToken!);
       await _supabase.realtime.setAuth(_accessToken);
 
@@ -1547,7 +1598,7 @@ class AppService extends ChangeNotifier {
 
     if (activityId != null) {
       try {
-        await _supabase
+        await _database
             .from('branch_activity_logs')
             .update({'closed_at': DateTime.now().toUtc().toIso8601String()}).eq(
                 'id', activityId);
@@ -1559,7 +1610,8 @@ class AppService extends ChangeNotifier {
     _currentUser = null;
     _accessToken = null;
     _employeeGardenProgress = const EmployeeGardenProgress();
-    _supabase.rest.setAuth(null);
+    SupabaseService.setDatabaseAuth(null);
+    _dataAccessToken = null;
     await _supabase.realtime.setAuth(null);
     await _clearStoredUser();
 
@@ -1827,7 +1879,7 @@ class AppService extends ChangeNotifier {
       final employeePayload = _employeeToSupabase(employeeWithBranch)
         ..['employment_status'] = employmentStatus
         ..['payroll_branch_id'] = payrollBranchId;
-      await _supabase.from('employees').insert(employeePayload);
+      await _database.from('employees').insert(employeePayload);
 
       try {
         final salaryPayload = <String, dynamic>{
@@ -1835,7 +1887,7 @@ class AppService extends ChangeNotifier {
           ...salaryDefaults,
         };
         try {
-          await _supabase
+          await _database
               .from('employee_salary_defaults')
               .insert(salaryPayload);
         } catch (error) {
@@ -1849,13 +1901,13 @@ class AppService extends ChangeNotifier {
           // not run yet. The employee table still retains the address, and
           // statutory exports already use it as their fallback.
           salaryPayload.remove('address');
-          await _supabase
+          await _database
               .from('employee_salary_defaults')
               .insert(salaryPayload);
         }
       } catch (salaryError) {
         try {
-          await _supabase.from('employees').delete().eq('employee_id', cleanId);
+          await _database.from('employees').delete().eq('employee_id', cleanId);
         } catch (rollbackError) {
           return 'Employee $cleanId was added, but salary defaults failed: '
               '$salaryError. Employee rollback also failed: $rollbackError';
@@ -1898,7 +1950,7 @@ class AppService extends ChangeNotifier {
     }
 
     try {
-      await _supabase
+      await _database
           .from('employees')
           .update(
             _employeeToSupabase(
@@ -1944,22 +1996,22 @@ class AppService extends ChangeNotifier {
     }
 
     try {
-      await _supabase.from('attendance').delete().eq(
+      await _database.from('attendance').delete().eq(
             'employee_id',
             employee.employeeId,
           );
 
-      await _supabase.from('payroll').delete().eq(
+      await _database.from('payroll').delete().eq(
             'employee_id',
             employee.employeeId,
           );
 
-      await _supabase.from('app_user').delete().eq(
+      await _database.from('app_user').delete().eq(
             'employee_id',
             employee.employeeId,
           );
 
-      await _supabase.from('employees').delete().eq(
+      await _database.from('employees').delete().eq(
             'employee_id',
             employee.employeeId,
           );
@@ -1983,7 +2035,7 @@ class AppService extends ChangeNotifier {
     final id = employeeId.toString().trim();
     if (id.isEmpty) throw Exception('Employee ID was not found.');
 
-    await _supabase.rpc(
+    await _database.rpc(
       'set_employee_active_status',
       params: {
         'p_employee_id': id,
@@ -2327,7 +2379,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
         );
 
         if (existing != null) {
-          await _supabase
+          await _database
               .from('employees')
               .update(
                 _employeeToSupabase(
@@ -2348,7 +2400,7 @@ employeeId,name,designation,department,email,newIcNo,bankCode,bankAccount,phone,
 
           updated++;
         } else {
-          await _supabase.from('employees').insert(
+          await _database.from('employees').insert(
                 _employeeToSupabase(
                   employee,
                 ),
@@ -2713,14 +2765,14 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
         );
 
         if (existing != null) {
-          await _supabase.from('payroll').update(data).eq(
+          await _database.from('payroll').update(data).eq(
                 'id',
                 existing.id,
               );
 
           updated++;
         } else {
-          await _supabase.from('payroll').upsert(data);
+          await _database.from('payroll').upsert(data);
 
           imported++;
         }
@@ -3151,7 +3203,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     PayrollRecord record,
   ) async {
     try {
-      await _supabase.from('payroll').upsert(
+      await _database.from('payroll').upsert(
             _payrollToSupabase(
               record,
             ),
@@ -3171,7 +3223,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     String payrollId,
   ) async {
     try {
-      await _supabase.from('payroll').delete().eq(
+      await _database.from('payroll').delete().eq(
             'id',
             payrollId,
           );
@@ -3335,7 +3387,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     );
 
     try {
-      await _supabase.from('attendance').upsert(
+      await _database.from('attendance').upsert(
             _attendanceToSupabase(
               newRecord,
             ),
@@ -3375,7 +3427,7 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     DateTime date,
   ) async {
     try {
-      await _supabase
+      await _database
           .from('attendance')
           .delete()
           .eq(

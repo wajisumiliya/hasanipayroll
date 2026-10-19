@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/database_session.dart';
+
 class SupabaseService {
   // Diagnostics are debug-only and must not include payroll or identity data.
   static void _debugLog(String message) {
@@ -98,12 +100,27 @@ class SupabaseService {
 
   static SupabaseClient get client => Supabase.instance.client;
 
+  static bool get usesNeonDatabase => neonDataApiUrl.trim().isNotEmpty;
+
   static final PostgrestClient? _neonDatabase =
       neonDataApiUrl.trim().isEmpty ? null : PostgrestClient(neonDataApiUrl);
 
   /// Database-only client. Auth, Storage, Realtime, and Edge Functions must
   /// continue through [client] until their Neon adapters are enabled.
   static PostgrestClient get database => _neonDatabase ?? client.rest;
+
+  /// API tokens remain on the Node API / legacy services. Neon accepts only
+  /// the separately signed data token verified through the backend JWKS.
+  static void setDatabaseSession({
+    required String? accessToken,
+    required String? dataAccessToken,
+  }) {
+    setDatabaseAuth(databaseSessionToken(
+      usesNeon: usesNeonDatabase,
+      accessToken: accessToken,
+      dataAccessToken: dataAccessToken,
+    ));
+  }
 
   static void setDatabaseAuth(String? token) {
     database.setAuth(token);
