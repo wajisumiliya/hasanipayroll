@@ -1590,22 +1590,18 @@ class SupabaseService {
     await AppService.instance.submitDailyReportToNeon(report);
   }
 
-  static Future<Map<String, dynamic>> verifyDailyReportPin(String pin) async {
-    final response = await database.rpc(
-      'verify_daily_report_pin',
-      params: {'p_pin': pin.trim()},
-    );
-    return Map<String, dynamic>.from(response as Map);
+  static Future<Map<String, dynamic>> verifyDailyReportPin(String pin) {
+    return AppService.instance.verifyDailyReportPinOnNeon(pin);
   }
 
   static Future<void> changeDailyReportPin({
     required String currentPin,
     required String newPin,
-  }) async {
-    await database.rpc('change_daily_report_pin', params: {
-      'p_current_pin': currentPin.trim(),
-      'p_new_pin': newPin.trim(),
-    });
+  }) {
+    return AppService.instance.changeDailyReportPinOnNeon(
+      currentPin: currentPin,
+      newPin: newPin,
+    );
   }
 
   static Future<void> reviewDailyReport({

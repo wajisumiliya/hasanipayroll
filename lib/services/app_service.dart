@@ -202,6 +202,28 @@ class AppService extends ChangeNotifier {
     return Uri.parse('$base/${path.replaceFirst(RegExp(r'^/+'), '')}');
   }
 
+  Future<Map<String, dynamic>> verifyDailyReportPinOnNeon(String pin) {
+    return _postAuth(
+      '/api/daily-reports/pin/verify',
+      {'pin': pin.trim()},
+      authenticated: true,
+    );
+  }
+
+  Future<void> changeDailyReportPinOnNeon({
+    required String currentPin,
+    required String newPin,
+  }) async {
+    final result = await _postAuth(
+      '/api/daily-reports/pin/change',
+      {'current_pin': currentPin.trim(), 'new_pin': newPin.trim()},
+      authenticated: true,
+    );
+    if (result['ok'] != true) {
+      throw StateError(result['message']?.toString() ?? 'PIN update failed.');
+    }
+  }
+
   Future<Map<String, dynamic>> configureBranchPassword({
     required String username,
     required String newPassword,

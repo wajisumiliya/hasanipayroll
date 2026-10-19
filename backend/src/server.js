@@ -2030,6 +2030,150 @@ app.get("/api/attendance", authenticate, async (req, res) => {
 
 // Authenticated Neon daily reports list with server-enforced branch scope.
 // Daily report creation is branch-scoped; caller cannot choose another branch.
+// Branch-scoped Daily Report PINs are stored in Neon. Never accept a
+// branch ID from the request body; the authenticated JWT determines scope.
+const dailyReportPinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, message: "Too many PIN requests. Try again later." },
+});
+
+function dailyReportPinBranch(req, res) {
+  if (String(req.user?.role ?? "").toUpperCase() !== "BRANCH") {
+    res.status(403).json({ ok: false, message: "Branch access required." });
+    return null;
+  }
+  const branchId = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+  if (!branchId) {
+    res.status(403).json({ ok: false, message: "Branch scope is missing." });
+    return null;
+  }
+  return branchId;
+}
+
+app.post("/api/daily-reports/pin/verify", dailyReportPinLimiter, authenticate, async (req, res) => {
+  const branchId = dailyReportPinBranch(req, res);
+  if (!branchId) return;
+  const pin = String(req.body?.pin ?? "").trim();
+  if (!/^\\d{4}$/.test(pin)) {
+    return res.status(400).json({ ok: false, message: "A four-digit PIN is required." });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Serialise attempts per branch, including the first attempt.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", ["daily-report-pin:" + branchId.toLowerCase()]);
+    const attempts = await client.query(
+      "SELECT failed_attempts, window_started_at, locked_until FROM public.daily_report_pin_attempts WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1)) LIMIT 1 FOR UPDATE",
+      [branchId],
+    );
+    const attempt = attempts.rows[0];
+    const now = Date.now();
+    if (attempt?.locked_until && new Date(attempt.locked_until).getTime() > now) {
+      await client.query("COMMIT");
+      return res.status(429).json({ ok: false, message: "Too many incorrect attempts. Try again later." });
+    }
+    const stored = await client.query(
+      "SELECT pin_hash FROM public.daily_report_branch_pins WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1)) LIMIT 1",
+      [branchId],
+    );
+    const hash = stored.rows[0]?.pin_hash;
+    const valid = hash ? await bcrypt.compare(pin, hash) : pin === "2026";
+    if (valid) {
+      await client.query("DELETE FROM public.daily_report_pin_attempts WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1))", [branchId]);
+      await client.query("COMMIT");
+      return res.json({ ok: true, valid: true, must_change: !hash });
+    }
+    const expiredWindow = !attempt || new Date(attempt.window_started_at).getTime() < now - 15 * 60 * 1000;
+    const failed = (expiredWindow ? 0 : Number(attempt.failed_attempts)) + 1;
+    const lockedUntil = failed >= 5 ? new Date(now + 15 * 60 * 1000) : null;
+    await client.query(
+      `INSERT INTO public.daily_report_pin_attempts
+       (branch_id, failed_attempts, window_started_at, locked_until, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (branch_id) DO UPDATE SET failed_attempts = EXCLUDED.failed_attempts,
+       window_started_at = EXCLUDED.window_started_at, locked_until = EXCLUDED.locked_until, updated_at = NOW()`,
+      [branchId, failed, expiredWindow ? new Date(now) : attempt.window_started_at, lockedUntil],
+    );
+    await client.query("COMMIT");
+    return res.json({ ok: true, valid: false, must_change: false });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("DAILY REPORT PIN VERIFY ERROR:", error.message);
+    return genericError(res, 503);
+  } finally {
+    client.release();
+  }
+});
+
+app.post("/api/daily-reports/pin/change", dailyReportPinLimiter, authenticate, async (req, res) => {
+  const branchId = dailyReportPinBranch(req, res);
+  if (!branchId) return;
+  const currentPin = String(req.body?.current_pin ?? "").trim();
+  const newPin = String(req.body?.new_pin ?? "").trim();
+  if (!/^\\d{4}$/.test(currentPin) || !/^\\d{4}$/.test(newPin) || newPin === "2026") {
+    return res.status(400).json({ ok: false, message: "Choose a new four-digit PIN." });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", ["daily-report-pin:" + branchId.toLowerCase()]);
+    const attempts = await client.query(
+      "SELECT locked_until FROM public.daily_report_pin_attempts WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1)) LIMIT 1",
+      [branchId],
+    );
+    if (attempts.rows[0]?.locked_until && new Date(attempts.rows[0].locked_until).getTime() > Date.now()) {
+      await client.query("COMMIT");
+      return res.status(429).json({ ok: false, message: "Too many incorrect attempts. Try again later." });
+    }
+    const stored = await client.query(
+      "SELECT pin_hash FROM public.daily_report_branch_pins WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1)) LIMIT 1 FOR UPDATE",
+      [branchId],
+    );
+    const hash = stored.rows[0]?.pin_hash;
+    const valid = hash ? await bcrypt.compare(currentPin, hash) : currentPin === "2026";
+    if (!valid) {
+      const state = await client.query(
+        "SELECT failed_attempts, window_started_at FROM public.daily_report_pin_attempts WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1)) LIMIT 1 FOR UPDATE",
+        [branchId],
+      );
+      const previous = state.rows[0];
+      const now = Date.now();
+      const expired = !previous || new Date(previous.window_started_at).getTime() < now - 15 * 60 * 1000;
+      const failures = (expired ? 0 : Number(previous.failed_attempts)) + 1;
+      await client.query(
+        `INSERT INTO public.daily_report_pin_attempts
+         (branch_id, failed_attempts, window_started_at, locked_until, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (branch_id) DO UPDATE SET failed_attempts = EXCLUDED.failed_attempts,
+         window_started_at = EXCLUDED.window_started_at, locked_until = EXCLUDED.locked_until, updated_at = NOW()`,
+        [branchId, failures, expired ? new Date(now) : previous.window_started_at,
+          failures >= 5 ? new Date(now + 15 * 60 * 1000) : null],
+      );
+      await client.query("COMMIT");
+      return res.status(403).json({ ok: false, message: "Incorrect current PIN." });
+    }
+    const newHash = await bcrypt.hash(newPin, 12);
+    await client.query(
+      `INSERT INTO public.daily_report_branch_pins (branch_id, pin_hash, changed_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (branch_id) DO UPDATE SET pin_hash = EXCLUDED.pin_hash, changed_at = NOW()`,
+      [branchId, newHash],
+    );
+    await client.query("DELETE FROM public.daily_report_pin_attempts WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1))", [branchId]);
+    await client.query("COMMIT");
+    return res.json({ ok: true });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("DAILY REPORT PIN CHANGE ERROR:", error.message);
+    return genericError(res, 503);
+  } finally {
+    client.release();
+  }
+});
+
 app.post("/api/daily-reports", authenticate, async (req, res) => {
   try {
     if (String(req.user?.role ?? "").toUpperCase() !== "BRANCH") {
