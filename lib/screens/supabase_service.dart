@@ -1655,45 +1655,17 @@ class SupabaseService {
     int year,
     int month,
   ) async {
-    try {
-      final startDate = '${year.toString().padLeft(4, '0')}-'
-          '${month.toString().padLeft(2, '0')}-01';
-
-      final nextMonth = DateTime(
-        year,
-        month + 1,
-        1,
-      );
-
-      final endDate = _dateOnlyText(nextMonth);
-
-      final response = await database
-          .from('attendance')
-          .select()
-          .eq(
-            'employee_id',
-            employeeId.toString(),
-          )
-          .gte(
-            'attendance_date',
-            startDate,
-          )
-          .lt(
-            'attendance_date',
-            endDate,
-          )
-          .order(
-            'attendance_date',
-            ascending: true,
-          );
-
-      return _mapList(response);
-    } catch (e, stackTrace) {
-      _debugLog(
-        'GET EMPLOYEE ATTENDANCE BY MONTH ERROR: $e',
-      );
-      rethrow;
-    }
+    final id = employeeId.toString().trim();
+    if (id.isEmpty) return <Map<String, dynamic>>[];
+    final rows = await AppService.instance.loadNeonAttendance(
+      year: year,
+      month: month,
+    );
+    return rows.where((row) =>
+      (row['employee_id']?.toString().trim() ?? '') == id
+    ).toList()
+      ..sort((a, b) => (a['attendance_date']?.toString() ?? '')
+          .compareTo(b['attendance_date']?.toString() ?? ''));
   }
 
   // ============================================================
