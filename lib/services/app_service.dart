@@ -259,6 +259,24 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  /// Loads the original admin dashboard's existing data model from Neon.
+  /// Authentication and permissions are checked by the Node API.
+  Future<Map<String, dynamic>> loadNeonAdminDashboard(DateTime month) async {
+    final data = await _getAuth(
+      '/api/admin/dashboard/overview?year=${month.year}&month=${month.month}',
+    );
+    if (data['ok'] != true || data['source'] != 'neon' ||
+        data['employees'] is! List ||
+        data['payroll'] is! List ||
+        data['branches'] is! List) {
+      throw StateError(
+        data['message']?.toString() ??
+            'Cannot load dashboard from Neon. Check your DEV backend.',
+      );
+    }
+    return data;
+  }
+
   // ==========================================================================
   // CURRENT USER
   // ==========================================================================
