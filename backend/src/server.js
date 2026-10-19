@@ -1913,6 +1913,37 @@ app.get(
   },
 );
 
+// Authenticated leave request listing. Approval mutations remain on the legacy path.
+app.get("/api/leave-requests", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").toUpperCase();
+    const params = [];
+    let scope = "";
+    if (role === "BRANCH") {
+      const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+      if (!branch) return res.status(403).json({ ok: false, message: "Branch scope missing." });
+      params.push(branch);
+      scope = "WHERE LOWER(TRIM(l.branch_id)) = LOWER(TRIM($1))";
+    } else if (role === "EMPLOYEE") {
+      const employeeId = normalizeEmployeeId(req.user.employeeId ?? req.user.employee_id);
+      if (!employeeId) return res.status(403).json({ ok: false, message: "Employee scope missing." });
+      params.push(employeeId);
+      scope = "WHERE UPPER(TRIM(l.employee_id)) = $1";
+    } else if (role !== "ADMIN") {
+      return res.status(403).json({ ok: false, message: "Access denied." });
+    }
+    const result = await pool.query(
+      `SELECT to_jsonb(l) AS data FROM public.leave_requests AS l
+       ${scope} ORDER BY l.submitted_at DESC`,
+      params,
+    );
+    return res.json({ ok: true, requests: result.rows.map((row) => row.data) });
+  } catch (error) {
+    console.error("LEAVE REQUESTS LIST ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 // Read-only EA forms: authenticated, scoped, and backed by Neon.
 app.get("/api/ea-forms", authenticate, async (req, res) => {
   try {

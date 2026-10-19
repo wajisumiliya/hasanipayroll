@@ -715,6 +715,20 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  /// Scoped leave requests retrieved through the authenticated Neon backend.
+  Future<List<Map<String, dynamic>>> fetchLeaveRequestsFromNeon() async {
+    final data = await _getAuth('/api/leave-requests');
+    if (data['ok'] != true || data['requests'] is! List) {
+      throw StateError(
+        data['message']?.toString() ?? 'Unable to load leave requests from Neon.',
+      );
+    }
+    return (data['requests'] as List)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');

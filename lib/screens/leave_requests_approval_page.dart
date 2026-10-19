@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'supabase_service.dart';
+import '../services/app_service.dart';
 import '../services/notification_service.dart';
 
 class LeaveRequestsApprovalPage extends StatefulWidget {
@@ -38,9 +39,7 @@ class _LeaveRequestsApprovalPageState extends State<LeaveRequestsApprovalPage> {
   void _refresh() => _future = _load();
 
   Future<List<Map<String, dynamic>>> _load() async {
-    var rows = widget.adminMode
-        ? await SupabaseService.getAllLeaveRequests()
-        : await SupabaseService.getBranchLeaveRequests(widget.branchId ?? '');
+    var rows = await AppService.instance.fetchLeaveRequestsFromNeon();
     final visible = widget.employeeIds;
     if (!widget.adminMode && visible != null) {
       rows = rows.where((row) {
