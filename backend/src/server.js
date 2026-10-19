@@ -1913,6 +1913,41 @@ app.get(
   },
 );
 
+// Authenticated Neon daily reports list with server-enforced branch scope.
+app.get("/api/daily-reports", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").toUpperCase();
+    const date = req.query.date == null ? "" : String(req.query.date);
+    if (date && !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+      return res.status(400).json({ ok: false, message: "Invalid report date." });
+    }
+    const params = [];
+    const conditions = [];
+    if (role === "BRANCH") {
+      const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+      if (!branch) return res.status(403).json({ ok: false, message: "Branch scope missing." });
+      params.push(branch);
+      conditions.push(`LOWER(TRIM(d.branch_id)) = LOWER(TRIM(${params.length}))`);
+    } else if (role !== "ADMIN") {
+      return res.status(403).json({ ok: false, message: "Access denied." });
+    }
+    if (date) {
+      params.push(date);
+      conditions.push(`d.report_date = ${params.length}::date`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const result = await pool.query(
+      `SELECT to_jsonb(d) AS data FROM public.daily_reports AS d
+       ${where} ORDER BY d.report_date DESC`,
+      params,
+    );
+    return res.json({ ok: true, reports: result.rows.map((row) => row.data) });
+  } catch (error) {
+    console.error("DAILY REPORT LIST ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 // Authenticated leave request listing. Approval mutations remain on the legacy path.
 app.get("/api/leave-requests", authenticate, async (req, res) => {
   try {
