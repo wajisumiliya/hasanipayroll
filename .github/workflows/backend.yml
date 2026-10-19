@@ -3,12 +3,12 @@ name: Backend CI
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, neon-dev, feature/full-neon-migration]
     paths:
       - "backend/**"
       - ".github/workflows/backend.yml"
   pull_request:
-    branches: [main]
+    branches: [main, neon-dev]
     paths:
       - "backend/**"
       - ".github/workflows/backend.yml"

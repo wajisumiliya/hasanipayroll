@@ -29,13 +29,7 @@ const JWT_SECRET = String(
   process.env.JWT_SECRET || "",
 ).trim();
 
-const SUPABASE_JWT_SECRET = String(
-  process.env.SUPABASE_JWT_SECRET || "",
-).trim();
-
-const SUPABASE_JWT_KEY_ID = String(
-  process.env.SUPABASE_JWT_KEY_ID || "",
-).trim();
+const ACCESS_TOKEN_SECRET = JWT_SECRET;
 
 const JWT_EXPIRES_IN =
   process.env.JWT_EXPIRES_IN || "8h";
@@ -96,13 +90,6 @@ if (JWT_SECRET.length < 32) {
     "FATAL: JWT_SECRET must be at least 32 characters.",
   );
 
-  process.exit(1);
-}
-
-if (SUPABASE_JWT_SECRET.length < 32) {
-  console.error(
-    "FATAL: SUPABASE_JWT_SECRET must be a signing secret trusted by Supabase.",
-  );
   process.exit(1);
 }
 
@@ -473,12 +460,9 @@ function createAccessToken(
       type: "access",
     },
 
-    SUPABASE_JWT_SECRET,
+    ACCESS_TOKEN_SECRET,
 
     {
-      ...(SUPABASE_JWT_KEY_ID
-        ? { keyid: SUPABASE_JWT_KEY_ID }
-        : {}),
       expiresIn:
         JWT_EXPIRES_IN,
 
@@ -618,7 +602,7 @@ async function authenticate(
     const payload =
       jwt.verify(
         token,
-        SUPABASE_JWT_SECRET,
+        ACCESS_TOKEN_SECRET,
         {
           issuer:
             "hasani-payroll",
