@@ -635,69 +635,31 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadEmployeesFromSupabase() async {
     try {
-      final response = await _supabase.from('employees').select();
-      final salaryDefaultAddresses = <String, String>{};
-
-      try {
-        // Employee sessions only need their own salary-default address.
-        // Admin and branch sessions retain the full address lookup.
-        final signedInEmployeeId = _currentUser?.employeeId?.trim() ?? '';
-        final salaryDefaults =
-            _currentUser?.isEmployee == true && signedInEmployeeId.isNotEmpty
-                ? await _supabase
-                    .from('employee_salary_defaults')
-                    .select('employee_id,address')
-                    .eq('employee_id', signedInEmployeeId)
-                : await _supabase
-                    .from('employee_salary_defaults')
-                    .select('employee_id,address');
-        for (final row in salaryDefaults) {
-          final employeeId = row['employee_id']?.toString().trim() ?? '';
-          final address = row['address']?.toString().trim() ?? '';
-          if (employeeId.isNotEmpty && address.isNotEmpty) {
-            salaryDefaultAddresses[employeeId] = address;
-          }
-        }
-      } catch (_) {
-        // Optional compatibility data may be unavailable.
+      final data = await _getAuth('/api/employees');
+      if (data['ok'] != true || data['employees'] is! List) {
+        throw Exception(data['message']?.toString() ?? 'Unable to load employees from Neon.');
       }
 
       employees.clear();
-
-      for (final row in response) {
+      for (final raw in data['employees'] as List) {
+        if (raw is! Map) continue;
         try {
-          var employee = _employeeFromSupabase(
-            Map<String, dynamic>.from(
-              row,
-            ),
-          );
-          final salaryDefaultAddress =
-              salaryDefaultAddresses[employee.employeeId];
-          if (salaryDefaultAddress != null) {
-            employee = employee.copyWith(address: salaryDefaultAddress);
-          }
-
+          final row = Map<String, dynamic>.from(raw);
+          final employee = _employeeFromSupabase(row);
           if (employee.employeeId.trim().isNotEmpty) {
             employees.add(employee);
           }
         } catch (_) {
-          // Skip malformed employee rows without exposing row details.
+          // Skip malformed rows without logging employee identity details.
         }
       }
 
-      employees
-          .removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
-
+      employees.removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
       _employeesLoaded = true;
-
       notifyListeners();
-    } catch (e) {
+    } catch (error) {
       _employeesLoaded = false;
-
-      debugPrint(
-        'ERROR loading employees: $e',
-      );
-
+      debugPrint('ERROR loading employees from payroll API.');
       rethrow;
     }
   }
@@ -766,56 +728,52 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadPayrollFromSupabase() async {
     try {
-      const pageSize = 1000;
-      final response = <Map<String, dynamic>>[];
-      var offset = 0;
-      while (true) {
-        final batch = await _supabase
-            .from('payroll')
-            .select(
-              'id,employee_id,period,basic_salary,fw_salary,elaun_kedatangan,elaun_perkhidmatan,elaun_kerajinan,elaun_makanan,overtime,cuti_umum,epf_employee,socso_employee,eis_employee,pcb,zakat,epf_employer,socso_employer,eis_employer,new_ic_no,bank_code,bank_account,remarks,created_at,updated_at,late_deduction,unpaid_deduction,bonus,commission,other_earnings,advance,is_published,published_at,published_by,release_at',
-            )
-            .order('period', ascending: false)
-            .order('employee_id', ascending: true)
-            .range(offset, offset + pageSize - 1);
-        final page = List<Map<String, dynamic>>.from(batch);
-        response.addAll(page);
-        if (page.length < pageSize) break;
-        offset += pageSize;
+      final uri = _authUri('/api/payroll');
+      final token = _accessToken;
+      final response = await http.get(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 45));
+
+      Map<String, dynamic> data = {};
+      if (response.body.trim().isNotEmpty) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) data = Map<String, dynamic>.from(decoded);
       }
-
+      if (response.statusCode < 200 || response.statusCode >= 300 || data['ok'] != true) {
+        throw Exception(data['message']?.toString() ?? 'Unable to load payroll from Neon.');
+      }
+      final rows = data['payroll'] is List ? data['payroll'] as List : const [];
       payroll.clear();
-
       final allowedEmployeeIds = employees
           .map((employee) => employee.employeeId.trim().toUpperCase())
           .toSet();
 
-      for (final row in response) {
+      for (final raw in rows) {
+        if (raw is! Map) continue;
         try {
-          if (_currentUser?.isEmployee == true &&
-              !_supabaseBool(row['is_published'] ?? row['isPublished'])) {
-            continue;
-          }
+          final row = Map<String, dynamic>.from(raw);
           final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
-              .toString()
-              .trim()
-              .toUpperCase();
-          if (_currentUser?.staffScope != null &&
-              !allowedEmployeeIds.contains(employeeId)) {
+              .toString().trim().toUpperCase();
+          if (_currentUser?.isEmployee == true &&
+              !(row['is_published'] == true || row['isPublished'] == true)) {
             continue;
           }
-          payroll.add(
-            _payrollFromSupabase(
-              Map<String, dynamic>.from(
-                row,
-              ),
-            ),
-          );
+          if (_currentUser?.staffScope != null && !allowedEmployeeIds.contains(employeeId)) {
+            continue;
+          }
+          payroll.add(_payrollFromSupabase(row));
         } catch (_) {
-          // Skip malformed payroll rows without exposing row details.
+          // Skip malformed records without logging payroll data.
         }
       }
-
+      payroll.sort((a, b) {
+        final byPeriod = b.period.compareTo(a.period);
+        return byPeriod != 0 ? byPeriod : a.employeeId.compareTo(b.employeeId);
+      });
       notifyListeners();
     } catch (_) {
       rethrow;
@@ -827,32 +785,21 @@ class AppService extends ChangeNotifier {
   Future<void> loadCurrentEmployeePayrollFromSupabase(String employeeId) async {
     final normalizedId = employeeId.trim();
     if (normalizedId.isEmpty) return;
-    const pageSize = 1000;
-    final refreshed = <PayrollRecord>[];
-    var offset = 0;
-    while (true) {
-      final batch = await _supabase
-          .from('payroll')
-          .select()
-          .eq('employee_id', normalizedId)
-          .eq('is_published', true)
-          .order('period', ascending: false)
-          .range(offset, offset + pageSize - 1);
-      final page = List<Map<String, dynamic>>.from(batch);
-      for (final row in page) {
-        try {
-          refreshed.add(_payrollFromSupabase(row));
-        } catch (_) {
-          // Ignore malformed records without exposing payroll data.
-        }
-      }
-      if (page.length < pageSize) break;
-      offset += pageSize;
+    final data = await _getAuth('/api/employees/${Uri.encodeComponent(normalizedId)}/payroll');
+    if (data['ok'] != true || data['payroll'] is! List) {
+      throw Exception(data['message']?.toString() ?? 'Unable to load employee payroll from Neon.');
     }
-    payroll.removeWhere(
-      (record) =>
-          record.employeeId.trim().toUpperCase() == normalizedId.toUpperCase(),
-    );
+    final refreshed = <PayrollRecord>[];
+    for (final raw in data['payroll'] as List) {
+      if (raw is! Map) continue;
+      try {
+        refreshed.add(_payrollFromSupabase(Map<String, dynamic>.from(raw)));
+      } catch (_) {
+        // Skip malformed records without exposing payroll values.
+      }
+    }
+    payroll.removeWhere((record) =>
+        record.employeeId.trim().toUpperCase() == normalizedId.toUpperCase());
     payroll.addAll(refreshed);
     payroll.sort((a, b) => b.period.compareTo(a.period));
     notifyListeners();
@@ -861,60 +808,34 @@ class AppService extends ChangeNotifier {
   /// Refreshes only one generated payroll month instead of downloading the
   /// complete payroll history after every batch generation.
   Future<void> loadPayrollMonthFromSupabase(DateTime month) async {
-    final start = DateTime(month.year, month.month, 1);
-    final end = DateTime(month.year, month.month + 1, 1);
-    const pageSize = 1000;
-    final response = <Map<String, dynamic>>[];
-    var offset = 0;
-    while (true) {
-      final batch = await _supabase
-          .from('payroll')
-          .select()
-          .gte('period', _dateOnlyString(start))
-          .lt('period', _dateOnlyString(end))
-          .order('employee_id', ascending: true)
-          .range(offset, offset + pageSize - 1);
-      final page = List<Map<String, dynamic>>.from(batch);
-      response.addAll(page);
-      if (page.length < pageSize) break;
-      offset += pageSize;
+    final data = await _getAuth(
+      '/api/payroll?year=${month.year}&month=${month.month}',
+    );
+    if (data['ok'] != true || data['payroll'] is! List) {
+      throw Exception(data['message']?.toString() ?? 'Unable to refresh monthly payroll from Neon.');
     }
-
+    payroll.removeWhere((record) =>
+        record.period.year == month.year && record.period.month == month.month);
     final allowedEmployeeIds = employees
         .map((employee) => employee.employeeId.trim().toUpperCase())
         .toSet();
-    payroll.removeWhere(
-      (record) =>
-          record.period.year == start.year &&
-          record.period.month == start.month,
-    );
-
-    for (final rawRow in response) {
+    for (final raw in data['payroll'] as List) {
+      if (raw is! Map) continue;
       try {
-        final row = Map<String, dynamic>.from(rawRow);
-        if (_currentUser?.isEmployee == true &&
-            !_supabaseBool(row['is_published'] ?? row['isPublished'])) {
-          continue;
-        }
+        final row = Map<String, dynamic>.from(raw);
         final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
-            .toString()
-            .trim()
-            .toUpperCase();
-        if (_currentUser?.staffScope != null &&
-            !allowedEmployeeIds.contains(employeeId)) {
+            .toString().trim().toUpperCase();
+        if (_currentUser?.staffScope != null && !allowedEmployeeIds.contains(employeeId)) {
           continue;
         }
         payroll.add(_payrollFromSupabase(row));
       } catch (_) {
-        // Keep the same malformed-row handling as the full payroll loader.
+        // Skip malformed records without exposing payroll data.
       }
     }
-
     payroll.sort((a, b) {
-      final periodComparison = b.period.compareTo(a.period);
-      return periodComparison != 0
-          ? periodComparison
-          : a.employeeId.compareTo(b.employeeId);
+      final byPeriod = b.period.compareTo(a.period);
+      return byPeriod != 0 ? byPeriod : a.employeeId.compareTo(b.employeeId);
     });
     notifyListeners();
   }
