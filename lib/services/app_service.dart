@@ -285,7 +285,7 @@ class AppService extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> loadNeonBranches() async {
     final data = await _getAuth('/api/branches');
     if (data['ok'] != true || data['branches'] is! List) {
-      throw StateError(data['message']?.toString() ?? 'Cannot load branches from Neon.');
+      throw StateError(\n        data['message']?.toString() ?? 'Cannot load branches from Neon.',\n      );
     }
     return (data['branches'] as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
