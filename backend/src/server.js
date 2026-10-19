@@ -2135,6 +2135,23 @@ app.post("/api/daily-reports/pin/change", dailyReportPinLimiter, authenticate, a
     const hash = stored.rows[0]?.pin_hash;
     const valid = hash ? await bcrypt.compare(currentPin, hash) : currentPin === "2026";
     if (!valid) {
+      const state = await client.query(
+        "SELECT failed_attempts, window_started_at FROM public.daily_report_pin_attempts WHERE LOWER(TRIM(branch_id)) = LOWER(TRIM($1)) LIMIT 1 FOR UPDATE",
+        [branchId],
+      );
+      const previous = state.rows[0];
+      const now = Date.now();
+      const expired = !previous || new Date(previous.window_started_at).getTime() < now - 15 * 60 * 1000;
+      const failures = (expired ? 0 : Number(previous.failed_attempts)) + 1;
+      await client.query(
+        `INSERT INTO public.daily_report_pin_attempts
+         (branch_id, failed_attempts, window_started_at, locked_until, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (branch_id) DO UPDATE SET failed_attempts = EXCLUDED.failed_attempts,
+         window_started_at = EXCLUDED.window_started_at, locked_until = EXCLUDED.locked_until, updated_at = NOW()`,
+        [branchId, failures, expired ? new Date(now) : previous.window_started_at,
+          failures >= 5 ? new Date(now + 15 * 60 * 1000) : null],
+      );
       await client.query("COMMIT");
       return res.status(403).json({ ok: false, message: "Incorrect current PIN." });
     }
