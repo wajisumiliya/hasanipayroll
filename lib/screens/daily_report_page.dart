@@ -70,8 +70,8 @@ class _DailyReportPageState extends State<DailyReportPage> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _load() => SupabaseService.getDailyReports(
-        branchId: widget.adminMode ? null : widget.branchId,
+  Future<List<Map<String, dynamic>>> _load() =>
+      AppService.instance.fetchDailyReportsFromNeon(
         reportDate: reportFilterDate,
       );
 

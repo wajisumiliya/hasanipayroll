@@ -729,6 +729,27 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  /// Scoped daily reports loaded from Neon via Render API.
+  Future<List<Map<String, dynamic>>> fetchDailyReportsFromNeon({
+    DateTime? reportDate,
+  }) async {
+    final date = reportDate == null
+        ? ''
+        : '?date=${reportDate.year.toString().padLeft(4, '0')}-'
+          '${reportDate.month.toString().padLeft(2, '0')}-'
+          '${reportDate.day.toString().padLeft(2, '0')}';
+    final data = await _getAuth('/api/daily-reports$date');
+    if (data['ok'] != true || data['reports'] is! List) {
+      throw StateError(
+        data['message']?.toString() ?? 'Unable to load daily reports from Neon.',
+      );
+    }
+    return (data['reports'] as List)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');
