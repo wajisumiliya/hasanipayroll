@@ -1,0 +1,48 @@
+name: Neon Flutter Preview CI
+
+on:
+  push:
+    branches: [feature/neon-flutter-preview]
+    paths:
+      - "lib/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".github/workflows/neon-preview-ci.yml"
+  pull_request:
+    branches: [neon-dev]
+    paths:
+      - "lib/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".github/workflows/neon-preview-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    name: Build Neon Flutter preview (web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze preview entrypoint
+        run: dart analyze lib/neon_preview.dart
+      - name: Build isolated Neon Flutter preview
+        run: flutter build web --release --no-pub --dart-define=NEON_PREVIEW=true --dart-define=API_BASE_URL=http://127.0.0.1:5001
+      - name: Verify output
+        run: test -f build/web/index.html
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-flutter-preview-web
+          path: build/web/
+          retention-days: 7
