@@ -1632,7 +1632,7 @@ class SupabaseService {
   }
 
   static Future<void> submitDailyReport(Map<String, dynamic> report) async {
-    await database.from('daily_reports').insert(report);
+    await AppService.instance.submitDailyReportToNeon(report);
   }
 
   static Future<Map<String, dynamic>> verifyDailyReportPin(String pin) async {
@@ -1658,12 +1658,11 @@ class SupabaseService {
     required String comment,
     required String reviewer,
   }) async {
-    await database.from('daily_reports').update({
-      'hq_comment': comment.trim(),
-      'reviewed_by': reviewer.trim(),
-      'reviewed_at': DateTime.now().toUtc().toIso8601String(),
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', id);
+    await AppService.instance.reviewDailyReportOnNeon(
+      id: id,
+      comment: comment,
+      reviewer: reviewer,
+    );
   }
 
   // ============================================================
