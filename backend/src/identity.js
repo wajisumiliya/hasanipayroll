@@ -60,7 +60,8 @@ export async function findPasswordResetUser(pool, userId) {
 
   return {
     ...data,
-    id: data.id ?? data.username,\n    passwordHash: data.passwordHash ?? data.password_hash ?? null,
+    id: data.id ?? data.username,
+    passwordHash: data.passwordHash ?? data.password_hash ?? null,
     passwordChangedAt:
       data.passwordChangedAt ?? data.password_changed_at ?? null,
     isActive: [true, "true", "t", "1"].includes(
