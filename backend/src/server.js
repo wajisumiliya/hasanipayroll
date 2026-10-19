@@ -1979,6 +1979,54 @@ app.get("/api/ot-requests", authenticate, async (req, res) => {
   }
 });
 
+// Server-authorized leave approvals. Conditional status update prevents double review.
+app.post("/api/leave-requests/review", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").toUpperCase();
+    const id = String(req.body?.requestId ?? "").trim();
+    const approve = req.body?.approve;
+    const remarks = String(req.body?.remarks ?? "").trim();
+    const approverName = String(req.body?.approverName ?? "").trim();
+    if (!id || id.length > 100 || typeof approve !== "boolean" || !remarks || remarks.length > 2000) {
+      return res.status(400).json({ ok: false, message: "Valid request, decision and remarks required." });
+    }
+    if (role !== "ADMIN" && role !== "BRANCH") {
+      return res.status(403).json({ ok: false, message: "Approval access required." });
+    }
+    const params = [id];
+    let sql;
+    if (role === "BRANCH") {
+      const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+      if (!branch || !approverName || approverName.length > 200) {
+        return res.status(400).json({ ok: false, message: "Branch and approver name required." });
+      }
+      params.push(branch, remarks, approverName, approve ? "pending_admin" : "rejected", String(req.user.id ?? req.user.userId ?? ""));
+      sql = `UPDATE public.leave_requests
+        SET status = $5, branch_remarks = $3,
+            branch_approved_at = CASE WHEN $5 = 'pending_admin' THEN NOW() ELSE NULL END,
+            branch_approved_by = CASE WHEN $5 = 'pending_admin' THEN $6 ELSE NULL END,
+            branch_approved_name = CASE WHEN $5 = 'pending_admin' THEN $4 ELSE NULL END
+        WHERE id::text = $1 AND status = 'pending_branch'
+          AND LOWER(TRIM(branch_id)) = LOWER(TRIM($2))
+        RETURNING id, status`;
+    } else {
+      params.push(remarks, approve ? "approved" : "rejected", String(req.user.id ?? req.user.userId ?? ""));
+      sql = `UPDATE public.leave_requests
+        SET status = $3, admin_remarks = $2,
+            admin_approved_at = CASE WHEN $3 = 'approved' THEN NOW() ELSE NULL END,
+            admin_approved_by = CASE WHEN $3 = 'approved' THEN $4 ELSE NULL END
+        WHERE id::text = $1 AND status = 'pending_admin'
+        RETURNING id, status`;
+    }
+    const result = await pool.query(sql, params);
+    if (!result.rowCount) return res.status(409).json({ ok: false, message: "Request not found, out of scope, or already reviewed." });
+    return res.json({ ok: true, request: result.rows[0] });
+  } catch (error) {
+    console.error("LEAVE REVIEW ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 // Authenticated leave request listing. Approval mutations remain on the legacy path.
 app.get("/api/leave-requests", authenticate, async (req, res) => {
   try {
