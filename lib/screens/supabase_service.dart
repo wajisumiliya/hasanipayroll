@@ -497,18 +497,17 @@ class SupabaseService {
             .map(_normaliseBranchValue),
       }..remove('');
 
-      if (wanted.isEmpty) {
-        return activeOnly ? getActiveEmployees() : getEmployees();
-      }
-
-      var query = database.from('employees').select();
-      if (activeOnly) {
-        query =
-            query.eq('is_active', true).neq('employment_status', 'vacation');
-      }
-      final response = await query.order('name', ascending: true);
-
-      return _mapList(response).where((employee) {
+      // Attendance employee lists must use the authenticated Neon backend.
+      // Supabase PostgREST may be unavailable after the database cutover.
+      final response = await AppService.instance.fetchEmployeeRowsFromNeon();
+      return response.where((employee) {
+        if (activeOnly) {
+          if (employee['is_active'] != true ||
+              employee['employment_status']?.toString().toLowerCase() ==
+                  'vacation') {
+            return false;
+          }
+        }
         final management = employee['is_management_staff'];
         if (management == true ||
             management?.toString().toLowerCase() == 'true') {
@@ -534,8 +533,10 @@ class SupabaseService {
           employee['branch_name'],
           employee['branch'],
           employee['branchName'],
+          employee['payroll_branch_id'],
         ];
 
+        if (wanted.isEmpty) return true;
         return values.any((value) {
           final actual = _normaliseBranchValue(
             value?.toString() ?? '',
