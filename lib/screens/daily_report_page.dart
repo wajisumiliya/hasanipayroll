@@ -61,9 +61,8 @@ class _DailyReportPageState extends State<DailyReportPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.adminMode) {
-      reportFilterDate = DateUtils.dateOnly(DateTime.now());
-    }
+    // Show the full report history initially. Admins can filter by date.
+    // Defaulting to today hid every report submitted on earlier dates.
     reports = _load();
     if (!widget.adminMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _unlock());
