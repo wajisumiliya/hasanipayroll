@@ -276,28 +276,15 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       final start = DateTime(widget.month.year, widget.month.month, 1);
       final end = DateTime(widget.month.year, widget.month.month + 1, 1);
 
-      // Employee queries are filtered at the database query itself so the
-      // Employee Portal never asks Supabase for unsubmitted attendance.
-      final List<Map<String, dynamic>> allRows = widget.editable
-          ? await SupabaseService.getAttendanceByEmployeeMonth(
-              employeeId,
-              widget.month.year,
-              widget.month.month,
-            )
-          : List<Map<String, dynamic>>.from(
-              await SupabaseService.database
-                  .from('attendance')
-                  .select()
-                  .eq('employee_id', employeeId)
-                  .eq('is_submitted', true)
-                  .gte('attendance_date',
-                      start.toIso8601String().substring(0, 10))
-                  .lt('attendance_date', end.toIso8601String().substring(0, 10))
-                  .order('attendance_date'),
-            );
-
-      // Only submitted rows are visible outside the Branch Portal.
-      final rows = widget.editable ? allRows : allRows;
+      // Attendance comes from Neon; the API enforces role/branch scope.
+      final allRows = await SupabaseService.getAttendanceByEmployeeMonth(
+        employeeId,
+        widget.month.year,
+        widget.month.month,
+      );
+      final rows = widget.editable
+          ? allRows
+          : allRows.where((row) => _toBool(row['is_submitted'])).toList();
 
       _submittedDays.clear();
       for (final row in allRows) {
