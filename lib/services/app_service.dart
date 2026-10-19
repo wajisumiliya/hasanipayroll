@@ -746,7 +746,8 @@ class AppService extends ChangeNotifier {
     final data = await _getAuth('/api/leave-requests');
     if (data['ok'] != true || data['requests'] is! List) {
       throw StateError(
-        data['message']?.toString() ?? 'Unable to load leave requests from Neon.',
+        data['message']?.toString() ??
+            'Unable to load leave requests from Neon.',
       );
     }
     return (data['requests'] as List)
@@ -762,12 +763,13 @@ class AppService extends ChangeNotifier {
     final date = reportDate == null
         ? ''
         : '?date=${reportDate.year.toString().padLeft(4, '0')}-'
-          '${reportDate.month.toString().padLeft(2, '0')}-'
-          '${reportDate.day.toString().padLeft(2, '0')}';
+            '${reportDate.month.toString().padLeft(2, '0')}-'
+            '${reportDate.day.toString().padLeft(2, '0')}';
     final data = await _getAuth('/api/daily-reports$date');
     if (data['ok'] != true || data['reports'] is! List) {
       throw StateError(
-        data['message']?.toString() ?? 'Unable to load daily reports from Neon.',
+        data['message']?.toString() ??
+            'Unable to load daily reports from Neon.',
       );
     }
     return (data['reports'] as List)
@@ -779,7 +781,8 @@ class AppService extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> fetchOtRequestsFromNeon() async {
     final data = await _getAuth('/api/ot-requests');
     if (data['ok'] != true || data['requests'] is! List) {
-      throw StateError(data['message']?.toString() ?? 'Unable to load OT requests.');
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to load OT requests.');
     }
     return (data['requests'] as List)
         .whereType<Map>()
@@ -793,14 +796,18 @@ class AppService extends ChangeNotifier {
     required String remarks,
     String? approverName,
   }) async {
-    final data = await _postAuth('/api/leave-requests/review', {
-      'requestId': requestId,
-      'approve': approve,
-      'remarks': remarks,
-      if (approverName != null) 'approverName': approverName,
-    }, authenticated: true);
+    final data = await _postAuth(
+        '/api/leave-requests/review',
+        {
+          'requestId': requestId,
+          'approve': approve,
+          'remarks': remarks,
+          if (approverName != null) 'approverName': approverName,
+        },
+        authenticated: true);
     if (data['ok'] != true) {
-      throw StateError(data['message']?.toString() ?? 'Unable to review leave request.');
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to review leave request.');
     }
   }
 
@@ -809,20 +816,26 @@ class AppService extends ChangeNotifier {
     required bool approve,
     String? approvedByName,
   }) async {
-    final data = await _postAuth('/api/ot-requests/branch-review', {
-      'requestId': requestId,
-      'approve': approve,
-      'approvedByName': approvedByName ?? '',
-    }, authenticated: true);
+    final data = await _postAuth(
+        '/api/ot-requests/branch-review',
+        {
+          'requestId': requestId,
+          'approve': approve,
+          'approvedByName': approvedByName ?? '',
+        },
+        authenticated: true);
     if (data['ok'] != true) {
-      throw StateError(data['message']?.toString() ?? 'Unable to review OT request.');
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to review OT request.');
     }
   }
 
   Future<void> submitDailyReportToNeon(Map<String, dynamic> report) async {
-    final data = await _postAuth('/api/daily-reports', report, authenticated: true);
+    final data =
+        await _postAuth('/api/daily-reports', report, authenticated: true);
     if (data['ok'] != true) {
-      throw StateError(data['message']?.toString() ?? 'Unable to submit daily report.');
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to submit daily report.');
     }
   }
 
@@ -831,13 +844,17 @@ class AppService extends ChangeNotifier {
     required String comment,
     required String reviewer,
   }) async {
-    final data = await _postAuth('/api/daily-reports/review', {
-      'id': id,
-      'comment': comment,
-      'reviewer': reviewer,
-    }, authenticated: true);
+    final data = await _postAuth(
+        '/api/daily-reports/review',
+        {
+          'id': id,
+          'comment': comment,
+          'reviewer': reviewer,
+        },
+        authenticated: true);
     if (data['ok'] != true) {
-      throw StateError(data['message']?.toString() ?? 'Unable to review daily report.');
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to review daily report.');
     }
   }
 
