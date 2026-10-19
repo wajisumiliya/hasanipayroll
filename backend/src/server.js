@@ -1918,7 +1918,7 @@ app.get("/api/daily-reports", authenticate, async (req, res) => {
   try {
     const role = String(req.user?.role ?? "").toUpperCase();
     const date = req.query.date == null ? "" : String(req.query.date);
-    if (date && !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({ ok: false, message: "Invalid report date." });
     }
     const params = [];
