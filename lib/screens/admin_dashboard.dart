@@ -2769,7 +2769,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<List<Map<String, dynamic>>> _loadScopedEmployees() async {
-    return _scopedEmployeeRows(await SupabaseService.getEmployees());
+    // Employee directory uses the same authenticated Neon/Render backend as
+    // the working dashboard. Do not fall back to Supabase when it is limited.
+    return _scopedEmployeeRows(await service.fetchEmployeeRowsFromNeon());
   }
 
   Widget _dashboardFlagsAndClock() {
