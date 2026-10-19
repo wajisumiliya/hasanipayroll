@@ -1914,6 +1914,64 @@ app.get(
 );
 
 // Authenticated Neon daily reports list with server-enforced branch scope.
+// Daily report creation is branch-scoped; caller cannot choose another branch.
+app.post("/api/daily-reports", authenticate, async (req, res) => {
+  try {
+    if (String(req.user?.role ?? "").toUpperCase() !== "BRANCH") {
+      return res.status(403).json({ ok: false, message: "Branch access required." });
+    }
+    const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+    const body = req.body ?? {};
+    const date = String(body.report_date ?? "");
+    const reporter = String(body.reported_by ?? "").trim();
+    if (!branch || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !reporter || reporter.length > 200) {
+      return res.status(400).json({ ok: false, message: "Valid date and reporter required." });
+    }
+    const fields = ["attendance","unpaid_leave","weekly_leave","annual_leave",
+      "air_conditioner","maintenance_total","working_condition","service_repair",
+      "maintenance_report","report_crew","recommendation","branch_stamp"];
+    const values = fields.map((key) => String(body[key] ?? "").slice(0, 10000));
+    const orsanco = body.orsanco && typeof body.orsanco === "object" &&
+      !Array.isArray(body.orsanco) ? body.orsanco : {};
+    const cols = ["branch_id","report_date","reported_by",...fields,"orsanco"];
+    const params = [branch,date,reporter,...values,JSON.stringify(orsanco)];
+    const markers = params.map((_, i) => "$" + (i + 1) +
+      (i === 1 ? "::date" : i === params.length - 1 ? "::jsonb" : ""));
+    const result = await pool.query(
+      "INSERT INTO public.daily_reports (" + cols.join(",") + ") VALUES (" +
+      markers.join(",") + ") RETURNING id", params);
+    return res.status(201).json({ ok: true, id: result.rows[0].id });
+  } catch (error) {
+    console.error("DAILY REPORT CREATE ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
+// HQ review is restricted to administrators.
+app.post("/api/daily-reports/review", authenticate, async (req, res) => {
+  try {
+    if (String(req.user?.role ?? "").toUpperCase() !== "ADMIN") {
+      return res.status(403).json({ ok: false, message: "Administrator access required." });
+    }
+    const id = String(req.body?.id ?? "").trim();
+    const comment = String(req.body?.comment ?? "").trim();
+    const reviewer = String(req.body?.reviewer ?? "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id) ||
+        comment.length > 10000 || !reviewer || reviewer.length > 200) {
+      return res.status(400).json({ ok: false, message: "Valid report and reviewer required." });
+    }
+    const result = await pool.query(
+      `UPDATE public.daily_reports SET hq_comment = $2, reviewed_by = $3,
+       reviewed_at = NOW(), updated_at = NOW()
+       WHERE id = $1::uuid RETURNING id`, [id, comment, reviewer]);
+    if (!result.rowCount) return res.status(404).json({ ok: false, message: "Report not found." });
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("DAILY REPORT REVIEW ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 app.get("/api/daily-reports", authenticate, async (req, res) => {
   try {
     const role = String(req.user?.role ?? "").toUpperCase();
