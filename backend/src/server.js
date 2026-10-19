@@ -1948,6 +1948,39 @@ app.get("/api/daily-reports", authenticate, async (req, res) => {
   }
 });
 
+// Authenticated branch OT review, with conditional state transition and branch scope.
+app.post("/api/ot-requests/branch-review", authenticate, async (req, res) => {
+  try {
+    if (String(req.user?.role ?? "").toUpperCase() !== "BRANCH") {
+      return res.status(403).json({ ok: false, message: "Branch access required." });
+    }
+    const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+    const id = String(req.body?.requestId ?? "").trim();
+    const approve = req.body?.approve;
+    const name = String(req.body?.approvedByName ?? "").trim();
+    if (!branch || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id) ||
+        typeof approve !== "boolean" || (approve && (!name || name.length > 200))) {
+      return res.status(400).json({ ok: false, message: "Valid branch, request and decision required." });
+    }
+    const result = await pool.query(
+      `UPDATE public.overtime_requests
+       SET status = $3,
+           branch_approved_at = CASE WHEN $4 THEN NOW() ELSE NULL END,
+           branch_approved_name = CASE WHEN $4 THEN $5 ELSE NULL END,
+           reviewed_at = CASE WHEN $4 THEN reviewed_at ELSE NOW() END
+       WHERE id = $1::uuid AND status = 'pending_branch'
+         AND LOWER(TRIM(branch_id)) = LOWER(TRIM($2))
+       RETURNING id, status`,
+      [id, branch, approve ? "pending_admin" : "rejected", approve, name],
+    );
+    if (!result.rowCount) return res.status(409).json({ ok: false, message: "Request not found, already reviewed or out of branch scope." });
+    return res.json({ ok: true, request: result.rows[0] });
+  } catch (error) {
+    console.error("BRANCH OT REVIEW ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 // Role-scoped overtime listing through Neon.
 app.get("/api/ot-requests", authenticate, async (req, res) => {
   try {

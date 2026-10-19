@@ -778,6 +778,21 @@ class AppService extends ChangeNotifier {
     }
   }
 
+  Future<void> reviewBranchOtOnNeon({
+    required String requestId,
+    required bool approve,
+    String? approvedByName,
+  }) async {
+    final data = await _postAuth('/api/ot-requests/branch-review', {
+      'requestId': requestId,
+      'approve': approve,
+      'approvedByName': approvedByName ?? '',
+    }, authenticated: true);
+    if (data['ok'] != true) {
+      throw StateError(data['message']?.toString() ?? 'Unable to review OT request.');
+    }
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');

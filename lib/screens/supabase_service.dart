@@ -1510,28 +1510,11 @@ class SupabaseService {
     required bool approve,
     String? approvedByName,
   }) async {
-    final approverName = approvedByName?.trim() ?? '';
-    if (approve && approverName.isEmpty) {
-      throw ArgumentError('Branch approver name is required.');
-    }
-    final now = DateTime.now().toUtc().toIso8601String();
-    final updated = await database
-        .from('overtime_requests')
-        .update({
-          'status': approve ? 'pending_admin' : 'rejected',
-          'branch_approved_at': approve ? now : null,
-          'branch_approved_by': approve ? currentUser?.id : null,
-          'branch_approved_name': approve ? approverName : null,
-          if (!approve) 'reviewed_at': now,
-          if (!approve) 'reviewed_by': currentUser?.id,
-        })
-        .eq('id', requestId)
-        .select('id,branch_approved_name');
-    if (updated.isEmpty) {
-      throw StateError(
-        'The OT request was not updated. Please refresh and try again.',
-      );
-    }
+    await AppService.instance.reviewBranchOtOnNeon(
+      requestId: requestId,
+      approve: approve,
+      approvedByName: approvedByName,
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getEmployeeOtRequests(
