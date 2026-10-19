@@ -1,0 +1,41 @@
+name: Neon DEV Flutter Web Build Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neon-dev-web-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-web:
+    name: Compile Flutter Web (no deployment)
+    if: github.ref == 'refs/heads/neon-dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout Neon DEV branch
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Compile Flutter Web only
+        run: flutter build web --release --no-pub --dart-define=API_BASE_URL=https://dev-api.invalid
+
+      - name: Confirm compilation completed
+        run: test -f build/web/index.html
+
+# Deliberately no deploy, artifact upload, production secrets or database access.
+# The Flutter source still contains production Supabase references.
+# Do not deploy or distribute this build until those references are removed.
