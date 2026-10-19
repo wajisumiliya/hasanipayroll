@@ -1703,6 +1703,47 @@ app.post(
   },
 );
 
+// Original Flutter admin dashboard, backed by existing Neon tables.
+// Data shape mirrors the previous Supabase rows so the current UI can render
+// without changes to its visual design. Only administrators may access it.
+app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req, res) => {
+  try {
+    const year = Number(req.query.year);
+    const month = Number(req.query.month);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100 ||
+        !Number.isInteger(month) || month < 1 || month > 12) {
+      return res.status(400).json({ ok: false, message: "Invalid dashboard month." });
+    }
+    const [employeesResult, payrollResult, branchesResult] = await Promise.all([
+      pool.query("SELECT to_jsonb(e) AS row FROM public.employees e ORDER BY e.name ASC"),
+      pool.query(
+        `SELECT to_jsonb(p) AS row FROM public.payroll p
+         WHERE p.period >= make_date($1, $2, 1)
+           AND p.period < (make_date($1, $2, 1) + INTERVAL '1 month')
+         ORDER BY p.employee_id ASC`,
+        [year, month],
+      ),
+      pool.query("SELECT to_jsonb(b) AS row FROM public.branches b ORDER BY b.name ASC"),
+    ]);
+    const branches = branchesResult.rows.map(({row}) => {
+      if (String(row.name ?? "").trim().toUpperCase() === "SUNGAI PETANI") {
+        return {...row, name: "SP-EDAR", ...(Object.hasOwn(row,"branch_name") ? {branch_name:"SP-EDAR"} : {})};
+      }
+      return row;
+    });
+    return res.json({
+      ok: true,
+      source: "neon",
+      employees: employeesResult.rows.map(({row}) => row),
+      payroll: payrollResult.rows.map(({row}) => row),
+      branches,
+    });
+  } catch (error) {
+    console.error("NEON DASHBOARD OVERVIEW ERROR:", error.message);
+    return res.status(503).json({ ok: false, message: "The Neon dashboard is temporarily unavailable." });
+  }
+});
+
 // ADMIN / BRANCH PAYROLL — read directly from the existing Neon schema.
 app.get(
   "/api/admin/payroll",
