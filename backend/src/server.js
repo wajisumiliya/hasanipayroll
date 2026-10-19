@@ -1927,13 +1927,13 @@ app.get("/api/daily-reports", authenticate, async (req, res) => {
       const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
       if (!branch) return res.status(403).json({ ok: false, message: "Branch scope missing." });
       params.push(branch);
-      conditions.push(`LOWER(TRIM(d.branch_id)) = LOWER(TRIM(${params.length}))`);
+      conditions.push("LOWER(TRIM(d.branch_id)) = LOWER(TRIM($" + params.length + "))");
     } else if (role !== "ADMIN") {
       return res.status(403).json({ ok: false, message: "Access denied." });
     }
     if (date) {
       params.push(date);
-      conditions.push(`d.report_date = ${params.length}::date`);
+      conditions.push("d.report_date = $" + params.length + "::date");
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const result = await pool.query(
