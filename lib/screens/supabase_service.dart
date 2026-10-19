@@ -1483,9 +1483,11 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getBranchOtRequests(
       String branchId) async {
     final rows = await AppService.instance.fetchOtRequestsFromNeon();
-    return rows.where((row) =>
-        row['branch_id']?.toString().trim().toUpperCase() ==
-        branchId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['branch_id']?.toString().trim().toUpperCase() ==
+            branchId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<void> reviewBranchOtRequest({
@@ -1503,9 +1505,11 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getEmployeeOtRequests(
       String employeeId) async {
     final rows = await AppService.instance.fetchOtRequestsFromNeon();
-    return rows.where((row) =>
-        row['employee_id']?.toString().trim().toUpperCase() ==
-        employeeId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['employee_id']?.toString().trim().toUpperCase() ==
+            employeeId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<void> submitOtRequest(Map<String, dynamic> request) async {
@@ -1519,17 +1523,21 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getEmployeeLeaveRequests(
       String employeeId) async {
     final rows = await AppService.instance.fetchLeaveRequestsFromNeon();
-    return rows.where((row) =>
-        row['employee_id']?.toString().trim().toUpperCase() ==
-        employeeId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['employee_id']?.toString().trim().toUpperCase() ==
+            employeeId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<List<Map<String, dynamic>>> getBranchLeaveRequests(
       String branchId) async {
     final rows = await AppService.instance.fetchLeaveRequestsFromNeon();
-    return rows.where((row) =>
-        row['branch_id']?.toString().trim().toUpperCase() ==
-        branchId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['branch_id']?.toString().trim().toUpperCase() ==
+            branchId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<List<Map<String, dynamic>>> getAllLeaveRequests() async {
