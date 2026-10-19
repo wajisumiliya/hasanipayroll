@@ -25,6 +25,20 @@ jobs:
     name: Test and audit Node backend
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: bootstrap_test
+          POSTGRES_PASSWORD: local-ci-fixture-only
+          POSTGRES_DB: hasani_bootstrap_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bootstrap_test -d hasani_bootstrap_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -49,7 +63,10 @@ jobs:
         run: npm run db:generate
 
       - name: Run backend tests
+        env:
+          BOOTSTRAP_TEST_DATABASE_URL: postgresql://bootstrap_test:local-ci-fixture-only@127.0.0.1:5432/hasani_bootstrap_test
         run: npm test
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
