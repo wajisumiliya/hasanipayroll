@@ -31,7 +31,7 @@ class SupabaseService {
     required int month,
     String? employeeId,
   }) async {
-    var query = client
+    var query = database
         .from('monthly_rosters')
         .select()
         .eq('branch_id', branchId)
@@ -54,7 +54,7 @@ class SupabaseService {
     required DateTime start,
     required DateTime end,
   }) async {
-    final response = await client
+    final response = await database
         .from('daily_rosters')
         .select()
         .eq('branch_id', branchId)
@@ -129,7 +129,7 @@ class SupabaseService {
         );
     // Store the object path, not a permanent public URL. EmployeePhoto resolves
     // this path to a short-lived signed URL for authenticated viewers.
-    await client
+    await database
         .from('employees')
         .update({'photo_url': path}).eq('employee_id', employeeId.trim());
     return path;
@@ -139,7 +139,7 @@ class SupabaseService {
     final safeId = employeeId.trim().replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
     if (safeId.isEmpty) return;
     await client.storage.from('employee-photos').remove(['$safeId/profile']);
-    await client
+    await database
         .from('employees')
         .update({'photo_url': null}).eq('employee_id', employeeId.trim());
   }
@@ -191,7 +191,7 @@ class SupabaseService {
     Map<String, dynamic>? details,
   }) async {
     try {
-      final response = await client
+      final response = await database
           .from('branch_activity_logs')
           .insert({
             'branch_id': branchId.trim(),
@@ -215,7 +215,7 @@ class SupabaseService {
     if (activityId == null || activityId.trim().isEmpty) return;
 
     try {
-      await client
+      await database
           .from('branch_activity_logs')
           .update({'closed_at': DateTime.now().toUtc().toIso8601String()}).eq(
               'id', activityId);
@@ -240,7 +240,8 @@ class SupabaseService {
             .toIso8601String();
       }
 
-      final response = await database.rpc('admin_branch_activity_logs', params: {
+      final response =
+          await database.rpc('admin_branch_activity_logs', params: {
         'p_branch_id': branchId?.trim(),
         'p_start': start,
         'p_end': end,
@@ -398,7 +399,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getEmployees() async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .select()
           .order('name', ascending: true);
@@ -412,7 +413,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getActiveEmployees() async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .select()
           .eq('is_active', true)
@@ -428,7 +429,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getInactiveEmployees() async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .select()
           .eq('is_active', false)
@@ -445,7 +446,7 @@ class SupabaseService {
     dynamic employeeId,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .select()
           .eq('employee_id', employeeId.toString())
@@ -548,7 +549,7 @@ class SupabaseService {
         return await getActiveEmployees();
       }
 
-      final response = await client
+      final response = await database
           .from('employees')
           .select()
           .eq('branch_id', branchId.trim())
@@ -570,7 +571,7 @@ class SupabaseService {
     String department,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .select()
           .eq('department', department.trim())
@@ -587,7 +588,7 @@ class SupabaseService {
     String department,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .select()
           .eq('department', department.trim())
@@ -651,7 +652,7 @@ class SupabaseService {
         now.day,
       );
 
-      var query = client
+      var query = database
           .from('employees')
           .select()
           .gte('joining_date', _dateOnlyText(sixMonthsAgo))
@@ -685,7 +686,7 @@ class SupabaseService {
         now.day,
       );
 
-      var query = client
+      var query = database
           .from('employees')
           .select()
           .eq('is_active', true)
@@ -735,8 +736,10 @@ class SupabaseService {
     String? branchId,
   }) async {
     try {
-      var query =
-          database.from('employees').select('employee_id').eq('is_active', true);
+      var query = database
+          .from('employees')
+          .select('employee_id')
+          .eq('is_active', true);
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -803,8 +806,10 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getBranches() async {
     try {
-      final response =
-          await database.from('branches').select().order('name', ascending: true);
+      final response = await database
+          .from('branches')
+          .select()
+          .order('name', ascending: true);
 
       return _mapList(response).map((branch) {
         final row = Map<String, dynamic>.from(branch);
@@ -900,7 +905,7 @@ class SupabaseService {
         ..remove('is_active')
         ..['branch_id'] = branchId.trim()
         ..['status'] = 'PENDING';
-      final response = await client
+      final response = await database
           .from('employee_requests')
           .insert(payload)
           .select()
@@ -932,7 +937,7 @@ class SupabaseService {
     required String requestId,
     required Map<String, dynamic> changes,
   }) async {
-    final response = await client
+    final response = await database
         .from('employee_requests')
         .update(changes)
         .eq('id', requestId)
@@ -969,7 +974,7 @@ class SupabaseService {
     String? note,
   }) async {
     try {
-      await client
+      await database
           .from('employee_requests')
           .update({
             'status': 'REJECTED',
@@ -993,7 +998,7 @@ class SupabaseService {
     Map<String, dynamic> employee,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .update(employee)
           .eq('employee_id', employeeId.toString())
@@ -1024,7 +1029,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getStaffTransferHistory(
       String employeeId) async {
-    final response = await client
+    final response = await database
         .from('staff_transfer_history')
         .select()
         .eq('employee_id', employeeId.trim())
@@ -1038,7 +1043,7 @@ class SupabaseService {
     required Map<String, dynamic> changes,
   }) async {
     try {
-      final response = await client
+      final response = await database
           .from('employees')
           .update(changes)
           .eq('employee_id', employeeId.trim())
@@ -1065,7 +1070,7 @@ class SupabaseService {
     required bool isActive,
   }) async {
     try {
-      await client
+      await database
           .from('employees')
           .update({
             'is_active': isActive,
@@ -1110,7 +1115,7 @@ class SupabaseService {
       var offset = 0;
 
       while (true) {
-        final response = await client
+        final response = await database
             .from('payroll')
             .select()
             .order('period', ascending: false)
@@ -1139,7 +1144,7 @@ class SupabaseService {
       var offset = 0;
 
       while (true) {
-        final response = await client
+        final response = await database
             .from('payroll')
             .select()
             .gte('period', start)
@@ -1171,7 +1176,7 @@ class SupabaseService {
           '${value.year.toString().padLeft(4, '0')}-'
           '${value.month.toString().padLeft(2, '0')}-'
           '${value.day.toString().padLeft(2, '0')}';
-      final response = await client
+      final response = await database
           .from('payroll')
           .select()
           .gte('period', dateText(start))
@@ -1188,7 +1193,7 @@ class SupabaseService {
     dynamic employeeId,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('payroll')
           .select()
           .eq(
@@ -1258,7 +1263,7 @@ class SupabaseService {
     Map<String, dynamic> payroll,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('payroll')
           .update(payroll)
           .eq(
@@ -1319,7 +1324,7 @@ class SupabaseService {
         return await getAttendance();
       }
 
-      final response = await client
+      final response = await database
           .from('attendance')
           .select()
           .eq(
@@ -1351,7 +1356,7 @@ class SupabaseService {
           '${value.month.toString().padLeft(2, '0')}-'
           '${value.day.toString().padLeft(2, '0')}';
 
-      final response = await client
+      final response = await database
           .from('attendance')
           .select()
           .eq('branch_id', branchId.trim())
@@ -1390,7 +1395,7 @@ class SupabaseService {
     var offset = 0;
 
     while (true) {
-      final response = await client
+      final response = await database
           .from('attendance')
           .select('employee_id,attendance_date,is_submitted')
           .inFilter('employee_id', ids)
@@ -1417,7 +1422,7 @@ class SupabaseService {
       final dateText = '${date.year.toString().padLeft(4, '0')}-'
           '${date.month.toString().padLeft(2, '0')}-'
           '${date.day.toString().padLeft(2, '0')}';
-      final response = await client
+      final response = await database
           .from('attendance')
           .select()
           .eq('branch_id', branchId.trim())
@@ -1431,7 +1436,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getPendingOtRequests() async {
     try {
-      final response = await client
+      final response = await database
           .from('overtime_requests')
           .select()
           .order('submitted_at', ascending: false);
@@ -1448,7 +1453,7 @@ class SupabaseService {
     int? approvedOtMinutes,
   }) async {
     try {
-      final updated = await client
+      final updated = await database
           .from('overtime_requests')
           .update({
             'status': approve ? 'approved' : 'rejected',
@@ -1474,7 +1479,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getBranchOtRequests(
       String branchId) async {
-    final response = await client
+    final response = await database
         .from('overtime_requests')
         .select()
         .ilike('branch_id', branchId.trim())
@@ -1492,7 +1497,7 @@ class SupabaseService {
       throw ArgumentError('Branch approver name is required.');
     }
     final now = DateTime.now().toUtc().toIso8601String();
-    final updated = await client
+    final updated = await database
         .from('overtime_requests')
         .update({
           'status': approve ? 'pending_admin' : 'rejected',
@@ -1513,7 +1518,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getEmployeeOtRequests(
       String employeeId) async {
-    final response = await client
+    final response = await database
         .from('overtime_requests')
         .select()
         .eq('employee_id', employeeId.trim())
@@ -1531,7 +1536,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getEmployeeLeaveRequests(
       String employeeId) async {
-    final response = await client
+    final response = await database
         .from('leave_requests')
         .select()
         .eq('employee_id', employeeId.trim())
@@ -1541,7 +1546,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getBranchLeaveRequests(
       String branchId) async {
-    final response = await client
+    final response = await database
         .from('leave_requests')
         .select()
         .ilike('branch_id', branchId.trim())
@@ -1550,7 +1555,7 @@ class SupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getAllLeaveRequests() async {
-    final response = await client
+    final response = await database
         .from('leave_requests')
         .select()
         .order('submitted_at', ascending: false);
@@ -1570,7 +1575,7 @@ class SupabaseService {
       throw ArgumentError('Branch remarks are required.');
     }
     final now = DateTime.now().toUtc().toIso8601String();
-    final updated = await client
+    final updated = await database
         .from('leave_requests')
         .update({
           'status': approve ? 'pending_admin' : 'rejected',
@@ -1594,7 +1599,7 @@ class SupabaseService {
       throw ArgumentError('Admin remarks are required.');
     }
     final now = DateTime.now().toUtc().toIso8601String();
-    final updated = await client
+    final updated = await database
         .from('leave_requests')
         .update({
           'status': approve ? 'approved' : 'rejected',
@@ -1610,14 +1615,14 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getEmployeeNotifications(
       String employeeId) async {
-    final notifications = _mapList(await client
+    final notifications = _mapList(await database
         .from('app_notifications')
         .select()
         .eq('audience', 'employee')
         .eq('employee_id', employeeId.trim())
         .order('created_at', ascending: false)
         .limit(50));
-    final reads = _mapList(await client
+    final reads = _mapList(await database
         .from('notification_reads')
         .select('notification_id')
         .eq('employee_id', employeeId.trim()));
@@ -1697,7 +1702,7 @@ class SupabaseService {
     dynamic employeeId,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('attendance')
           .select()
           .eq(
@@ -1737,7 +1742,7 @@ class SupabaseService {
 
       final endDate = _dateOnlyText(nextMonth);
 
-      final response = await client
+      final response = await database
           .from('attendance')
           .select()
           .eq(
@@ -1807,8 +1812,11 @@ class SupabaseService {
     Map<String, dynamic> attendance,
   ) async {
     try {
-      final response =
-          await database.from('attendance').insert(attendance).select().single();
+      final response = await database
+          .from('attendance')
+          .insert(attendance)
+          .select()
+          .single();
 
       return _map(response);
     } catch (e, stackTrace) {
@@ -1826,7 +1834,7 @@ class SupabaseService {
     Map<String, dynamic> attendance,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('attendance')
           .update(attendance)
           .eq(
@@ -1853,7 +1861,7 @@ class SupabaseService {
     required bool otAuthorized,
   }) async {
     try {
-      await client
+      await database
           .from('attendance')
           .update({
             'ot_authorized': otAuthorized,
@@ -2362,7 +2370,7 @@ class SupabaseService {
       // UPSERT
       // ==========================================================
 
-      final response = await client
+      final response = await database
           .from('attendance')
           .upsert(
             data,
@@ -2406,7 +2414,7 @@ class SupabaseService {
     String username,
   ) async {
     try {
-      final response = await client
+      final response = await database
           .from('users')
           .select()
           .eq(
