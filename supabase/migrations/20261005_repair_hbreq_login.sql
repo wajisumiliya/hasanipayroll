@@ -1,4 +1,0 @@
--- `hbreq` is authenticated by the backend using ADMIN_PASSWORD. It does not
--- need an app_user row because legacy app_user schemas do not consistently
--- contain the password-hash columns needed for a database account.
--- Deploy backend/src/server.js after this change.
