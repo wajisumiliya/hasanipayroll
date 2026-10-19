@@ -50,7 +50,7 @@ export async function findPasswordResetUser(pool, userId) {
   const result = await pool.query(
     `SELECT to_jsonb(account_row) AS data
      FROM public."app_user" AS account_row
-     WHERE account_row."id" = $1
+     WHERE LOWER(TRIM(account_row."username")) = LOWER(TRIM($1))
      LIMIT 1`,
     [cleanUserId],
   );
@@ -60,7 +60,7 @@ export async function findPasswordResetUser(pool, userId) {
 
   return {
     ...data,
-    passwordHash: data.passwordHash ?? data.password_hash ?? null,
+    id: data.id ?? data.username,\n    passwordHash: data.passwordHash ?? data.password_hash ?? null,
     passwordChangedAt:
       data.passwordChangedAt ?? data.password_changed_at ?? null,
     isActive: [true, "true", "t", "1"].includes(
