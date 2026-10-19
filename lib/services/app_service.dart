@@ -685,6 +685,22 @@ class AppService extends ChangeNotifier {
   // LOAD EMPLOYEES
   // ==========================================================================
 
+  /// Employee directory for the admin screen, sourced from the authenticated
+  /// Render API backed by Neon. Never fall back to Supabase on API errors.
+  Future<List<Map<String, dynamic>>> fetchEmployeeRowsFromNeon() async {
+    final data = await _getAuth('/api/employees');
+    if (data['ok'] != true || data['employees'] is! List) {
+      throw StateError(
+        data['message']?.toString() ??
+            'Unable to load employees from the payroll server.',
+      );
+    }
+    return (data['employees'] as List)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');
