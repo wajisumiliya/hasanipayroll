@@ -20,7 +20,7 @@ async function check(label, secret) {
   if (!addresses.length) throw new Error(label + ': no IPv4 address; use an IPv4-capable pooler URL');
   const pool = new Pool({ connectionString: secret, connectionTimeoutMillis: 10000 });
   try {
-    const result = await pool.query('SELECT username FROM public.app_user');
+    const result = await pool.query('SELECT username, ("passwordHash" IS NOT NULL AND length(trim("passwordHash")) > 0) AS has_password_hash FROM public.app_user');
     console.log(label + ': connection succeeded');
     return result.rows;
   } catch (error) {
@@ -35,8 +35,11 @@ try {
   const targetRows = await check('Neon target', process.env.NEON_DATABASE_URL);
   const existing = new Set(targetRows.map((row) => row.username.toLowerCase()));
   const missing = sourceRows.filter((row) => !existing.has(row.username.toLowerCase()));
-  console.log(JSON.stringify({ sourceCount: sourceRows.length, neonCount: targetRows.length, missingAccounts: missing.length }));
-  if (missing.length) process.exitCode = 2;
+  const sourceHasHashes = sourceRows.filter((row) => row.has_password_hash).length;
+  const neonHasHashes = targetRows.filter((row) => row.has_password_hash).length;
+  const neonMissingHashes = targetRows.length - neonHasHashes;
+  console.log(JSON.stringify({ sourceCount: sourceRows.length, neonCount: targetRows.length, missingAccounts: missing.length, sourceHasHashes, neonHasHashes, neonMissingHashes }));
+  if (missing.length || neonMissingHashes) process.exitCode = 2;
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
