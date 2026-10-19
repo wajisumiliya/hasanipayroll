@@ -1913,6 +1913,36 @@ app.get(
   },
 );
 
+// Read-only EA forms: authenticated, scoped, and backed by Neon.
+app.get("/api/ea-forms", authenticate, async (req, res) => {
+  try {
+    const year = Number(req.query.year);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return res.status(400).json({ ok: false, message: "Invalid tax year." });
+    }
+    const role = String(req.user?.role ?? "").toUpperCase();
+    const params = [year];
+    let scope = "";
+    if (role === "EMPLOYEE") {
+      const id = normalizeEmployeeId(req.user.employeeId ?? req.user.employee_id);
+      if (!id) return res.status(403).json({ ok: false, message: "Employee scope missing." });
+      params.push(id);
+      scope = "AND UPPER(TRIM(f.employee_id)) = $2";
+    } else if (role !== "ADMIN") {
+      return res.status(403).json({ ok: false, message: "Access denied." });
+    }
+    const result = await pool.query(
+      `SELECT to_jsonb(f) AS data FROM public.employee_ea_forms AS f
+       WHERE f.tax_year = $1 ${scope} ORDER BY f.employee_id ASC`,
+      params,
+    );
+    return res.json({ ok: true, forms: result.rows.map((row) => row.data) });
+  } catch (error) {
+    console.error("EA FORMS LIST ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 app.get(
   "/api/employees",
   authenticate,

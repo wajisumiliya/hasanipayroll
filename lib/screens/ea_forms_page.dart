@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/app_service.dart';
 import '../services/ea_form_pdf_service.dart';
 import '../services/notification_service.dart';
 import 'supabase_service.dart';
@@ -92,13 +93,11 @@ class _EaFormsPageState extends State<EaFormsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    var query = SupabaseService.database
-        .from('employee_ea_forms')
-        .select()
-        .eq('tax_year', _year);
-    if (!widget.isAdmin) query = query.eq('employee_id', widget.employeeId!);
-    final rows = await query.order('employee_id');
-    return List<Map<String, dynamic>>.from(rows);
+    final rows = await AppService.instance.fetchEaFormsFromNeon(_year);
+    if (widget.isAdmin) return rows;
+    final id = widget.employeeId?.trim().toUpperCase();
+    return rows.where((row) =>
+        row['employee_id']?.toString().trim().toUpperCase() == id).toList();
   }
 
   double _number(dynamic value) =>
