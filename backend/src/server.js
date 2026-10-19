@@ -1914,6 +1914,36 @@ app.get(
 );
 
 
+// Branch selector data comes from Neon, never Supabase. Exclude credentials.
+app.get("/api/branches", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").toUpperCase();
+    if (!["ADMIN", "BRANCH", "EMPLOYEE"].includes(role)) {
+      return res.status(403).json({ ok: false, message: "Access denied." });
+    }
+    const params = [];
+    let where = "";
+    if (role === "BRANCH") {
+      const branchId = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+      if (!branchId) return res.status(403).json({ ok: false, message: "Branch access denied." });
+      params.push(branchId);
+      where = "WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))";
+    } else if (role === "EMPLOYEE") {
+      return res.status(403).json({ ok: false, message: "Access denied." });
+    }
+    const result = await pool.query(
+      "SELECT id, name, location, address, phone, is_active FROM public.branches " + where + " ORDER BY name ASC", params);
+    const branches = result.rows.map(row => {
+      if (String(row.name ?? "").trim().toUpperCase() === "SUNGAI PETANI") return {...row, name: "SP-EDAR"};
+      return row;
+    });
+    return res.json({ ok: true, branches });
+  } catch (error) {
+    console.error("BRANCH LIST ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 // Neon attendance listing with JWT-based role and branch scope.
 app.get("/api/attendance", authenticate, async (req, res) => {
   try {

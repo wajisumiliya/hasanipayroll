@@ -823,28 +823,7 @@ class SupabaseService {
   // ============================================================
 
   static Future<List<Map<String, dynamic>>> getBranches() async {
-    try {
-      final response = await database
-          .from('branches')
-          .select()
-          .order('name', ascending: true);
-
-      return _mapList(response).map((branch) {
-        final row = Map<String, dynamic>.from(branch);
-        final name = (row['name'] ?? row['branch_name'] ?? '')
-            .toString()
-            .trim()
-            .toUpperCase();
-        if (name == 'SUNGAI PETANI') {
-          row['name'] = 'SP-EDAR';
-          if (row.containsKey('branch_name')) row['branch_name'] = 'SP-EDAR';
-        }
-        return row;
-      }).toList();
-    } catch (e, stackTrace) {
-      _debugLog('GET BRANCHES ERROR');
-      rethrow;
-    }
+    return AppService.instance.loadNeonBranches();
   }
 
   static Future<List<Map<String, dynamic>>> getAllBranches() async {

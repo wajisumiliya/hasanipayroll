@@ -281,6 +281,19 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  /// Safe branch selector data from Neon.
+  Future<List<Map<String, dynamic>>> loadNeonBranches() async {
+    final data = await _getAuth('/api/branches');
+    if (data['ok'] != true || data['branches'] is! List) {
+      throw StateError(
+        data['message']?.toString() ?? 'Cannot load branches from Neon.',
+      );
+    }
+    return (data['branches'] as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
   /// Authenticated attendance rows from Neon, scoped by the Node API.
   Future<List<Map<String, dynamic>>> loadNeonAttendance({
     String? branchId,
