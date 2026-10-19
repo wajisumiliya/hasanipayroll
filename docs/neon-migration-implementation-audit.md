@@ -1,6 +1,6 @@
 # Neon migration implementation audit
 
-Status: **in progress — not ready to merge as the completed migration**
+Status: **partial implementation committed — full migration is still not ready to merge**
 
 This audit is based on the current `feature/full-neon-migration` branch and read-only inspection of the connected Neon schema.
 
@@ -9,7 +9,7 @@ This audit is based on the current `feature/full-neon-migration` branch and read
 Flutter code still depends directly on Supabase in these areas:
 
 - Startup: `lib/main.dart` calls `SupabaseService.initialize()`.
-- Authentication and data loading: `lib/services/app_service.dart` still uses `Supabase.instance.client` for users, employees, payroll, attendance, storage auth, and RPC calls.
+- Authentication and data loading: login/password flows use the Node API, and the employee/payroll list loaders have been switched to the Neon API. `AppService` still uses Supabase for users, attendance, storage auth, garden RPCs, branch logs, and some employee writes.
 - Data service: `lib/screens/supabase_service.dart` still accesses employees, payroll, attendance, branches, rosters, requests, notifications, and storage.
 - Payroll generation: `lib/services/attendance_payroll_service.dart` directly reads/writes payroll, employees, salary defaults, attendance, and rosters.
 - Notification registration: `lib/services/notification_service.dart` calls the Supabase RPC `register_notification_device`.
@@ -27,6 +27,15 @@ The current Prisma schema contains models `app_user`, `Employee`, `PayrollRecord
 
 Do not run `prisma db push` against this database as a shortcut: it may attempt schema changes that are not a safe representation of the existing payroll data.
 
+## Implemented on `feature/full-neon-migration` so far
+
+- Added Neon SQL-backed employee list/detail and payroll list/month/payslip API routes, with employee self-access checks and branch scoping for payroll lists.
+- Updated employee list and payroll list/month loaders in `lib/services/app_service.dart` to call the backend API instead of Supabase.
+- Changed the backend employee-status update, payroll import, and payroll deletion paths to use the existing Neon `employees` and `payroll` tables rather than the mismatched legacy Prisma models.
+- Changed the authentication middleware's token lookup and safe employee lookup to tolerate the actual Neon `app_user`/`employees` table shapes.
+
+These changes have been committed to the migration branch, but have not yet been run against a local backend build or Flutter analyzer. They are not yet deployed, and are not evidence that all workflows work.
+
 ## Required implementation order
 
 1. Align Prisma models/field mappings with the real Neon schema, or deliberately use parameterized SQL for tables that do not fit the legacy Prisma models.
@@ -39,7 +48,7 @@ Do not run `prisma db push` against this database as a shortcut: it may attempt 
 
 ## Safety status
 
-- This audit is documentation only.
+- This document tracks the migration; code changes are committed separately on the migration branch.
 - No production database schema/data was modified.
 - No production deployment was changed.
 - This PR is intentionally draft and is not the completed migration.
