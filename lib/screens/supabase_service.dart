@@ -1366,26 +1366,11 @@ class SupabaseService {
     required int year,
     required int month,
   }) async {
-    try {
-      final start = DateTime(year, month, 1);
-      final end = DateTime(year, month + 1, 1);
-      String dateText(DateTime value) =>
-          '${value.year.toString().padLeft(4, '0')}-'
-          '${value.month.toString().padLeft(2, '0')}-'
-          '${value.day.toString().padLeft(2, '0')}';
-
-      final response = await database
-          .from('attendance')
-          .select()
-          .eq('branch_id', branchId.trim())
-          .gte('attendance_date', dateText(start))
-          .lt('attendance_date', dateText(end))
-          .order('attendance_date', ascending: false);
-      return _mapList(response);
-    } catch (e, stackTrace) {
-      _debugLog('GET BRANCH MONTH ATTENDANCE ERROR');
-      rethrow;
-    }
+    return AppService.instance.loadNeonAttendance(
+      branchId: branchId,
+      year: year,
+      month: month,
+    );
   }
 
   /// Returns every attendance submission row for the selected employees/month.
@@ -1498,9 +1483,11 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getBranchOtRequests(
       String branchId) async {
     final rows = await AppService.instance.fetchOtRequestsFromNeon();
-    return rows.where((row) =>
-        row['branch_id']?.toString().trim().toUpperCase() ==
-        branchId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['branch_id']?.toString().trim().toUpperCase() ==
+            branchId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<void> reviewBranchOtRequest({
@@ -1518,9 +1505,11 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getEmployeeOtRequests(
       String employeeId) async {
     final rows = await AppService.instance.fetchOtRequestsFromNeon();
-    return rows.where((row) =>
-        row['employee_id']?.toString().trim().toUpperCase() ==
-        employeeId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['employee_id']?.toString().trim().toUpperCase() ==
+            employeeId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<void> submitOtRequest(Map<String, dynamic> request) async {
@@ -1534,17 +1523,21 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getEmployeeLeaveRequests(
       String employeeId) async {
     final rows = await AppService.instance.fetchLeaveRequestsFromNeon();
-    return rows.where((row) =>
-        row['employee_id']?.toString().trim().toUpperCase() ==
-        employeeId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['employee_id']?.toString().trim().toUpperCase() ==
+            employeeId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<List<Map<String, dynamic>>> getBranchLeaveRequests(
       String branchId) async {
     final rows = await AppService.instance.fetchLeaveRequestsFromNeon();
-    return rows.where((row) =>
-        row['branch_id']?.toString().trim().toUpperCase() ==
-        branchId.trim().toUpperCase()).toList();
+    return rows
+        .where((row) =>
+            row['branch_id']?.toString().trim().toUpperCase() ==
+            branchId.trim().toUpperCase())
+        .toList();
   }
 
   static Future<List<Map<String, dynamic>>> getAllLeaveRequests() async {
@@ -1742,29 +1735,10 @@ class SupabaseService {
     String date, {
     String? branchId,
   }) async {
-    try {
-      var query = database.from('attendance').select().eq(
-            'attendance_date',
-            date,
-          );
-
-      if (branchId != null && branchId.trim().isNotEmpty) {
-        query = query.eq(
-          'branch_id',
-          branchId.trim(),
-        );
-      }
-
-      final response = await query.order(
-        'employee_id',
-        ascending: true,
-      );
-
-      return _mapList(response);
-    } catch (e, stackTrace) {
-      _debugLog('GET ATTENDANCE BY DATE ERROR');
-      rethrow;
-    }
+    return AppService.instance.loadNeonAttendance(
+      date: date,
+      branchId: branchId,
+    );
   }
 
   // ============================================================
