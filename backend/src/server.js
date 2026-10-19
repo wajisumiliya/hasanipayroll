@@ -1485,8 +1485,14 @@ app.get(
               : null,
         );
 
+      const dataAccessToken = createDataApiAccessToken(
+        req.user,
+        req.auth?.app_metadata?.staff_scope ?? null,
+      );
+      res.set("Cache-Control", "no-store");
       res.json({
         ok: true,
+        ...(dataAccessToken ? { dataAccessToken } : {}),
         user:
           safeUser,
       });
@@ -4110,3 +4116,4 @@ process.on(
     shutdown("SIGTERM"),
 
 );
+
