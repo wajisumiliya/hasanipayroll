@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
+import 'neon_preview.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/branch_dashboard.dart';
 import 'screens/employee_portal.dart';
@@ -13,6 +14,11 @@ import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Independent Neon preview: never initialize the legacy Supabase client.
+  if (const bool.fromEnvironment('NEON_PREVIEW', defaultValue: false)) {
+    runApp(const NeonPreviewApp());
+    return;
+  }
   await SupabaseService.initialize();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

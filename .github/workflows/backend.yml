@@ -8,7 +8,7 @@ on:
       - "backend/**"
       - ".github/workflows/backend.yml"
   pull_request:
-    branches: [main]
+    branches: [main, neon-dev]
     paths:
       - "backend/**"
       - ".github/workflows/backend.yml"

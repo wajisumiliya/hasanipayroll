@@ -623,14 +623,30 @@ async function authenticate(
       });
     }
 
-    const user =
-      await prisma.app_user.findUnique({
-        where: {
-          id: String(
-            payload.sub,
-          ),
-        },
-      });
+    // Neon app_user uses username as its primary key (not a synthetic id).
+    // Resolve the token subject against the supported identity columns without
+    // relying on the legacy Prisma app_user model.
+    const userResult = await pool.query(
+      `SELECT to_jsonb(u) AS data
+       FROM public.app_user AS u
+       WHERE COALESCE(to_jsonb(u)->>'username', '') = $1
+          OR COALESCE(to_jsonb(u)->>'email', '') = $1
+          OR COALESCE(to_jsonb(u)->>'id', '') = $1
+          OR COALESCE(to_jsonb(u)->>'employee_id', to_jsonb(u)->>'employeeId', '') = $1
+       LIMIT 1`,
+      [String(payload.sub)],
+    );
+    const rawUser = userResult.rows[0]?.data;
+    const user = rawUser ? {
+      ...rawUser,
+      id: rawUser.id ?? rawUser.username ?? rawUser.email ?? rawUser.employee_id ?? rawUser.employeeId,
+      username: rawUser.username ?? rawUser.email ?? rawUser.employee_id ?? rawUser.employeeId ?? '',
+      employeeId: rawUser.employeeId ?? rawUser.employee_id ?? null,
+      passwordHash: rawUser.passwordHash ?? rawUser.passwordhash ?? rawUser.password_hash ?? null,
+      isActive: [true, "true", "t", "1"].includes(rawUser.isActive ?? rawUser.is_active ?? true),
+      mustChangePassword: rawUser.mustChangePassword ?? rawUser.must_change_password ?? false,
+      passwordChangedAt: rawUser.passwordChangedAt ?? rawUser.password_changed_at ?? null,
+    } : null;
 
     if (!user) {
       return res.status(401).json({
@@ -831,83 +847,43 @@ async function publicAppUser(
   staffScope = null,
   loginAlias = null,
 ) {
-  const role =
-    String(
-      user.role ?? "",
-    )
-      .trim()
-      .toLowerCase();
-
+  const role = String(user.role ?? "").trim().toLowerCase();
   const reviewer = isPlayReviewer(user);
   let employee = null;
 
   if (user.employeeId && !reviewer) {
-    employee =
-      await prisma.employee.findUnique(
-        {
-          where: {
-            employeeId:
-              normalizeEmployeeId(
-                user.employeeId,
-              ),
-          },
-        },
+    try {
+      const result = await pool.query(
+        `SELECT to_jsonb(e) AS data
+         FROM public.employees AS e
+         WHERE UPPER(TRIM(e.employee_id)) = $1
+         LIMIT 1`,
+        [normalizeEmployeeId(user.employeeId)],
       );
+      employee = result.rows[0]?.data ?? null;
+    } catch (error) {
+      console.warn("PUBLIC USER EMPLOYEE LOOKUP FAILED:", error.message);
+    }
   }
 
   return {
-    id: user.id ?? null,
-
-    username:
-      loginAlias ?? user.username ?? "",
-
-    email:
-      user.email ?? null,
-
+    id: user.id ?? user.username ?? user.email ?? null,
+    username: loginAlias ?? user.username ?? user.email ?? "",
+    email: user.email ?? null,
     role,
-
-    employeeId:
-      user.employeeId ??
-      null,
-
-    // Branch accounts are identified by their configured username (for
-    // example "ALOR SETAR") and do not have an employee record.
-    branchId:
-      role === "branch"
-        ? normalizeLogin(
-            user.username || user.email,
-          )
-        : employee?.branch ?? null,
-
-    displayName:
-      employee?.name ??
-      user.username ??
-      "",
-
-    isActive:
-      user.isActive === true,
-
-    firstLogin:
-      user.mustChangePassword ===
-      true,
-
-    mustChangePassword:
-      user.mustChangePassword ===
-      true,
-
+    employeeId: user.employeeId ?? user.employee_id ?? null,
+    branchId: role === "branch"
+      ? (user.branchId ?? user.branch_id ?? normalizeLogin(user.username || user.email))
+      : (employee?.branch_id ?? employee?.branch ?? user.branchId ?? user.branch_id ?? null),
+    displayName: employee?.name ?? user.displayName ?? user.display_name ?? user.username ?? "",
+    isActive: user.isActive === true,
+    firstLogin: user.mustChangePassword === true || user.must_change_password === true,
+    mustChangePassword: user.mustChangePassword === true || user.must_change_password === true,
     employee,
-
-    isAdmin:
-      role === "admin",
-
-    isBranch:
-      role === "branch",
-
-    isEmployee:
-      role === "employee",
-
+    isAdmin: role === "admin",
+    isBranch: role === "branch",
+    isEmployee: role === "employee",
     isReviewer: reviewer,
-
     staffScope,
   };
 }
@@ -1242,8 +1218,8 @@ app.post(
          SET "passwordHash" = $1,
              "passwordChangedAt" = NOW(),
              "updatedAt" = NOW()
-         WHERE "id" = $2`,
-        [passwordHash, req.user.id],
+         WHERE "username" = $2 OR "email" = $2 OR "employee_id" = $2`,
+        [passwordHash, req.user.username ?? req.user.email ?? req.user.employeeId],
       );
 
       return res.json({ok: true, message: "Password updated successfully."});
@@ -1552,33 +1528,16 @@ app.get(
   requireAdmin,
   async (req, res) => {
     try {
-      const employees =
-        await prisma.employee.findMany(
-          {
-            orderBy: {
-              employeeId:
-                "asc",
-            },
-          },
-        );
-
-      res.json({
-        ok: true,
-
-        count:
-          employees.length,
-
-        employees,
-      });
+      const result = await pool.query(
+        `SELECT to_jsonb(e) AS data
+         FROM public.employees AS e
+         ORDER BY e.employee_id ASC`,
+      );
+      const employees = result.rows.map((row) => row.data);
+      return res.json({ ok: true, count: employees.length, employees });
     } catch (error) {
-      console.error(
-        "EMPLOYEE LIST ERROR:",
-        error.message,
-      );
-
-      return genericError(
-        res,
-      );
+      console.error("EMPLOYEE LIST ERROR:", error.message);
+      return genericError(res, 503);
     }
   },
 );
@@ -1699,10 +1658,10 @@ app.post(
       client = await pool.connect();
       await client.query("BEGIN");
       const employeeResult = await client.query(
-        `UPDATE public."Employee"
-         SET "isActive" = $2
-         WHERE "employeeId" = $1
-         RETURNING "employeeId"`,
+        `UPDATE public.employees
+         SET is_active = $2, updated_at = NOW()
+         WHERE UPPER(TRIM(employee_id)) = UPPER($1)
+         RETURNING employee_id`,
         [employeeId, isActive],
       );
 
@@ -1715,9 +1674,9 @@ app.post(
       }
 
       await client.query(
-        `UPDATE public."app_user"
-         SET "isActive" = $2
-         WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = UPPER($1)`,
+        `UPDATE public.app_user
+         SET is_active = $2, updated_at = NOW()
+         WHERE UPPER(TRIM(COALESCE(employee_id, ''))) = UPPER($1)`,
         [employeeId, isActive],
       );
       await client.query("COMMIT");
@@ -1742,256 +1701,203 @@ app.post(
   },
 );
 
-// ADMIN - PAYROLL
-// ============================================================
-
+// ADMIN / BRANCH PAYROLL — read directly from the existing Neon schema.
 app.get(
   "/api/admin/payroll",
   authenticate,
   requireAdmin,
   async (req, res) => {
     try {
-      const records =
-        await prisma.payrollRecord.findMany(
-          {
-            include: {
-              employee: true,
-            },
-
-            orderBy: [
-              {
-                period:
-                  "desc",
-              },
-
-              {
-                employeeId:
-                  "asc",
-              },
-            ],
-          },
-        );
-
-      res.json({
-        ok: true,
-
-        count:
-          records.length,
-
-        payroll:
-          records,
-      });
+      const result = await pool.query(
+        `SELECT to_jsonb(p) AS data, to_jsonb(e) AS employee_data
+         FROM public.payroll AS p
+         LEFT JOIN public.employees AS e ON e.employee_id = p.employee_id
+         ORDER BY p.period DESC, p.employee_id ASC`,
+      );
+      const payroll = result.rows.map((row) => ({
+        ...row.data,
+        employee: row.employee_data ?? null,
+      }));
+      return res.json({ ok: true, count: payroll.length, payroll });
     } catch (error) {
-      console.error(
-        "PAYROLL LIST ERROR:",
-        error.message,
-      );
-
-      return genericError(
-        res,
-      );
+      console.error("ADMIN PAYROLL LIST ERROR:", error.message);
+      return genericError(res, 503);
     }
   },
 );
 
-// ============================================================
-// EMPLOYEE PAYROLL
-// ============================================================
+app.get(
+  "/api/payroll",
+  authenticate,
+  async (req, res) => {
+    try {
+      const role = String(req.user?.role ?? "").toUpperCase();
+      if (role !== "ADMIN" && role !== "BRANCH") {
+        return res.status(403).json({ ok: false, message: "Administrator or branch access required." });
+      }
+      const year = req.query.year == null ? null : Number(req.query.year);
+      const month = req.query.month == null ? null : Number(req.query.month);
+      if ((year != null && (!Number.isInteger(year) || year < 2000 || year > 2100)) ||
+          (month != null && (!Number.isInteger(month) || month < 1 || month > 12))) {
+        return res.status(400).json({ ok: false, message: "Invalid payroll year or month." });
+      }
+      const params = [];
+      const conditions = [];
+      if (year != null) { params.push(year); conditions.push(`EXTRACT(YEAR FROM p.period) = $${params.length}`); }
+      if (month != null) { params.push(month); conditions.push(`EXTRACT(MONTH FROM p.period) = $${params.length}`); }
+      if (role === "BRANCH") {
+        const branchId = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+        if (!branchId) return res.status(403).json({ ok: false, message: "Branch scope is missing for this account." });
+        params.push(branchId);
+        conditions.push(`(e.branch_id = $${params.length} OR e.payroll_branch_id = $${params.length})`);
+      }
+      const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      const result = await pool.query(
+        `SELECT to_jsonb(p) AS data, to_jsonb(e) AS employee_data
+         FROM public.payroll AS p
+         LEFT JOIN public.employees AS e ON e.employee_id = p.employee_id
+         ${where}
+         ORDER BY p.period DESC, p.employee_id ASC`,
+        params,
+      );
+      const payroll = result.rows.map((row) => ({ ...row.data, employee: row.employee_data ?? null }));
+      return res.json({ ok: true, count: payroll.length, payroll });
+    } catch (error) {
+      console.error("PAYROLL LIST ERROR:", error.message);
+      return genericError(res, 503);
+    }
+  },
+);
 
+app.get(
+  "/api/employees",
+  authenticate,
+  async (req, res) => {
+    try {
+      const role = String(req.user?.role ?? "").toUpperCase();
+      const params = [];
+      let where = "";
+      if (role === "EMPLOYEE") {
+        const employeeId = normalizeEmployeeId(req.user.employeeId ?? req.user.employee_id);
+        if (!employeeId) return res.status(403).json({ ok: false, message: "Employee scope is missing." });
+        params.push(employeeId);
+        where = "WHERE UPPER(TRIM(e.employee_id)) = $1";
+      } else if (role === "BRANCH") {
+        const branchId = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+        if (!branchId) return res.status(403).json({ ok: false, message: "Branch scope is missing." });
+        params.push(branchId);
+        where = "WHERE e.branch_id = $1 OR e.payroll_branch_id = $1";
+      } else if (role !== "ADMIN") {
+        return res.status(403).json({ ok: false, message: "Access denied." });
+      }
+      const result = await pool.query(
+        `SELECT to_jsonb(e) AS data FROM public.employees AS e ${where} ORDER BY e.employee_id ASC`,
+        params,
+      );
+      const employees = result.rows.map((row) => row.data);
+      return res.json({ ok: true, count: employees.length, employees });
+    } catch (error) {
+      console.error("EMPLOYEE LIST ERROR:", error.message);
+      return genericError(res, 503);
+    }
+  },
+);
+
+app.get(
+  "/api/employees/:employeeId",
+  authenticate,
+  async (req, res) => {
+    try {
+      const employeeId = normalizeEmployeeId(req.params.employeeId);
+      const role = String(req.user?.role ?? "").toUpperCase();
+      if (!isValidEmployeeId(employeeId)) return res.status(400).json({ ok: false, message: "Invalid employee ID." });
+      if (role === "EMPLOYEE" && normalizeEmployeeId(req.user.employeeId ?? req.user.employee_id) !== employeeId) {
+        return res.status(403).json({ ok: false, message: "Not authorized." });
+      }
+      const result = await pool.query(
+        `SELECT to_jsonb(e) AS data FROM public.employees AS e
+         WHERE UPPER(TRIM(e.employee_id)) = $1 LIMIT 1`,
+        [employeeId],
+      );
+      const employee = result.rows[0]?.data;
+      if (!employee) return res.status(404).json({ ok: false, message: "Employee not found." });
+      if (role === "BRANCH" && String(employee.branch_id ?? employee.payroll_branch_id ?? "") !== String(req.user.branchId ?? req.user.branch_id ?? "")) {
+        return res.status(403).json({ ok: false, message: "Not authorized." });
+      }
+      return res.json({ ok: true, employee });
+    } catch (error) {
+      console.error("EMPLOYEE LOOKUP ERROR:", error.message);
+      return genericError(res, 503);
+    }
+  },
+);
+
+// EMPLOYEE PAYROLL
 app.get(
   "/api/employees/:employeeId/payroll",
   authenticate,
   requireEmployeeAccess,
   async (req, res) => {
     try {
-      const employeeId =
-        normalizeEmployeeId(
-          req.params.employeeId,
-        );
-
-      if (
-        !isValidEmployeeId(
-          employeeId,
-        )
-      ) {
-        return res.status(400).json({
-          ok: false,
-          message:
-            "Invalid employee ID.",
-        });
+      const employeeId = normalizeEmployeeId(req.params.employeeId);
+      if (!isValidEmployeeId(employeeId)) return res.status(400).json({ ok: false, message: "Invalid employee ID." });
+      const year = req.query.year == null ? null : Number(req.query.year);
+      const month = req.query.month == null ? null : Number(req.query.month);
+      if ((year != null && (!Number.isInteger(year) || year < 2000 || year > 2100)) ||
+          (month != null && (!Number.isInteger(month) || month < 1 || month > 12))) {
+        return res.status(400).json({ ok: false, message: "Invalid payroll year or month." });
       }
-
-      const employee =
-        await prisma.employee.findUnique(
-          {
-            where: {
-              employeeId,
-            },
-          },
-        );
-
-      if (!employee) {
-        return res.status(404).json({
-          ok: false,
-          message:
-            "Employee not found.",
-        });
-      }
-
-      const payroll =
-        await prisma.payrollRecord.findMany(
-          {
-            where: {
-              employeeId,
-            },
-
-            orderBy: {
-              period:
-                "desc",
-            },
-          },
-        );
-
-      res.json({
-        ok: true,
-
-        employee,
-
-        count:
-          payroll.length,
-
-        payroll,
-      });
+      const params = [employeeId];
+      const conditions = ["UPPER(TRIM(p.employee_id)) = $1", "p.is_published = TRUE"];
+      if (year != null) { params.push(year); conditions.push(`EXTRACT(YEAR FROM p.period) = $${params.length}`); }
+      if (month != null) { params.push(month); conditions.push(`EXTRACT(MONTH FROM p.period) = $${params.length}`); }
+      const employeeResult = await pool.query(
+        `SELECT to_jsonb(e) AS data FROM public.employees e WHERE UPPER(TRIM(e.employee_id)) = $1 LIMIT 1`,
+        [employeeId],
+      );
+      const employee = employeeResult.rows[0]?.data;
+      if (!employee) return res.status(404).json({ ok: false, message: "Employee not found." });
+      const result = await pool.query(
+        `SELECT to_jsonb(p) AS data FROM public.payroll p WHERE ${conditions.join(" AND ")} ORDER BY p.period DESC`,
+        params,
+      );
+      const payroll = result.rows.map((row) => row.data);
+      return res.json({ ok: true, employee, count: payroll.length, payroll });
     } catch (error) {
-      console.error(
-        "EMPLOYEE PAYROLL ERROR:",
-        error.message,
-      );
-
-      return genericError(
-        res,
-      );
+      console.error("EMPLOYEE PAYROLL ERROR:", error.message);
+      return genericError(res, 503);
     }
   },
 );
 
-// ============================================================
 // SINGLE PAYSLIP
-// ============================================================
-
 app.get(
   "/api/employees/:employeeId/payroll/:year/:month",
   authenticate,
   requireEmployeeAccess,
   async (req, res) => {
     try {
-      const employeeId =
-        normalizeEmployeeId(
-          req.params.employeeId,
-        );
-
-      const year =
-        Number(
-          req.params.year,
-        );
-
-      const month =
-        Number(
-          req.params.month,
-        );
-
-      if (
-        !isValidEmployeeId(
-          employeeId,
-        )
-      ) {
-        return res.status(400).json({
-          ok: false,
-          message:
-            "Invalid employee ID.",
-        });
+      const employeeId = normalizeEmployeeId(req.params.employeeId);
+      const year = Number(req.params.year);
+      const month = Number(req.params.month);
+      if (!isValidEmployeeId(employeeId) || !Number.isInteger(year) || year < 2000 || year > 2100 ||
+          !Number.isInteger(month) || month < 1 || month > 12) {
+        return res.status(400).json({ ok: false, message: "Invalid employee ID, year or month." });
       }
-
-      if (
-        !Number.isInteger(
-          year,
-        ) ||
-        year < 2000 ||
-        year > 2100 ||
-        !Number.isInteger(
-          month,
-        ) ||
-        month < 1 ||
-        month > 12
-      ) {
-        return res.status(400).json({
-          ok: false,
-          message:
-            "Invalid year or month.",
-        });
-      }
-
-      const startDate =
-        new Date(
-          Date.UTC(
-            year,
-            month - 1,
-            1,
-          ),
-        );
-
-      const endDate =
-        new Date(
-          Date.UTC(
-            year,
-            month,
-            1,
-          ),
-        );
-
-      const payroll =
-        await prisma.payrollRecord.findFirst(
-          {
-            where: {
-              employeeId,
-
-              period: {
-                gte:
-                  startDate,
-
-                lt:
-                  endDate,
-              },
-            },
-
-            include: {
-              employee: true,
-            },
-          },
-        );
-
-      if (!payroll) {
-        return res.status(404).json({
-          ok: false,
-          message:
-            "Payslip not found.",
-        });
-      }
-
-      res.json({
-        ok: true,
-
-        payroll,
-      });
+      const result = await pool.query(
+        `SELECT to_jsonb(p) AS data, to_jsonb(e) AS employee_data
+         FROM public.payroll p LEFT JOIN public.employees e ON e.employee_id = p.employee_id
+         WHERE UPPER(TRIM(p.employee_id)) = $1 AND p.is_published = TRUE
+           AND EXTRACT(YEAR FROM p.period) = $2 AND EXTRACT(MONTH FROM p.period) = $3
+         ORDER BY p.period DESC LIMIT 1`,
+        [employeeId, year, month],
+      );
+      const row = result.rows[0];
+      if (!row) return res.status(404).json({ ok: false, message: "Payslip not found." });
+      return res.json({ ok: true, payroll: { ...row.data, employee: row.employee_data ?? null } });
     } catch (error) {
-      console.error(
-        "PAYSLIP ERROR:",
-        error.message,
-      );
-
-      return genericError(
-        res,
-      );
+      console.error("PAYSLIP ERROR:", error.message);
+      return genericError(res, 503);
     }
   },
 );
@@ -2132,14 +2038,21 @@ app.post(
             ),
           );
 
-        const employee =
-          await prisma.employee.findUnique(
-            {
-              where: {
-                employeeId,
-              },
-            },
-          );
+        const employeeResult = await pool.query(
+          `SELECT to_jsonb(e) AS data
+           FROM public.employees e
+           WHERE UPPER(TRIM(e.employee_id)) = $1
+           LIMIT 1`,
+          [employeeId],
+        );
+        const employee = employeeResult.rows[0]?.data
+          ? {
+              ...employeeResult.rows[0].data,
+              bankCode: employeeResult.rows[0].data.bank_code,
+              bankAccount: employeeResult.rows[0].data.bank_account,
+              newIcNo: employeeResult.rows[0].data.new_ic_no,
+            }
+          : null;
 
         if (!employee) {
           results.errors.push({
@@ -2275,48 +2188,88 @@ app.post(
               : null,
         };
 
-        const existing =
-          await prisma.payrollRecord.findUnique(
-            {
-              where: {
-                employeeId_period:
-                  {
-                    employeeId,
-
-                    period:
-                      normalizedPeriod,
-                  },
-              },
-            },
-          );
-
-        await prisma.payrollRecord.upsert(
-          {
-            where: {
-              employeeId_period:
-                {
-                  employeeId,
-
-                  period:
-                    normalizedPeriod,
-                },
-            },
-
-            update:
-              payrollData,
-
-            create: {
-              employeeId,
-
-              period:
-                normalizedPeriod,
-
-              ...payrollData,
-            },
-          },
+        const existed = await pool.query(
+          `SELECT 1 FROM public.payroll
+           WHERE employee_id = $1 AND period = $2::date
+           LIMIT 1`,
+          [employeeId, normalizedPeriod.toISOString().slice(0, 10)],
         );
 
-        if (existing) {
+        const value = (snake, camel, fallback = 0) =>
+          safeNumber(row[snake] ?? row[camel] ?? fallback);
+        const bonus = row.bonus == null ? null : String(row.bonus).slice(0, 1000);
+        const commission = row.commission == null ? null : String(row.commission).slice(0, 1000);
+        const otherEarnings = row.other_earnings == null && row.otherEarnings == null
+          ? null : String(row.other_earnings ?? row.otherEarnings).slice(0, 1000);
+        await pool.query(
+          `INSERT INTO public.payroll (
+             id, employee_id, period, basic_salary, fw_salary,
+             elaun_kedatangan, elaun_perkhidmatan, elaun_kerajinan, elaun_makanan,
+             overtime, cuti_umum, epf_employee, socso_employee, eis_employee, pcb, zakat,
+             epf_employer, socso_employer, eis_employer, new_ic_no, bank_code, bank_account,
+             remarks, late_deduction, unpaid_deduction, bonus, commission, other_earnings,
+             advance, is_published, published_at, published_by, release_at, created_at, updated_at
+           ) VALUES (
+             $1,$2,$3::date,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+             $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,FALSE,NULL,NULL,NULL,NOW(),NOW()
+           )
+           ON CONFLICT (employee_id, period) DO UPDATE SET
+             basic_salary = EXCLUDED.basic_salary,
+             fw_salary = EXCLUDED.fw_salary,
+             elaun_kedatangan = EXCLUDED.elaun_kedatangan,
+             elaun_perkhidmatan = EXCLUDED.elaun_perkhidmatan,
+             elaun_kerajinan = EXCLUDED.elaun_kerajinan,
+             elaun_makanan = EXCLUDED.elaun_makanan,
+             overtime = EXCLUDED.overtime,
+             cuti_umum = EXCLUDED.cuti_umum,
+             epf_employee = EXCLUDED.epf_employee,
+             socso_employee = EXCLUDED.socso_employee,
+             eis_employee = EXCLUDED.eis_employee,
+             pcb = EXCLUDED.pcb,
+             epf_employer = EXCLUDED.epf_employer,
+             socso_employer = EXCLUDED.socso_employer,
+             eis_employer = EXCLUDED.eis_employer,
+             new_ic_no = EXCLUDED.new_ic_no,
+             bank_code = EXCLUDED.bank_code,
+             bank_account = EXCLUDED.bank_account,
+             remarks = EXCLUDED.remarks,
+             late_deduction = EXCLUDED.late_deduction,
+             unpaid_deduction = EXCLUDED.unpaid_deduction,
+             bonus = EXCLUDED.bonus,
+             commission = EXCLUDED.commission,
+             other_earnings = EXCLUDED.other_earnings,
+             advance = EXCLUDED.advance,
+             updated_at = NOW()`,
+          [
+            crypto.randomUUID(), employeeId, normalizedPeriod.toISOString().slice(0, 10),
+            payrollData.basicSalary,
+            value("fw_salary", "fwSalary", employee.fw_salary),
+            value("elaun_kedatangan", "elaunKedatangan", employee.elaun_kedatangan),
+            value("elaun_perkhidmatan", "elaunPerkhidmatan", employee.elaun_perkhidmatan),
+            value("elaun_kerajinan", "elaunKerajinan", employee.elaun_kerajinan),
+            payrollData.foodAllowance,
+            payrollData.overtime,
+            value("cuti_umum", "cutiUmum"),
+            payrollData.epfEmployee,
+            payrollData.socsoEmployee,
+            payrollData.eisEmployee,
+            payrollData.pcb,
+            value("zakat", "zakat"),
+            payrollData.epfEmployer,
+            payrollData.socsoEmployer,
+            payrollData.eisEmployer,
+            String(row.new_ic_no ?? row.newIcNo ?? employee.new_ic_no ?? "").slice(0, 100),
+            payrollData.bankCode,
+            payrollData.bankAccount,
+            payrollData.remarks,
+            value("late_deduction", "lateDeduction"),
+            value("unpaid_deduction", "unpaidDeduction"),
+            bonus, commission, otherEarnings,
+            value("advance", "advance"),
+          ],
+        );
+
+        if (existed.rowCount > 0) {
           results.updated++;
         } else {
           results.imported++;
@@ -2371,30 +2324,17 @@ app.delete(
         });
       }
 
-      const existing =
-        await prisma.payrollRecord.findUnique(
-          {
-            where: {
-              id,
-            },
-          },
-        );
+      const deleted = await pool.query(
+        `DELETE FROM public.payroll WHERE id = $1 RETURNING id`,
+        [id],
+      );
 
-      if (!existing) {
+      if (deleted.rowCount === 0) {
         return res.status(404).json({
           ok: false,
-          message:
-            "Payroll record not found.",
+          message: "Payroll record not found.",
         });
       }
-
-      await prisma.payrollRecord.delete(
-        {
-          where: {
-            id,
-          },
-        },
-      );
 
       res.json({
         ok: true,
@@ -3613,6 +3553,57 @@ app.post(
 );
 
 // ============================================================
+// ============================================================
+// NEON DEV FLUTTER PREVIEW — safe, read-only employee directory
+// ============================================================
+// This endpoint deliberately returns only non-sensitive directory fields.
+// Employee and branch scope are enforced by the backend; never return full
+// employee rows to the browser, as they contain identity/payroll data.
+app.get("/api/neon/preview/employees", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").trim().toUpperCase();
+    const employeeId = normalizeEmployeeId(req.user?.employeeId);
+    const branchId = String(req.user?.branch_id ?? req.user?.branchId ?? "").trim();
+    const params = [];
+    let predicate = "";
+
+    if (role === "EMPLOYEE") {
+      if (!isValidEmployeeId(employeeId)) {
+        return res.status(403).json({ok:false,message:"Employee scope missing."});
+      }
+      params.push(employeeId);
+      predicate = "WHERE UPPER(TRIM(e.employee_id)) = $1";
+    } else if (role === "BRANCH") {
+      if (!branchId) {
+        return res.status(403).json({ok:false,message:"Branch scope missing."});
+      }
+      params.push(branchId);
+      predicate = "WHERE e.branch_id = $1";
+    } else if (role !== "ADMIN") {
+      return res.status(403).json({ok:false,message:"Role is not authorized."});
+    }
+
+    const result = await pool.query(
+      `SELECT e.employee_id, e.name, e.branch_id, e.department, e.designation,
+              e.is_active, e.employment_status
+       FROM public.employees AS e
+       ${predicate}
+       ORDER BY e.name, e.employee_id
+       LIMIT 500`,
+      params,
+    );
+    return res.json({
+      ok:true,
+      source:"neon",
+      count:result.rows.length,
+      employees:result.rows,
+    });
+  } catch (error) {
+    console.error("NEON PREVIEW DIRECTORY ERROR:", error.message);
+    return res.status(503).json({ok:false,message:"Unable to load Neon employee directory."});
+  }
+});
+
 // 404
 // ============================================================
 
