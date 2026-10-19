@@ -1327,6 +1327,35 @@ app.post(
   },
 );
 
+// Administrator-controlled branch password setup for migrated Neon accounts.
+// Requires an authenticated ADMIN and never returns or logs password material.
+app.post("/api/admin/branch-password", passwordLimiter, authenticate, requireAdmin, async (req, res) => {
+  try {
+    const username = normalizeLogin(req.body?.username);
+    const newPassword = String(req.body?.newPassword ?? "");
+    if (!username || newPassword.length < 12 || newPassword.length > 128) {
+      return res.status(400).json({ ok: false, message: "A branch username and password of 12–128 characters are required." });
+    }
+    const result = await pool.query(
+      "SELECT username, role FROM public.app_user WHERE LOWER(TRIM(username)) = LOWER(TRIM($1)) LIMIT 1",
+      [username],
+    );
+    const target = result.rows[0];
+    if (!target || String(target.role).toUpperCase() !== "BRANCH") {
+      return res.status(404).json({ ok: false, message: "Branch account not found." });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await pool.query(
+      'UPDATE public.app_user SET "passwordHash" = $1, must_change_password = FALSE, first_login = FALSE, password_changed_at = NOW(), updated_at = NOW() WHERE username = $2',
+      [passwordHash, target.username],
+    );
+    return res.json({ ok: true, message: "Branch password configured.", username: target.username });
+  } catch (error) {
+    console.error("ADMIN BRANCH PASSWORD ERROR:", error.message);
+    return genericError(res);
+  }
+});
+
 // ============================================================
 // FORGOT PASSWORD
 // ============================================================
