@@ -1,0 +1,75 @@
+name: Prepare dependency and formatting fixes
+
+on:
+  push:
+    branches: [codex/neon-database-connection]
+    paths: [".github/workflows/prepare-neon-ci-fixes.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Resolve patched versions
+        run: |
+          npm install --package-lock-only --ignore-scripts --save-exact nodemailer@10
+          npm audit fix --package-lock-only --ignore-scripts
+      - name: Verify installation, Prisma, tests, and audit
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+        run: |
+          npm ci
+          npm run db:generate
+          npm test
+          npm audit --omit=dev --audit-level=high
+      - name: Export resolved manifests for review
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          for (const path of ['package.json', 'package-lock.json']) {
+            const data = fs.readFileSync(path).toString('base64');
+            console.log('FIX_FILE_BEGIN ' + 'backend/' + path);
+            for (let i = 0; i < data.length; i += 2000) console.log('FIX_DATA ' + data.slice(i, i + 2000));
+            console.log('FIX_FILE_END');
+          }
+          JS
+  formatting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format lib test
+      - name: Export formatter output for review
+        run: |
+          python3 - <<'PY'
+          import base64, pathlib, subprocess
+          paths = subprocess.check_output(['git', 'diff', '--name-only', '--', 'lib', 'test'], text=True).splitlines()
+          for path in paths:
+              data = base64.b64encode(pathlib.Path(path).read_bytes()).decode()
+              print('FIX_FILE_BEGIN ' + path)
+              for i in range(0, len(data), 2000):
+                  print('FIX_DATA ' + data[i:i+2000])
+              print('FIX_FILE_END')
+          PY
+      - run: flutter analyze
+      - run: flutter test
