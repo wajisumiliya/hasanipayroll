@@ -31,10 +31,6 @@ const JWT_SECRET = String(
 
 const ACCESS_TOKEN_SECRET = JWT_SECRET;
 
-const SUPABASE_JWT_KEY_ID = String(
-  process.env.SUPABASE_JWT_KEY_ID || "",
-).trim();
-
 const JWT_EXPIRES_IN =
   process.env.JWT_EXPIRES_IN || "8h";
 
@@ -467,9 +463,6 @@ function createAccessToken(
     ACCESS_TOKEN_SECRET,
 
     {
-      ...(SUPABASE_JWT_KEY_ID
-        ? { keyid: SUPABASE_JWT_KEY_ID }
-        : {}),
       expiresIn:
         JWT_EXPIRES_IN,
 
