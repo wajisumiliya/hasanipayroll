@@ -37,7 +37,8 @@ void main() {
     }
   });
 
-  test('logout clears database authorization even when a data token remains', () {
+  test('logout clears database authorization even when a data token remains',
+      () {
     expect(
       databaseSessionToken(
         usesNeon: true,

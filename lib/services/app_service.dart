@@ -268,7 +268,8 @@ class AppService extends ChangeNotifier {
     final data = await _getAuth(
       '/api/admin/dashboard/overview?year=${month.year}&month=${month.month}',
     );
-    if (data['ok'] != true || data['source'] != 'neon' ||
+    if (data['ok'] != true ||
+        data['source'] != 'neon' ||
         data['employees'] is! List ||
         data['payroll'] is! List ||
         data['branches'] is! List) {
@@ -579,8 +580,8 @@ class AppService extends ChangeNotifier {
           notifyListeners();
           return;
         }
-        _dataAccessToken = validation['dataAccessToken']?.toString() ??
-            _dataAccessToken;
+        _dataAccessToken =
+            validation['dataAccessToken']?.toString() ?? _dataAccessToken;
         _applyDatabaseSession();
         final verified = Map<String, dynamic>.from(validation['user']);
         _currentUser = app_user(
@@ -688,7 +689,8 @@ class AppService extends ChangeNotifier {
     try {
       final data = await _getAuth('/api/employees');
       if (data['ok'] != true || data['employees'] is! List) {
-        throw Exception(data['message']?.toString() ?? 'Unable to load employees from Neon.');
+        throw Exception(data['message']?.toString() ??
+            'Unable to load employees from Neon.');
       }
 
       employees.clear();
@@ -705,7 +707,8 @@ class AppService extends ChangeNotifier {
         }
       }
 
-      employees.removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
+      employees
+          .removeWhere((employee) => !_employeeAllowedByStaffScope(employee));
       _employeesLoaded = true;
       notifyListeners();
     } catch (error) {
@@ -785,7 +788,8 @@ class AppService extends ChangeNotifier {
         uri,
         headers: {
           'Accept': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 45));
 
@@ -794,8 +798,11 @@ class AppService extends ChangeNotifier {
         final decoded = jsonDecode(response.body);
         if (decoded is Map) data = Map<String, dynamic>.from(decoded);
       }
-      if (response.statusCode < 200 || response.statusCode >= 300 || data['ok'] != true) {
-        throw Exception(data['message']?.toString() ?? 'Unable to load payroll from Neon.');
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          data['ok'] != true) {
+        throw Exception(
+            data['message']?.toString() ?? 'Unable to load payroll from Neon.');
       }
       final rows = data['payroll'] is List ? data['payroll'] as List : const [];
       payroll.clear();
@@ -808,12 +815,15 @@ class AppService extends ChangeNotifier {
         try {
           final row = Map<String, dynamic>.from(raw);
           final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
-              .toString().trim().toUpperCase();
+              .toString()
+              .trim()
+              .toUpperCase();
           if (_currentUser?.isEmployee == true &&
               !(row['is_published'] == true || row['isPublished'] == true)) {
             continue;
           }
-          if (_currentUser?.staffScope != null && !allowedEmployeeIds.contains(employeeId)) {
+          if (_currentUser?.staffScope != null &&
+              !allowedEmployeeIds.contains(employeeId)) {
             continue;
           }
           payroll.add(_payrollFromSupabase(row));
@@ -836,9 +846,11 @@ class AppService extends ChangeNotifier {
   Future<void> loadCurrentEmployeePayrollFromSupabase(String employeeId) async {
     final normalizedId = employeeId.trim();
     if (normalizedId.isEmpty) return;
-    final data = await _getAuth('/api/employees/${Uri.encodeComponent(normalizedId)}/payroll');
+    final data = await _getAuth(
+        '/api/employees/${Uri.encodeComponent(normalizedId)}/payroll');
     if (data['ok'] != true || data['payroll'] is! List) {
-      throw Exception(data['message']?.toString() ?? 'Unable to load employee payroll from Neon.');
+      throw Exception(data['message']?.toString() ??
+          'Unable to load employee payroll from Neon.');
     }
     final refreshed = <PayrollRecord>[];
     for (final raw in data['payroll'] as List) {
@@ -863,7 +875,8 @@ class AppService extends ChangeNotifier {
       '/api/payroll?year=${month.year}&month=${month.month}',
     );
     if (data['ok'] != true || data['payroll'] is! List) {
-      throw Exception(data['message']?.toString() ?? 'Unable to refresh monthly payroll from Neon.');
+      throw Exception(data['message']?.toString() ??
+          'Unable to refresh monthly payroll from Neon.');
     }
     payroll.removeWhere((record) =>
         record.period.year == month.year && record.period.month == month.month);
@@ -875,8 +888,11 @@ class AppService extends ChangeNotifier {
       try {
         final row = Map<String, dynamic>.from(raw);
         final employeeId = (row['employee_id'] ?? row['employeeId'] ?? '')
-            .toString().trim().toUpperCase();
-        if (_currentUser?.staffScope != null && !allowedEmployeeIds.contains(employeeId)) {
+            .toString()
+            .trim()
+            .toUpperCase();
+        if (_currentUser?.staffScope != null &&
+            !allowedEmployeeIds.contains(employeeId)) {
           continue;
         }
         payroll.add(_payrollFromSupabase(row));
@@ -4055,4 +4071,3 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
     };
   }
 }
-

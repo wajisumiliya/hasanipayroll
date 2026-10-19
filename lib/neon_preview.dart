@@ -50,12 +50,19 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is Map) {
-        return {...Map<String, dynamic>.from(decoded), '_status': response.statusCode};
+        return {
+          ...Map<String, dynamic>.from(decoded),
+          '_status': response.statusCode
+        };
       }
     } catch (_) {
       // Malformed/unavailable response gets a safe, generic error.
     }
-    return {'ok': false, 'message': 'Unexpected API response.', '_status': response.statusCode};
+    return {
+      'ok': false,
+      'message': 'Unexpected API response.',
+      '_status': response.statusCode
+    };
   }
 
   Future<void> login() async {
@@ -69,7 +76,10 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
       final response = await http
           .post(
             _uri('/api/auth/login'),
-            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
             body: jsonEncode({
               'username': username.text.trim(),
               'password': password.text,
@@ -81,8 +91,10 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
       if (response.statusCode != 200 || data['ok'] != true) {
         throw StateError(data['message']?.toString() ?? 'Login failed.');
       }
-      if (data['requiresPasswordChange'] == true || data['firstLogin'] == true) {
-        throw StateError('This account requires first-login password setup. Use the regular payroll app to complete it.');
+      if (data['requiresPasswordChange'] == true ||
+          data['firstLogin'] == true) {
+        throw StateError(
+            'This account requires first-login password setup. Use the regular payroll app to complete it.');
       }
       if (accessToken.isEmpty) {
         throw StateError('The API did not return a login token.');
@@ -96,7 +108,9 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
       setState(() {
         token = null;
         signedInAs = null;
-        error = e is StateError ? e.message.toString() : 'Cannot reach Neon DEV API. Check the backend and API_BASE_URL.';
+        error = e is StateError
+            ? e.message.toString()
+            : 'Cannot reach Neon DEV API. Check the backend and API_BASE_URL.';
       });
     } finally {
       if (mounted) setState(() => busy = false);
@@ -111,27 +125,34 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
       error = null;
     });
     try {
-      final response = await http
-          .get(_uri('/api/neon/preview/employees'), headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer $activeToken',
-          })
-          .timeout(const Duration(seconds: 25));
+      final response =
+          await http.get(_uri('/api/neon/preview/employees'), headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $activeToken',
+      }).timeout(const Duration(seconds: 25));
       final data = await _decode(response);
-      if (response.statusCode != 200 || data['ok'] != true || data['source'] != 'neon') {
-        throw StateError(data['message']?.toString() ?? 'Unable to load employees from Neon.');
+      if (response.statusCode != 200 ||
+          data['ok'] != true ||
+          data['source'] != 'neon') {
+        throw StateError(data['message']?.toString() ??
+            'Unable to load employees from Neon.');
       }
       final rows = data['employees'];
       if (!mounted) return;
       setState(() {
         employees = rows is List
-            ? rows.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList()
+            ? rows
+                .whereType<Map>()
+                .map((row) => Map<String, dynamic>.from(row))
+                .toList()
             : const [];
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        error = e is StateError ? e.message.toString() : 'Neon DEV API request failed.';
+        error = e is StateError
+            ? e.message.toString()
+            : 'Neon DEV API request failed.';
       });
     } finally {
       if (mounted) setState(() => busy = false);
@@ -162,7 +183,11 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
       appBar: AppBar(
         title: const Text('Hasani Payroll • Neon DEV'),
         actions: [
-          if (loggedIn) IconButton(onPressed: busy ? null : signOut, icon: const Icon(Icons.logout), tooltip: 'Sign out'),
+          if (loggedIn)
+            IconButton(
+                onPressed: busy ? null : signOut,
+                icon: const Icon(Icons.logout),
+                tooltip: 'Sign out'),
         ],
       ),
       body: Center(
@@ -179,7 +204,8 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
                       Icon(Icons.cloud_done, color: Colors.green),
                       SizedBox(width: 12),
                       Expanded(
-                        child: Text('Neon PostgreSQL DEV Preview\nRead-only directory • no Supabase connection'),
+                        child: Text(
+                            'Neon PostgreSQL DEV Preview\nRead-only directory • no Supabase connection'),
                       ),
                     ],
                   ),
@@ -199,14 +225,17 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
                 TextField(
                   controller: username,
                   autocorrect: false,
-                  decoration: const InputDecoration(labelText: 'Username / Employee ID', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      labelText: 'Username / Employee ID',
+                      border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: password,
                   obscureText: true,
                   onSubmitted: (_) => login(),
-                  decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      labelText: 'Password', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
@@ -217,7 +246,9 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
               ] else ...[
                 Row(
                   children: [
-                    Expanded(child: Text('Signed in: ${signedInAs ?? ""}', style: Theme.of(context).textTheme.titleMedium)),
+                    Expanded(
+                        child: Text('Signed in: ${signedInAs ?? ""}',
+                            style: Theme.of(context).textTheme.titleMedium)),
                     IconButton(
                       onPressed: busy ? null : refreshDirectory,
                       icon: const Icon(Icons.refresh),
@@ -226,7 +257,8 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Employees returned by Neon: ${employees.length}', style: Theme.of(context).textTheme.titleMedium),
+                Text('Employees returned by Neon: ${employees.length}',
+                    style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 12),
                 if (employees.isEmpty && !busy)
                   const Text('No employees are visible to this account.'),
@@ -248,12 +280,14 @@ class _NeonPreviewPageState extends State<NeonPreviewPage> {
                   );
                 }),
               ],
-              if (busy) const Padding(
-                padding: EdgeInsets.all(20),
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              if (busy)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
               const SizedBox(height: 20),
-              SelectableText('DEV API: $apiBaseUrl', style: Theme.of(context).textTheme.bodySmall),
+              SelectableText('DEV API: $apiBaseUrl',
+                  style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),

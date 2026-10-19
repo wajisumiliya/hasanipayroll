@@ -2647,4 +2647,3 @@ class SupabaseService {
     }
   }
 }
-
