@@ -197,7 +197,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       Map<String, dynamic>? salary;
 
       // Production schema uses epf_category. Avoid a failing query on every load.
-      final rows = await SupabaseService.client
+      final rows = await SupabaseService.database
           .from('employee_salary_defaults')
           .select('eis_applicable,epf_category')
           .eq('employee_id', employeeId)
@@ -285,7 +285,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               widget.month.month,
             )
           : List<Map<String, dynamic>>.from(
-              await SupabaseService.client
+              await SupabaseService.database
                   .from('attendance')
                   .select()
                   .eq('employee_id', employeeId)
@@ -946,7 +946,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         String dateText(DateTime value) =>
             '${value.year.toString().padLeft(4, '0')}-'
             '${value.month.toString().padLeft(2, '0')}-01';
-        final payroll = await SupabaseService.client
+        final payroll = await SupabaseService.database
             .from('payroll')
             .select('overtime,late_deduction,unpaid_deduction')
             .eq('employee_id', _employeeId())
@@ -1262,7 +1262,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
         // Keep the attendance table synchronized with the exact values shown
         // on this screen. These columns already exist in attendance.
-        await SupabaseService.client
+        await SupabaseService.database
             .from('attendance')
             .update({
               'work_minutes': workMinutes,
@@ -1316,7 +1316,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           submissionEnd! + 1,
         );
 
-        await SupabaseService.client
+        await SupabaseService.database
             .from('attendance')
             .update({
               'is_submitted': true,

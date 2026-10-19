@@ -93,7 +93,7 @@ class NotificationService {
     String? employeeId,
     String? branchId,
   ) async {
-    await SupabaseService.client.rpc(
+    await SupabaseService.database.rpc(
       'register_notification_device',
       params: {
         'p_token': token,

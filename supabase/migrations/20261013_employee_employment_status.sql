@@ -51,6 +51,15 @@ begin
 end;
 $$;
 
+-- Recreate the trigger here as well as in the original resigned-at migration.
+-- This keeps the status migration self-contained for restored/imported databases
+-- where the function may exist but its trigger was not carried across.
+drop trigger if exists employees_sync_resigned_at on public.employees;
+create trigger employees_sync_resigned_at
+before insert or update on public.employees
+for each row
+execute function public.sync_employee_resigned_at();
+
 drop index if exists public.employees_resigned_purge_idx;
 create index employees_resigned_purge_idx
   on public.employees (resigned_at)

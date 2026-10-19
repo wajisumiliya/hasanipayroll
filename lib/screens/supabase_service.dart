@@ -43,7 +43,7 @@ class SupabaseService {
   }
 
   static Future<void> saveMonthlyRoster(Map<String, dynamic> roster) async {
-    await client.from('monthly_rosters').upsert(roster,
+    await database.from('monthly_rosters').upsert(roster,
         onConflict:
             'branch_id,employee_id,roster_year,roster_month,week_number');
   }
@@ -69,7 +69,7 @@ class SupabaseService {
     List<Map<String, dynamic>> rosters,
   ) async {
     if (rosters.isEmpty) return;
-    await client.from('daily_rosters').upsert(
+    await database.from('daily_rosters').upsert(
           rosters,
           onConflict: 'branch_id,employee_id,roster_date',
         );
@@ -83,11 +83,31 @@ class SupabaseService {
   static const String supabaseAnonKey =
       'sb_publishable_zZk97NP7edFidJ0HBCUKtQ_SAQ69tId';
 
+  /// Neon Data API endpoint used for PostgreSQL queries after cutover.
+  ///
+  /// Keep this empty in existing builds to retain the current Supabase REST
+  /// endpoint. Production Neon builds provide it with:
+  /// `--dart-define=NEON_DATA_API_URL=https://...`
+  static const String neonDataApiUrl = String.fromEnvironment(
+    'NEON_DATA_API_URL',
+  );
+
   // ============================================================
   // CLIENT
   // ============================================================
 
   static SupabaseClient get client => Supabase.instance.client;
+
+  static final PostgrestClient? _neonDatabase =
+      neonDataApiUrl.trim().isEmpty ? null : PostgrestClient(neonDataApiUrl);
+
+  /// Database-only client. Auth, Storage, Realtime, and Edge Functions must
+  /// continue through [client] until their Neon adapters are enabled.
+  static PostgrestClient get database => _neonDatabase ?? client.rest;
+
+  static void setDatabaseAuth(String? token) {
+    database.setAuth(token);
+  }
 
   static Future<String> uploadEmployeePhoto({
     required String employeeId,
@@ -220,7 +240,7 @@ class SupabaseService {
             .toIso8601String();
       }
 
-      final response = await client.rpc('admin_branch_activity_logs', params: {
+      final response = await database.rpc('admin_branch_activity_logs', params: {
         'p_branch_id': branchId?.trim(),
         'p_start': start,
         'p_end': end,
@@ -272,7 +292,7 @@ class SupabaseService {
 
   static Future<bool> testConnection() async {
     try {
-      await client.from('employees').select('employee_id').limit(1);
+      await database.from('employees').select('employee_id').limit(1);
 
       _debugLog('SUPABASE CONNECTION: OK');
       return true;
@@ -284,7 +304,7 @@ class SupabaseService {
 
   static Future<bool> testEmployeesTable() async {
     try {
-      await client.from('employees').select('employee_id').limit(1);
+      await database.from('employees').select('employee_id').limit(1);
 
       _debugLog('EMPLOYEES TABLE OK');
       return true;
@@ -296,7 +316,7 @@ class SupabaseService {
 
   static Future<bool> testPayrollTable() async {
     try {
-      await client.from('payroll').select('id').limit(1);
+      await database.from('payroll').select('id').limit(1);
 
       _debugLog('PAYROLL TABLE OK');
       return true;
@@ -462,7 +482,7 @@ class SupabaseService {
         return activeOnly ? getActiveEmployees() : getEmployees();
       }
 
-      var query = client.from('employees').select();
+      var query = database.from('employees').select();
       if (activeOnly) {
         query =
             query.eq('is_active', true).neq('employment_status', 'vacation');
@@ -588,7 +608,7 @@ class SupabaseService {
     bool? activeOnly,
   }) async {
     try {
-      var query = client.from('employees').select();
+      var query = database.from('employees').select();
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -696,7 +716,7 @@ class SupabaseService {
     String? branchId,
   }) async {
     try {
-      var query = client.from('employees').select('employee_id');
+      var query = database.from('employees').select('employee_id');
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -716,7 +736,7 @@ class SupabaseService {
   }) async {
     try {
       var query =
-          client.from('employees').select('employee_id').eq('is_active', true);
+          database.from('employees').select('employee_id').eq('is_active', true);
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -749,7 +769,7 @@ class SupabaseService {
     String? branchId,
   }) async {
     try {
-      var query = client.from('employees').select('department');
+      var query = database.from('employees').select('department');
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq('branch_id', branchId.trim());
@@ -784,7 +804,7 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getBranches() async {
     try {
       final response =
-          await client.from('branches').select().order('name', ascending: true);
+          await database.from('branches').select().order('name', ascending: true);
 
       return _mapList(response).map((branch) {
         final row = Map<String, dynamic>.from(branch);
@@ -806,7 +826,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getAllBranches() async {
     try {
-      final response = await client.from('employees').select();
+      final response = await database.from('employees').select();
 
       final seen = <String>{};
       final result = <Map<String, dynamic>>[];
@@ -852,7 +872,7 @@ class SupabaseService {
   ) async {
     try {
       final response =
-          await client.from('employees').insert(employee).select().single();
+          await database.from('employees').insert(employee).select().single();
 
       return _map(response);
     } catch (e, stackTrace) {
@@ -896,7 +916,7 @@ class SupabaseService {
     String? status,
   }) async {
     try {
-      var query = client.from('employee_requests').select();
+      var query = database.from('employee_requests').select();
       if (status != null && status.trim().isNotEmpty) {
         query = query.eq('status', status.trim().toUpperCase());
       }
@@ -927,7 +947,7 @@ class SupabaseService {
     required String employeeId,
   }) async {
     try {
-      final response = await client.rpc(
+      final response = await database.rpc(
         'approve_employee_request',
         params: {
           'request_id': requestId,
@@ -993,7 +1013,7 @@ class SupabaseService {
     required DateTime effectiveDate,
     String? reason,
   }) async {
-    final response = await client.rpc('transfer_staff', params: {
+    final response = await database.rpc('transfer_staff', params: {
       'p_employee_id': employeeId.trim(),
       'p_to_branch_id': toBranchId.trim(),
       'p_effective_date': effectiveDate.toIso8601String().split('T').first,
@@ -1069,7 +1089,7 @@ class SupabaseService {
     dynamic employeeId,
   ) async {
     try {
-      await client.from('employees').delete().eq(
+      await database.from('employees').delete().eq(
             'employee_id',
             employeeId.toString(),
           );
@@ -1224,7 +1244,7 @@ class SupabaseService {
   ) async {
     try {
       final response =
-          await client.from('payroll').insert(payroll).select().single();
+          await database.from('payroll').insert(payroll).select().single();
 
       return _map(response);
     } catch (e, stackTrace) {
@@ -1259,7 +1279,7 @@ class SupabaseService {
     dynamic payrollId,
   ) async {
     try {
-      await client.from('payroll').delete().eq(
+      await database.from('payroll').delete().eq(
             'id',
             payrollId.toString(),
           );
@@ -1275,7 +1295,7 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getAttendance() async {
     try {
-      final response = await client.from('attendance').select().order(
+      final response = await database.from('attendance').select().order(
             'attendance_date',
             ascending: false,
           );
@@ -1502,11 +1522,11 @@ class SupabaseService {
   }
 
   static Future<void> submitOtRequest(Map<String, dynamic> request) async {
-    await client.from('overtime_requests').insert(request);
+    await database.from('overtime_requests').insert(request);
   }
 
   static Future<void> submitLeaveRequest(Map<String, dynamic> request) async {
-    await client.from('leave_requests').insert(request);
+    await database.from('leave_requests').insert(request);
   }
 
   static Future<List<Map<String, dynamic>>> getEmployeeLeaveRequests(
@@ -1613,7 +1633,7 @@ class SupabaseService {
     required String notificationId,
     required String employeeId,
   }) async {
-    await client.from('notification_reads').upsert({
+    await database.from('notification_reads').upsert({
       'notification_id': notificationId,
       'employee_id': employeeId.trim(),
     }, onConflict: 'notification_id,employee_id');
@@ -1623,7 +1643,7 @@ class SupabaseService {
     String? branchId,
     DateTime? reportDate,
   }) async {
-    var query = client.from('daily_reports').select();
+    var query = database.from('daily_reports').select();
     if (branchId != null && branchId.trim().isNotEmpty) {
       query = query.ilike('branch_id', branchId.trim());
     }
@@ -1635,11 +1655,11 @@ class SupabaseService {
   }
 
   static Future<void> submitDailyReport(Map<String, dynamic> report) async {
-    await client.from('daily_reports').insert(report);
+    await database.from('daily_reports').insert(report);
   }
 
   static Future<Map<String, dynamic>> verifyDailyReportPin(String pin) async {
-    final response = await client.rpc(
+    final response = await database.rpc(
       'verify_daily_report_pin',
       params: {'p_pin': pin.trim()},
     );
@@ -1650,7 +1670,7 @@ class SupabaseService {
     required String currentPin,
     required String newPin,
   }) async {
-    await client.rpc('change_daily_report_pin', params: {
+    await database.rpc('change_daily_report_pin', params: {
       'p_current_pin': currentPin.trim(),
       'p_new_pin': newPin.trim(),
     });
@@ -1661,7 +1681,7 @@ class SupabaseService {
     required String comment,
     required String reviewer,
   }) async {
-    await client.from('daily_reports').update({
+    await database.from('daily_reports').update({
       'hq_comment': comment.trim(),
       'reviewed_by': reviewer.trim(),
       'reviewed_at': DateTime.now().toUtc().toIso8601String(),
@@ -1755,7 +1775,7 @@ class SupabaseService {
     String? branchId,
   }) async {
     try {
-      var query = client.from('attendance').select().eq(
+      var query = database.from('attendance').select().eq(
             'attendance_date',
             date,
           );
@@ -1788,7 +1808,7 @@ class SupabaseService {
   ) async {
     try {
       final response =
-          await client.from('attendance').insert(attendance).select().single();
+          await database.from('attendance').insert(attendance).select().single();
 
       return _map(response);
     } catch (e, stackTrace) {
@@ -2368,7 +2388,7 @@ class SupabaseService {
     dynamic id,
   ) async {
     try {
-      await client.from('attendance').delete().eq(
+      await database.from('attendance').delete().eq(
             'id',
             id.toString(),
           );
@@ -2415,7 +2435,7 @@ class SupabaseService {
     bool activeOnly = false,
   }) async {
     try {
-      var query = client.from('employees').select();
+      var query = database.from('employees').select();
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq(
@@ -2547,7 +2567,7 @@ class SupabaseService {
         );
       }
 
-      var query = client.from('employees').select();
+      var query = database.from('employees').select();
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         query = query.eq(
@@ -2574,7 +2594,7 @@ class SupabaseService {
         return results;
       }
 
-      var nameQuery = client.from('employees').select();
+      var nameQuery = database.from('employees').select();
 
       if (branchId != null && branchId.trim().isNotEmpty) {
         nameQuery = nameQuery.eq(

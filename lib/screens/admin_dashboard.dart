@@ -6970,7 +6970,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final employeeId = employee['employee_id']?.toString().trim() ?? '';
     Map<String, dynamic> salaryDefault = <String, dynamic>{};
     try {
-      final response = await SupabaseService.client
+      final response = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
           .eq('employee_id', employeeId)
@@ -7655,7 +7655,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'address': fields['Address']!.text.trim(),
                           };
                           try {
-                            await SupabaseService.client
+                            await SupabaseService.database
                                 .from('employee_salary_defaults')
                                 .upsert(salaryDefaultsPayload,
                                     onConflict: 'employee_id');
@@ -7667,7 +7667,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     text.contains('employee_salary_defaults');
                             if (!addressColumnMissing) rethrow;
                             salaryDefaultsPayload.remove('address');
-                            await SupabaseService.client
+                            await SupabaseService.database
                                 .from('employee_salary_defaults')
                                 .upsert(salaryDefaultsPayload,
                                     onConflict: 'employee_id');
@@ -10228,7 +10228,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       if (recordId.isNotEmpty) {
         await SupabaseService.updateAttendance(recordId, values);
       } else {
-        await SupabaseService.client
+        await SupabaseService.database
             .from('attendance')
             .update(values)
             .eq('employee_id', employeeId)
@@ -11064,7 +11064,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       );
 
       try {
-        await SupabaseService.client.from('employees').upsert(
+        await SupabaseService.database.from('employees').upsert(
               employeeRows,
               onConflict: 'employee_id',
             );
@@ -11220,7 +11220,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     DateTime selectedMonth = selectedPayrollMonth;
 
     final branchesFuture = SupabaseService.getBranches();
-    final employeesFuture = SupabaseService.client
+    final employeesFuture = SupabaseService.database
         .from('employees')
         .select(
           'employee_id,name,branch_id,payroll_branch_id,'
@@ -12186,7 +12186,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     try {
       final responses = await Future.wait([
         SupabaseService.getBranches(),
-        SupabaseService.client
+        SupabaseService.database
             .from('employees')
             .select()
             .eq('is_active', true)
@@ -12318,7 +12318,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               try {
                 final start = DateTime(month.year, month.month);
                 final end = DateTime(month.year, month.month + 1);
-                final response = await SupabaseService.client
+                final response = await SupabaseService.database
                     .from('payroll')
                     .select()
                     .eq('employee_id', employeeId!)
@@ -12446,7 +12446,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 record.remove('branch_id');
                 record.remove('branch_name');
 
-                await SupabaseService.client.from('payroll').upsert(
+                await SupabaseService.database.from('payroll').upsert(
                       record,
                       onConflict: 'employee_id,period',
                     );
@@ -13065,7 +13065,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<void> _publishEmployeePayslip(PayrollRecord record) async {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
-      await SupabaseService.client.from('payroll').update({
+      await SupabaseService.database.from('payroll').update({
         'is_published': true,
         'release_at': now,
         'published_at': now,
@@ -14625,7 +14625,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         _payrollNumber(item['increment_amount']) > 0,
                   )
                   .toList();
-              await SupabaseService.client.rpc(
+              await SupabaseService.database.rpc(
                 'schedule_monthly_payslip_release',
                 params: {
                   'p_payroll_month': DateFormat('yyyy-MM-dd')
@@ -14734,15 +14734,15 @@ class _AdminDashboardState extends State<AdminDashboard>
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
         SupabaseService.getBranches(),
-        SupabaseService.client.from('employees').select().order('employee_id'),
-        SupabaseService.client
+        SupabaseService.database.from('employees').select().order('employee_id'),
+        SupabaseService.database
             .from('payroll')
             .select()
             .order('period', ascending: false),
-        SupabaseService.client
+        SupabaseService.database
             .from('employee_salary_defaults')
             .select('employee_id,inc_details'),
-        SupabaseService.client
+        SupabaseService.database
             .from('attendance')
             .select('employee_id,branch_id')
             .gte(
@@ -15752,7 +15752,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           .toSet()
           .toList();
 
-      final existingEmployees = await SupabaseService.client
+      final existingEmployees = await SupabaseService.database
           .from('employees')
           .select(
             'employee_id',
@@ -15818,7 +15818,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         // It allows an imported CSV to update the payroll
         // for an employee/month instead of failing with
         // duplicate employee + period.
-        await SupabaseService.client.from('payroll').upsert(
+        await SupabaseService.database.from('payroll').upsert(
               payrollRows,
               onConflict: 'employee_id,period',
             );
@@ -16695,7 +16695,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           .toSet()
           .toList();
 
-      final employeeResponse = await SupabaseService.client
+      final employeeResponse = await SupabaseService.database
           .from('employees')
           .select()
           .inFilter('employee_id', employeeIds);
@@ -16708,7 +16708,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         }
       }
 
-      final salaryResponse = await SupabaseService.client
+      final salaryResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
           .inFilter('employee_id', employeeIds);
@@ -17161,18 +17161,18 @@ class _AdminDashboardState extends State<AdminDashboard>
           .where((id) => id.isNotEmpty)
           .toSet()
           .toList();
-      final employeeResponse = await SupabaseService.client
+      final employeeResponse = await SupabaseService.database
           .from('employees')
           .select()
           .inFilter('employee_id', employeeIds);
-      final salaryResponse = await SupabaseService.client
+      final salaryResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
           .inFilter('employee_id', employeeIds);
 
       final previousPayrollMonth =
           DateTime(selectedPayrollMonth.year, selectedPayrollMonth.month - 1);
-      final previousPayrollResponse = await SupabaseService.client
+      final previousPayrollResponse = await SupabaseService.database
           .from('payroll')
           .select()
           .inFilter('employee_id', employeeIds)
@@ -18493,7 +18493,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           .toSet()
           .toList();
 
-      final employeeResponse = await SupabaseService.client
+      final employeeResponse = await SupabaseService.database
           .from('employees')
           .select()
           .inFilter('employee_id', employeeIds);
@@ -18503,7 +18503,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) employeeMap[id] = Map<String, dynamic>.from(row);
       }
-      final salaryResponse = await SupabaseService.client
+      final salaryResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
           .inFilter('employee_id', employeeIds);
@@ -18883,7 +18883,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           .where((id) => id.isNotEmpty)
           .toSet()
           .toList();
-      final employeeResponse = await SupabaseService.client
+      final employeeResponse = await SupabaseService.database
           .from('employees')
           .select()
           .inFilter('employee_id', employeeIds);
@@ -18892,7 +18892,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) employeeMap[id] = row;
       }
-      final salaryResponse = await SupabaseService.client
+      final salaryResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
           .inFilter('employee_id', employeeIds);
@@ -19506,11 +19506,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         .toSet()
         .toList();
     final responses = await Future.wait([
-      SupabaseService.client
+      SupabaseService.database
           .from('employees')
           .select()
           .inFilter('employee_id', employeeIds),
-      SupabaseService.client
+      SupabaseService.database
           .from('employee_salary_defaults')
           .select()
           .inFilter('employee_id', employeeIds),
@@ -21013,7 +21013,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       final payrollRows = <Map<String, dynamic>>[];
       const payrollPageSize = 1000;
       for (var offset = 0;; offset += payrollPageSize) {
-        final response = await SupabaseService.client
+        final response = await SupabaseService.database
             .from('payroll')
             .select()
             .gte('period', DateFormat('yyyy-MM-dd').format(monthStart))
@@ -21058,7 +21058,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           .toList();
 
       final employeeResponse =
-          await SupabaseService.client.from('employees').select().inFilter(
+          await SupabaseService.database.from('employees').select().inFilter(
                 'employee_id',
                 employeeIds,
               );
@@ -21080,7 +21080,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         (a, b) => _comparePayrollExportRecords(a, b, employeeMap),
       );
 
-      final salaryDefaultsResponse = await SupabaseService.client
+      final salaryDefaultsResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
           .inFilter('employee_id', employeeIds);

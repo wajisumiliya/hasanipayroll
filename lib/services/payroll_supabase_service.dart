@@ -5,7 +5,7 @@ import '../screens/supabase_service.dart';
 class PayrollSupabaseService {
   PayrollSupabaseService._();
 
-  static SupabaseClient get _client => SupabaseService.client;
+  static PostgrestClient get _client => SupabaseService.database;
 
   // ============================================================
   // EMPLOYEES

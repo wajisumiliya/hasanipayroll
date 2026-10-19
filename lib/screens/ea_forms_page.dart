@@ -92,7 +92,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    var query = SupabaseService.client
+    var query = SupabaseService.database
         .from('employee_ea_forms')
         .select()
         .eq('tax_year', _year);
@@ -123,7 +123,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
     setState(() => _busy = true);
     try {
       final results = await Future.wait([
-        SupabaseService.client.from('employees').select(),
+        SupabaseService.database.from('employees').select(),
         SupabaseService.getPayrollForYear(_year),
       ]);
       final employees = List<Map<String, dynamic>>.from(results[0]);
@@ -234,7 +234,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
         });
       }
       if (rows.isEmpty) throw Exception('No payroll records found for $_year.');
-      await SupabaseService.client
+      await SupabaseService.database
           .from('employee_ea_forms')
           .upsert(rows, onConflict: 'employee_id,tax_year');
       String? notificationWarning;

@@ -31,6 +31,37 @@ const JWT_SECRET = String(
 
 const ACCESS_TOKEN_SECRET = JWT_SECRET;
 
+const DATA_API_JWT_PRIVATE_KEY = String(
+  process.env.DATA_API_JWT_PRIVATE_KEY || "",
+).replace(/\\n/g, "\n").trim();
+
+const DATA_API_JWT_KEY_ID = String(
+  process.env.DATA_API_JWT_KEY_ID || "hasani-neon-data-api",
+).trim();
+
+const DATA_API_JWT_ISSUER = String(
+  process.env.DATA_API_JWT_ISSUER || "https://hasaniworkhub.onrender.com",
+).trim().replace(/\/+$/, "");
+
+let dataApiJwtPrivateKey = null;
+let dataApiJwtPublicJwk = null;
+
+if (DATA_API_JWT_PRIVATE_KEY) {
+  try {
+    dataApiJwtPrivateKey = crypto.createPrivateKey(DATA_API_JWT_PRIVATE_KEY);
+    const publicKey = crypto.createPublicKey(dataApiJwtPrivateKey);
+    dataApiJwtPublicJwk = {
+      ...publicKey.export({ format: "jwk" }),
+      alg: "RS256",
+      use: "sig",
+      kid: DATA_API_JWT_KEY_ID,
+    };
+  } catch (error) {
+    console.error("FATAL: DATA_API_JWT_PRIVATE_KEY is invalid.", error.message);
+    process.exit(1);
+  }
+}
+
 const JWT_EXPIRES_IN =
   process.env.JWT_EXPIRES_IN || "8h";
 
@@ -473,6 +504,49 @@ function createAccessToken(
 
       audience:
         "authenticated",
+    },
+  );
+}
+
+function createDataApiAccessToken(
+  user,
+  staffScope = null,
+) {
+  if (!dataApiJwtPrivateKey) return null;
+
+  const login = String(user.username || user.email || "").trim().toUpperCase();
+  const baseLogin = login.endsWith("FRN") ? login.slice(0, -3) : login;
+  const branchByLogin = {
+    HBSP: "SUNGAI PETANI", HPSP: "SUNGAI PETANI", HBAMJ: "AMANJAYA",
+    HBAS: "ALOR SETAR", HBASTANA: "ASTANA", HBGURUN: "GURUN",
+    HBJITRA: "JITRA", HBPERAI: "PRAI", HBKULIM: "KULIM", HBLKW: "LANGKAWI",
+  };
+  const appRole = staffScope === "requests"
+    ? "request_admin"
+    : String(user.role || "employee").trim().toLowerCase();
+
+  return jwt.sign(
+    {
+      sub: String(user.id ?? user.username ?? user.email),
+      role: "authenticated",
+      app_metadata: {
+        app_role: appRole,
+        branch_id: branchByLogin[baseLogin] || null,
+        employee_id: user.employeeId || null,
+        is_frn: login.endsWith("FRN"),
+        is_reviewer: isPlayReviewer(user),
+        staff_scope: staffScope,
+      },
+      employeeId: user.employeeId || null,
+      type: "data-access",
+    },
+    dataApiJwtPrivateKey,
+    {
+      algorithm: "RS256",
+      keyid: DATA_API_JWT_KEY_ID,
+      expiresIn: JWT_EXPIRES_IN,
+      issuer: DATA_API_JWT_ISSUER,
+      audience: "authenticated",
     },
   );
 }
@@ -959,6 +1033,15 @@ app.get(
   },
 );
 
+// Public verification keys used by the Neon Data API. The private signing key
+// never leaves the backend environment.
+app.get("/.well-known/jwks.json", (req, res) => {
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({
+    keys: dataApiJwtPublicJwk ? [dataApiJwtPublicJwk] : [],
+  });
+});
+
 // ============================================================
 // HEALTH
 // ============================================================
@@ -1138,6 +1221,11 @@ app.post(
           user,
           staffScope,
         );
+      const dataAccessToken =
+        createDataApiAccessToken(
+          user,
+          staffScope,
+        );
 
       return res.json({
         ok: true,
@@ -1152,6 +1240,8 @@ app.post(
           false,
 
         accessToken,
+
+        ...(dataAccessToken ? { dataAccessToken } : {}),
 
         tokenType:
           "Bearer",
@@ -3352,6 +3442,10 @@ app.post(
         createAccessToken(
           updatedUser,
         );
+      const dataAccessToken =
+        createDataApiAccessToken(
+          updatedUser,
+        );
 
       return res.json({
         ok: true,
@@ -3366,6 +3460,8 @@ app.post(
           false,
 
         accessToken,
+
+        ...(dataAccessToken ? { dataAccessToken } : {}),
 
         tokenType:
           "Bearer",

@@ -277,7 +277,7 @@ class AttendancePayrollService {
     }
 
     if (pendingPayrollWrites.isNotEmpty) {
-      await SupabaseService.client.from('payroll').upsert(
+      await SupabaseService.database.from('payroll').upsert(
             pendingPayrollWrites,
             onConflict: 'employee_id,period',
           );
@@ -839,7 +839,7 @@ class AttendancePayrollService {
       if (pendingPayrollWrites != null) {
         pendingPayrollWrites.add(data);
       } else {
-        await SupabaseService.client
+        await SupabaseService.database
             .from('payroll')
             .update(data)
             .eq('id', existingId);
@@ -849,7 +849,7 @@ class AttendancePayrollService {
         pendingPayrollWrites.add(data);
       } else {
         // Do not send payroll.id. The database generates it.
-        await SupabaseService.client.from('payroll').insert(data);
+        await SupabaseService.database.from('payroll').insert(data);
       }
     }
 
@@ -892,7 +892,7 @@ class AttendancePayrollService {
   static Future<List<Map<String, dynamic>>> _getEmployeesByIds(
     List<String> employeeIds,
   ) async {
-    final response = await SupabaseService.client
+    final response = await SupabaseService.database
         .from('employees')
         .select(
           'employee_id,name,new_ic_no,bank_code,bank_account,branch_id,'
@@ -911,7 +911,7 @@ class AttendancePayrollService {
   static Future<List<Map<String, dynamic>>> _getSalaryDefaultsByIds(
     List<String> employeeIds,
   ) async {
-    final response = await SupabaseService.client
+    final response = await SupabaseService.database
         .from('employee_salary_defaults')
         .select(
           'employee_id,'
@@ -946,7 +946,7 @@ class AttendancePayrollService {
     }
 
     try {
-      final response = await SupabaseService.client
+      final response = await SupabaseService.database
           .from('employee_salary_defaults')
           .select(
             'employee_id,'
@@ -995,7 +995,7 @@ class AttendancePayrollService {
     final rows = <Map<String, dynamic>>[];
     var offset = 0;
     while (true) {
-      final response = await SupabaseService.client
+      final response = await SupabaseService.database
           .from('attendance')
           .select(
             'employee_id,attendance_date,work_minutes,break_minutes,'
@@ -1038,7 +1038,7 @@ class AttendancePayrollService {
       1,
     );
 
-    final response = await SupabaseService.client
+    final response = await SupabaseService.database
         .from('attendance')
         .select(
           'employee_id,attendance_date,work_minutes,break_minutes,'
@@ -1066,7 +1066,7 @@ class AttendancePayrollService {
     List<String> employeeIds,
     String period,
   ) async {
-    final response = await SupabaseService.client
+    final response = await SupabaseService.database
         .from('payroll')
         .select('id,employee_id,period')
         .inFilter('employee_id', employeeIds)
@@ -1083,7 +1083,7 @@ class AttendancePayrollService {
     final rows = <Map<String, dynamic>>[];
     var offset = 0;
     while (true) {
-      final response = await SupabaseService.client
+      final response = await SupabaseService.database
           .from('monthly_rosters')
           .select()
           .inFilter('employee_id', employeeIds)
@@ -1104,7 +1104,7 @@ class AttendancePayrollService {
     String employeeId,
     String period,
   ) async {
-    final response = await SupabaseService.client
+    final response = await SupabaseService.database
         .from('payroll')
         .select('id,employee_id,period')
         .eq('employee_id', employeeId)
