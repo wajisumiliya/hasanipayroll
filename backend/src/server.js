@@ -1913,6 +1913,62 @@ app.get(
   },
 );
 
+
+// Neon attendance listing with JWT-based role and branch scope.
+app.get("/api/attendance", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").toUpperCase();
+    if (role !== "ADMIN" && role !== "BRANCH" && role !== "EMPLOYEE") {
+      return res.status(403).json({ ok: false, message: "Access denied." });
+    }
+    const date = String(req.query.date ?? "").trim();
+    const year = String(req.query.year ?? "").trim();
+    const month = String(req.query.month ?? "").trim();
+    const branch = String(req.query.branch_id ?? "").trim();
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ ok: false, message: "Invalid date." });
+    }
+    if ((year && !/^\d{4}$/.test(year)) || (month && !/^(?:[1-9]|1[0-2])$/.test(month)) ||
+        Boolean(year) !== Boolean(month)) {
+      return res.status(400).json({ ok: false, message: "Invalid month." });
+    }
+    const conditions = [];
+    const params = [];
+    const add = (sql, value) => {
+      params.push(value);
+      conditions.push(sql.replace("?", "$" + params.length));
+    };
+    if (role === "BRANCH") {
+      const scope = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+      if (!scope || (branch && branch.toLowerCase() !== scope.toLowerCase())) {
+        return res.status(403).json({ ok: false, message: "Branch access denied." });
+      }
+      add("LOWER(TRIM(a.branch_id)) = LOWER(TRIM(?))", scope);
+    } else if (role === "EMPLOYEE") {
+      const employeeId = String(req.user.employeeId ?? req.user.employee_id ?? "").trim();
+      if (!employeeId || branch) return res.status(403).json({ ok: false, message: "Access denied." });
+      add("a.employee_id = ?", employeeId);
+    } else if (branch) {
+      add("LOWER(TRIM(a.branch_id)) = LOWER(TRIM(?))", branch);
+    }
+    if (date) add("a.attendance_date = ?::date", date);
+    if (year && month) {
+      const start = year + "-" + month.padStart(2, "0") + "-01";
+      params.push(start);
+      conditions.push("a.attendance_date >= $" + params.length + "::date");
+      conditions.push("a.attendance_date < ($" + params.length + "::date + INTERVAL '1 month')");
+    }
+    const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
+    const result = await pool.query(
+      "SELECT to_jsonb(a) AS data FROM public.attendance a " + where +
+      " ORDER BY a.attendance_date DESC, a.employee_id ASC LIMIT 20000", params);
+    return res.json({ ok: true, attendance: result.rows.map(r => r.data) });
+  } catch (error) {
+    console.error("ATTENDANCE LIST ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 // Authenticated Neon daily reports list with server-enforced branch scope.
 // Daily report creation is branch-scoped; caller cannot choose another branch.
 app.post("/api/daily-reports", authenticate, async (req, res) => {
