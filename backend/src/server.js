@@ -143,6 +143,8 @@ const allowedOrigins = (
       "https://hasaniworkhub.onrender.com",
       "https://hasaniworkhub.onrender.com:5000",
       "http://localhost:5000",
+      "http://localhost:3001",
+      "http://127.0.0.1:3001",
     ])
 );
 
