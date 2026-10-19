@@ -3553,6 +3553,57 @@ app.post(
 );
 
 // ============================================================
+// ============================================================
+// NEON DEV FLUTTER PREVIEW — safe, read-only employee directory
+// ============================================================
+// This endpoint deliberately returns only non-sensitive directory fields.
+// Employee and branch scope are enforced by the backend; never return full
+// employee rows to the browser, as they contain identity/payroll data.
+app.get("/api/neon/preview/employees", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").trim().toUpperCase();
+    const employeeId = normalizeEmployeeId(req.user?.employeeId);
+    const branchId = String(req.user?.branch_id ?? req.user?.branchId ?? "").trim();
+    const params = [];
+    let predicate = "";
+
+    if (role === "EMPLOYEE") {
+      if (!isValidEmployeeId(employeeId)) {
+        return res.status(403).json({ok:false,message:"Employee scope missing."});
+      }
+      params.push(employeeId);
+      predicate = "WHERE UPPER(TRIM(e.employee_id)) = $1";
+    } else if (role === "BRANCH") {
+      if (!branchId) {
+        return res.status(403).json({ok:false,message:"Branch scope missing."});
+      }
+      params.push(branchId);
+      predicate = "WHERE e.branch_id = $1";
+    } else if (role !== "ADMIN") {
+      return res.status(403).json({ok:false,message:"Role is not authorized."});
+    }
+
+    const result = await pool.query(
+      `SELECT e.employee_id, e.name, e.branch_id, e.department, e.designation,
+              e.is_active, e.employment_status
+       FROM public.employees AS e
+       ${predicate}
+       ORDER BY e.name, e.employee_id
+       LIMIT 500`,
+      params,
+    );
+    return res.json({
+      ok:true,
+      source:"neon",
+      count:result.rows.length,
+      employees:result.rows,
+    });
+  } catch (error) {
+    console.error("NEON PREVIEW DIRECTORY ERROR:", error.message);
+    return res.status(503).json({ok:false,message:"Unable to load Neon employee directory."});
+  }
+});
+
 // 404
 // ============================================================
 
