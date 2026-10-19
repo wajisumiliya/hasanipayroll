@@ -750,6 +750,17 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  Future<List<Map<String, dynamic>>> fetchOtRequestsFromNeon() async {
+    final data = await _getAuth('/api/ot-requests');
+    if (data['ok'] != true || data['requests'] is! List) {
+      throw StateError(data['message']?.toString() ?? 'Unable to load OT requests.');
+    }
+    return (data['requests'] as List)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');
