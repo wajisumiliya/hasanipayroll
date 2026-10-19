@@ -33,8 +33,7 @@ class _BranchOtRequestsPageState extends State<BranchOtRequestsPage> {
   void _refresh() => _future = _loadRequests();
 
   Future<List<Map<String, dynamic>>> _loadRequests() async {
-    final rows =
-        await SupabaseService.getBranchOtRequests(widget.branchId.trim());
+    final rows = await service.fetchOtRequestsFromNeon();
     final visibleIds = widget.employeeIds;
     if (visibleIds == null) return rows;
     if (visibleIds.isEmpty) return const [];
