@@ -96,8 +96,10 @@ class _EaFormsPageState extends State<EaFormsPage> {
     final rows = await AppService.instance.fetchEaFormsFromNeon(_year);
     if (widget.isAdmin) return rows;
     final id = widget.employeeId?.trim().toUpperCase();
-    return rows.where((row) =>
-        row['employee_id']?.toString().trim().toUpperCase() == id).toList();
+    return rows
+        .where(
+            (row) => row['employee_id']?.toString().trim().toUpperCase() == id)
+        .toList();
   }
 
   double _number(dynamic value) =>
