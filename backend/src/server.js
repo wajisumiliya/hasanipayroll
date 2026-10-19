@@ -2000,21 +2000,21 @@ app.post("/api/leave-requests/review", authenticate, async (req, res) => {
       if (!branch || !approverName || approverName.length > 200) {
         return res.status(400).json({ ok: false, message: "Branch and approver name required." });
       }
-      params.push(branch, remarks, approverName, approve ? "pending_admin" : "rejected", String(req.user.id ?? req.user.userId ?? ""));
+      params.push(branch, remarks, approverName, approve ? "pending_admin" : "rejected");
       sql = `UPDATE public.leave_requests
         SET status = $5, branch_remarks = $3,
             branch_approved_at = CASE WHEN $5 = 'pending_admin' THEN NOW() ELSE NULL END,
-            branch_approved_by = CASE WHEN $5 = 'pending_admin' THEN $6 ELSE NULL END,
+            branch_approved_by = NULL,
             branch_approved_name = CASE WHEN $5 = 'pending_admin' THEN $4 ELSE NULL END
         WHERE id::text = $1 AND status = 'pending_branch'
           AND LOWER(TRIM(branch_id)) = LOWER(TRIM($2))
         RETURNING id, status`;
     } else {
-      params.push(remarks, approve ? "approved" : "rejected", String(req.user.id ?? req.user.userId ?? ""));
+      params.push(remarks, approve ? "approved" : "rejected");
       sql = `UPDATE public.leave_requests
         SET status = $3, admin_remarks = $2,
             admin_approved_at = CASE WHEN $3 = 'approved' THEN NOW() ELSE NULL END,
-            admin_approved_by = CASE WHEN $3 = 'approved' THEN $4 ELSE NULL END
+            admin_approved_by = NULL
         WHERE id::text = $1 AND status = 'pending_admin'
         RETURNING id, status`;
     }
