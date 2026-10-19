@@ -202,6 +202,17 @@ class AppService extends ChangeNotifier {
     return Uri.parse('$base/${path.replaceFirst(RegExp(r'^/+'), '')}');
   }
 
+  Future<Map<String, dynamic>> configureBranchPassword({
+    required String username,
+    required String newPassword,
+  }) {
+    return _postAuth(
+      '/api/admin/branch-password',
+      {'username': username.trim(), 'newPassword': newPassword},
+      authenticated: true,
+    );
+  }
+
   Future<Map<String, dynamic>> _postAuth(
     String path,
     Map<String, dynamic> body, {
