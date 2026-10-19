@@ -701,6 +701,20 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  /// Read EA forms through the authenticated Neon API, never Supabase PostgREST.
+  Future<List<Map<String, dynamic>>> fetchEaFormsFromNeon(int year) async {
+    final data = await _getAuth('/api/ea-forms?year=$year');
+    if (data['ok'] != true || data['forms'] is! List) {
+      throw StateError(
+        data['message']?.toString() ?? 'Unable to load EA forms from Neon.',
+      );
+    }
+    return (data['forms'] as List)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');
