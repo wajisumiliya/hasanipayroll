@@ -1456,10 +1456,10 @@ app.post(
       const passwordHash = await bcrypt.hash(newPassword, 12);
       await pool.query(
         `UPDATE public."app_user"
-         SET "passwordHash" = $1, "mustChangePassword" = FALSE,
-             "passwordChangedAt" = NOW(), "updatedAt" = NOW()
-         WHERE "id" = $2`,
-        [passwordHash, user.id],
+         SET "passwordHash" = $1, must_change_password = FALSE,
+             password_changed_at = NOW(), updated_at = NOW()
+         WHERE "username" = $2`,
+        [passwordHash, user.username],
       );
 
       return res.json({ ok: true, message: "Password reset successfully. You can now sign in." });
