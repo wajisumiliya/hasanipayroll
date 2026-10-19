@@ -497,10 +497,6 @@ class SupabaseService {
             .map(_normaliseBranchValue),
       }..remove('');
 
-      if (wanted.isEmpty) {
-        return activeOnly ? getActiveEmployees() : getEmployees();
-      }
-
       // Attendance employee lists must use the authenticated Neon backend.
       // Supabase PostgREST may be unavailable after the database cutover.
       final response = await AppService.instance.fetchEmployeeRowsFromNeon();
@@ -537,8 +533,10 @@ class SupabaseService {
           employee['branch_name'],
           employee['branch'],
           employee['branchName'],
+          employee['payroll_branch_id'],
         ];
 
+        if (wanted.isEmpty) return true;
         return values.any((value) {
           final actual = _normaliseBranchValue(
             value?.toString() ?? '',
