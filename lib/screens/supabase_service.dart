@@ -1,3 +1,4 @@
+import '../services/app_service.dart';
 // lib/screens/supabase_service.dart
 
 import 'package:flutter/foundation.dart';
@@ -1535,12 +1536,10 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getEmployeeOtRequests(
       String employeeId) async {
-    final response = await database
-        .from('overtime_requests')
-        .select()
-        .eq('employee_id', employeeId.trim())
-        .order('overtime_date', ascending: false);
-    return _mapList(response);
+    final rows = await AppService.instance.fetchOtRequestsFromNeon();
+    return rows.where((row) =>
+        row['employee_id']?.toString().trim().toUpperCase() ==
+        employeeId.trim().toUpperCase()).toList();
   }
 
   static Future<void> submitOtRequest(Map<String, dynamic> request) async {
@@ -1553,12 +1552,10 @@ class SupabaseService {
 
   static Future<List<Map<String, dynamic>>> getEmployeeLeaveRequests(
       String employeeId) async {
-    final response = await database
-        .from('leave_requests')
-        .select()
-        .eq('employee_id', employeeId.trim())
-        .order('submitted_at', ascending: false);
-    return _mapList(response);
+    final rows = await AppService.instance.fetchLeaveRequestsFromNeon();
+    return rows.where((row) =>
+        row['employee_id']?.toString().trim().toUpperCase() ==
+        employeeId.trim().toUpperCase()).toList();
   }
 
   static Future<List<Map<String, dynamic>>> getBranchLeaveRequests(
