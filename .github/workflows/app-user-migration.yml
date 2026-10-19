@@ -1,0 +1,15 @@
+name: App user migration preflight
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check database secret configuration
+        env:
+          SOURCE_URL: ${{ secrets.SUPABASE_SOURCE_DATABASE_URL }}
+          TARGET_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          test -n "$SOURCE_URL" || { echo "Missing Supabase source secret"; exit 1; }
+          test -n "$TARGET_URL" || { echo "Missing Neon destination secret"; exit 1; }
+          echo "Both database secrets configured. No migration performed."
