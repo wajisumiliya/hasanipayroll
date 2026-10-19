@@ -281,6 +281,32 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  /// Authenticated attendance rows from Neon, scoped by the Node API.
+  Future<List<Map<String, dynamic>>> loadNeonAttendance({
+    String? branchId,
+    String? date,
+    int? year,
+    int? month,
+  }) async {
+    final parameters = <String, String>{
+      if (branchId != null && branchId.trim().isNotEmpty)
+        'branch_id': branchId.trim(),
+      if (date != null && date.trim().isNotEmpty) 'date': date.trim(),
+      if (year != null) 'year': '$year',
+      if (month != null) 'month': '$month',
+    };
+    final path = Uri(path: '/api/attendance', queryParameters: parameters);
+    final data = await _getAuth(path.toString());
+    if (data['ok'] != true || data['attendance'] is! List) {
+      throw StateError(
+        data['message']?.toString() ?? 'Cannot load attendance from Neon.',
+      );
+    }
+    return (data['attendance'] as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
   // ==========================================================================
   // CURRENT USER
   // ==========================================================================
