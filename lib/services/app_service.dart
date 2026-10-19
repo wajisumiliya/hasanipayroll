@@ -793,6 +793,28 @@ class AppService extends ChangeNotifier {
     }
   }
 
+  Future<void> submitDailyReportToNeon(Map<String, dynamic> report) async {
+    final data = await _postAuth('/api/daily-reports', report, authenticated: true);
+    if (data['ok'] != true) {
+      throw StateError(data['message']?.toString() ?? 'Unable to submit daily report.');
+    }
+  }
+
+  Future<void> reviewDailyReportOnNeon({
+    required String id,
+    required String comment,
+    required String reviewer,
+  }) async {
+    final data = await _postAuth('/api/daily-reports/review', {
+      'id': id,
+      'comment': comment,
+      'reviewer': reviewer,
+    }, authenticated: true);
+    if (data['ok'] != true) {
+      throw StateError(data['message']?.toString() ?? 'Unable to review daily report.');
+    }
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');
