@@ -761,6 +761,23 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  Future<void> reviewLeaveRequestOnNeon({
+    required String requestId,
+    required bool approve,
+    required String remarks,
+    String? approverName,
+  }) async {
+    final data = await _postAuth('/api/leave-requests/review', {
+      'requestId': requestId,
+      'approve': approve,
+      'remarks': remarks,
+      if (approverName != null) 'approverName': approverName,
+    }, authenticated: true);
+    if (data['ok'] != true) {
+      throw StateError(data['message']?.toString() ?? 'Unable to review leave request.');
+    }
+  }
+
   Future<void> loadEmployeesFromSupabase() async {
     try {
       final data = await _getAuth('/api/employees');
