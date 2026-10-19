@@ -1658,10 +1658,10 @@ app.post(
       client = await pool.connect();
       await client.query("BEGIN");
       const employeeResult = await client.query(
-        `UPDATE public."Employee"
-         SET "isActive" = $2
-         WHERE "employeeId" = $1
-         RETURNING "employeeId"`,
+        `UPDATE public.employees
+         SET is_active = $2, updated_at = NOW()
+         WHERE UPPER(TRIM(employee_id)) = UPPER($1)
+         RETURNING employee_id`,
         [employeeId, isActive],
       );
 
@@ -1674,9 +1674,9 @@ app.post(
       }
 
       await client.query(
-        `UPDATE public."app_user"
-         SET "isActive" = $2
-         WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = UPPER($1)`,
+        `UPDATE public.app_user
+         SET is_active = $2, updated_at = NOW()
+         WHERE UPPER(TRIM(COALESCE(employee_id, ''))) = UPPER($1)`,
         [employeeId, isActive],
       );
       await client.query("COMMIT");
@@ -2038,14 +2038,21 @@ app.post(
             ),
           );
 
-        const employee =
-          await prisma.employee.findUnique(
-            {
-              where: {
-                employeeId,
-              },
-            },
-          );
+        const employeeResult = await pool.query(
+          `SELECT to_jsonb(e) AS data
+           FROM public.employees e
+           WHERE UPPER(TRIM(e.employee_id)) = $1
+           LIMIT 1`,
+          [employeeId],
+        );
+        const employee = employeeResult.rows[0]?.data
+          ? {
+              ...employeeResult.rows[0].data,
+              bankCode: employeeResult.rows[0].data.bank_code,
+              bankAccount: employeeResult.rows[0].data.bank_account,
+              newIcNo: employeeResult.rows[0].data.new_ic_no,
+            }
+          : null;
 
         if (!employee) {
           results.errors.push({
@@ -2181,48 +2188,88 @@ app.post(
               : null,
         };
 
-        const existing =
-          await prisma.payrollRecord.findUnique(
-            {
-              where: {
-                employeeId_period:
-                  {
-                    employeeId,
-
-                    period:
-                      normalizedPeriod,
-                  },
-              },
-            },
-          );
-
-        await prisma.payrollRecord.upsert(
-          {
-            where: {
-              employeeId_period:
-                {
-                  employeeId,
-
-                  period:
-                    normalizedPeriod,
-                },
-            },
-
-            update:
-              payrollData,
-
-            create: {
-              employeeId,
-
-              period:
-                normalizedPeriod,
-
-              ...payrollData,
-            },
-          },
+        const existed = await pool.query(
+          `SELECT 1 FROM public.payroll
+           WHERE employee_id = $1 AND period = $2::date
+           LIMIT 1`,
+          [employeeId, normalizedPeriod.toISOString().slice(0, 10)],
         );
 
-        if (existing) {
+        const value = (snake, camel, fallback = 0) =>
+          safeNumber(row[snake] ?? row[camel] ?? fallback);
+        const bonus = row.bonus == null ? null : String(row.bonus).slice(0, 1000);
+        const commission = row.commission == null ? null : String(row.commission).slice(0, 1000);
+        const otherEarnings = row.other_earnings == null && row.otherEarnings == null
+          ? null : String(row.other_earnings ?? row.otherEarnings).slice(0, 1000);
+        await pool.query(
+          `INSERT INTO public.payroll (
+             id, employee_id, period, basic_salary, fw_salary,
+             elaun_kedatangan, elaun_perkhidmatan, elaun_kerajinan, elaun_makanan,
+             overtime, cuti_umum, epf_employee, socso_employee, eis_employee, pcb, zakat,
+             epf_employer, socso_employer, eis_employer, new_ic_no, bank_code, bank_account,
+             remarks, late_deduction, unpaid_deduction, bonus, commission, other_earnings,
+             advance, is_published, published_at, published_by, release_at, created_at, updated_at
+           ) VALUES (
+             $1,$2,$3::date,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+             $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,FALSE,NULL,NULL,NULL,NOW(),NOW()
+           )
+           ON CONFLICT (employee_id, period) DO UPDATE SET
+             basic_salary = EXCLUDED.basic_salary,
+             fw_salary = EXCLUDED.fw_salary,
+             elaun_kedatangan = EXCLUDED.elaun_kedatangan,
+             elaun_perkhidmatan = EXCLUDED.elaun_perkhidmatan,
+             elaun_kerajinan = EXCLUDED.elaun_kerajinan,
+             elaun_makanan = EXCLUDED.elaun_makanan,
+             overtime = EXCLUDED.overtime,
+             cuti_umum = EXCLUDED.cuti_umum,
+             epf_employee = EXCLUDED.epf_employee,
+             socso_employee = EXCLUDED.socso_employee,
+             eis_employee = EXCLUDED.eis_employee,
+             pcb = EXCLUDED.pcb,
+             epf_employer = EXCLUDED.epf_employer,
+             socso_employer = EXCLUDED.socso_employer,
+             eis_employer = EXCLUDED.eis_employer,
+             new_ic_no = EXCLUDED.new_ic_no,
+             bank_code = EXCLUDED.bank_code,
+             bank_account = EXCLUDED.bank_account,
+             remarks = EXCLUDED.remarks,
+             late_deduction = EXCLUDED.late_deduction,
+             unpaid_deduction = EXCLUDED.unpaid_deduction,
+             bonus = EXCLUDED.bonus,
+             commission = EXCLUDED.commission,
+             other_earnings = EXCLUDED.other_earnings,
+             advance = EXCLUDED.advance,
+             updated_at = NOW()`,
+          [
+            crypto.randomUUID(), employeeId, normalizedPeriod.toISOString().slice(0, 10),
+            payrollData.basicSalary,
+            value("fw_salary", "fwSalary", employee.fw_salary),
+            value("elaun_kedatangan", "elaunKedatangan", employee.elaun_kedatangan),
+            value("elaun_perkhidmatan", "elaunPerkhidmatan", employee.elaun_perkhidmatan),
+            value("elaun_kerajinan", "elaunKerajinan", employee.elaun_kerajinan),
+            payrollData.foodAllowance,
+            payrollData.overtime,
+            value("cuti_umum", "cutiUmum"),
+            payrollData.epfEmployee,
+            payrollData.socsoEmployee,
+            payrollData.eisEmployee,
+            payrollData.pcb,
+            value("zakat", "zakat"),
+            payrollData.epfEmployer,
+            payrollData.socsoEmployer,
+            payrollData.eisEmployer,
+            String(row.new_ic_no ?? row.newIcNo ?? employee.new_ic_no ?? "").slice(0, 100),
+            payrollData.bankCode,
+            payrollData.bankAccount,
+            payrollData.remarks,
+            value("late_deduction", "lateDeduction"),
+            value("unpaid_deduction", "unpaidDeduction"),
+            bonus, commission, otherEarnings,
+            value("advance", "advance"),
+          ],
+        );
+
+        if (existed.rowCount > 0) {
           results.updated++;
         } else {
           results.imported++;
@@ -2277,30 +2324,17 @@ app.delete(
         });
       }
 
-      const existing =
-        await prisma.payrollRecord.findUnique(
-          {
-            where: {
-              id,
-            },
-          },
-        );
+      const deleted = await pool.query(
+        `DELETE FROM public.payroll WHERE id = $1 RETURNING id`,
+        [id],
+      );
 
-      if (!existing) {
+      if (deleted.rowCount === 0) {
         return res.status(404).json({
           ok: false,
-          message:
-            "Payroll record not found.",
+          message: "Payroll record not found.",
         });
       }
-
-      await prisma.payrollRecord.delete(
-        {
-          where: {
-            id,
-          },
-        },
-      );
 
       res.json({
         ok: true,
