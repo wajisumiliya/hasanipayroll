@@ -1582,26 +1582,12 @@ class SupabaseService {
     required String approverName,
     String? remarks,
   }) async {
-    if (approverName.trim().isEmpty) {
-      throw ArgumentError('Approver name is required.');
-    }
-    if (remarks == null || remarks.trim().isEmpty) {
-      throw ArgumentError('Branch remarks are required.');
-    }
-    final now = DateTime.now().toUtc().toIso8601String();
-    final updated = await database
-        .from('leave_requests')
-        .update({
-          'status': approve ? 'pending_admin' : 'rejected',
-          'branch_remarks': remarks.trim(),
-          'branch_approved_at': approve ? now : null,
-          'branch_approved_by': approve ? currentUser?.id : null,
-          'branch_approved_name': approve ? approverName.trim() : null,
-        })
-        .eq('id', requestId)
-        .eq('status', 'pending_branch')
-        .select('id,status');
-    if (updated.isEmpty) throw StateError('Leave request was not updated.');
+    await AppService.instance.reviewLeaveRequestOnNeon(
+      requestId: requestId,
+      approve: approve,
+      approverName: approverName,
+      remarks: remarks ?? '',
+    );
   }
 
   static Future<void> reviewAdminLeaveRequest({
@@ -1609,22 +1595,11 @@ class SupabaseService {
     required bool approve,
     String? remarks,
   }) async {
-    if (remarks == null || remarks.trim().isEmpty) {
-      throw ArgumentError('Admin remarks are required.');
-    }
-    final now = DateTime.now().toUtc().toIso8601String();
-    final updated = await database
-        .from('leave_requests')
-        .update({
-          'status': approve ? 'approved' : 'rejected',
-          'admin_remarks': remarks.trim(),
-          'admin_approved_at': approve ? now : null,
-          'admin_approved_by': approve ? currentUser?.id : null,
-        })
-        .eq('id', requestId)
-        .eq('status', 'pending_admin')
-        .select('id,status');
-    if (updated.isEmpty) throw StateError('Leave request was not updated.');
+    await AppService.instance.reviewLeaveRequestOnNeon(
+      requestId: requestId,
+      approve: approve,
+      remarks: remarks ?? '',
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getEmployeeNotifications(
