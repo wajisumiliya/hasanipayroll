@@ -1979,7 +1979,7 @@ app.post("/api/daily-reports", authenticate, async (req, res) => {
     const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
     const body = req.body ?? {};
     const date = String(body.report_date ?? "");
-    const reporter = String(body.reported_by ?? "").trim();
+    const reporter = String(req.user.username ?? req.user.displayName ?? "").trim();
     if (!branch || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !reporter || reporter.length > 200) {
       return res.status(400).json({ ok: false, message: "Valid date and reporter required." });
     }
@@ -2011,7 +2011,7 @@ app.post("/api/daily-reports/review", authenticate, async (req, res) => {
     }
     const id = String(req.body?.id ?? "").trim();
     const comment = String(req.body?.comment ?? "").trim();
-    const reviewer = String(req.body?.reviewer ?? "").trim();
+    const reviewer = String(req.user.username ?? req.user.displayName ?? "").trim();
     if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id) ||
         comment.length > 10000 || !reviewer || reviewer.length > 200) {
       return res.status(400).json({ ok: false, message: "Valid report and reviewer required." });
