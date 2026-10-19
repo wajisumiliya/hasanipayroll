@@ -5,11 +5,16 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Check database secret configuration
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Compare source and target account coverage
+        working-directory: backend
         env:
-          SOURCE_URL: ${{ secrets.SUPABASE_SOURCE_DATABASE_URL }}
-          TARGET_URL: ${{ secrets.NEON_DATABASE_URL }}
-        run: |
-          test -n "$SOURCE_URL" || { echo "Missing Supabase source secret"; exit 1; }
-          test -n "$TARGET_URL" || { echo "Missing Neon destination secret"; exit 1; }
-          echo "Both database secrets configured. No migration performed."
+          SUPABASE_SOURCE_DATABASE_URL: ${{ secrets.SUPABASE_SOURCE_DATABASE_URL }}
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: node src/scripts/check-app-user-migration.js
