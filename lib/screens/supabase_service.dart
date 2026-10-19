@@ -1421,20 +1421,10 @@ class SupabaseService {
     required String branchId,
     required DateTime date,
   }) async {
-    try {
-      final dateText = '${date.year.toString().padLeft(4, '0')}-'
-          '${date.month.toString().padLeft(2, '0')}-'
-          '${date.day.toString().padLeft(2, '0')}';
-      final response = await database
-          .from('attendance')
-          .select()
-          .eq('branch_id', branchId.trim())
-          .eq('attendance_date', dateText);
-      return _mapList(response);
-    } catch (e, stackTrace) {
-      _debugLog('GET BRANCH DATE ATTENDANCE ERROR');
-      rethrow;
-    }
+    return AppService.instance.loadNeonAttendance(
+      branchId: branchId,
+      date: _dateOnlyText(date),
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getPendingOtRequests() async {
