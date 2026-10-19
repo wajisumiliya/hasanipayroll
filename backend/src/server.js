@@ -9,6 +9,11 @@ import pg from "pg";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import {
+  ensureAdminAccount,
+  ensureFrnBranchAccounts,
+  ensurePlayReviewerAccount,
+} from "./startup-accounts.js";
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -3853,103 +3858,6 @@ async function testDatabase() {
   }
 }
 
-async function ensureFrnBranchAccounts() {
-  const usernames = [
-    "HPSPFRN",
-    "HBSPFRN",
-    "HBAMJFRN",
-    "HBASFRN",
-    "HBASTANAFRN",
-    "HBGURUNFRN",
-    "HBJITRAFRN",
-    "HBPERAIFRN",
-    "HBKULIMFRN",
-    "HBLKWFRN",
-  ];
-  const password = process.env.FRN_BRANCH_PASSWORD;
-  if (!password) {
-    console.warn("FRN branch account bootstrap skipped: FRN_BRANCH_PASSWORD is not set.");
-    return;
-  }
-  if (password.length < 12) {
-    throw new Error("FRN_BRANCH_PASSWORD must contain at least 12 characters.");
-  }
-  const passwordHash =
-    await bcrypt.hash(password, 12);
-
-  for (const username of usernames) {
-    const email =
-      `${username.toLowerCase()}@hasani.local`;
-    const updated = await pool.query(
-      `
-        UPDATE public."app_user"
-        SET "username" = $1,
-            "email" = $2,
-            "role" = 'BRANCH',
-            "isActive" = TRUE,
-            "mustChangePassword" = FALSE,
-            "updatedAt" = NOW()
-        WHERE UPPER(TRIM(COALESCE("username", ''))) = $1
-           OR LOWER(TRIM(COALESCE("email", ''))) = LOWER($2)
-        RETURNING "id"
-      `,
-      [username, email],
-    );
-
-    if (updated.rowCount === 0) {
-      await pool.query(
-        `
-          INSERT INTO public."app_user" (
-            "id", "username", "email", "passwordHash", "role",
-            "isActive", "mustChangePassword", "createdAt", "updatedAt"
-          )
-          VALUES ($1, $2, $3, $4, 'BRANCH', TRUE, FALSE, NOW(), NOW())
-        `,
-        [crypto.randomUUID(), username, email, passwordHash],
-      );
-    }
-  }
-
-  console.log(`FRN branch accounts ready: ${usernames.length}`);
-}
-
-async function ensurePlayReviewerAccount() {
-  if (!PLAY_REVIEWER_PASSWORD) {
-    console.warn("Google Play reviewer account skipped: PLAY_REVIEWER_PASSWORD is not set.");
-    return;
-  }
-  if (PLAY_REVIEWER_PASSWORD.length < 12) {
-    throw new Error("PLAY_REVIEWER_PASSWORD must contain at least 12 characters.");
-  }
-
-  const passwordHash = await bcrypt.hash(PLAY_REVIEWER_PASSWORD, 12);
-  const updated = await pool.query(
-    `UPDATE public."app_user"
-     SET "employeeId" = $1, "username" = $2, "email" = $3,
-         "passwordHash" = $4, "role" = 'EMPLOYEE', "isActive" = TRUE,
-         "mustChangePassword" = FALSE, "passwordChangedAt" = NOW(),
-         "updatedAt" = NOW()
-     WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = $1
-        OR LOWER(TRIM(COALESCE("username", ''))) = $2
-        OR LOWER(TRIM(COALESCE("email", ''))) = $3
-     RETURNING "id"`,
-    [PLAY_REVIEWER_EMPLOYEE_ID, PLAY_REVIEWER_USERNAME, PLAY_REVIEWER_EMAIL, passwordHash],
-  );
-
-  if (updated.rowCount === 0) {
-    await pool.query(
-      `INSERT INTO public."app_user" (
-         "id", "employeeId", "username", "email", "passwordHash", "role",
-         "isActive", "mustChangePassword", "passwordChangedAt", "createdAt", "updatedAt"
-       ) VALUES ($1, $2, $3, $4, $5, 'EMPLOYEE', TRUE, FALSE, NOW(), NOW(), NOW())`,
-      [crypto.randomUUID(), PLAY_REVIEWER_EMPLOYEE_ID, PLAY_REVIEWER_USERNAME,
-        PLAY_REVIEWER_EMAIL, passwordHash],
-    );
-  }
-
-  console.log("Google Play reviewer account synchronized.");
-}
-
 function matchesConfiguredPassword(enteredPassword, configuredPassword) {
   const entered = Buffer.from(String(enteredPassword ?? ""), "utf8");
   const configured = Buffer.from(String(configuredPassword ?? ""), "utf8");
@@ -3957,47 +3865,6 @@ function matchesConfiguredPassword(enteredPassword, configuredPassword) {
     entered.length === configured.length &&
     crypto.timingSafeEqual(entered, configured);
 }
-async function ensureAdminAccount() {
-  const email = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
-  const password = String(process.env.ADMIN_PASSWORD || "");
-
-  if (!email || !password) {
-    console.warn("Admin account bootstrap skipped: ADMIN_EMAIL or ADMIN_PASSWORD is not set.");
-    return;
-  }
-  if (password.length < 12) {
-    throw new Error("ADMIN_PASSWORD must contain at least 12 characters.");
-  }
-
-  const existing = await pool.query(
-    `SELECT "id"
-     FROM public."app_user"
-     WHERE UPPER(TRIM(COALESCE("username", ''))) = 'ADMIN'
-        OR LOWER(TRIM(COALESCE("email", ''))) = $1
-     LIMIT 1`,
-    [email],
-  );
-
-  // ADMIN_PASSWORD is a bootstrap credential only. Never overwrite an
-  // existing admin password during a restart or redeploy.
-  if (existing.rows.length > 0) {
-    console.log("Admin account already exists; startup password left unchanged.");
-    return;
-  }
-
-  const passwordHash = await bcrypt.hash(password, 12);
-  await pool.query(
-    `INSERT INTO public."app_user" (
-       "id", "username", "email", "passwordHash", "role",
-       "isActive", "mustChangePassword", "passwordChangedAt",
-       "createdAt", "updatedAt"
-     ) VALUES ($1, 'ADMIN', $2, $3, 'ADMIN', TRUE, FALSE, NOW(), NOW(), NOW())`,
-    [crypto.randomUUID(), email, passwordHash],
-  );
-
-  console.log("Admin account created from environment configuration.");
-}
-
 // ============================================================
 // SERVER
 // ============================================================
@@ -4006,9 +3873,23 @@ let server;
 
 async function startServer() {
   await testDatabase();
-  await ensureAdminAccount();
-  await ensurePlayReviewerAccount();
-  await ensureFrnBranchAccounts();
+  const hashPassword = (password) => bcrypt.hash(password, 12);
+  await ensureAdminAccount(pool, {
+    email: process.env.ADMIN_EMAIL,
+    password: process.env.ADMIN_PASSWORD,
+    hashPassword,
+  });
+  await ensurePlayReviewerAccount(pool, {
+    username: PLAY_REVIEWER_USERNAME,
+    email: PLAY_REVIEWER_EMAIL,
+    employeeId: PLAY_REVIEWER_EMPLOYEE_ID,
+    password: PLAY_REVIEWER_PASSWORD,
+    hashPassword,
+  });
+  await ensureFrnBranchAccounts(pool, {
+    password: process.env.FRN_BRANCH_PASSWORD,
+    hashPassword,
+  });
 
   server =
     app.listen(
