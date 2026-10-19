@@ -41,7 +41,7 @@ jobs:
       - name: Verify output
         run: test -f build/web/index.html
       - name: Upload preview artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: neon-flutter-preview-web
           path: build/web/
