@@ -465,6 +465,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'EA Forms';
       case 16:
         return 'Status View';
+      case 17:
+        return 'Branch Passwords';
       default:
         return 'Dashboard';
     }
@@ -576,8 +578,141 @@ class _AdminDashboardState extends State<AdminDashboard>
       case 15:
         return const EaFormsPage.admin();
 
+      case 17:
+        return _branchPasswordPage();
+
       default:
         return _dashboardPage();
+    }
+  }
+
+  Widget _branchPasswordPage() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 540),
+        child: Card(
+          margin: const EdgeInsets.all(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Branch Password Management',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                const Text('Set a password for an existing Neon branch account. Inactive accounts remain inactive.'),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: _showBranchPasswordDialog,
+                  icon: const Icon(Icons.lock_reset),
+                  label: const Text('Set Branch Password'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showBranchPasswordDialog() async {
+    final username = TextEditingController();
+    final password = TextEditingController();
+    final confirm = TextEditingController();
+    bool saving = false;
+    bool obscure = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: const Text('Set Branch Password'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: username,
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Branch username',
+                      hintText: 'e.g. hbsp or HBSPFRN',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: password,
+                    obscureText: obscure,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      labelText: 'New password (12+ characters)',
+                      suffixIcon: IconButton(
+                        icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setDialogState(() => obscure = !obscure),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirm,
+                    obscureText: obscure,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    decoration: const InputDecoration(labelText: 'Confirm password'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: saving ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: saving ? null : () async {
+                  if (username.text.trim().isEmpty ||
+                      password.text.length < 12 ||
+                      password.text.length > 128 ||
+                      password.text != confirm.text) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Enter a username and matching password of 12–128 characters.')),
+                    );
+                    return;
+                  }
+                  setDialogState(() => saving = true);
+                  try {
+                    final result = await service.configureBranchPassword(
+                      username: username.text,
+                      newPassword: password.text,
+                    );
+                    if (result['ok'] != true) {
+                      throw Exception(result['message'] ?? 'Password setup failed');
+                    }
+                    if (!dialogContext.mounted) return;
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Branch password saved in Neon.')),
+                    );
+                  } catch (error) {
+                    if (!dialogContext.mounted) return;
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(content: Text('Unable to save: $error')),
+                    );
+                    setDialogState(() => saving = false);
+                  }
+                },
+                child: Text(saving ? 'Saving...' : 'Save Password'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      username.dispose();
+      password.dispose();
+      confirm.dispose();
     }
   }
 
@@ -818,6 +953,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                             Icons.settings_outlined,
                             7,
                           ),
+                          _drawerItem(
+                            'Branch Passwords',
+                            Icons.password_rounded,
+                            17,
+                          ),
                         ],
                 ),
               ),
@@ -887,6 +1027,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               item('Daily Reports', Icons.article_rounded, 14),
               item('Reports', Icons.bar_chart_rounded, 6),
               item('Settings', Icons.settings_rounded, 7),
+              item('Branch Passwords', Icons.password_rounded, 17),
             ],
       onLogout: logout,
     );
