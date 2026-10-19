@@ -1661,9 +1661,9 @@ class SupabaseService {
       year: year,
       month: month,
     );
-    return rows.where((row) =>
-      (row['employee_id']?.toString().trim() ?? '') == id
-    ).toList()
+    return rows
+        .where((row) => (row['employee_id']?.toString().trim() ?? '') == id)
+        .toList()
       ..sort((a, b) => (a['attendance_date']?.toString() ?? '')
           .compareTo(b['attendance_date']?.toString() ?? ''));
   }
