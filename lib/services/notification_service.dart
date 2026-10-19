@@ -93,7 +93,9 @@ class NotificationService {
     String? employeeId,
     String? branchId,
   ) async {
-    await SupabaseService.database.rpc(
+    // Notifications remain on Supabase during the Neon database cutover.
+    // Never route device registration through the Neon database client.
+    await SupabaseService.client.rpc(
       'register_notification_device',
       params: {
         'p_token': token,

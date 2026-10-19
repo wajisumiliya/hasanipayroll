@@ -100,7 +100,24 @@ class SupabaseService {
 
   static SupabaseClient get client => Supabase.instance.client;
 
+  /// Opt-in safety gate for Neon migration builds. When enabled, missing
+  /// Neon configuration must fail rather than silently query Supabase.
+  /// Legacy production builds keep their existing behavior until cutover.
+  static const bool requireNeonDatabase = bool.fromEnvironment(
+    'REQUIRE_NEON_DATABASE',
+    defaultValue: false,
+  );
+
   static bool get usesNeonDatabase => neonDataApiUrl.trim().isNotEmpty;
+
+  static void validateDatabaseConfiguration() {
+    if (requireNeonDatabase && !usesNeonDatabase) {
+      throw StateError(
+        'Neon database is required for this build but NEON_DATA_API_URL '
+        'is missing. Refusing to fall back to Supabase.',
+      );
+    }
+  }
 
   static final PostgrestClient? _neonDatabase =
       neonDataApiUrl.trim().isEmpty ? null : PostgrestClient(neonDataApiUrl);
@@ -166,6 +183,7 @@ class SupabaseService {
   // ============================================================
 
   static Future<void> initialize() async {
+    validateDatabaseConfiguration();
     try {
       await Supabase.initialize(
         url: supabaseUrl,
