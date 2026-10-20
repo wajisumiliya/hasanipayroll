@@ -255,15 +255,16 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
       // Fetch salary and rosters from the same authenticated Neon backend.
       // Legacy PostgREST rejects Node-issued JWTs with PGRST301.
-      final dependencies = await AppService.instance.loadAttendanceSheetDependencies(
+      final dependencies =
+          await AppService.instance.loadAttendanceSheetDependencies(
         employeeId: employeeId,
         year: widget.month.year,
         month: widget.month.month,
       );
       final salary = dependencies['salary'];
       if (salary is Map) {
-        final epfCategory = (salary['epf_category'] ?? '')
-            .toString().trim().toLowerCase();
+        final epfCategory =
+            (salary['epf_category'] ?? '').toString().trim().toLowerCase();
         final eisApplicable = _toBool(salary['eis_applicable']);
         if (epfCategory == 'normal1' || eisApplicable) {
           _requiredWorkHours = 7.5;
@@ -286,7 +287,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         ..clear()
         ..addEntries(daily.map((value) {
           final row = Map<String, dynamic>.from(value as Map);
-          return MapEntry(DateTime.parse(row['roster_date'].toString()).day, row);
+          return MapEntry(
+              DateTime.parse(row['roster_date'].toString()).day, row);
         }));
 
       final rows = widget.editable
@@ -893,7 +895,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                             attendance.isUnpaid = false;
                           }
                         }
-                        await SupabaseService.saveDailyRosters(rows);
+                        await AppService.instance.saveNeonDailyRosters(rows);
                         if (dialogContext.mounted) {
                           Navigator.pop(dialogContext, true);
                         }
@@ -1217,82 +1219,60 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         // SAVE
         // ================================================================
 
-        await SupabaseService.saveMonthlyAttendanceRow(
-          employeeId: employeeId,
-          branchId: employeeBranchId,
-          date: DateTime(
-            widget.month.year,
-            widget.month.month,
-            day,
-          ),
+        final attendanceDate =
+            '${widget.month.year.toString().padLeft(4, '0')}-'
+            '${widget.month.month.toString().padLeft(2, '0')}-'
+            '${day.toString().padLeft(2, '0')}';
+        await AppService.instance.saveNeonAttendanceRow({
+          'id': '${employeeId.trim()}_$attendanceDate',
+          'employee_id': employeeId.trim(),
+          'branch_id': employeeBranchId.trim(),
+          'attendance_date': attendanceDate,
+          'check_in': row.workingIn.text.trim().isEmpty
+              ? '-'
+              : row.workingIn.text.trim(),
+          'check_out': row.workingOut.text.trim().isEmpty
+              ? '-'
+              : row.workingOut.text.trim(),
+          'morning_in': row.morningIn.text.trim().isEmpty
+              ? null
+              : row.morningIn.text.trim(),
+          'morning_out': row.morningOut.text.trim().isEmpty
+              ? null
+              : row.morningOut.text.trim(),
+          'afternoon_in': row.afternoonIn.text.trim().isEmpty
+              ? null
+              : row.afternoonIn.text.trim(),
+          'afternoon_out': row.afternoonOut.text.trim().isEmpty
+              ? null
+              : row.afternoonOut.text.trim(),
+          'overtime_in': row.overtimeIn.text.trim().isEmpty
+              ? null
+              : row.overtimeIn.text.trim(),
+          'overtime_out': row.overtimeOut.text.trim().isEmpty
+              ? null
+              : row.overtimeOut.text.trim(),
+          'status': _calculatedAttendanceStatus(day, row),
+          'work_minutes': workMinutes,
+          'break_minutes': breakMinutes,
+          'net_working_minutes': netWorkingMinutes,
+          'net_working_duration': formatMinutes(netWorkingMinutes),
+          'overtime_minutes': dailyOtMinutes,
+          'overtime_duration': formatMinutes(dailyOtMinutes),
+          'ot_requested': row.otRequested,
+          'ot_authorized': _isAdminView() && dailyOtMinutes > 0,
+          if (_isAdminView() || !_isOvertimeEligible) ...{
+            'approved_ot_minutes': _isOvertimeEligible
+                ? (dailyOtMinutes > 0
+                    ? dailyOtMinutes
+                    : (hasManualOtOverride ? 0 : null))
+                : null,
+            'ot_manual_override': _isOvertimeEligible && hasManualOtOverride,
+          },
+          'is_unpaid': row.isUnpaid,
+          'is_public_holiday': row.isPublicHoliday,
+        });
 
-          // WORK
-          workingIn: row.workingIn.text.trim(),
-          workingOut: row.workingOut.text.trim(),
-
-          // MORNING BREAK
-          morningIn: row.morningIn.text.trim(),
-          morningOut: row.morningOut.text.trim(),
-
-          // AFTERNOON BREAK
-          afternoonIn: row.afternoonIn.text.trim(),
-          afternoonOut: row.afternoonOut.text.trim(),
-
-          // EVENING BREAK
-          //
-          // Database column names remain overtime_in/out
-          // for compatibility with the existing schema.
-          overtimeIn: row.overtimeIn.text.trim(),
-          overtimeOut: row.overtimeOut.text.trim(),
-
-          status: _calculatedAttendanceStatus(day, row),
-          otRequested: row.otRequested,
-          otAuthorized: _isAdminView() ? row.otAuthorized : false,
-
-          // CALCULATED
-          workMinutes: workMinutes,
-          breakMinutes: breakMinutes,
-        );
-
-        // Keep the attendance table synchronized with the exact values shown
-        // on this screen. These columns already exist in attendance.
-        await SupabaseService.database
-            .from('attendance')
-            .update({
-              'work_minutes': workMinutes,
-              'break_minutes': breakMinutes,
-              'net_working_minutes': netWorkingMinutes,
-              'net_working_duration': formatMinutes(netWorkingMinutes),
-              'overtime_minutes': dailyOtMinutes,
-              'overtime_duration': formatMinutes(dailyOtMinutes),
-              'ot_requested': row.otRequested,
-              'ot_authorized': _isAdminView() && dailyOtMinutes > 0,
-              if (_isAdminView() || !_isOvertimeEligible) ...{
-                // Keep the calculated value payable, but separately remember
-                // whether Admin entered it. On reload a manual value wins over
-                // the automatic local-staff calculation, including zero.
-                'approved_ot_minutes': _isOvertimeEligible
-                    ? (dailyOtMinutes > 0
-                        ? dailyOtMinutes
-                        : (hasManualOtOverride ? 0 : null))
-                    : null,
-                'ot_manual_override':
-                    _isOvertimeEligible && hasManualOtOverride,
-              },
-              'is_unpaid': row.isUnpaid,
-              'is_public_holiday': row.isPublicHoliday,
-            })
-            .eq('employee_id', employeeId)
-            .eq('branch_id', employeeBranchId)
-            .eq(
-              'attendance_date',
-              '${widget.month.year.toString().padLeft(4, '0')}-'
-                  '${widget.month.month.toString().padLeft(2, '0')}-'
-                  '${day.toString().padLeft(2, '0')}',
-            );
-
-        // Admin-only payroll flags are saved directly because the existing
-        // SupabaseService method does not expose these columns.
         savedRows++;
       }
 
@@ -1310,17 +1290,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           submissionEnd! + 1,
         );
 
-        await SupabaseService.database
-            .from('attendance')
-            .update({
-              'is_submitted': true,
-              'submitted_at': DateTime.now().toIso8601String(),
-              'submitted_by': 'branch',
-            })
-            .eq('employee_id', employeeId)
-            .eq('branch_id', employeeBranchId)
-            .gte('attendance_date', start.toIso8601String().substring(0, 10))
-            .lt('attendance_date', end.toIso8601String().substring(0, 10));
+        await AppService.instance.submitNeonAttendance(
+          employeeId: employeeId,
+          start: start.toIso8601String().substring(0, 10),
+          end: end.toIso8601String().substring(0, 10),
+        );
 
         _submittedDays.addAll(
           List<int>.generate(submissionEnd, (index) => index + 1),
