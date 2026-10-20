@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
 import '../services/app_service.dart';
@@ -62,8 +61,6 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   final Set<int> _submittedDays = <int>{};
   bool _showBreakAttendanceOnMobile = false;
   String? loadError;
-  RealtimeChannel? _attendanceChannel;
-  Timer? _attendanceRealtimeDebounce;
   Timer? _liveRefreshTimer;
 
   String get _watermarkBranchName {
@@ -101,10 +98,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
     _loadAttendance();
 
-    // Employee attendance updates arrive through Realtime. Keep a slow fallback
-    // refresh in case a websocket reconnect misses an event.
+    // Refresh employee attendance from the authenticated data service.
+    // Avoid subscribing to the legacy Supabase Realtime attendance table.
     if (!widget.editable) {
-      _subscribeToAttendance();
       _liveRefreshTimer = Timer.periodic(
         const Duration(minutes: 5),
         (_) => _loadAttendance(silent: true),
@@ -112,42 +108,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     }
   }
 
-  void _subscribeToAttendance() {
-    final employeeId = _employeeId().trim();
-    if (employeeId.isEmpty) return;
-
-    _attendanceChannel = SupabaseService.client
-        .channel('employee-attendance-$employeeId-$hashCode')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'attendance',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'employee_id',
-            value: employeeId,
-          ),
-          callback: (_) {
-            _attendanceRealtimeDebounce?.cancel();
-            _attendanceRealtimeDebounce = Timer(
-              const Duration(milliseconds: 500),
-              () {
-                if (mounted) _loadAttendance(silent: true);
-              },
-            );
-          },
-        )
-        .subscribe();
-  }
-
   @override
   void dispose() {
     _liveRefreshTimer?.cancel();
-    _attendanceRealtimeDebounce?.cancel();
-    final channel = _attendanceChannel;
-    if (channel != null) {
-      SupabaseService.client.removeChannel(channel);
-    }
     for (final controller in controllers) {
       controller.dispose();
     }
