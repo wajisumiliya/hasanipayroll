@@ -1,3 +1,4 @@
+import { createApiCorsOptions } from "./api-cors.js";
 import { isDailyReportPin } from "./daily-report-pin.js";
 import { findAccountByLogin, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
 import "dotenv/config";
@@ -195,60 +196,7 @@ const uniqueOrigins = [...new Set(allowedOrigins)];
 
 console.log("✅ CORS allowed origins:", uniqueOrigins);
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Requests such as curl/Postman/server-to-server
-      // may not contain an Origin header.
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      const normalizedOrigin = origin
-        .trim()
-        .toLowerCase()
-        .replace(/\/+$/, "");
-
-      const originAllowed = uniqueOrigins.some(
-        (allowed) => allowed.toLowerCase() === normalizedOrigin,
-      );
-
-      if (originAllowed) {
-        return callback(null, true);
-      }
-
-      console.warn(
-        "⚠️  CORS blocked:",
-        normalizedOrigin,
-      );
-
-      console.warn(
-        "Allowed origins:",
-        uniqueOrigins,
-      );
-
-      return callback(new Error('Origin not allowed by CORS.'));
-    },
-
-    credentials: true,
-
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
-
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-    ],
-
-    optionsSuccessStatus: 200,
-  }),
-);
+app.use(cors(createApiCorsOptions(uniqueOrigins)));
 
 
 
@@ -4574,4 +4522,3 @@ process.on(
     shutdown("SIGTERM"),
 
 );
-
