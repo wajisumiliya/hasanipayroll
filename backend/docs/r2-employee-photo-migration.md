@@ -1,18 +1,19 @@
-# Cloudflare R2 employee photo migration (staged)
+# R2 employee photos
 
-The Node API now provides `POST /api/employee-photos/:employeeId/sign` with the existing Hasani Payroll bearer JWT. The endpoint returns a 5-minute SigV4 URL for a single private R2 object: `employee-photos/{employeeId}/profile`. It does not return R2 secrets. `GET` is allowed for the employee's own photo or an admin; `PUT` is restricted to admins. The bucket must remain private.
+Flutter now signs photo GET/PUT/DELETE requests through the authenticated Neon
+backend and uses the returned R2 URL directly. See [NEON_DEPLOYMENT.md](../../NEON_DEPLOYMENT.md)
+for Render configuration and existing-file migration.
 
-## Render environment (server only)
+The bucket stays private. Set `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`,
+and `R2_SECRET_ACCESS_KEY` only on the Node service. Configure bucket CORS for
+the frontend origins, GET/PUT/DELETE methods, and Content-Type header.
 
-Set `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` on the Render Node service. Never put these values in GitHub, Flutter defines, or browser code. Grant the R2 key object read/write only for the designated bucket.
+`POST /api/employee-photos/:employeeId/sign` returns a five-minute SigV4 URL
+for `employee-photos/<employee_id>/profile`. Reads require visibility of the
+employee under the Neon row policies; writes require a full administrator.
+R2 credentials and the API bearer token are never included in storage uploads.
+Successful uploads update the employee's Neon `photo_url` to the object key.
 
-## Integration requirements before cutover
-
-- Configure R2 bucket CORS for the deployed Flutter web origin and `GET`, `PUT`, and `Content-Type` requests.
-- Update Flutter upload/download widgets to call the authenticated Node sign endpoint and upload directly to the returned URL using exactly the returned content type.
-- After a successful upload, verify the object and update `public.employees.photo_url` in Neon to the R2 object key using an authenticated backend endpoint. The current code **does not** change the database photo path or migrate existing files.
-- Copy existing private employee photos from Supabase Storage into R2 before switching reads; retain the old storage until parity checks and authorization tests pass.
-- Add branch-manager photo permissions only after checking branch ownership on the server. The new endpoint deliberately denies branch-role access for now.
-- Test cross-employee access denial, expiry, object overwrite rules, file size and actual image validation, and mobile/web display before production release.
-
-This PR is **backend groundwork only**. It does not remove Supabase Storage from Flutter or complete the data migration. Do not disable Supabase.
+Existing storage files must be copied to those R2 keys or uploaded again.
+Importing database tables does not copy image bytes. Legacy photo URLs are
+resolved as R2 employee references; missing objects show the initials fallback.
