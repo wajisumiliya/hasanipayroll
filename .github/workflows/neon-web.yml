@@ -2,10 +2,10 @@ name: Neon web
 on:
   pull_request:
     branches: [main, neon-dev]
-    paths: ['lib/**', 'test/**', 'pubspec.*', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
+    paths: ['lib/**', 'test/**', 'pubspec.*', 'package*.json', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
   push:
     branches: [main, codex/remove-remaining-supabase]
-    paths: ['lib/**', 'test/**', 'pubspec.*', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
+    paths: ['lib/**', 'test/**', 'pubspec.*', 'package*.json', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
 permissions:
   contents: read
 concurrency:
@@ -26,4 +26,5 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - run: flutter test
-      - run: bash scripts/render-build-web.sh
+      # Render currently runs npm install; exercise its Flutter build hook.
+      - run: npm ci
