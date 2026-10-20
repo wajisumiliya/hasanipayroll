@@ -255,15 +255,16 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
       // Fetch salary and rosters from the same authenticated Neon backend.
       // Legacy PostgREST rejects Node-issued JWTs with PGRST301.
-      final dependencies = await AppService.instance.loadAttendanceSheetDependencies(
+      final dependencies =
+          await AppService.instance.loadAttendanceSheetDependencies(
         employeeId: employeeId,
         year: widget.month.year,
         month: widget.month.month,
       );
       final salary = dependencies['salary'];
       if (salary is Map) {
-        final epfCategory = (salary['epf_category'] ?? '')
-            .toString().trim().toLowerCase();
+        final epfCategory =
+            (salary['epf_category'] ?? '').toString().trim().toLowerCase();
         final eisApplicable = _toBool(salary['eis_applicable']);
         if (epfCategory == 'normal1' || eisApplicable) {
           _requiredWorkHours = 7.5;
@@ -286,7 +287,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         ..clear()
         ..addEntries(daily.map((value) {
           final row = Map<String, dynamic>.from(value as Map);
-          return MapEntry(DateTime.parse(row['roster_date'].toString()).day, row);
+          return MapEntry(
+              DateTime.parse(row['roster_date'].toString()).day, row);
         }));
 
       final rows = widget.editable
@@ -1227,21 +1229,29 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           'branch_id': employeeBranchId.trim(),
           'attendance_date': attendanceDate,
           'check_in': row.workingIn.text.trim().isEmpty
-              ? '-' : row.workingIn.text.trim(),
+              ? '-'
+              : row.workingIn.text.trim(),
           'check_out': row.workingOut.text.trim().isEmpty
-              ? '-' : row.workingOut.text.trim(),
+              ? '-'
+              : row.workingOut.text.trim(),
           'morning_in': row.morningIn.text.trim().isEmpty
-              ? null : row.morningIn.text.trim(),
+              ? null
+              : row.morningIn.text.trim(),
           'morning_out': row.morningOut.text.trim().isEmpty
-              ? null : row.morningOut.text.trim(),
+              ? null
+              : row.morningOut.text.trim(),
           'afternoon_in': row.afternoonIn.text.trim().isEmpty
-              ? null : row.afternoonIn.text.trim(),
+              ? null
+              : row.afternoonIn.text.trim(),
           'afternoon_out': row.afternoonOut.text.trim().isEmpty
-              ? null : row.afternoonOut.text.trim(),
+              ? null
+              : row.afternoonOut.text.trim(),
           'overtime_in': row.overtimeIn.text.trim().isEmpty
-              ? null : row.overtimeIn.text.trim(),
+              ? null
+              : row.overtimeIn.text.trim(),
           'overtime_out': row.overtimeOut.text.trim().isEmpty
-              ? null : row.overtimeOut.text.trim(),
+              ? null
+              : row.overtimeOut.text.trim(),
           'status': _calculatedAttendanceStatus(day, row),
           'work_minutes': workMinutes,
           'break_minutes': breakMinutes,
@@ -1257,8 +1267,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     ? dailyOtMinutes
                     : (hasManualOtOverride ? 0 : null))
                 : null,
-            'ot_manual_override':
-                _isOvertimeEligible && hasManualOtOverride,
+            'ot_manual_override': _isOvertimeEligible && hasManualOtOverride,
           },
           'is_unpaid': row.isUnpaid,
           'is_public_holiday': row.isPublicHoliday,
