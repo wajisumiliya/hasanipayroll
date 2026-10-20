@@ -353,6 +353,25 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  /// Salary and roster data for one employee, scoped by the Node JWT.
+  Future<Map<String, dynamic>> loadAttendanceSheetDependencies({
+    required String employeeId,
+    required int year,
+    required int month,
+  }) async {
+    final uri = Uri(path: '/api/attendance-sheet/dependencies', queryParameters: {
+      'employee_id': employeeId,
+      'year': '$year',
+      'month': '$month',
+    });
+    final data = await _getAuth(uri.toString());
+    if (data['ok'] != true) {
+      throw StateError(data['message']?.toString() ??
+          'Unable to load attendance sheet dependencies.');
+    }
+    return data;
+  }
+
   // ==========================================================================
   // CURRENT USER
   // ==========================================================================
