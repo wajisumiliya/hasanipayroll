@@ -14889,12 +14889,12 @@ class _AdminDashboardState extends State<AdminDashboard>
   Widget _payrollPage() {
     return FutureBuilder<List<dynamic>>(
       future: service.loadNeonPayrollPage(selectedPayrollMonth).then((data) => [
-        data['branches'],
-        data['employees'],
-        data['payroll'],
-        data['salary_defaults'],
-        data['attendance'],
-      ]),
+            data['branches'],
+            data['employees'],
+            data['payroll'],
+            data['salary_defaults'],
+            data['attendance'],
+          ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
