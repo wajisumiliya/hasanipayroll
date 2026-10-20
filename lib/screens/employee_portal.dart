@@ -3260,7 +3260,8 @@ class _EmployeePortalState extends State<EmployeePortal>
       }
       final currentEmployee = employee;
       if (currentEmployee == null) {
-        throw StateError('Employee profile is not available. Refresh and retry.');
+        throw StateError(
+          'Employee profile is not available. Refresh and retry.');
       }
       final bytes = await PdfService.buildPayslip(
         employee: currentEmployee,
@@ -3281,7 +3282,6 @@ class _EmployeePortalState extends State<EmployeePortal>
       );
     }
   }
-
 }
 
 class _ChangePasswordPage extends StatefulWidget {
