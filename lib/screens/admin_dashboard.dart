@@ -599,9 +599,11 @@ class _AdminDashboardState extends State<AdminDashboard>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text('Branch Password Management',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                const Text('Set a password for an existing Neon branch account. Inactive accounts remain inactive.'),
+                const Text(
+                    'Set a password for an existing Neon branch account. Inactive accounts remain inactive.'),
                 const SizedBox(height: 18),
                 FilledButton.icon(
                   onPressed: _showBranchPasswordDialog,
@@ -649,8 +651,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                     decoration: InputDecoration(
                       labelText: 'New password (12+ characters)',
                       suffixIcon: IconButton(
-                        icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
-                        onPressed: () => setDialogState(() => obscure = !obscure),
+                        icon: Icon(
+                            obscure ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () =>
+                            setDialogState(() => obscure = !obscure),
                       ),
                     ),
                   ),
@@ -660,7 +664,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                     obscureText: obscure,
                     enableSuggestions: false,
                     autocorrect: false,
-                    decoration: const InputDecoration(labelText: 'Confirm password'),
+                    decoration:
+                        const InputDecoration(labelText: 'Confirm password'),
                   ),
                 ],
               ),
@@ -671,38 +676,45 @@ class _AdminDashboardState extends State<AdminDashboard>
                 child: const Text('Cancel'),
               ),
               FilledButton(
-                onPressed: saving ? null : () async {
-                  if (username.text.trim().isEmpty ||
-                      password.text.length < 12 ||
-                      password.text.length > 128 ||
-                      password.text != confirm.text) {
-                    ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      const SnackBar(content: Text('Enter a username and matching password of 12–128 characters.')),
-                    );
-                    return;
-                  }
-                  setDialogState(() => saving = true);
-                  try {
-                    final result = await service.configureBranchPassword(
-                      username: username.text,
-                      newPassword: password.text,
-                    );
-                    if (result['ok'] != true) {
-                      throw Exception(result['message'] ?? 'Password setup failed');
-                    }
-                    if (!dialogContext.mounted) return;
-                    Navigator.pop(dialogContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Branch password saved in Neon.')),
-                    );
-                  } catch (error) {
-                    if (!dialogContext.mounted) return;
-                    ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      SnackBar(content: Text('Unable to save: $error')),
-                    );
-                    setDialogState(() => saving = false);
-                  }
-                },
+                onPressed: saving
+                    ? null
+                    : () async {
+                        if (username.text.trim().isEmpty ||
+                            password.text.length < 12 ||
+                            password.text.length > 128 ||
+                            password.text != confirm.text) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Enter a username and matching password of 12–128 characters.')),
+                          );
+                          return;
+                        }
+                        setDialogState(() => saving = true);
+                        try {
+                          final result = await service.configureBranchPassword(
+                            username: username.text,
+                            newPassword: password.text,
+                          );
+                          if (result['ok'] != true) {
+                            throw Exception(
+                                result['message'] ?? 'Password setup failed');
+                          }
+                          if (!dialogContext.mounted) return;
+                          Navigator.pop(dialogContext);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('Branch password saved in Neon.')),
+                          );
+                        } catch (error) {
+                          if (!dialogContext.mounted) return;
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text('Unable to save: $error')),
+                          );
+                          setDialogState(() => saving = false);
+                        }
+                      },
                 child: Text(saving ? 'Saving...' : 'Save Password'),
               ),
             ],
