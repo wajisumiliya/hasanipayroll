@@ -3249,52 +3249,37 @@ class _EmployeePortalState extends State<EmployeePortal>
   // PDF
   // =============================================================
 
-  Future<void> _pdf(
-    PayrollRecord payroll,
-  ) async {
-    if (!_showFinancialDetails) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Tap the eye icon to reveal financial details before viewing the payslip.',
-          ),
-        ),
-      );
-      return;
-    }
-
+  Future<void> _pdf(PayrollRecord payroll) async {
     try {
-      await service.loadAttendanceFromSupabase();
+      // Attendance refresh must not prevent viewing an already published
+      // payslip when the attendance API is unavailable.
+      try {
+        await service.loadAttendanceFromSupabase();
+      } catch (error) {
+        debugPrint('Payslip attendance refresh unavailable: $error');
+      }
+      final currentEmployee = employee;
+      if (currentEmployee == null) {
+        throw StateError(
+          'Employee profile is not available. Refresh and retry.',
+        );
+      }
       final bytes = await PdfService.buildPayslip(
-        employee: employee!,
+        employee: currentEmployee,
         p: payroll,
         history: records,
         attendance: service.employeeAttendance(employeeId),
       );
+      final period = DateFormat('yyyy-MM').format(payroll.period);
+      final filename = 'payslip_${payroll.employeeId}_$period.pdf';
 
-      if (kIsWeb) {
-        final period = DateFormat('yyyy-MM').format(payroll.period);
-        await Printing.sharePdf(
-          bytes: bytes,
-          filename: 'payslip_${payroll.employeeId}_$period.pdf',
-        );
-      } else {
-        await Printing.layoutPdf(
-          onLayout: (_) async => bytes,
-          format: PdfService.payslipPageFormat,
-          dynamicLayout: false,
-          forceCustomPrintPaper: true,
-        );
-      }
+      // Share PDF supports opening/saving on Android and downloading on web;
+      // layoutPdf opens the print dialog rather than a download destination.
+      await Printing.sharePdf(bytes: bytes, filename: filename);
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Unable to generate payslip: $e',
-          ),
-        ),
+        SnackBar(content: Text('Unable to open payslip: $e')),
       );
     }
   }
