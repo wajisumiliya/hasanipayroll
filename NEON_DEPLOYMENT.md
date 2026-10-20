@@ -43,6 +43,14 @@ JPEG, PNG and WebP uploads are limited to 512 KB; the app optimizes to 480 px.
 Existing Supabase photo files must be copied separately. See
 [photo migration instructions](backend/docs/neon-employee-photos.md).
 
+Notifications are saved in Neon's inbox. For Firebase push, set backend
+`FIREBASE_SERVICE_ACCOUNT_JSON` (or `FIREBASE_SERVICE_ACCOUNT`) to the Firebase
+service account JSON previously used by the Edge Function. Without it, inbox
+delivery still works and the response reports `pushConfigured: false`.
+Device registration uses the authenticated Neon RPC. Scheduled payslip releases
+run in the Node backend every minute instead of the former provider's cron job;
+Render must be running for that worker to execute.
+
 ## Access controls
 
 The generic adapter exposes only the tables and RPCs used by the app, validates

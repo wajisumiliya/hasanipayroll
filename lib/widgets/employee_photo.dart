@@ -48,7 +48,11 @@ String? employeeIdFromPhotoReference(String? reference) {
       break;
     }
   }
-  path = Uri.decodeComponent(path.split('?').first);
+  try {
+    path = Uri.decodeComponent(path.split('?').first);
+  } on FormatException {
+    return null;
+  }
   for (final prefix in ['neon-photo/', 'employee-photos/']) {
     if (path.startsWith(prefix)) path = path.substring(prefix.length);
   }

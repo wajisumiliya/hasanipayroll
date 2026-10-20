@@ -117,6 +117,10 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
       assert.equal((await photoRequest('admin','DELETE')).status,200);
       assert.equal((await photoRequest('admin')).status,404);
       assert.equal((await pool.query("SELECT photo_url FROM employees WHERE employee_id='FIX_E1'")).rows[0].photo_url,null);
+      await pool.query("INSERT INTO employees(employee_id,name,branch_id) VALUES ('FIX_PHOTO_DELETE','Temporary photo employee','FIX_A')");
+      await pool.query("INSERT INTO app_private.employee_photos(employee_id,content_type,photo_bytes) VALUES ('FIX_PHOTO_DELETE','image/png',$1)",[photo]);
+      await pool.query("DELETE FROM employees WHERE employee_id='FIX_PHOTO_DELETE'");
+      assert.equal((await pool.query("SELECT count(*) FROM app_private.employee_photos WHERE employee_id='FIX_PHOTO_DELETE'")).rows[0].count,'0');
     });
     await t.test('photo copy defaults to preview, copies atomically and never overwrites a Neon photo',async()=>{
       await pool.query("UPDATE employees SET photo_url='FIX_E1/profile' WHERE employee_id='FIX_E1'");
