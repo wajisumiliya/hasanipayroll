@@ -314,6 +314,23 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  /// All datasets required by the admin Payroll screen, from the Node/Neon API.
+  Future<Map<String, dynamic>> loadNeonPayrollPage(DateTime month) async {
+    final data = await _getAuth(
+      '/api/admin/payroll-page?year=${month.year}&month=${month.month}',
+    );
+    if (data['ok'] != true ||
+        data['branches'] is! List ||
+        data['employees'] is! List ||
+        data['payroll'] is! List ||
+        data['salary_defaults'] is! List ||
+        data['attendance'] is! List) {
+      throw StateError(data['message']?.toString() ??
+          'Unable to load payroll page from Neon.');
+    }
+    return data;
+  }
+
   /// Safe branch selector data from Neon.
   Future<List<Map<String, dynamic>>> loadNeonBranches() async {
     final data = await _getAuth('/api/branches');

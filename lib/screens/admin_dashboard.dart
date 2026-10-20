@@ -14888,43 +14888,13 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _payrollPage() {
     return FutureBuilder<List<dynamic>>(
-      future: Future.wait([
-        SupabaseService.getBranches(),
-        SupabaseService.database
-            .from('employees')
-            .select()
-            .order('employee_id'),
-        SupabaseService.database
-            .from('payroll')
-            .select()
-            .order('period', ascending: false),
-        SupabaseService.database
-            .from('employee_salary_defaults')
-            .select('employee_id,inc_details'),
-        SupabaseService.database
-            .from('attendance')
-            .select('employee_id,branch_id')
-            .gte(
-              'attendance_date',
-              DateFormat('yyyy-MM-dd').format(
-                DateTime(
-                  selectedPayrollMonth.year,
-                  selectedPayrollMonth.month,
-                  1,
-                ),
-              ),
-            )
-            .lt(
-              'attendance_date',
-              DateFormat('yyyy-MM-dd').format(
-                DateTime(
-                  selectedPayrollMonth.year,
-                  selectedPayrollMonth.month + 1,
-                  1,
-                ),
-              ),
-            ),
-      ]),
+      future: service.loadNeonPayrollPage(selectedPayrollMonth).then((data) => [
+            data['branches'],
+            data['employees'],
+            data['payroll'],
+            data['salary_defaults'],
+            data['attendance'],
+          ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
