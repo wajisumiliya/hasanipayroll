@@ -17,13 +17,14 @@ void main() {
       return http.Response('{"ok":true,"inbox":1}', 200);
     });
     final result = await NeonApi.jsonRequest('/api/notifications/send',
-      body: {'title': 'Hello'}, client: client);
+        body: {'title': 'Hello'}, client: client);
     expect(result['inbox'], 1);
   });
 
   test('clearing the session blocks authenticated API calls', () async {
     NeonApi.setAccessToken(null);
-    await expectLater(NeonApi.jsonRequest('/api/admin/users', method: 'GET'), throwsStateError);
+    await expectLater(NeonApi.jsonRequest('/api/admin/users', method: 'GET'),
+        throwsStateError);
   });
 
   test('photo upload never forwards the backend bearer token to R2', () async {
@@ -31,18 +32,22 @@ void main() {
     final client = MockClient((request) async {
       expect(request.headers.containsKey('Authorization'), false);
       expect(request.headers['Content-Type'], 'image/jpeg');
-      expect(request.bodyBytes, [1,2,3]);
+      expect(request.bodyBytes, [1, 2, 3]);
       return http.Response('', 200);
     });
     await NeonApi.objectRequest({
-      'url': 'https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com/photos/one?signature=fixture',
+      'url':
+          'https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com/photos/one?signature=fixture',
       'headers': {'Content-Type': 'image/jpeg'},
-    }, method: 'PUT', bytes: Uint8List.fromList([1,2,3]), client: client);
+    }, method: 'PUT', bytes: Uint8List.fromList([1, 2, 3]), client: client);
   });
 
   test('photo upload rejects an unexpected storage host', () async {
-    await expectLater(NeonApi.objectRequest({
-      'url': 'https://example.invalid/photo', 'headers': <String,String>{},
-    }, method: 'PUT'), throwsStateError);
+    await expectLater(
+        NeonApi.objectRequest({
+          'url': 'https://example.invalid/photo',
+          'headers': <String, String>{},
+        }, method: 'PUT'),
+        throwsStateError);
   });
 }

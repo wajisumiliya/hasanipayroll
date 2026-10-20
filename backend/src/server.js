@@ -11,7 +11,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import { installDataApi, withDatabaseIdentity, claimsForRequest } from "./data-api.js";
-import { ensureApplicationSchema } from "./application-schema.js";
+import { ensureApplicationSchema, startPayslipReleaseWorker } from "./application-schema.js";
 import { installNotificationApi } from "./notification-api.js";
 import {
   ensureAdminAccount,
@@ -4461,7 +4461,7 @@ installNotificationApi(app, { pool, authenticate });
 
 app.get('/api/admin/users', authenticate, requireAdmin, async (req,res) => {
   try {
-    if (['attendance','requests'].includes(req.auth?.app_metadata?.staff_scope)) return res.status(403).json({ok:false,message:'Access denied.'});
+    if (['attendance','requests'].includes(req.auth?.app_metadata?.staff_scope) || req.auth?.app_metadata?.is_reviewer) return res.status(403).json({ok:false,message:'Access denied.'});
     const result=await pool.query('SELECT username,role,branch_id,employee_id,display_name,is_active FROM public.app_user ORDER BY username');
     res.json({ok:true,users:result.rows});
   } catch { res.status(503).json({ok:false,message:'Unable to load application accounts.'}); }
@@ -4623,6 +4623,7 @@ let server;
 async function startServer() {
   await testDatabase();
   await ensureApplicationSchema(pool);
+  startPayslipReleaseWorker(pool);
   const hashPassword = (password) => bcrypt.hash(password, 12);
   await ensureAdminAccount(pool, {
     email: process.env.ADMIN_EMAIL,

@@ -183,8 +183,6 @@ class AppService extends ChangeNotifier {
 
   PostgrestClient get _database => SupabaseService.database;
 
-
-
   static const String _authApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://hasaniworkhub.onrender.com/',
@@ -709,8 +707,6 @@ class AppService extends ChangeNotifier {
       _currentUser = app_user.fromJson(Map<String, dynamic>.from(savedUser));
       _applyDatabaseSession();
 
-
-
       try {
         final validation = await _getAuth('/api/auth/me');
         if (validation['ok'] != true || validation['user'] is! Map) {
@@ -753,7 +749,6 @@ class AppService extends ChangeNotifier {
       _accessToken = null;
       SupabaseService.setDatabaseAuth(null);
       _dataAccessToken = null;
-
     }
     notifyListeners();
   }
@@ -802,7 +797,8 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadUsersFromSupabase() async {
     try {
-      final result = await NeonApi.jsonRequest('/api/admin/users', method: 'GET');
+      final result =
+          await NeonApi.jsonRequest('/api/admin/users', method: 'GET');
       final response = result['users'] as List;
 
       users.clear();
@@ -1594,8 +1590,6 @@ class AppService extends ChangeNotifier {
       _dataAccessToken = data['dataAccessToken']?.toString();
       _applyDatabaseSession();
 
-
-
       _firstLoginOtpState = null;
       await _persistCurrentUser();
       notifyListeners();
@@ -1794,8 +1788,6 @@ class AppService extends ChangeNotifier {
       }
       _dataAccessToken = data['dataAccessToken']?.toString();
       _applyDatabaseSession();
-
-
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();

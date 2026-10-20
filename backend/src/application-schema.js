@@ -24,3 +24,20 @@ export async function ensureApplicationSchema(pool) {
     await client.query('ROLLBACK'); throw error;
   } finally { client.release(); }
 }
+
+// Replaces the former provider's pg_cron job. The SQL function locks pending
+// schedules with SKIP LOCKED, so overlapping Render instances are safe.
+export function startPayslipReleaseWorker(pool) {
+  let running = false;
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try { await pool.query('SELECT public.release_due_payslips()'); }
+    catch (error) { console.error('PAYSLIP RELEASE ERROR:', error.code || 'release_error'); }
+    finally { running = false; }
+  };
+  void tick();
+  const timer = setInterval(tick, 60000);
+  timer.unref();
+  return () => clearInterval(timer);
+}

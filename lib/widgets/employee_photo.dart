@@ -62,7 +62,8 @@ Future<String?> resolveEmployeePhotoUrl(String? photoUrl) async {
   if (!storagePathFound && Uri.tryParse(raw)?.hasAbsolutePath == true) {
     final uri = Uri.tryParse(raw);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      if (uri.host.endsWith('.supabase.co') || uri.host.endsWith('.supabase.in')) return null;
+      if (uri.host.endsWith('.supabase.co') ||
+          uri.host.endsWith('.supabase.in')) return null;
       return raw;
     }
   }

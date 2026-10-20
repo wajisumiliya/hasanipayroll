@@ -6,8 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:postgrest/postgrest.dart';
 import '../services/neon_api.dart';
 
-
-
 class SupabaseService {
   // Diagnostics are debug-only and must not include payroll or identity data.
   static void _debugLog(String message) {
@@ -116,8 +114,9 @@ class SupabaseService {
     );
     await NeonApi.objectRequest(signed, method: 'PUT', bytes: bytes);
     final objectKey = signed['objectKey'].toString();
-    await database.from('employees').update({'photo_url': objectKey})
-        .eq('employee_id', employeeId);
+    await database
+        .from('employees')
+        .update({'photo_url': objectKey}).eq('employee_id', employeeId);
     return objectKey;
   }
 
@@ -127,8 +126,9 @@ class SupabaseService {
       body: {'method': 'DELETE'},
     );
     await NeonApi.objectRequest(signed, method: 'DELETE');
-    await database.from('employees').update({'photo_url': null})
-        .eq('employee_id', employeeId);
+    await database
+        .from('employees')
+        .update({'photo_url': null}).eq('employee_id', employeeId);
   }
 
   // ============================================================
@@ -2179,12 +2179,15 @@ class SupabaseService {
   // GET APPLICATION USER
   // ============================================================
 
-  static Future<Map<String, dynamic>?> getApplicationUser(String username) async {
+  static Future<Map<String, dynamic>?> getApplicationUser(
+      String username) async {
     final response = await NeonApi.jsonRequest(
-      '/api/auth/user/${Uri.encodeComponent(username.trim())}', method: 'GET',
+      '/api/auth/user/${Uri.encodeComponent(username.trim())}',
+      method: 'GET',
     );
     return response['user'] is Map
-        ? Map<String, dynamic>.from(response['user'] as Map) : null;
+        ? Map<String, dynamic>.from(response['user'] as Map)
+        : null;
   }
 
   // ============================================================
