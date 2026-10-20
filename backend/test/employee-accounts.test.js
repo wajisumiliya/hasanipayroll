@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeAccount,provisionEmployeeAccount,saveAccountPassword } from '../src/employee-accounts.js';
+import { normalizeAccount,findAccountByLogin,provisionEmployeeAccount,saveAccountPassword } from '../src/employee-accounts.js';
 
 test('imported accounts use a real username token subject and snake-case metadata',()=>{
   const user=normalizeAccount({username:'FIX_E1',employee_id:'FIX_E1',role:'employee',is_active:true,must_change_password:true});
@@ -63,6 +63,16 @@ test('employee account provisioning and password completion work with imported N
       const result=await provisionEmployeeAccount(pool,{...options,employeeId:'FIX_E2',email:'two@example.test'});
       assert.equal(result.created,true);assert.equal(result.username,'two@example.test');
     });
+    await t.test('exact username and email take priority over employee-ID aliases',async()=>{
+      await pool.query(`INSERT INTO app_user(username,employee_id,email,role,"passwordHash")
+        VALUES('ALIAS_E1','FIX_E1','alias@example.test','employee','alias-hash')`);
+      assert.equal((await findAccountByLogin(pool,'alias_e1')).username,'ALIAS_E1');
+      assert.equal((await findAccountByLogin(pool,'ALIAS@EXAMPLE.TEST')).username,'ALIAS_E1');
+      assert.equal((await findAccountByLogin(pool,'FIX_E1')).username,'FIX_E1');
+      assert.equal((await findAccountByLogin(pool,'one@example.test')).username,'FIX_E1');
+      assert.equal(await findAccountByLogin(pool,'missing-login'),null);
+    });
+
   } finally {
     await pool.end();await bootstrap.query('DROP DATABASE hasani_employee_login_test WITH (FORCE)');await bootstrap.end();
   }

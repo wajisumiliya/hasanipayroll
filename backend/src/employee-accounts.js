@@ -60,3 +60,34 @@ export async function saveAccountPassword(pool, username, passwordHash, { firstL
     RETURNING *`,[passwordHash,username,firstLoginOnly]);
   return normalizeAccount(result.rows[0]);
 }
+
+export async function findAccountByLogin(pool, login) {
+  const cleanLogin=String(login ?? '').trim();
+  if(!cleanLogin) return null;
+  const employeeId=cleanLogin.toUpperCase();
+  const result = await pool.query(
+    `SELECT to_jsonb(account_row) AS data
+     FROM public."app_user" AS account_row
+     WHERE LOWER(TRIM(COALESCE(
+             to_jsonb(account_row) ->> 'username',
+             ''
+           ))) = LOWER(TRIM($1))
+        OR LOWER(TRIM(COALESCE(
+             to_jsonb(account_row) ->> 'email',
+             ''
+           ))) = LOWER(TRIM($1))
+        OR UPPER(TRIM(COALESCE(
+             to_jsonb(account_row) ->> 'employeeId',
+             to_jsonb(account_row) ->> 'employee_id',
+             ''
+           ))) = $2
+     ORDER BY CASE
+       WHEN LOWER(TRIM(COALESCE(to_jsonb(account_row)->>'username','')))=LOWER(TRIM($1)) THEN 0
+       WHEN LOWER(TRIM(COALESCE(to_jsonb(account_row)->>'email','')))=LOWER(TRIM($1)) THEN 1
+       ELSE 2 END
+     LIMIT 1`,
+    [cleanLogin, employeeId],
+  );
+
+  return normalizeAccount(result.rows[0]?.data);
+}

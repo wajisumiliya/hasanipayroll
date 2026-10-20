@@ -1,4 +1,4 @@
-import { normalizeAccount, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
+import { findAccountByLogin, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
 import "dotenv/config";
 
 import crypto from "crypto";
@@ -709,27 +709,7 @@ async function authenticate(
     // Neon app_user uses username as its primary key (not a synthetic id).
     // Resolve the token subject against the supported identity columns without
     // relying on the legacy Prisma app_user model.
-    const userResult = await pool.query(
-      `SELECT to_jsonb(u) AS data
-       FROM public.app_user AS u
-       WHERE COALESCE(to_jsonb(u)->>'username', '') = $1
-          OR COALESCE(to_jsonb(u)->>'email', '') = $1
-          OR COALESCE(to_jsonb(u)->>'id', '') = $1
-          OR COALESCE(to_jsonb(u)->>'employee_id', to_jsonb(u)->>'employeeId', '') = $1
-       LIMIT 1`,
-      [String(payload.sub)],
-    );
-    const rawUser = userResult.rows[0]?.data;
-    const user = rawUser ? {
-      ...rawUser,
-      id: rawUser.id ?? rawUser.username ?? rawUser.email ?? rawUser.employee_id ?? rawUser.employeeId,
-      username: rawUser.username ?? rawUser.email ?? rawUser.employee_id ?? rawUser.employeeId ?? '',
-      employeeId: rawUser.employeeId ?? rawUser.employee_id ?? null,
-      passwordHash: rawUser.passwordHash ?? rawUser.passwordhash ?? rawUser.password_hash ?? null,
-      isActive: [true, "true", "t", "1"].includes(rawUser.isActive ?? rawUser.is_active ?? true),
-      mustChangePassword: rawUser.mustChangePassword ?? rawUser.must_change_password ?? false,
-      passwordChangedAt: rawUser.passwordChangedAt ?? rawUser.password_changed_at ?? null,
-    } : null;
+    const user = await findAppUser(String(payload.sub));
 
     if (!user) {
       return res.status(401).json({
@@ -847,33 +827,7 @@ function requireEmployeeAccess(
 // ============================================================
 
 async function findAppUser(login) {
-  const cleanLogin = normalizeLogin(login);
-  if (!cleanLogin) return null;
-
-  const employeeId = normalizeEmployeeId(cleanLogin);
-  // Read the row as JSON so older deployments that do not yet contain every
-  // optional auth/OTP column still support login and password recovery.
-  const result = await pool.query(
-    `SELECT to_jsonb(account_row) AS data
-     FROM public."app_user" AS account_row
-     WHERE LOWER(TRIM(COALESCE(
-             to_jsonb(account_row) ->> 'username',
-             ''
-           ))) = LOWER(TRIM($1))
-        OR LOWER(TRIM(COALESCE(
-             to_jsonb(account_row) ->> 'email',
-             ''
-           ))) = LOWER(TRIM($1))
-        OR UPPER(TRIM(COALESCE(
-             to_jsonb(account_row) ->> 'employeeId',
-             to_jsonb(account_row) ->> 'employee_id',
-             ''
-           ))) = $2
-     LIMIT 1`,
-    [cleanLogin, employeeId],
-  );
-
-  return normalizeAccount(result.rows[0]?.data);
+  return findAccountByLogin(pool, normalizeLogin(login));
 }
 
 async function findPrimaryAdminUser() {
