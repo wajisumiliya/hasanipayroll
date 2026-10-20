@@ -1357,37 +1357,9 @@ class AppService extends ChangeNotifier {
 
   Future<void> _loadAttendanceFromSupabaseInternal() async {
     try {
-      // Fetch only the fields used by AttendanceRecord. The attendance table
-      // also contains lengthy duration/metadata fields that this model ignores.
-      // Keep the employee filter and admin/branch visibility unchanged.
-      const attendanceColumns =
-          'id,employee_id,branch_id,attendance_date,check_in,check_out,status,morning_in,morning_out,afternoon_in,afternoon_out,overtime_in,overtime_out,ot_authorized,approved_ot_minutes,overtime_minutes';
-      final employeeId = _currentUser?.employeeId?.trim() ?? '';
-      // Supabase REST returns at most 1,000 rows per request by default.
-      // Page deterministically so older attendance is not silently omitted.
-      const pageSize = 1000;
-      final response = <Map<String, dynamic>>[];
-      var offset = 0;
-      while (true) {
-        final batch = _currentUser?.isEmployee == true && employeeId.isNotEmpty
-            ? await _database
-                .from('attendance')
-                .select(attendanceColumns)
-                .eq('employee_id', employeeId)
-                .order('attendance_date')
-                .order('id')
-                .range(offset, offset + pageSize - 1)
-            : await _database
-                .from('attendance')
-                .select(attendanceColumns)
-                .order('attendance_date')
-                .order('id')
-                .range(offset, offset + pageSize - 1);
-        final page = List<Map<String, dynamic>>.from(batch);
-        response.addAll(page);
-        if (page.length < pageSize) break;
-        offset += pageSize;
-      }
+      // Use the authenticated Neon Node API, not legacy Supabase PostgREST.
+      // The API enforces employee and branch scope from the signed session.
+      final response = await loadNeonAttendance();
 
       attendance.clear();
 
