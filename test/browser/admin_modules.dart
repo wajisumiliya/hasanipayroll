@@ -25,7 +25,7 @@ Future<void> main() async {
     require(loginError == null, 'Login failed: $loginError');
     completed.add('login');
     final photo = base64Decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aFJkAAAAASUVORK5CYII=');
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYPgPAAEDAQAIicLsAAAAAElFTkSuQmCC');
     final reference = await SupabaseService.uploadEmployeePhoto(
         employeeId: 'FIX_E1', bytes: photo, contentType: 'image/png');
     require(reference == 'neon-photo/FIX_E1', 'Photo reference missing');

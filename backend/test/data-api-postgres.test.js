@@ -85,7 +85,7 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
       assert.equal((await request('/employees?employee_id=eq.MISSING','admin',{headers:{Accept:'application/vnd.pgrst.object+json'}})).status,406);
     });
     await t.test('private Neon photos enforce authentication, RLS scope, input limits and atomic writes',async()=>{
-      const photo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aFJkAAAAASUVORK5CYII=','base64');
+      const photo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYPgPAAEDAQAIicLsAAAAAElFTkSuQmCC','base64');
       const photoUrl = base.replace('/api/data','/api/employee-photos/FIX_E1');
       const photoRequest = (identity,method='GET',body=undefined,type='image/png',id='FIX_E1') =>
         fetch(photoUrl.replace('/FIX_E1','/'+id),{method,body,headers:{Authorization:'Bearer '+identity,'Content-Type':type}});
