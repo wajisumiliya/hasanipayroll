@@ -1,3 +1,4 @@
+import { normalizeAccount, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
 import "dotenv/config";
 
 import crypto from "crypto";
@@ -872,25 +873,7 @@ async function findAppUser(login) {
     [cleanLogin, employeeId],
   );
 
-  const data = result.rows[0]?.data;
-  if (!data) return null;
-  return {
-    ...data,
-    employeeId: data.employeeId ?? data.employee_id ?? null,
-    passwordHash:
-      data.passwordHash ??
-      data.passwordhash ??
-      data.password_hash ??
-      data.password ??
-      null,
-    isActive: [true, "true", "t", "1"].includes(
-      data.isActive ?? data.is_active ?? true,
-    ),
-    mustChangePassword:
-      data.mustChangePassword ?? data.must_change_password ?? false,
-    passwordChangedAt:
-      data.passwordChangedAt ?? data.password_changed_at ?? null,
-  };
+  return normalizeAccount(result.rows[0]?.data);
 }
 
 async function findPrimaryAdminUser() {
@@ -1318,14 +1301,7 @@ app.post(
       }
 
       const passwordHash = await bcrypt.hash(newPassword, 12);
-      await pool.query(
-        `UPDATE public."app_user"
-         SET "passwordHash" = $1,
-             "passwordChangedAt" = NOW(),
-             "updatedAt" = NOW()
-         WHERE "username" = $2 OR "email" = $2 OR "employee_id" = $2`,
-        [passwordHash, req.user.username ?? req.user.email ?? req.user.employeeId],
-      );
+      await saveAccountPassword(pool, req.user.username, passwordHash);
 
       return res.json({ok: true, message: "Password updated successfully."});
     } catch (error) {
@@ -1706,73 +1682,20 @@ app.post(
       }
       const requestedActive = req.body?.isActive ?? req.query?.isActive;
       const isActive = ![false, "false", "0"].includes(requestedActive);
-      const existing = await pool.query(
-        `SELECT "id", "employeeId", "email" FROM public."app_user"
-         WHERE UPPER(TRIM(COALESCE("employeeId", ''))) = $1
-            OR LOWER(TRIM(COALESCE("email", ''))) = $2`,
-        [employeeId, email],
-      );
-
-      if (existing.rowCount > 0) {
-        const employeeAccount = existing.rows.find(
-          (row) => normalizeEmployeeId(row.employeeId) === employeeId,
-        );
-        const emailAccount = existing.rows.find(
-          (row) => String(row.email || "").trim().toLowerCase() === email,
-        );
-        if (employeeAccount && emailAccount && employeeAccount.id !== emailAccount.id) {
-          return res.status(409).json({
-            ok: false,
-            message:
-              "Two application accounts conflict for this employee ID and email. Remove or correct the duplicate app_user account first.",
-          });
-        }
-
-        const account = employeeAccount || emailAccount;
-        if (account.employeeId && normalizeEmployeeId(account.employeeId) !== employeeId) {
-          return res.status(409).json({ ok: false, message: "That email address is already assigned to another employee login." });
-        }
-        if (resetPassword) {
-          const passwordHash = await bcrypt.hash(defaultPassword, 12);
-          await pool.query(
-            `UPDATE public."app_user" SET "employeeId" = $2, "username" = $3,
-             "email" = $3, "passwordHash" = $4, "role" = 'EMPLOYEE',
-             "isActive" = $5, "mustChangePassword" = TRUE,
-             "passwordChangedAt" = NULL, "updatedAt" = NOW()
-             WHERE "id" = $1`,
-            [account.id, employeeId, email, passwordHash, isActive],
-          );
-        } else {
-          await pool.query(
-            `UPDATE public."app_user" SET "employeeId" = $2, "username" = $3,
-             "email" = $3, "role" = 'EMPLOYEE', "isActive" = $4, "updatedAt" = NOW()
-             WHERE "id" = $1`,
-            [account.id, employeeId, email, isActive],
-          );
-        }
-        return res.json({
-          ok: true,
-          created: false,
-          passwordReset: resetPassword,
-          employeeId,
-          email,
-        });
+      if (req.auth?.app_metadata?.is_reviewer || ['attendance','requests'].includes(req.auth?.app_metadata?.staff_scope)) {
+        return res.status(403).json({ok:false,message:'Administrator access required.'});
       }
-
-      const passwordHash = await bcrypt.hash(defaultPassword, 12);
-      await pool.query(
-        `INSERT INTO public."app_user" ("id", "employeeId", "username", "email",
-          "passwordHash", "role", "isActive", "mustChangePassword", "passwordChangedAt", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $3, $4, 'EMPLOYEE', $5, TRUE, NULL, NOW(), NOW())`,
-        [crypto.randomUUID(), employeeId, email, passwordHash, isActive],
-      );
-      return res.status(201).json({ ok: true, created: true, employeeId, email });
+      const result = await provisionEmployeeAccount(pool, {
+        employeeId, email, isActive, resetPassword,
+        hashPassword: () => bcrypt.hash(defaultPassword, 12),
+      });
+      return res.status(result.created ? 201 : 200).json({ok:true,...result});
     } catch (error) {
       console.error("EMPLOYEE ACCOUNT PROVISION ERROR:", error.message);
       const errorCode = String(error.code || "database_error");
-      return res.status(503).json({
+      return res.status(error.status || 503).json({
         ok: false,
-        message: `Unable to create or reset the application login (${errorCode}).`,
+        message: error.status ? error.message : `Unable to create or reset the application login (${errorCode}).`,
       });
     }
   },
@@ -4012,16 +3935,7 @@ app.post(
         });
       }
 
-      const user =
-        await prisma.app_user.findUnique(
-          {
-            where: {
-              id: String(
-                session.sub,
-              ),
-            },
-          },
-        );
+      const user = await findAppUser(String(session.sub));
 
       if (
         !user ||
@@ -4095,53 +4009,10 @@ app.post(
           12,
         );
 
-      const updated =
-        await pool.query(
-          `
-          UPDATE public."app_user"
-          SET
-            "passwordHash" = $1,
-            "mustChangePassword" = FALSE,
-            "passwordChangedAt" = NOW(),
-            "otpHash" = NULL,
-            "otpExpiresAt" = NULL,
-            "otpAttempts" = 0,
-            "otpLastSentAt" = NULL,
-            "otpVerifiedAt" = NULL,
-            "updatedAt" = NOW()
-          WHERE "id" = $2
-          RETURNING
-            "id",
-            "employeeId",
-            "username",
-            "email",
-            "role",
-            "isActive",
-            "mustChangePassword",
-            "passwordChangedAt",
-            "lastLoginAt",
-            "createdAt",
-            "updatedAt"
-          `,
-          [
-            passwordHash,
-            user.id,
-          ],
-        );
-
-      if (
-        updated.rows.length ===
-        0
-      ) {
-        return res.status(500).json({
-          ok: false,
-          message:
-            "Unable to create password.",
-        });
+      const updatedUser = await saveAccountPassword(pool, user.username, passwordHash, {firstLoginOnly:true});
+      if (!updatedUser) {
+        return res.status(403).json({ok:false,message:'Password setup session has already been used.'});
       }
-
-      const updatedUser =
-        updated.rows[0];
 
       const safeUser =
         await publicAppUser(
@@ -4720,4 +4591,3 @@ process.on(
     shutdown("SIGTERM"),
 
 );
-
