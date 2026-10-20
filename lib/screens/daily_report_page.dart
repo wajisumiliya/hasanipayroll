@@ -219,6 +219,11 @@ class _DailyReportPageState extends State<DailyReportPage> {
       );
       if (pin == null || !mounted) return;
       final result = await SupabaseService.verifyDailyReportPin(pin);
+      if (result['ok'] != true) {
+        _message(result['message']?.toString() ??
+            'Unable to verify Daily Report PIN.');
+        return;
+      }
       if (result['valid'] != true) {
         _message('Incorrect daily report PIN.');
         return;
