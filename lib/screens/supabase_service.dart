@@ -1371,30 +1371,19 @@ class SupabaseService {
       ..sort();
     if (ids.isEmpty) return <Map<String, dynamic>>[];
 
-    const pageSize = 1000;
-    final start = DateTime(month.year, month.month, 1);
-    final end = DateTime(month.year, month.month + 1, 1);
-    final rows = <Map<String, dynamic>>[];
-    var offset = 0;
-
-    while (true) {
-      final response = await database
-          .from('attendance')
-          .select('employee_id,attendance_date,is_submitted')
-          .inFilter('employee_id', ids)
-          .gte('attendance_date', _dateOnlyText(start))
-          .lt('attendance_date', _dateOnlyText(end))
-          .order('employee_id')
-          .order('attendance_date')
-          .range(offset, offset + pageSize - 1);
-      final page = _mapList(response);
-      rows.addAll(page);
-
-      if (page.length < pageSize) break;
-      offset += pageSize;
-    }
-
-    return rows;
+    final response = await AppService.instance.loadNeonAttendance(
+      year: month.year,
+      month: month.month,
+    );
+    final allowed = ids.toSet();
+    return response
+        .where((row) => allowed.contains(row['employee_id']?.toString().trim()))
+        .map((row) => <String, dynamic>{
+              'employee_id': row['employee_id'],
+              'attendance_date': row['attendance_date'],
+              'is_submitted': row['is_submitted'],
+            })
+        .toList();
   }
 
   static Future<List<Map<String, dynamic>>> getAttendanceByBranchDate({

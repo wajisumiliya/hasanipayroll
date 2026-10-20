@@ -11375,17 +11375,16 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<void> _showGenerateAttendancePayrollDialog() async {
     DateTime selectedMonth = selectedPayrollMonth;
 
-    final branchesFuture = SupabaseService.getBranches();
-    final employeesFuture = SupabaseService.database
-        .from('employees')
-        .select(
-          'employee_id,name,branch_id,payroll_branch_id,'
-          'photo_url,is_active,employment_status,is_management_staff,is_temp_staff,'
-          'is_support_staff,is_other_staff',
-        )
-        .eq('is_active', true)
-        .neq('employment_status', 'vacation')
-        .order('employee_id');
+    final branchesFuture = service.loadNeonBranches();
+    final employeesFuture = service.loadNeonAdminDashboard(selectedMonth).then(
+          (data) => (data['employees'] as List)
+              .map((row) => Map<String, dynamic>.from(row as Map))
+              .where((row) =>
+                  row['is_active'] == true &&
+                  row['employment_status']?.toString().toLowerCase() !=
+                      'vacation')
+              .toList(),
+        );
 
     await showDialog<void>(
       context: context,
