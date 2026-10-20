@@ -3261,7 +3261,8 @@ class _EmployeePortalState extends State<EmployeePortal>
       final currentEmployee = employee;
       if (currentEmployee == null) {
         throw StateError(
-          'Employee profile is not available. Refresh and retry.');
+          'Employee profile is not available. Refresh and retry.',
+        );
       }
       final bytes = await PdfService.buildPayslip(
         employee: currentEmployee,
