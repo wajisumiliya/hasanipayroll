@@ -353,6 +353,34 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  Future<void> saveNeonDailyRosters(List<Map<String, dynamic>> rosters) async {
+    final data = await _postAuth('/api/attendance-sheet/rosters',
+        {'rosters': rosters}, authenticated: true);
+    if (data['ok'] != true) throw StateError(
+        data['message']?.toString() ?? 'Unable to save daily roster.');
+  }
+
+  Future<void> saveNeonAttendanceRow(Map<String, dynamic> attendance) async {
+    final data = await _postAuth('/api/attendance-sheet/save',
+        {'attendance': attendance}, authenticated: true);
+    if (data['ok'] != true) throw StateError(
+        data['message']?.toString() ?? 'Unable to save attendance.');
+  }
+
+  Future<void> submitNeonAttendance({
+    required String employeeId,
+    required String start,
+    required String end,
+  }) async {
+    final data = await _postAuth('/api/attendance-sheet/submit', {
+      'employee_id': employeeId,
+      'start': start,
+      'end': end,
+    }, authenticated: true);
+    if (data['ok'] != true) throw StateError(
+        data['message']?.toString() ?? 'Unable to submit attendance.');
+  }
+
   /// Salary and roster data for one employee, scoped by the Node JWT.
   Future<Map<String, dynamic>> loadAttendanceSheetDependencies({
     required String employeeId,
