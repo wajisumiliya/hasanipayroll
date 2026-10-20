@@ -2010,6 +2010,103 @@ app.get("/api/attendance-sheet/dependencies", authenticate, async (req, res) => 
   }
 });
 
+// All attendance writes are authenticated and scoped on the server.
+// Never trust a branch or submission identity supplied by the client.
+app.post("/api/attendance-sheet/rosters", authenticate, async (req, res) => {
+  const role = String(req.user?.role ?? "").toUpperCase();
+  if (!["ADMIN", "BRANCH"].includes(role)) return res.status(403).json({ok:false,message:"Access denied."});
+  const rows = req.body?.rosters;
+  if (!Array.isArray(rows) || !rows.length || rows.length > 31) return res.status(400).json({ok:false,message:"Invalid roster rows."});
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const row of rows) {
+      const employeeId = String(row?.employee_id ?? "").trim();
+      const date = String(row?.roster_date ?? "");
+      if (!employeeId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ok:false,message:"Invalid employee or date."});
+      }
+      const employee = await client.query("SELECT branch_id FROM public.employees WHERE employee_id=$1 LIMIT 1",[employeeId]);
+      if (!employee.rows.length) { await client.query("ROLLBACK"); return res.status(404).json({ok:false,message:"Employee not found."}); }
+      const branchId = String(employee.rows[0].branch_id ?? "").trim();
+      if (role === "BRANCH" && branchId.toLowerCase() !== String(req.user.branchId ?? req.user.branch_id ?? "").trim().toLowerCase()) {
+        await client.query("ROLLBACK");return res.status(403).json({ok:false,message:"Branch access denied."});
+      }
+      if (String(row.branch_id ?? "").trim().toLowerCase() !== branchId.toLowerCase()) {
+        await client.query("ROLLBACK");return res.status(400).json({ok:false,message:"Roster branch mismatch."});
+      }
+      const allowed = ["branch_id","employee_id","roster_date","assignment_type","shift_start","shift_end","break_minutes","updated_at"];
+      const fields = allowed.filter(k=>Object.hasOwn(row,k));
+      const values = fields.map(k=>row[k]);
+      const placeholders = fields.map((_,i)=>"$"+(i+1));
+      const update = fields.filter(k=>!["branch_id","employee_id","roster_date"].includes(k)).map(k=>k+"=EXCLUDED."+k).join(",");
+      await client.query("INSERT INTO public.daily_rosters ("+fields.join(",")+") VALUES ("+placeholders.join(",")+") ON CONFLICT (branch_id,employee_id,roster_date) DO UPDATE SET "+update,values);
+    }
+    await client.query("COMMIT");
+    return res.json({ok:true});
+  } catch(error) {
+    await client.query("ROLLBACK").catch(()=>{});
+    console.error("NEON ROSTER WRITE ERROR:",error.message);
+    return genericError(res,503);
+  } finally {client.release();}
+});
+
+app.post("/api/attendance-sheet/save", authenticate, async (req,res) => {
+  const role = String(req.user?.role ?? "").toUpperCase();
+  if (!["ADMIN","BRANCH"].includes(role)) return res.status(403).json({ok:false,message:"Access denied."});
+  const row = req.body?.attendance;
+  if (!row || typeof row !== "object" || Array.isArray(row)) return res.status(400).json({ok:false,message:"Invalid attendance row."});
+  const employeeId = String(row.employee_id ?? "").trim();
+  const date = String(row.attendance_date ?? "");
+  if (!employeeId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ok:false,message:"Invalid employee or date."});
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const employee = await client.query("SELECT branch_id FROM public.employees WHERE employee_id=$1 LIMIT 1",[employeeId]);
+    if (!employee.rows.length) {await client.query("ROLLBACK");return res.status(404).json({ok:false,message:"Employee not found."});}
+    const branchId = String(employee.rows[0].branch_id ?? "").trim();
+    if (role === "BRANCH" && branchId.toLowerCase() !== String(req.user.branchId ?? req.user.branch_id ?? "").trim().toLowerCase()) {
+      await client.query("ROLLBACK");return res.status(403).json({ok:false,message:"Branch access denied."});
+    }
+    if (String(row.branch_id ?? "").trim().toLowerCase() !== branchId.toLowerCase()) {
+      await client.query("ROLLBACK");return res.status(400).json({ok:false,message:"Attendance branch mismatch."});
+    }
+    const existing = await client.query("SELECT is_submitted FROM public.attendance WHERE employee_id=$1 AND attendance_date=$2::date FOR UPDATE",[employeeId,date]);
+    if (role === "BRANCH" && existing.rows.some(r=>r.is_submitted)) {
+      await client.query("ROLLBACK");return res.status(409).json({ok:false,message:"Submitted attendance is locked."});
+    }
+    const allowed = ["id","employee_id","branch_id","attendance_date","check_in","check_out","status","morning_in","morning_out","afternoon_in","afternoon_out","evening_in","evening_out","overtime_in","overtime_out","work_minutes","break_minutes","net_working_minutes","net_working_duration","work_duration","break_duration","overtime_minutes","overtime_duration","ot_requested","ot_authorized","approved_ot_minutes","ot_manual_override","is_unpaid","is_public_holiday"];
+    const fields = allowed.filter(k=>Object.hasOwn(row,k));
+    const values = fields.map(k=>row[k]);
+    const updates = fields.filter(k=>!["id","employee_id","branch_id","attendance_date"].includes(k)).map(k=>k+"=EXCLUDED."+k).join(",");
+    if (!updates) {await client.query("ROLLBACK");return res.status(400).json({ok:false,message:"No attendance fields."});}
+    if (role === "BRANCH" && ["ot_authorized","approved_ot_minutes","ot_manual_override"].some(k=>row[k] != null && row[k] !== false)) {
+      await client.query("ROLLBACK");return res.status(403).json({ok:false,message:"Admin OT approval required."});
+    }
+    const result = await client.query("INSERT INTO public.attendance ("+fields.join(",")+") VALUES ("+fields.map((_,i)=>"$"+(i+1)).join(",")+") ON CONFLICT (employee_id,attendance_date) DO UPDATE SET "+updates+" RETURNING to_jsonb(attendance.*) AS data",values);
+    await client.query("COMMIT");
+    return res.json({ok:true,attendance:result.rows[0]?.data});
+  } catch(error) {
+    await client.query("ROLLBACK").catch(()=>{});
+    console.error("NEON ATTENDANCE WRITE ERROR:",error.message);
+    return genericError(res,503);
+  } finally {client.release();}
+});
+
+app.post("/api/attendance-sheet/submit", authenticate, async (req,res) => {
+  if (String(req.user?.role ?? "").toUpperCase() !== "BRANCH") return res.status(403).json({ok:false,message:"Branch access required."});
+  const employeeId = String(req.body?.employee_id ?? "").trim();
+  const start = String(req.body?.start ?? "");
+  const end = String(req.body?.end ?? "");
+  if (!employeeId || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start >= end) return res.status(400).json({ok:false,message:"Invalid submission range."});
+  try {
+    const branch = String(req.user.branchId ?? req.user.branch_id ?? "").trim();
+    const result = await pool.query("UPDATE public.attendance a SET is_submitted=true,submitted_at=NOW(),submitted_by='branch' FROM public.employees e WHERE a.employee_id=$1 AND a.employee_id=e.employee_id AND LOWER(TRIM(e.branch_id))=LOWER(TRIM($2)) AND a.attendance_date >= $3::date AND a.attendance_date < $4::date AND COALESCE(a.is_submitted,false)=false RETURNING a.id",[employeeId,branch,start,end]);
+    return res.json({ok:true,updated:result.rowCount});
+  } catch(error) {console.error("NEON ATTENDANCE SUBMIT ERROR:",error.message);return genericError(res,503);}
+});
+
 // Neon attendance listing with JWT-based role and branch scope.
 app.get("/api/attendance", authenticate, async (req, res) => {
   try {
