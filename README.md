@@ -1,422 +1,270 @@
 # Hasani Books Payroll Portal
 
-Production payroll, attendance, roster, employee self-service, branch operations and statutory export system for Hasani Books.
+**Employee management, attendance, payroll, payslips, branch operations and statutory reporting.**
 
-> **Flutter:** 3.47.0 stable · **Dart:** 3.13.0  
-> **Primary data platform:** Supabase  
-> **Additional backend:** Node.js / Express / Prisma  
-> **Mobile CI:** GitHub Actions  
+> **Project status:** Neon-backed application architecture implemented in the current repository. Production deployment, end-to-end verification and historical employee-photo migration must be checked independently.  
+> **Application:** Flutter (Android, iOS and Web)  
+> **Backend:** Node.js, Express, PostgreSQL (`pg`), Prisma where applicable  
+> **Primary database:** Neon PostgreSQL  
+> **Hosting:** Render (backend; web deployment supported)  
+> **Push notifications:** Firebase Cloud Messaging  
 > **License:** Proprietary
 
 ## Overview
 
-Hasani Payroll supports three application roles:
+Hasani Payroll provides three principal roles:
 
-- **Admin** — company-wide employee, attendance, OT, payroll, statutory, export and administrative operations.
-- **Branch** — branch employee attendance, roster, OT requests and branch operations.
-- **Employee** — self-service portal, attendance information, requests, notifications and payslips.
+- **Administrator:** Employee and branch management, payroll generation and history, attendance oversight, overtime approvals, statutory reporting, exports, EA Forms and system administration.
+- **Branch user:** Branch-scoped attendance, rosters, overtime requests, daily reports and branch workflows.
+- **Employee:** Self-service information, requests, notifications and available payslips.
 
-This is a production payroll system. Payroll, attendance and statutory rules must not be changed from assumptions. Inspect the current implementation, confirm the business rule and add regression coverage before modifying calculations.
+The application processes sensitive employee and payroll information. Authorization must be enforced by the backend and database, not only by hidden UI controls.
 
-## Architecture
+## Current architecture
 
 ```text
-Flutter application
-├── Direct Supabase access
-│   ├── employees
-│   ├── branches
-│   ├── attendance
-│   ├── payroll
-│   ├── employee_salary_defaults
-│   ├── monthly_rosters
-│   ├── daily_rosters
-│   ├── requests / notifications
-│   └── operational RPCs
-│
-├── Supabase Realtime
-│   ├── attendance updates
-│   ├── employee notifications
-│   └── EA form changes
-│
-├── Supabase Storage
-│   └── employee-photos
-│
-├── Firebase
-│   └── push notifications
-│
-└── Node / Express / Prisma backend
-    ├── authentication
-    ├── JWT
-    ├── first-login OTP
-    ├── password management
-    └── account operations
+Flutter Android / iOS / Web
+    |
+    | HTTPS + authenticated bearer JWT
+    v
+Node.js / Express API (Render)
+    |-- Login, account recovery, JWT and role/branch checks
+    |-- /api/data: PostgREST-compatible adapter for existing Flutter queries
+    |-- Dedicated attendance, payroll and reporting endpoints
+    |-- /api/employee-photos/:employeeId: private image API
+    |-- /api/notifications/send: notification API
+    |
+    +--> Neon PostgreSQL
+    |      |-- Employees, branches, attendance and payroll
+    |      |-- Rosters, requests, EA Forms and notifications
+    |      |-- Daily Report PIN hashes and authorization policies
+    |      `-- app_private.employee_photos (private photo bytes)
+    |
+    `--> Firebase Cloud Messaging (push, when configured)
 ```
 
-Flutter still accesses important production data directly through `lib/screens/supabase_service.dart`. The Node/Prisma schema is not automatically the same schema as the Supabase tables used directly by Flutter.
+### Supabase migration status
 
-## Main features
+The current Flutter client uses `lib/services/neon_api.dart` and the authenticated Node API. Its legacy `SupabaseService` class name is retained for compatibility, but its `database` client is initialized against the Node `/api/data` endpoint rather than a Supabase endpoint. The current Flutter dependency list does not include the Supabase SDK.
 
-The application currently includes employee and branch management, attendance entry/review, monthly and daily rosters, OT requests and authorization, leave/request workflows, monthly payroll generation, payroll history, payslips, employee notifications, EA forms, daily reports, branch activity auditing, employee photos, RHB bank export and EPF/SOCSO/EIS statutory exports.
+**Do not confuse source-code migration with production cutover.** Existing deployed clients may still run older builds until redeployed. Historical Supabase employee photos require a separate data-copy and validation process. Older `supabase/` migrations, filenames and comments may remain for historical reference; their presence alone does not mean the current client is calling Supabase.
 
-## Project structure
+**Employee photos currently use private Neon PostgreSQL storage, not Cloudflare R2.** R2-related configuration or earlier PR groundwork does not change the active `/api/employee-photos/:employeeId` implementation described in `backend/src/neon-employee-photos.js`.
+
+## Key features
+
+| Module | Scope |
+|---|---|
+| Employee and branch management | Employee profiles, branch assignment and status |
+| Attendance | Daily entry, submission, review and overtime-related data |
+| Rosters | Monthly and daily scheduling |
+| Payroll | Monthly generation, calculation, review and history |
+| Payslips | Employee payslip availability and PDF generation |
+| Requests | Employee, leave and overtime workflows |
+| Daily Reports | Branch-scoped access with saved PIN verification |
+| EA Forms | Employee statutory tax forms |
+| Exports | Payroll Excel, RHB bank format and statutory exports |
+| Notifications | Neon inbox and optional Firebase push |
+| Employee photos | Private, authenticated Neon photo API |
+
+### Payroll calculation safeguards
+
+Payroll calculation logic lives primarily in `lib/services/attendance_payroll_service.dart`. Preserve established business rules for authorized OT, public holidays, unpaid leave, working-time shortages and EPF/SOCSO/EIS contributions. Store and calculate work duration in **minutes**, not decimal representations of `HH:MM`.
+
+Example: `1:23` is **83 minutes**, not 1.23 hours.
+
+Never modify payroll formulas, statutory schedules or historical payroll records without confirming the relevant business rule and adding regression tests. Payroll periods are normalized to the first day of the selected month in the existing workflow.
+
+## Repository layout
 
 ```text
 lib/
-├── main.dart
-├── models/
-├── screens/
-│   ├── login_screen.dart
-│   ├── admin_dashboard.dart
-│   ├── branch_dashboard.dart
-│   ├── employee_portal.dart
-│   ├── attendance_dialog.dart
-│   └── supabase_service.dart
-├── services/
-│   ├── app_service.dart
-│   ├── attendance_payroll_service.dart
-│   ├── payroll_supabase_service.dart
-│   ├── notification_service.dart
-│   └── pdf_service.dart
-└── widgets/
-    ├── employee_photo.dart
-    └── shared_attendance_sheet.dart
-
+  main.dart
+  screens/
+    admin_dashboard.dart
+    branch_dashboard.dart
+    employee_portal.dart
+    attendance_dialog.dart
+    supabase_service.dart       # legacy name; Node/Neon-backed adapter
+  services/
+    neon_api.dart               # API base URL, JWT and authenticated requests
+    app_service.dart
+    attendance_payroll_service.dart
+    payroll_supabase_service.dart # legacy filename
+    notification_service.dart
+    pdf_service.dart
+  widgets/
+    employee_photo.dart
 backend/
-├── prisma/schema.prisma
-└── src/
-
-supabase/
-└── migrations/
-
-.github/workflows/
-└── android.yml
-
+  src/
+    server.js                   # Express API, auth and dedicated endpoints
+    data-api.js                 # authenticated PostgREST-shaped Neon adapter
+    neon-employee-photos.js     # private photo bytes and authorization
+    notification-api.js        # Neon inbox and Firebase push
+    application-schema.js      # application schema initialization
+  migrations/
+  prisma/
+  test/
+  docs/
 test/
 assets/
 android/
 ios/
 web/
-windows/
-linux/
-macos/
+.github/workflows/
+NEON_DEPLOYMENT.md
 ```
 
-## Core Supabase data
+## Prerequisites
 
-Important production tables include:
+- Flutter SDK and compatible Dart SDK (check CI and `pubspec.yaml` for the exact version)
+- Node.js and npm compatible with the backend dependencies
+- A Neon PostgreSQL database and its server-side connection URL
+- A Render service or equivalent HTTPS host for the Node API
+- Firebase project configuration if push notifications are required
 
-```text
-employees
-branches
-attendance
-payroll
-employee_salary_defaults
-monthly_rosters
-daily_rosters
-branch_activity_logs
-app_notifications
-notification_reads
-```
+## Local setup
 
-Additional request, reporting and operational tables/RPCs are used by individual modules. The production database schema and committed migrations are authoritative for exact column definitions.
-
-### Sensitive data
-
-The system processes salary, IC/passport, bank-account, EPF, SOCSO, attendance and payroll information. Access must be enforced through appropriate RLS, secure RPCs and/or backend authorization. Hiding a button in Flutter is not authorization.
-
-Never commit service-role keys, database passwords, JWT secrets, SMTP passwords, Firebase service-account credentials, production dumps or other server secrets.
-
-## Employee photos
-
-Employee photo metadata is stored with employee records and image objects are stored in the `employee-photos` Supabase Storage bucket.
-
-The current migration configures this bucket for public read access while upload/update/delete operations remain restricted by policy. Because reads are public, the Flutter `EmployeePhoto` widget uses public object URLs rather than generating an individual signed URL for every displayed employee.
-
-If employee-photo privacy requirements change, update the Storage policy and Flutter access strategy together. Do not simply make the widget use signed URLs without considering list-page request volume.
-
-## Attendance
-
-Important code:
-
-```text
-lib/screens/attendance_dialog.dart
-lib/screens/supabase_service.dart
-lib/services/attendance_payroll_service.dart
-lib/models/attendance.dart
-```
-
-Common statuses include:
-
-```text
-Present
-Late
-Absent
-OFF
-MC
-PL
-AL
-EL
-PH
-UNPAID
-```
-
-Do not rename stored statuses casually. Database constraints, reporting and payroll calculations may depend on the exact values.
-
-Working-time calculations use minutes. Never treat `1:23` as `1.23` decimal hours. One hour and 23 minutes is 83 minutes.
-
-### Realtime and request efficiency
-
-Read-only employee attendance uses Supabase Realtime for changes with a five-minute fallback refresh. Do not restore aggressive polling. Attendance list queries should remain date/month scoped and asynchronous work should not be recreated from Flutter `build()` methods.
-
-## Rosters
-
-Monthly roster lookup uses branch, employee, year, month and week information. Payroll can use an assigned roster target before falling back to the employee salary-rule target.
-
-Attendance, roster and payroll logic therefore need to remain synchronized.
-
-## Payroll
-
-Main calculation service:
-
-```text
-lib/services/attendance_payroll_service.dart
-```
-
-Primary monthly flow:
-
-```text
-Select payroll month / employees
-        ↓
-Load employee + salary defaults
-        ↓
-Load payroll-impact attendance
-        ↓
-Load applicable roster
-        ↓
-Calculate OT / PH / unpaid / shortage
-        ↓
-Calculate statutory contributions
-        ↓
-Insert or update payroll
-```
-
-The payroll period is normalized to the first day of the selected month.
-
-### Overtime
-
-OT must be authorized before becoming payroll OT. Calculations should remain minute-based.
-
-Regression example:
-
-```text
-Net work: 8:53 = 533 minutes
-Target:   7:30 = 450 minutes
-OT:             = 83 minutes = 1:23
-```
-
-Always use the current payroll service as the source of truth for target selection, roster overrides and eligibility.
-
-### Public holiday
-
-The current business rule includes the worked-public-holiday calculation:
-
-```text
-Basic Salary / 26 × 2
-```
-
-Example:
-
-```text
-RM1,700 / 26 × 2 = RM130.77
-```
-
-### Unpaid and shortage deductions
-
-UNPAID and short-working/late deductions depend on the current employee rule and attendance/roster data. These rules have evolved during development. Before changing them, inspect the current calculation service and verify with a manual regression example.
-
-### EPF / SOCSO / EIS
-
-The application contains business-specific statutory handling and embedded contribution schedules. Do not replace these with guessed percentages.
-
-Current implementation includes special EPF-category behavior, SOCSO first-category handling and EIS applicability rules. Verify the effective statutory schedule and intended payroll period before changing tables or formulas.
-
-## Payroll exports
-
-Supported workflows include payroll Excel output, RHB bank layout, EPF, SOCSO and EIS exports.
-
-Export files can contain confidential employee identity, bank and salary information. Verify employee identity, bank account, selected payroll month and payroll totals before distribution.
-
-## Payslips
-
-Payslip/PDF generation is primarily handled by:
-
-```text
-lib/services/pdf_service.dart
-```
-
-Whenever payroll fields or calculations change, review payslip mapping and exports in the same change.
-
-## Notifications
-
-The project uses Firebase notifications plus Supabase notification data. Employee notification changes use Realtime, with a five-minute fallback refresh rather than frequent polling.
-
-Important files include:
-
-```text
-lib/services/notification_service.dart
-lib/screens/employee_portal.dart
-lib/firebase_options.dart
-web/firebase-messaging-sw.js
-```
-
-## Supabase request optimization
-
-The application has been optimized to reduce unnecessary Supabase log ingestion and API traffic.
-
-Current rules:
-
-- Employee-photo list rendering does not generate one signed-URL request per employee.
-- Attendance queries used by dashboards are cached and month/date scoped where appropriate.
-- Read-only attendance uses Realtime with a five-minute fallback instead of two-second polling.
-- Employee notifications use Realtime with a five-minute fallback instead of 30-second polling.
-- High-frequency `FutureBuilder` data is cached in state rather than recreated during every rebuild.
-- Monthly roster and admin attendance page loads are cached and explicitly refreshed when needed.
-- Realtime-triggered reloads are debounced to avoid duplicate bursts.
-
-When adding new screens, avoid Supabase queries directly from `build()` and avoid short periodic polling unless there is a documented operational requirement.
-
-## Authentication
-
-Authentication/account operations are coordinated mainly by:
-
-```text
-lib/services/app_service.dart
-lib/screens/login_screen.dart
-backend/src/server.js
-```
-
-The backend supports role-based login, JWT, first-login handling, OTP verification, password creation/change, logout and session restore.
-
-Do not put server credentials or privileged Supabase keys in Flutter.
-
-## Local development
-
-Install dependencies and verify the Flutter environment:
+### Flutter
 
 ```bash
 flutter doctor
 flutter pub get
-```
-
-Run on Chrome:
-
-```bash
 flutter run -d chrome
 ```
 
-Run tests and analyzer:
+The frontend API URL is configured through a Dart environment definition. The current default is `https://hasaniworkhub.onrender.com`.
+
+```bash
+flutter run -d chrome --dart-define=API_BASE_URL=https://YOUR-BACKEND.example
+```
+
+Use the correct API domain for each environment. Do not embed database passwords or privileged service credentials in Flutter builds.
+
+### Node backend
+
+```bash
+cd backend
+npm install
+# Set environment variables in your local secret manager or untracked .env
+npm run dev
+```
+
+See `backend/.env.example` for available settings. At minimum, a production deployment requires a valid `DATABASE_URL`, strong `JWT_SECRET`, and the applicable frontend/CORS configuration. Other login, OTP, email and review-account settings depend on enabled features.
+
+**Do not commit `.env` files or real secrets.** Do not run `prisma db push` against the imported production database as a substitute for reviewed migrations.
+
+## API and authorization
+
+- Flutter authenticates with the Node backend and sends its bearer JWT on protected requests.
+- `lib/services/neon_api.dart` provides authenticated JSON and photo requests.
+- `backend/src/data-api.js` provides a constrained `/api/data/:table` adapter and `/api/data/rpc/:name` for permitted operations.
+- The data adapter sets database identity claims and uses PostgreSQL's `authenticated` role so row-level policies can apply.
+- Dedicated endpoints enforce additional admin, branch and employee scope checks.
+- Do not broaden table allowlists, bypass role checks, disable policies or expose account/password/PIN tables to fix client errors.
+
+A `PGRST...` error code can also come from the compatibility adapter; the error prefix alone does **not** prove a live Supabase request. Investigate the actual request URL and server response.
+
+## Employee photos
+
+The current active backend routes are:
+
+```text
+GET    /api/employee-photos/:employeeId
+PUT    /api/employee-photos/:employeeId
+DELETE /api/employee-photos/:employeeId
+```
+
+Photos are held privately in Neon's `app_private.employee_photos` table and are served through authenticated Node endpoints. The backend accepts JPEG, PNG and WebP with a 512 KB maximum and checks image signatures. Upload/delete are restricted to authorized administrators. The Flutter widget requests private image bytes and caches them within the active session.
+
+Historical photos stored in Supabase Storage are **not automatically copied** merely because this API exists. Follow `backend/docs/neon-employee-photos.md` to migrate and verify those files before retiring the historical storage.
+
+## Notifications
+
+The application uses a Neon-backed inbox and the Node endpoint:
+
+```text
+POST /api/notifications/send
+```
+
+Firebase Cloud Messaging push delivery requires `FIREBASE_SERVICE_ACCOUNT_JSON` (or `FIREBASE_SERVICE_ACCOUNT`) on the backend. If absent, the notification may still be saved in Neon while push delivery is unavailable. Device token registration uses an authenticated database RPC.
+
+Never put Firebase service-account private keys in Flutter or GitHub.
+
+## Attendance, payroll and Daily Report
+
+- **Attendance:** Confirm employee selection, branch scoping, submission, review and date/month filtering.
+- **Generate Payroll:** Confirm active employee selection, attendance readiness, roster rules, calculation, authorized OT and safe overwrite behavior.
+- **Payslips:** Confirm payroll availability, employee authorization, correct period and PDF output.
+- **Daily Report:** Confirm saved PIN verification, correct branch context, lockout/error messages and existing PIN compatibility. Never reset PINs as an undocumented workaround.
+
+A passing build does not establish that these flows work in production. Test with authorized accounts in a safe environment and avoid destructive tests against live payroll records.
+
+## Testing and builds
+
+### Flutter
 
 ```bash
 dart format --set-exit-if-changed lib test
 flutter analyze
 flutter test
-```
-
-Build Android:
-
-```bash
 flutter build apk --release
 flutter build appbundle --release
-```
-
-Build Web:
-
-```bash
 flutter build web --release
 ```
 
-## CI/CD
+### Backend
 
-Android CI is defined in `.github/workflows/android.yml`.
-
-The current validation pipeline performs repository checkout and environment setup, installs dependencies, formats Dart source, verifies formatting is already committed, analyzes source, runs tests, builds the release APK, builds the release AAB, verifies Android artifacts and uploads the artifacts.
-
-A pull request should not be merged when required CI is failing.
-
-## Safe development workflow
-
-For payroll, attendance, roster or statutory changes:
-
-```text
-Understand requirement
-        ↓
-Inspect current source + database schema
-        ↓
-Trace downstream payroll/export impact
-        ↓
-Make the smallest safe change
-        ↓
-Add/update regression tests
-        ↓
-dart format
-        ↓
-flutter analyze
-        ↓
-flutter test
-        ↓
-build/CI verification
-        ↓
-review before merge
+```bash
+cd backend
+npm test
 ```
 
-Never modify production payroll data as part of automated testing.
+### Required release checks
 
-## Database changes
+1. Verify administrator, branch and employee JWT login/session renewal and unauthorized access rejection.
+2. Verify employee and branch data isolation through the Node API and Neon policies.
+3. Confirm attendance entry, employee lists and monthly attendance readiness.
+4. Generate test payroll and confirm calculation totals without altering production payroll.
+5. Generate and open payslips, verify correct employee and month.
+6. Unlock Daily Report with existing authorized branch PINs and check lockout behavior.
+7. Verify employee photo read/upload/delete and historical photo migration coverage.
+8. Verify notification inbox delivery and Firebase push when configured.
+9. Verify backend and Flutter deployment versions, environment variables, CORS and database backups.
+10. Check GitHub Actions, backend tests and end-to-end results before declaring production ready.
 
-Use migrations and avoid undocumented production schema drift. Before changing a table, determine whether the data belongs to the direct Supabase path, Node/Prisma path or both.
+## Deployment
 
-Check RLS/policies, RPCs, Flutter field names, payroll queries, reports, exports and historical compatibility before deploying schema changes.
+See **[NEON_DEPLOYMENT.md](NEON_DEPLOYMENT.md)** for the current deployment process.
 
-## Production checklist
+Recommended order:
 
-Before a payroll release, verify admin/branch/employee login, attendance entry/submission, roster assignment, net working minutes, OT request/authorization, PH, UNPAID, shortage deduction, EPF/SOCSO/EIS, payroll generation/overwrite, payslip, RHB/statutory exports, missing bank-account handling, analyzer/tests, Android builds, production secrets and database backup.
+1. Back up Neon and verify migrations/schema policies.
+2. Deploy the backend with the correct Neon `DATABASE_URL`, JWT settings and secrets.
+3. Verify backend health and authenticated API responses.
+4. Build and deploy the Flutter web/mobile release using the intended `API_BASE_URL`.
+5. Sign in again to refresh sessions and test every business-critical workflow.
+6. Only retire legacy provider infrastructure after data parity, photo migration and live traffic verification.
 
-## Guidance for coding assistants
+Do not assume that merging a PR deploys Render, updates an installed Android app or replaces an older web bundle.
 
-Before changing payroll behavior, inspect at least:
+## Security and privacy
 
-```text
-lib/services/attendance_payroll_service.dart
-lib/screens/supabase_service.dart
-lib/screens/attendance_dialog.dart
-lib/screens/admin_dashboard.dart
-lib/screens/branch_dashboard.dart
-lib/services/app_service.dart
-backend/src/server.js
-backend/prisma/schema.prisma
-```
+The application handles salary, identity documents, bank details, payroll exports, PINs and employee photos. Keep all sensitive information confidential. Restrict database credentials to the backend, use HTTPS, maintain least-privilege roles and enforce access server-side. Review Neon RLS and table grants before changing any policy.
 
-Rules for AI-assisted changes:
+Never commit JWT secrets, `DATABASE_URL`, SMTP passwords, Firebase service-account JSON, employee passwords, PINs, private photo data or production database dumps.
 
-```text
-Do not guess payroll formulas.
-Do not weaken authorization to make a UI work.
-Do not expose credentials.
-Keep attendance, roster and payroll behavior synchronized.
-Do not test against production payroll data destructively.
-Use a separate branch for significant changes.
-Add regression coverage for payroll calculation changes.
-Verify CI before merging.
-```
+## Known verification items
 
-## Maintenance priorities
+- Confirm the deployed frontend and backend run the latest Neon-backed code.
+- Complete and reconcile historical employee-photo migration.
+- Validate JWT and PostgreSQL row policies across admin, branch and employee accounts.
+- Confirm payroll generation, payslip PDF, attendance and Daily Report PINs with live-like test cases.
+- Verify Firebase push credentials and actual device delivery.
+- Audit remaining legacy Supabase references and external services before decommissioning.
 
-Continue strengthening payroll regression tests, end-to-end tests, RLS documentation, migration discipline, statutory schedule versioning and clear ownership between direct Supabase data and Node/Prisma data.
-
-Performance work should be driven by live Supabase/API evidence rather than speculative optimization.
+**Status terminology:** "Implemented" means code exists; "CI passed" means automated checks passed; "Production verified" requires authenticated end-to-end testing on the deployed version. These are not interchangeable.
 
 ## License
 
-This project is proprietary software. See `LICENSE` for the authoritative terms.
-
-Do not copy, redistribute, publish, sell, sublicense or incorporate this code elsewhere without authorization from the copyright owner.
+Proprietary software. Refer to `LICENSE` for authoritative terms. Unauthorized copying, distribution, publication, resale or sublicensing is prohibited.
