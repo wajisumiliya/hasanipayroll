@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import crypto from "crypto";
+import { presignEmployeePhoto, r2Configured } from "./r2-employee-photos.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -4531,6 +4532,30 @@ function matchesConfiguredPassword(enteredPassword, configuredPassword) {
     entered.length === configured.length &&
     crypto.timingSafeEqual(entered, configured);
 }
+// R2 photo access is authorized by the existing Neon-backed JWT identity.
+// Employee users may access only their own photo; admins may access any.
+app.post("/api/employee-photos/:employeeId/sign", authenticate, requireEmployeeAccess, async (req, res) => {
+  try {
+    if (!r2Configured()) return res.status(503).json({ ok: false, message: "Photo storage is not configured." });
+    const employeeId = String(req.params.employeeId || "").trim();
+    const method = String(req.body?.method || "").toUpperCase();
+    if (!["GET", "PUT"].includes(method)) return res.status(400).json({ ok: false, message: "Invalid photo operation." });
+    // Only administrators can modify photos until branch manager scope is
+    // independently verified by the server.
+    if (method === "PUT" && String(req.user.role).toUpperCase() !== "ADMIN") {
+      return res.status(403).json({ ok: false, message: "Administrator access required." });
+    }
+    const photo = presignEmployeePhoto({
+      employeeId,
+      method,
+      contentType: String(req.body?.contentType || ""),
+    });
+    return res.json({ ok: true, ...photo });
+  } catch (error) {
+    return res.status(400).json({ ok: false, message: "Unable to sign employee photo request." });
+  }
+});
+
 // ============================================================
 // SERVER
 // ============================================================
