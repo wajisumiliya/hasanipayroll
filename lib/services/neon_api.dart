@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:postgrest/postgrest.dart';
 
 /// One session for the existing authenticated Node API and its Neon adapter.
 /// Object-storage requests intentionally never receive this session token.
@@ -13,6 +14,14 @@ class NeonApi {
       _configuredBaseUrl.replaceFirst(RegExp(r'/+$'), '');
   static String? _accessToken;
   static int sessionVersion = 0;
+  static PostgrestClient createDatabaseClient({http.Client? httpClient}) {
+    final database = PostgrestClient(
+      '$baseUrl/api/data',
+      httpClient: httpClient,
+    );
+    database.setAuth(_accessToken);
+    return database;
+  }
   static void setAccessToken(String? token) {
     if (token != _accessToken) sessionVersion++;
     _accessToken = token;

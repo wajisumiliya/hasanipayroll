@@ -12,8 +12,12 @@ test('application source cannot initialize or call the removed Supabase SDK',asy
       if(entry.isDirectory()) await scan(filename);
       else if(filename.endsWith('.dart')){
         const source=await readFile(filename,'utf8');
-        assert.doesNotMatch(source,/package:supabase_flutter|\bSupabase\.(?:initialize|instance)|SupabaseService\.client/,
+        assert.doesNotMatch(source,/package:supabase_flutter|\bSupabase\.(?:initialize|instance)|SupabaseService\.client|NEON_DATA_API_URL|SUPABASE_URL|SUPABASE_ANON_KEY/,
           `Legacy provider call in ${path.relative(root,filename)}`);
+        if(path.basename(filename)!=='neon_api.dart') {
+          assert.doesNotMatch(source,/\bPostgrestClient\(/,
+            `Database clients must use the shared backend JWT endpoint: ${path.relative(root,filename)}`);
+        }
       }
     }
   }

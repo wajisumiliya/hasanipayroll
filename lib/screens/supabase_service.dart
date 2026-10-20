@@ -82,9 +82,7 @@ class SupabaseService {
 
   // Retain this class name for existing screens. Every query now goes to the
   // authenticated Node/Neon backend; there is no legacy endpoint fallback.
-  static final PostgrestClient database = PostgrestClient(
-    '${NeonApi.baseUrl}/api/data',
-  );
+  static final PostgrestClient database = NeonApi.createDatabaseClient();
 
   static bool get usesNeonDatabase => true;
 

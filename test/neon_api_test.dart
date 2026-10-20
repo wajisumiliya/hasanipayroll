@@ -8,6 +8,22 @@ import 'package:hasani_payroll_portal/services/neon_api.dart';
 void main() {
   tearDown(() => NeonApi.setAccessToken(null));
 
+  test('database queries use the Node endpoint and its backend JWT', () async {
+    NeonApi.setAccessToken('backend-jwt');
+    final client = MockClient((request) async {
+      expect(request.url.origin, Uri.parse(NeonApi.baseUrl).origin);
+      expect(request.url.path, '/api/data/employees');
+      expect(request.headers['Authorization'], 'Bearer backend-jwt');
+      expect(request.headers.containsKey('apikey'), false);
+      return http.Response('[{"employee_id":"FIX_E1"}]', 200,
+          headers: {'content-type': 'application/json'});
+    });
+    final database = NeonApi.createDatabaseClient(httpClient: client);
+    final rows = await database.from('employees').select('employee_id');
+    expect(rows.single['employee_id'], 'FIX_E1');
+    client.close();
+  });
+
   test('Neon API sends the current backend session token', () async {
     NeonApi.setAccessToken('backend-session');
     final client = MockClient((request) async {
