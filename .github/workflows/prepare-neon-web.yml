@@ -1,0 +1,33 @@
+name: Prepare Neon web validation
+on:
+  push:
+    branches: [codex/remove-remaining-supabase]
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format lib test
+      - name: Export resolved lockfile and formatted source
+        run: |
+          python3 - <<'PY'
+          import subprocess,base64
+          paths=subprocess.check_output(['git','diff','--name-only'],text=True).splitlines()
+          for path in paths:
+              if path == 'pubspec.lock' or path.startswith(('lib/','test/')):
+                  data=base64.b64encode(open(path,'rb').read()).decode()
+                  print('FIX_FILE_BEGIN '+path)
+                  for i in range(0,len(data),2000): print('FIX_DATA '+data[i:i+2000])
+                  print('FIX_FILE_END')
+          PY
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test
+      - run: bash scripts/render-build-web.sh

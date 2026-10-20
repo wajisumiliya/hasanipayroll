@@ -15,7 +15,7 @@ export function r2Configured() {
 export function presignEmployeePhoto({ employeeId, method, contentType }) {
   if (!r2Configured()) throw new Error("R2 is not configured");
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(employeeId)) throw new Error("Invalid employee ID");
-  if (!["GET", "PUT"].includes(method)) throw new Error("Invalid operation");
+  if (!["GET", "PUT", "DELETE"].includes(method)) throw new Error("Invalid operation");
   const allowed = ["image/jpeg", "image/png", "image/webp"];
   if (method === "PUT" && !allowed.includes(contentType)) throw new Error("Unsupported photo type");
 

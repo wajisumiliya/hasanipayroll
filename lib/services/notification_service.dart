@@ -3,11 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 import '../screens/supabase_service.dart';
+import 'neon_api.dart';
 import 'notification_presenter.dart';
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  static const String _sendFunctionName = 'send-notification';
 
   static Future<void> initialize({
     String? employeeId,
@@ -122,8 +122,8 @@ class NotificationService {
     String? branchId,
     String? employeeId,
   }) async {
-    final response = await SupabaseService.client.functions.invoke(
-      _sendFunctionName,
+    final response = await NeonApi.jsonRequest(
+      '/api/notifications/send',
       body: {
         'title': title.trim(),
         'body': body.trim(),
@@ -133,8 +133,8 @@ class NotificationService {
         'employee_id': employeeId,
       },
     );
-    if (response.status < 200 || response.status >= 300) {
-      throw Exception('Notification service returned ${response.status}.');
+    if (response['ok'] != true) {
+      throw StateError('Unable to send notification.');
     }
   }
 
@@ -163,8 +163,8 @@ class NotificationService {
         .toList();
     if (ids.isEmpty) return;
 
-    final response = await SupabaseService.client.functions.invoke(
-      _sendFunctionName,
+    final response = await NeonApi.jsonRequest(
+      '/api/notifications/send',
       body: {
         'title': 'EA Form Available',
         'body': 'Your EA form for $taxYear is ready to view.',
@@ -174,8 +174,8 @@ class NotificationService {
         'tax_year': taxYear,
       },
     );
-    if (response.status < 200 || response.status >= 300) {
-      throw Exception('Notification service returned ${response.status}.');
+    if (response['ok'] != true) {
+      throw StateError('Unable to send notification.');
     }
   }
 }

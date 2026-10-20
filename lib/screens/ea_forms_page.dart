@@ -158,7 +158,7 @@ class _EaFormsPageState extends State<EaFormsPage> {
         rows.add({
           'employee_id': id,
           'tax_year': _year,
-          'generated_by': SupabaseService.client.auth.currentUser?.id,
+          'generated_by': AppService.instance.currentUser?.username,
           'generated_at': DateTime.now().toUtc().toIso8601String(),
           'updated_at': DateTime.now().toUtc().toIso8601String(),
           'form_data': {
