@@ -253,43 +253,41 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         widget.month.month,
       );
 
-      // Salary rules affect OT and target hours: do not silently substitute
-      // defaults when editing, as that could change payroll calculations.
-      if (!_salaryRuleLoaded) {
-        try {
-          await _loadSalaryWorkingRule(employeeId);
-        } catch (_) {
-          if (widget.editable) rethrow;
+      // Fetch salary and rosters from the same authenticated Neon backend.
+      // Legacy PostgREST rejects Node-issued JWTs with PGRST301.
+      final dependencies = await AppService.instance.loadAttendanceSheetDependencies(
+        employeeId: employeeId,
+        year: widget.month.year,
+        month: widget.month.month,
+      );
+      final salary = dependencies['salary'];
+      if (salary is Map) {
+        final epfCategory = (salary['epf_category'] ?? '')
+            .toString().trim().toLowerCase();
+        final eisApplicable = _toBool(salary['eis_applicable']);
+        if (epfCategory == 'normal1' || eisApplicable) {
+          _requiredWorkHours = 7.5;
+          _isLocalStaff = true;
+        } else {
+          _requiredWorkHours = 10.5;
+          _isLocalStaff = false;
         }
       }
-
-      _weeklyRoster.clear();
-      _dailyRoster.clear();
-      try {
-        final rosterRows = await SupabaseService.getMonthlyRosters(
-          branchId: _watermarkBranchName,
-          year: widget.month.year,
-          month: widget.month.month,
-          employeeId: employeeId,
-        );
-        _weeklyRoster.addEntries(rosterRows
-            .map((row) => MapEntry(_intValue(row['week_number']), row)));
-        final dailyRosterRows = await SupabaseService.getDailyRosters(
-          branchId: widget.branchId,
-          employeeId: employeeId,
-          start: DateTime(widget.month.year, widget.month.month, 1),
-          end: DateTime(widget.month.year, widget.month.month + 1, 1),
-        );
-        _dailyRoster.addEntries(dailyRosterRows.map((row) {
-          final date = DateTime.parse(row['roster_date'].toString());
-          return MapEntry(date.day, row);
+      _salaryRuleLoaded = true;
+      final monthly = dependencies['monthly_rosters'] as List;
+      final daily = dependencies['daily_rosters'] as List;
+      _weeklyRoster
+        ..clear()
+        ..addEntries(monthly.map((value) {
+          final row = Map<String, dynamic>.from(value as Map);
+          return MapEntry(_intValue(row['week_number']), row);
         }));
-      } catch (_) {
-        // Missing roster data must not prevent viewing attendance.
-        // Editing is blocked until roster access is restored to avoid
-        // calculating attendance against an incorrect schedule.
-        if (widget.editable) rethrow;
-      }
+      _dailyRoster
+        ..clear()
+        ..addEntries(daily.map((value) {
+          final row = Map<String, dynamic>.from(value as Map);
+          return MapEntry(DateTime.parse(row['roster_date'].toString()).day, row);
+        }));
 
       final rows = widget.editable
           ? allRows
