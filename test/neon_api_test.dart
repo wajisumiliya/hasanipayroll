@@ -44,27 +44,32 @@ void main() {
         throwsStateError);
   });
 
-  test('photo upload never forwards the backend bearer token to R2', () async {
+  test('photo upload sends bytes and authentication only to the app backend', () async {
     NeonApi.setAccessToken('private-session');
     final client = MockClient((request) async {
-      expect(request.headers.containsKey('Authorization'), false);
+      expect(request.url.origin, Uri.parse(NeonApi.baseUrl).origin);
+      expect(request.url.path, '/api/employee-photos/FIX_E1');
+      expect(request.headers['Authorization'], 'Bearer private-session');
       expect(request.headers['Content-Type'], 'image/jpeg');
-      expect(request.bodyBytes, [1, 2, 3]);
-      return http.Response('', 200);
+      expect(request.bodyBytes, [255, 216, 255, 217]);
+      return http.Response('{"ok":true}', 200);
     });
-    await NeonApi.objectRequest({
-      'url':
-          'https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com/photos/one?signature=fixture',
-      'headers': {'Content-Type': 'image/jpeg'},
-    }, method: 'PUT', bytes: Uint8List.fromList([1, 2, 3]), client: client);
+    await NeonApi.photoRequest('FIX_E1', method: 'PUT',
+        bytes: Uint8List.fromList([255, 216, 255, 217]),
+        contentType: 'image/jpeg', client: client);
   });
 
-  test('photo upload rejects an unexpected storage host', () async {
-    await expectLater(
-        NeonApi.objectRequest({
-          'url': 'https://example.invalid/photo',
-          'headers': <String, String>{},
-        }, method: 'PUT'),
-        throwsStateError);
+  test('photo read authenticates and returns bytes, missing photos use fallback', () async {
+    NeonApi.setAccessToken('private-session');
+    final client = MockClient((request) async {
+      expect(request.headers['Authorization'], 'Bearer private-session');
+      return request.url.path.endsWith('FIX_MISSING')
+          ? http.Response('', 404)
+          : http.Response.bytes([1, 2, 3], 200);
+    });
+    expect(await NeonApi.photoRequest('FIX_E1', client: client), [1, 2, 3]);
+    expect(await NeonApi.photoRequest('FIX_MISSING', client: client), null);
+    NeonApi.setAccessToken(null);
+    await expectLater(NeonApi.photoRequest('FIX_E1', client: client), throwsStateError);
   });
 }

@@ -4,7 +4,7 @@ import { findAccountByLogin, provisionEmployeeAccount, saveAccountPassword } fro
 import "dotenv/config";
 
 import crypto from "crypto";
-import { presignEmployeePhoto, r2Configured } from "./r2-employee-photos.js";
+import { installNeonPhotoApi } from "./neon-employee-photos.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -4250,33 +4250,10 @@ app.delete('/api/admin/employees/:employeeId/account', authenticate, requireAdmi
   } catch { res.status(503).json({ok:false,message:'Unable to remove employee account.'}); }
 });
 
-// R2 photo access is authorized by the existing Neon-backed JWT identity.
-// Employee users may access only their own photo; admins may access any.
-app.post("/api/employee-photos/:employeeId/sign", authenticate, async (req, res) => {
-  try {
-    if (!r2Configured()) return res.status(503).json({ ok: false, message: "Photo storage is not configured." });
-    const employeeId = String(req.params.employeeId || "").trim();
-    const method = String(req.body?.method || "").toUpperCase();
-    if (!["GET", "PUT", "DELETE"].includes(method)) return res.status(400).json({ ok: false, message: "Invalid photo operation." });
-    // Only administrators can modify photos until branch manager scope is
-    // independently verified by the server.
-    if (method !== "GET" && (String(req.user.role).toUpperCase() !== "ADMIN" || ["attendance","requests"].includes(req.auth?.app_metadata?.staff_scope))) {
-      return res.status(403).json({ ok: false, message: "Administrator access required." });
-    }
-    const visible = await withDatabaseIdentity(pool, claimsForRequest(req), (client) =>
-      client.query('SELECT employee_id FROM public.employees WHERE employee_id=$1', [employeeId]));
-    if (!visible.rowCount || req.auth?.app_metadata?.is_reviewer) return res.status(403).json({ok:false,message:"Access denied."});
-    const photo = presignEmployeePhoto({
-      employeeId,
-      method,
-      contentType: String(req.body?.contentType || ""),
-    });
-    return res.json({ ok: true, ...photo });
-  } catch (error) {
-    return res.status(400).json({ ok: false, message: "Unable to sign employee photo request." });
-  }
-});
+// Photos use the same authenticated Neon identity as employee records.
+installNeonPhotoApi(app, { pool, authenticate });
 
+// ============================================================
 // 404
 // ============================================================
 

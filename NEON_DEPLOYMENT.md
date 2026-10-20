@@ -32,24 +32,16 @@ push` against the imported production schema to deploy this change.
 
 ## Photos and notifications
 
-Photos continue to use the project's existing Cloudflare R2 integration. Keep
-`R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` on the
-backend. Configure R2 CORS for frontend origins, methods GET/PUT/DELETE, and the
-Content-Type header. The backend signs a five-minute URL after checking the
-employee's Neon access; its API bearer token is never forwarded to R2.
+Photos are stored as optimized image bytes in private Neon table
+`app_private.employee_photos`. The backend creates this table at startup.
+No R2 account, storage API key or additional Render variable is needed.
+Authenticated `/api/employee-photos/:employeeId` requests return bytes only
+when the caller can see that employee through existing Neon row policies.
+Only administrators within their existing employee scope may upload/delete.
+JPEG, PNG and WebP uploads are limited to 512 KB; the app optimizes to 480 px.
 
-Existing Supabase photo URLs are treated as employee object references. The R2
-object key is `employee-photos/<employee_id>/profile`. Database import does not
-copy photo bytes: copy old files into those R2 keys or upload them again if they
-are not already present. Missing photos show the usual initials fallback.
-
-Notifications are saved in Neon's inbox. For Firebase push, set backend
-`FIREBASE_SERVICE_ACCOUNT_JSON` (or `FIREBASE_SERVICE_ACCOUNT`) to the Firebase
-service account JSON previously used by the Edge Function. Without it, inbox
-delivery still works and the response reports `pushConfigured: false`.
-Device registration uses the authenticated Neon RPC. Scheduled payslip releases
-run in the Node backend every minute instead of the former provider's cron job;
-Render must be running for that worker to execute.
+Existing Supabase photo files must be copied separately. See
+[photo migration instructions](backend/docs/neon-employee-photos.md).
 
 ## Access controls
 

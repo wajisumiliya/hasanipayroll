@@ -1,0 +1,43 @@
+name: Copy employee photos to Neon
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Copy photos into Neon (false previews and validates only)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: copy-employee-photos-to-neon
+  cancel-in-progress: false
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - run: npm ci
+        working-directory: backend
+      - run: flutter pub get --enforce-lockfile
+      - run: dart compile exe tool/encode_employee_photo.dart -o /tmp/encode-employee-photo
+      - name: Copy or preview existing photos
+        env:
+          SUPABASE_SOURCE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SOURCE_SERVICE_ROLE_KEY }}
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          PHOTO_OPTIMIZER_PATH: /tmp/encode-employee-photo
+          APPLY_PHOTOS: ${{ inputs.apply }}
+        run: |
+          if [ "$APPLY_PHOTOS" = "true" ]; then
+            node backend/scripts/copy-employee-photos-to-neon.js --apply
+          else
+            node backend/scripts/copy-employee-photos-to-neon.js
+          fi
