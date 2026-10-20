@@ -14,9 +14,11 @@ retained so screens do not need unrelated rewrites.
    once in a transaction. This restores missing application RPCs and row access
    policies over the imported tables; it does not import or rewrite payroll rows.
    A private migration record prevents repeat execution on restart.
-2. On the **frontend** Render service, set **Build Command** to
-   `bash scripts/render-build-web.sh` and **Publish Directory** to `build/web`.
-   `npm install` alone does not compile the Flutter app.
+2. On the **frontend** Render service, keep **Build Command** as `npm install`
+   and **Publish Directory** as `build/web`. The root package now runs
+   `bash scripts/render-build-web.sh` after installation, compiling Flutter.
+   You can also use that script directly as the Build Command. The backend
+   keeps its separate `backend/package.json` and existing build command.
 3. If using a different backend domain, set frontend `API_BASE_URL` before the
    build. It defaults to `https://hasaniworkhub.onrender.com`. Keep the frontend
    domain in the backend's existing CORS allowlist.
