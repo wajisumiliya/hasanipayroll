@@ -44,9 +44,8 @@ class _EmployeePortalState extends State<EmployeePortal>
   Timer? _birthdayCelebrationTimer;
   Timer? _notificationRefreshTimer;
   Timer? _notificationRealtimeDebounce;
-  Timer? _payrollRealtimeDebounce;
   RealtimeChannel? _notificationChannel;
-  RealtimeChannel? _payrollChannel;
+  Timer? _payrollRefreshTimer;
   bool _showBirthdayCelebration = false;
   List<Map<String, dynamic>> _notifications = const [];
   bool _notificationsLoading = false;
@@ -117,42 +116,17 @@ class _EmployeePortalState extends State<EmployeePortal>
 
   void _subscribeToPayroll() {
     if (employeeId.isEmpty) return;
-
-    void scheduleRefresh() {
-      _payrollRealtimeDebounce?.cancel();
-      _payrollRealtimeDebounce = Timer(
-        const Duration(milliseconds: 500),
-        () {
-          if (mounted) unawaited(_refreshPayroll());
-        },
-      );
-    }
-
-    _payrollChannel = SupabaseService.client
-        .channel('employee-payroll-$employeeId-$hashCode')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'payroll',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'employee_id',
-            value: employeeId,
-          ),
-          callback: (_) => scheduleRefresh(),
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'payroll',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'employee_id',
-            value: employeeId,
-          ),
-          callback: (_) => scheduleRefresh(),
-        )
-        .subscribe();
+    // Neon payroll changes are read through the authenticated Node API.
+    // Until a Neon event stream is available, refresh while the portal is
+    // open rather than subscribing to the old Supabase payroll table.
+    _payrollRefreshTimer = Timer.periodic(
+      const Duration(minutes: 2),
+      (_) {
+        if (mounted && !_payrollLoading) {
+          unawaited(_refreshPayroll());
+        }
+      },
+    );
   }
 
   Future<void> _refreshPayroll() async {
@@ -393,14 +367,10 @@ class _EmployeePortalState extends State<EmployeePortal>
     _birthdayCelebrationTimer?.cancel();
     _notificationRefreshTimer?.cancel();
     _notificationRealtimeDebounce?.cancel();
-    _payrollRealtimeDebounce?.cancel();
+    _payrollRefreshTimer?.cancel();
     final notificationChannel = _notificationChannel;
     if (notificationChannel != null) {
       SupabaseService.client.removeChannel(notificationChannel);
-    }
-    final payrollChannel = _payrollChannel;
-    if (payrollChannel != null) {
-      SupabaseService.client.removeChannel(payrollChannel);
     }
     _birthdayController.dispose();
     super.dispose();
