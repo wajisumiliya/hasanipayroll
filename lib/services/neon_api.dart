@@ -22,6 +22,7 @@ class NeonApi {
     database.setAuth(_accessToken);
     return database;
   }
+
   static void setAccessToken(String? token) {
     if (token != _accessToken) sessionVersion++;
     _accessToken = token;

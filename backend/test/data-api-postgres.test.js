@@ -89,7 +89,7 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
   } finally {
     if(server) await new Promise(resolve=>server.close(resolve));
     await pool.end();
-    await bootstrap.query('DROP DATABASE hasani_data_api_test WITH (FORCE)');
+    await bootstrap.query('DROP DATABASE hasani_data_api_test');
     await bootstrap.end();
   }
 });

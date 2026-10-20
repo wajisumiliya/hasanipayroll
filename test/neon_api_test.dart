@@ -16,11 +16,12 @@ void main() {
       expect(request.headers['Authorization'], 'Bearer backend-jwt');
       expect(request.headers.containsKey('apikey'), false);
       return http.Response('[{"employee_id":"FIX_E1"}]', 200,
-          headers: {'content-type': 'application/json'});
+          request: request, headers: {'content-type': 'application/json'});
     });
     final database = NeonApi.createDatabaseClient(httpClient: client);
     final rows = await database.from('employees').select('employee_id');
     expect(rows.single['employee_id'], 'FIX_E1');
+    await database.dispose();
     client.close();
   });
 

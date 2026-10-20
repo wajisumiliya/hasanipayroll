@@ -74,6 +74,6 @@ test('employee account provisioning and password completion work with imported N
     });
 
   } finally {
-    await pool.end();await bootstrap.query('DROP DATABASE hasani_employee_login_test WITH (FORCE)');await bootstrap.end();
+    await pool.end();await bootstrap.query('DROP DATABASE hasani_employee_login_test');await bootstrap.end();
   }
 });
