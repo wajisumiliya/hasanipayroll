@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:postgrest/postgrest.dart';
 
 /// One session for the existing authenticated Node API and its Neon adapter.
-/// Object-storage requests intentionally never receive this session token.
+/// Employee photo bytes use this same authenticated backend.
 class NeonApi {
   static const String _configuredBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -66,31 +66,36 @@ class NeonApi {
     }
   }
 
-  static Future<void> objectRequest(
-    Map<String, dynamic> signed, {
-    required String method,
+  static Future<Uint8List?> photoRequest(
+    String employeeId, {
+    String method = 'GET',
     Uint8List? bytes,
+    String? contentType,
     http.Client? client,
   }) async {
-    final uri = Uri.parse(signed['url'].toString());
-    if (uri.scheme != 'https' ||
-        !uri.host.endsWith('.r2.cloudflarestorage.com')) {
-      throw StateError('Invalid photo storage endpoint.');
+    final token = _accessToken;
+    if (token == null || token.isEmpty) {
+      throw StateError('Please sign in again.');
     }
-    final request = http.Request(method, uri);
-    final headers = signed['headers'];
-    if (headers is Map) {
-      request.headers.addAll(headers
-          .map((key, value) => MapEntry(key.toString(), value.toString())));
-    }
+    final request = http.Request(
+      method,
+      Uri.parse(
+          '$baseUrl/api/employee-photos/${Uri.encodeComponent(employeeId)}'),
+    );
+    request.headers['Authorization'] = 'Bearer $token';
+    if (contentType != null) request.headers['Content-Type'] = contentType;
     if (bytes != null) request.bodyBytes = bytes;
     final transport = client ?? http.Client();
     try {
-      final response =
-          await transport.send(request).timeout(const Duration(seconds: 45));
-      await response.stream.drain<void>();
-      if (response.statusCode < 200 || response.statusCode >= 300)
-        throw StateError('Photo storage request failed.');
+      final response = await http.Response.fromStream(
+        await transport.send(request).timeout(const Duration(seconds: 45)),
+      );
+      if (method == 'GET' && response.statusCode == 404) return null;
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError(
+            'Unable to $method employee photo (${response.statusCode}).');
+      }
+      return method == 'GET' ? response.bodyBytes : null;
     } finally {
       if (client == null) transport.close();
     }

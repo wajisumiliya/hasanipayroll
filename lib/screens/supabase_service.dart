@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:postgrest/postgrest.dart';
 import '../services/neon_api.dart';
+import '../widgets/employee_photo.dart' show invalidateEmployeePhoto;
 
 class SupabaseService {
   // Diagnostics are debug-only and must not include payroll or identity data.
@@ -106,32 +107,20 @@ class SupabaseService {
     required Uint8List bytes,
     required String contentType,
   }) async {
-    final signed = await NeonApi.jsonRequest(
-      '/api/employee-photos/${Uri.encodeComponent(employeeId)}/sign',
-      body: {'method': 'PUT', 'contentType': contentType},
+    await NeonApi.photoRequest(
+      employeeId,
+      method: 'PUT',
+      bytes: bytes,
+      contentType: contentType,
     );
-    await NeonApi.objectRequest(signed, method: 'PUT', bytes: bytes);
-    final objectKey = signed['objectKey'].toString();
-    await database
-        .from('employees')
-        .update({'photo_url': objectKey}).eq('employee_id', employeeId);
-    return objectKey;
+    invalidateEmployeePhoto(employeeId);
+    return 'neon-photo/$employeeId';
   }
 
   static Future<void> removeEmployeePhoto(String employeeId) async {
-    final signed = await NeonApi.jsonRequest(
-      '/api/employee-photos/${Uri.encodeComponent(employeeId)}/sign',
-      body: {'method': 'DELETE'},
-    );
-    await NeonApi.objectRequest(signed, method: 'DELETE');
-    await database
-        .from('employees')
-        .update({'photo_url': null}).eq('employee_id', employeeId);
+    await NeonApi.photoRequest(employeeId, method: 'DELETE');
+    invalidateEmployeePhoto(employeeId);
   }
-
-  // ============================================================
-  // BRANCH ACTIVITY LOGS
-  // ============================================================
 
   static Future<String?> startBranchActivity({
     required String branchId,

@@ -19,6 +19,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query('REVOKE ALL ON ALL TABLES IN SCHEMA app_private FROM PUBLIC,anon,authenticated');
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [VERSION]);
     }
+    const photoVersion = '20261020_neon_employee_photos_v1';
+    const photoMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [photoVersion]);
+    if (!photoMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261020_neon_employee_photos.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [photoVersion]);
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK'); throw error;

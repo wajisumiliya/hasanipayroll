@@ -2,7 +2,10 @@
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:convert';
 import 'dart:html' as html;
+import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
+import 'package:hasani_payroll_portal/services/neon_api.dart';
+import 'package:hasani_payroll_portal/widgets/employee_photo.dart';
 import 'package:excel_plus/excel_plus.dart' as xls;
 import 'package:hasani_payroll_portal/services/app_service.dart';
 import 'package:hasani_payroll_portal/services/attendance_payroll_service.dart';
@@ -21,6 +24,31 @@ Future<void> main() async {
         .login('FIX_ADMIN', 'browser-fixture-password');
     require(loginError == null, 'Login failed: $loginError');
     completed.add('login');
+    final photo = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYPgPAAEDAQAIicLsAAAAAElFTkSuQmCC');
+    final reference = await SupabaseService.uploadEmployeePhoto(
+        employeeId: 'FIX_E1', bytes: photo, contentType: 'image/png');
+    require(reference == 'neon-photo/FIX_E1', 'Photo reference missing');
+    final loadedPhoto = await loadEmployeePhoto('FIX_E1', reference);
+    require(base64Encode(loadedPhoto!) == base64Encode(photo),
+        'Neon photo bytes did not roundtrip');
+    final codec = await ui.instantiateImageCodec(loadedPhoto);
+    final frame = await codec.getNextFrame();
+    require(frame.image.width == 1, 'Photo cannot be decoded for display');
+    frame.image.dispose();
+    codec.dispose();
+    final newPhoto = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC');
+    final replacement = await SupabaseService.uploadEmployeePhoto(
+        employeeId: 'FIX_E1', bytes: newPhoto, contentType: 'image/png');
+    final refreshed = await loadEmployeePhoto('FIX_E1', replacement);
+    require(base64Encode(refreshed!) == base64Encode(newPhoto),
+        'Replacement photo did not reload');
+    await SupabaseService.removeEmployeePhoto('FIX_E1');
+    require(await NeonApi.photoRequest('FIX_E1') == null,
+        'Deleted photo is still available');
+    completed
+        .add('Neon photo upload, authenticated read, replacement and delete');
     final generated = await AttendancePayrollService.generateMonthlyPayroll(
       month: DateTime(2026, 10),
       employeeIds: ['FIX_E1'],

@@ -1,79 +1,63 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/neon_api.dart';
 
-// Share signed URLs between photo widgets for four minutes. R2 URLs remain
-// valid for five minutes; refreshing early avoids displaying expired links.
-final Map<String, ({Future<String?> url, DateTime expiresAt})>
-    _employeePhotoSignedUrlCache = {};
+// Image bytes stay private and are shared only within the current login session.
+final Map<String, Future<Uint8List?>> _photoCache = {};
+int _photoCacheSession = -1;
+int _photoRevision = 0;
 
-Future<String?> _cachedEmployeePhotoSignedUrl(String path) async {
-  final now = DateTime.now();
-  final cacheKey = '${NeonApi.sessionVersion}:$path';
-  final existing = _employeePhotoSignedUrlCache[cacheKey];
-  if (existing != null && existing.expiresAt.isAfter(now)) {
-    return existing.url;
+void invalidateEmployeePhoto(String employeeId) {
+  _photoRevision++;
+  _photoCache.removeWhere((key, _) => key.startsWith('$employeeId:'));
+}
+
+Future<Uint8List?> loadEmployeePhoto(
+    String employeeId, String? reference) async {
+  if (_photoCacheSession != NeonApi.sessionVersion) {
+    _photoCache.clear();
+    _photoCacheSession = NeonApi.sessionVersion;
   }
-  // Keep the cache bounded for long-running dashboard sessions.
-  _employeePhotoSignedUrlCache.removeWhere(
-    (_, entry) => !entry.expiresAt.isAfter(now),
-  );
-  final employeeId = path.split('/').first;
-  final future = NeonApi.jsonRequest(
-    '/api/employee-photos/${Uri.encodeComponent(employeeId)}/sign',
-    body: {'method': 'GET'},
-  ).then<String?>((value) => value['url']?.toString());
-  _employeePhotoSignedUrlCache[cacheKey] = (
-    url: future,
-    expiresAt: now.add(const Duration(minutes: 4)),
-  );
+  if (reference == null || reference.trim().isEmpty) return null;
+  final key = '$employeeId:$reference';
+  if (_photoCache.containsKey(key)) return _photoCache[key];
+  // Bound memory use for long-running admin sessions.
+  if (_photoCache.length >= 100) _photoCache.remove(_photoCache.keys.first);
+  final future = NeonApi.photoRequest(employeeId);
+  _photoCache[key] = future;
   try {
-    return await future;
+    final bytes = await future;
+    if (bytes == null) _photoCache.remove(key);
+    return bytes;
   } catch (_) {
-    _employeePhotoSignedUrlCache.remove(cacheKey);
+    _photoCache.remove(key);
     return null;
   }
 }
 
-Future<String?> resolveEmployeePhotoUrl(String? photoUrl) async {
-  final raw = photoUrl?.trim() ?? '';
-  if (raw.isEmpty) return null;
-
-  var path = raw;
-  if (path.startsWith('employee-photos/')) {
-    path = path.substring('employee-photos/'.length);
-  }
-  const markers = [
+String? employeeIdFromPhotoReference(String? reference) {
+  var path = reference?.trim() ?? '';
+  if (path.isEmpty) return null;
+  for (final marker in [
     '/storage/v1/object/public/employee-photos/',
     '/storage/v1/object/authenticated/employee-photos/',
     '/storage/v1/object/sign/employee-photos/',
-  ];
-  var storagePathFound = false;
-  for (final marker in markers) {
-    final markerIndex = raw.indexOf(marker);
-    if (markerIndex >= 0) {
-      path = raw.substring(markerIndex + marker.length);
-      storagePathFound = true;
+  ]) {
+    if (path.contains(marker)) {
+      path = path.split(marker).last;
       break;
     }
   }
-
-  // Legacy object paths are resolved against the existing R2 backend.
-  // Never request or sign an object through the previous storage provider.
-  if (!storagePathFound && Uri.tryParse(raw)?.hasAbsolutePath == true) {
-    final uri = Uri.tryParse(raw);
-    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      if (uri.host.endsWith('.supabase.co') ||
-          uri.host.endsWith('.supabase.in')) return null;
-      return raw;
-    }
+  try {
+    path = Uri.decodeComponent(path.split('?').first);
+  } on FormatException {
+    return null;
   }
-
-  path = Uri.decodeComponent(
-    path.split('?').first.replaceFirst(RegExp(r'^/+'), ''),
-  );
-  if (path.isEmpty) return null;
-
-  return _cachedEmployeePhotoSignedUrl(path);
+  for (final prefix in ['neon-photo/', 'employee-photos/']) {
+    if (path.startsWith(prefix)) path = path.substring(prefix.length);
+  }
+  final id = path.split('/').first;
+  return RegExp(r'^[A-Za-z0-9_-]{1,80}$').hasMatch(id) ? id : null;
 }
 
 class EmployeePhotoImage extends StatefulWidget {
@@ -95,33 +79,50 @@ class EmployeePhotoImage extends StatefulWidget {
 }
 
 class _EmployeePhotoImageState extends State<EmployeePhotoImage> {
-  late Future<String?> _resolvedUrl;
+  late Future<Uint8List?> _photoBytes;
+  int _sessionVersion = -1;
+  int _loadedRevision = -1;
 
   @override
   void initState() {
     super.initState();
-    _resolvedUrl = resolveEmployeePhotoUrl(widget.photoUrl);
+    _loadPhoto();
   }
 
   @override
   void didUpdateWidget(covariant EmployeePhotoImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.photoUrl?.trim() != widget.photoUrl?.trim()) {
-      _resolvedUrl = resolveEmployeePhotoUrl(widget.photoUrl);
+      _loadPhoto();
     }
+  }
+
+  void _loadPhoto() {
+    _sessionVersion = NeonApi.sessionVersion;
+    _loadedRevision = _photoRevision;
+    final id = employeeIdFromPhotoReference(widget.photoUrl);
+    _photoBytes = id == null
+        ? Future.value(null)
+        : loadEmployeePhoto(id, widget.photoUrl);
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: _resolvedUrl,
+    if (_sessionVersion != NeonApi.sessionVersion ||
+        _loadedRevision != _photoRevision) {
+      _loadPhoto();
+    }
+    return FutureBuilder<Uint8List?>(
+      future: _photoBytes,
       builder: (context, snapshot) {
-        final url = snapshot.data;
-        if (url == null || url.isEmpty) {
+        final bytes = snapshot.data;
+        if (snapshot.connectionState != ConnectionState.done ||
+            bytes == null ||
+            bytes.isEmpty) {
           return widget.fallbackBuilder(context);
         }
-        return Image.network(
-          url,
+        return Image.memory(
+          bytes,
           fit: widget.fit,
           alignment: widget.alignment,
           gaplessPlayback: true,
