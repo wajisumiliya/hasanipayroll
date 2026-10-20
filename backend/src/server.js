@@ -1882,6 +1882,38 @@ app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req,
   }
 });
 
+// Admin payroll screen: all five datasets come from Neon under server JWT auth.
+app.get("/api/admin/payroll-page", authenticate, requireAdmin, async (req, res) => {
+  try {
+    const year = Number(req.query.year);
+    const month = Number(req.query.month);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100 ||
+        !Number.isInteger(month) || month < 1 || month > 12) {
+      return res.status(400).json({ ok: false, message: "Invalid payroll month." });
+    }
+    const [branches, employees, payroll, defaults, attendance] = await Promise.all([
+      pool.query("SELECT to_jsonb(b) AS data FROM public.branches b ORDER BY b.name"),
+      pool.query("SELECT to_jsonb(e) AS data FROM public.employees e ORDER BY e.employee_id"),
+      pool.query("SELECT to_jsonb(p) AS data FROM public.payroll p ORDER BY p.period DESC"),
+      pool.query("SELECT employee_id, inc_details FROM public.employee_salary_defaults"),
+      pool.query(`SELECT employee_id, branch_id FROM public.attendance
+                  WHERE attendance_date >= make_date($1,$2,1)
+                    AND attendance_date < (make_date($1,$2,1) + INTERVAL '1 month')`, [year, month]),
+    ]);
+    return res.json({
+      ok: true,
+      branches: branches.rows.map(r => r.data),
+      employees: employees.rows.map(r => r.data),
+      payroll: payroll.rows.map(r => r.data),
+      salary_defaults: defaults.rows,
+      attendance: attendance.rows,
+    });
+  } catch (error) {
+    console.error("PAYROLL PAGE LOAD ERROR:", error.message);
+    return genericError(res, 503);
+  }
+});
+
 // ADMIN / BRANCH PAYROLL — read directly from the existing Neon schema.
 app.get(
   "/api/admin/payroll",
