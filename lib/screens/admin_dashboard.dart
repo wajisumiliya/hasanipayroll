@@ -11377,13 +11377,14 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     final branchesFuture = service.loadNeonBranches();
     final employeesFuture = service.loadNeonAdminDashboard(selectedMonth).then(
-      (data) => (data['employees'] as List)
-          .map((row) => Map<String, dynamic>.from(row as Map))
-          .where((row) =>
-              row['is_active'] == true &&
-              row['employment_status']?.toString().toLowerCase() != 'vacation')
-          .toList(),
-    );
+          (data) => (data['employees'] as List)
+              .map((row) => Map<String, dynamic>.from(row as Map))
+              .where((row) =>
+                  row['is_active'] == true &&
+                  row['employment_status']?.toString().toLowerCase() !=
+                      'vacation')
+              .toList(),
+        );
 
     await showDialog<void>(
       context: context,
