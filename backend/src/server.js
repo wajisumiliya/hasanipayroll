@@ -747,7 +747,14 @@ async function authenticate(
       });
     }
 
-    req.user = user;
+    // JWT branch scope is server-signed at login. Preserve it on the
+    // authenticated user so branch-only Daily Report PIN and save routes
+    // resolve the correct branch without changing existing PIN hashes.
+    const tokenBranchId = String(payload.app_metadata?.branch_id ?? "").trim();
+    req.user = {
+      ...user,
+      branchId: tokenBranchId || user.branchId || user.branch_id || null,
+    };
 
     req.auth = payload;
 
