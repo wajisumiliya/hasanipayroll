@@ -3,8 +3,6 @@ on:
   pull_request:
     branches: [main]
     paths: ['backend/**', 'lib/**', 'test/**', 'scripts/check-admin-browser.mjs', '.github/workflows/admin-browser.yml']
-  push:
-    branches: [codex/fix-admin-module-browser-requests]
 permissions:
   contents: read
 concurrency:
@@ -46,18 +44,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://bootstrap_test:local-ci-fixture-only@127.0.0.1:5432/hasani_bootstrap_test
       - run: flutter pub get --enforce-lockfile
-      - run: dart format lib test
-      - name: Export formatted changes
-        run: |
-          python3 - <<'PY'
-          import base64,subprocess
-          for path in subprocess.check_output(['git','diff','--name-only'],text=True).splitlines():
-              if path.startswith(('lib/','test/')):
-                  value=base64.b64encode(open(path,'rb').read()).decode()
-                  print('FORMAT_FILE_BEGIN '+path)
-                  for i in range(0,len(value),2000): print('FORMAT_DATA '+value[i:i+2000])
-                  print('FORMAT_FILE_END')
-          PY
+      - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
       - name: Start isolated fixture backend
         run: |

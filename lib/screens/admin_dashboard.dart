@@ -8819,8 +8819,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   Future<List<Map<String, dynamic>>> _loadEmployeeRequests() {
-    return _employeeRequestsFuture ??=
-        SupabaseService.getEmployeeRequests(status: _employeeRequestStatus == 'ALL' ? null : _employeeRequestStatus);
+    return _employeeRequestsFuture ??= SupabaseService.getEmployeeRequests(
+        status:
+            _employeeRequestStatus == 'ALL' ? null : _employeeRequestStatus);
   }
 
   void _refreshEmployeeRequests() {
@@ -8859,7 +8860,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ],
                 onChanged: (value) {
                   if (value == null) return;
-                  setState(() { _employeeRequestStatus = value; _employeeRequestsFuture = null; });
+                  setState(() {
+                    _employeeRequestStatus = value;
+                    _employeeRequestsFuture = null;
+                  });
                 },
               ),
               IconButton(
@@ -8886,7 +8890,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                 final requests =
                     snapshot.data ?? const <Map<String, dynamic>>[];
                 if (requests.isEmpty) {
-                  return Center(child: Text(_employeeRequestStatus == 'PENDING' ? 'No pending employee requests. Select All statuses to view history.' : 'No employee requests for this status.'));
+                  return Center(
+                      child: Text(_employeeRequestStatus == 'PENDING'
+                          ? 'No pending employee requests. Select All statuses to view history.'
+                          : 'No employee requests for this status.'));
                 }
                 return ListView.separated(
                   itemCount: requests.length,
@@ -8968,23 +8975,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                             ),
                             const SizedBox(width: 10),
                             if (request['status'] == 'PENDING') ...[
-                            OutlinedButton.icon(
-                              onPressed: () => _editEmployeeRequest(request),
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Edit'),
-                            ),
-                            const SizedBox(width: 8),
-                            OutlinedButton(
-                              onPressed: () => _rejectEmployeeRequest(request),
-                              child: const Text('Reject'),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton.icon(
-                              onPressed: () => _approveEmployeeRequest(request),
-                              icon: const Icon(Icons.check),
-                              label: const Text('Approve'),
-                            ),
-                            ] else _statusChip(request['status']?.toString() ?? ''),
+                              OutlinedButton.icon(
+                                onPressed: () => _editEmployeeRequest(request),
+                                icon: const Icon(Icons.edit_outlined),
+                                label: const Text('Edit'),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: () =>
+                                    _rejectEmployeeRequest(request),
+                                child: const Text('Reject'),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton.icon(
+                                onPressed: () =>
+                                    _approveEmployeeRequest(request),
+                                icon: const Icon(Icons.check),
+                                label: const Text('Approve'),
+                              ),
+                            ] else
+                              _statusChip(request['status']?.toString() ?? ''),
                           ],
                         ),
                       ),
@@ -11564,7 +11574,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             employees: branchEmployees,
                                             month: selectedMonth,
                                             closeBranchDialog: () {
-                                              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                                              if (dialogContext.mounted)
+                                                Navigator.of(dialogContext)
+                                                    .pop();
                                             },
                                           );
                                         },
@@ -11702,7 +11714,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     required String branchName,
     required List<Map<String, dynamic>> employees,
     required DateTime month,
-    required VoidCallback closeBranchDialog,
+    VoidCallback? closeBranchDialog,
   }) async {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final today = DateTime.now();
@@ -12071,7 +12083,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             return;
                           }
                           Navigator.of(selectionContext).pop();
-                          closeBranchDialog();
+                          closeBranchDialog?.call();
                           await _generateSelectedPayroll(
                             month: month,
                             employeeIds: ids,
@@ -12157,7 +12169,11 @@ class _AdminDashboardState extends State<AdminDashboard>
           builder: (errorContext) => AlertDialog(
             title: const Text('Payroll generation failed'),
             content: SelectableText(e.toString()),
-            actions: [TextButton(onPressed: () => Navigator.pop(errorContext), child: const Text('Close'))],
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(errorContext),
+                  child: const Text('Close'))
+            ],
           ),
         );
       }
