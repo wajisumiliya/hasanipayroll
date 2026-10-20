@@ -1,3 +1,4 @@
+import { isDailyReportPin } from "./daily-report-pin.js";
 import { findAccountByLogin, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
 import "dotenv/config";
 
@@ -2111,7 +2112,7 @@ app.post("/api/daily-reports/pin/verify", dailyReportPinLimiter, authenticate, a
   const branchId = dailyReportPinBranch(req, res);
   if (!branchId) return;
   const pin = String(req.body?.pin ?? "").trim();
-  if (!/^\\d{4}$/.test(pin)) {
+  if (!isDailyReportPin(pin)) {
     return res.status(400).json({ ok: false, message: "A four-digit PIN is required." });
   }
   const client = await pool.connect();
@@ -2167,7 +2168,7 @@ app.post("/api/daily-reports/pin/change", dailyReportPinLimiter, authenticate, a
   if (!branchId) return;
   const currentPin = String(req.body?.current_pin ?? "").trim();
   const newPin = String(req.body?.new_pin ?? "").trim();
-  if (!/^\\d{4}$/.test(currentPin) || !/^\\d{4}$/.test(newPin) || newPin === "2026") {
+  if (!isDailyReportPin(currentPin) || !isDailyReportPin(newPin) || newPin === "2026") {
     return res.status(400).json({ ok: false, message: "Choose a new four-digit PIN." });
   }
   const client = await pool.connect();
