@@ -354,17 +354,21 @@ class AppService extends ChangeNotifier {
   }
 
   Future<void> saveNeonDailyRosters(List<Map<String, dynamic>> rosters) async {
-    final data = await _postAuth('/api/attendance-sheet/rosters',
-        {'rosters': rosters}, authenticated: true);
-    if (data['ok'] != true) throw StateError(
-        data['message']?.toString() ?? 'Unable to save daily roster.');
+    final data = await _postAuth(
+        '/api/attendance-sheet/rosters', {'rosters': rosters},
+        authenticated: true);
+    if (data['ok'] != true)
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to save daily roster.');
   }
 
   Future<void> saveNeonAttendanceRow(Map<String, dynamic> attendance) async {
-    final data = await _postAuth('/api/attendance-sheet/save',
-        {'attendance': attendance}, authenticated: true);
-    if (data['ok'] != true) throw StateError(
-        data['message']?.toString() ?? 'Unable to save attendance.');
+    final data = await _postAuth(
+        '/api/attendance-sheet/save', {'attendance': attendance},
+        authenticated: true);
+    if (data['ok'] != true)
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to save attendance.');
   }
 
   Future<void> submitNeonAttendance({
@@ -372,13 +376,17 @@ class AppService extends ChangeNotifier {
     required String start,
     required String end,
   }) async {
-    final data = await _postAuth('/api/attendance-sheet/submit', {
-      'employee_id': employeeId,
-      'start': start,
-      'end': end,
-    }, authenticated: true);
-    if (data['ok'] != true) throw StateError(
-        data['message']?.toString() ?? 'Unable to submit attendance.');
+    final data = await _postAuth(
+        '/api/attendance-sheet/submit',
+        {
+          'employee_id': employeeId,
+          'start': start,
+          'end': end,
+        },
+        authenticated: true);
+    if (data['ok'] != true)
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to submit attendance.');
   }
 
   /// Salary and roster data for one employee, scoped by the Node JWT.
@@ -387,7 +395,8 @@ class AppService extends ChangeNotifier {
     required int year,
     required int month,
   }) async {
-    final uri = Uri(path: '/api/attendance-sheet/dependencies', queryParameters: {
+    final uri =
+        Uri(path: '/api/attendance-sheet/dependencies', queryParameters: {
       'employee_id': employeeId,
       'year': '$year',
       'month': '$month',
