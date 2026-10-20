@@ -1973,6 +1973,43 @@ app.get("/api/branches", authenticate, async (req, res) => {
   }
 });
 
+// Neon attendance-sheet dependencies: read only within the authenticated scope.
+app.get("/api/attendance-sheet/dependencies", authenticate, async (req, res) => {
+  try {
+    const role = String(req.user?.role ?? "").toUpperCase();
+    if (!["ADMIN", "BRANCH", "EMPLOYEE"].includes(role)) return res.status(403).json({ok:false,message:"Access denied."});
+    const employeeId = String(req.query.employee_id ?? "").trim();
+    const year = Number(req.query.year);
+    const month = Number(req.query.month);
+    if (!employeeId || !Number.isInteger(year) || year < 2000 || year > 2100 ||
+        !Number.isInteger(month) || month < 1 || month > 12) {
+      return res.status(400).json({ok:false,message:"Invalid attendance period or employee."});
+    }
+    const employee = await pool.query(
+      "SELECT employee_id, branch_id FROM public.employees WHERE employee_id = $1 LIMIT 1", [employeeId]);
+    if (!employee.rows.length) return res.status(404).json({ok:false,message:"Employee not found."});
+    const employeeBranch = String(employee.rows[0].branch_id ?? "").trim();
+    if (role === "BRANCH" &&
+        employeeBranch.toLowerCase() !== String(req.user.branchId ?? req.user.branch_id ?? "").trim().toLowerCase()) {
+      return res.status(403).json({ok:false,message:"Branch access denied."});
+    }
+    if (role === "EMPLOYEE" &&
+        employeeId !== String(req.user.employeeId ?? req.user.employee_id ?? "").trim()) {
+      return res.status(403).json({ok:false,message:"Access denied."});
+    }
+    const start = `${year}-${String(month).padStart(2,"0")}-01`;
+    const [salary, monthly, daily] = await Promise.all([
+      pool.query("SELECT eis_applicable, epf_category FROM public.employee_salary_defaults WHERE employee_id = $1 LIMIT 1", [employeeId]),
+      pool.query("SELECT to_jsonb(r) AS data FROM public.monthly_rosters r WHERE r.employee_id = $1 AND LOWER(TRIM(r.branch_id)) = LOWER(TRIM($2)) AND r.roster_year = $3 AND r.roster_month = $4 ORDER BY r.week_number", [employeeId,employeeBranch,year,month]),
+      pool.query("SELECT to_jsonb(r) AS data FROM public.daily_rosters r WHERE r.employee_id = $1 AND LOWER(TRIM(r.branch_id)) = LOWER(TRIM($2)) AND r.roster_date >= $3::date AND r.roster_date < ($3::date + INTERVAL '1 month') ORDER BY r.roster_date", [employeeId,employeeBranch,start])
+    ]);
+    return res.json({ok:true,salary:salary.rows[0] ?? null,monthly_rosters:monthly.rows.map(r=>r.data),daily_rosters:daily.rows.map(r=>r.data)});
+  } catch (error) {
+    console.error("ATTENDANCE DEPENDENCIES ERROR:",error.message);
+    return genericError(res,503);
+  }
+});
+
 // Neon attendance listing with JWT-based role and branch scope.
 app.get("/api/attendance", authenticate, async (req, res) => {
   try {

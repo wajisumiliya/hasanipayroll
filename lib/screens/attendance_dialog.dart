@@ -244,44 +244,51 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       }
 
-      // Both branch attendance and Admin need the salary rule to distinguish
-      // local automatic OT from foreign-staff manual OT.
-      if (!_salaryRuleLoaded) {
-        await _loadSalaryWorkingRule(employeeId);
-      }
-
-      final rosterRows = await SupabaseService.getMonthlyRosters(
-        branchId: _watermarkBranchName,
-        year: widget.month.year,
-        month: widget.month.month,
-        employeeId: employeeId,
-      );
-      _weeklyRoster
-        ..clear()
-        ..addEntries(rosterRows
-            .map((row) => MapEntry(_intValue(row['week_number']), row)));
-      final dailyRosterRows = await SupabaseService.getDailyRosters(
-        branchId: widget.branchId,
-        employeeId: employeeId,
-        start: DateTime(widget.month.year, widget.month.month, 1),
-        end: DateTime(widget.month.year, widget.month.month + 1, 1),
-      );
-      _dailyRoster
-        ..clear()
-        ..addEntries(dailyRosterRows.map((row) {
-          final date = DateTime.parse(row['roster_date'].toString());
-          return MapEntry(date.day, row);
-        }));
-
-      final start = DateTime(widget.month.year, widget.month.month, 1);
-      final end = DateTime(widget.month.year, widget.month.month + 1, 1);
-
-      // Attendance comes from Neon; the API enforces role/branch scope.
+      // Attendance must load independently of optional roster lookups.
+      // During the Neon cutover, legacy PostgREST can reject the Node JWT
+      // (PGRST301). Do not block the employee's attendance sheet on that.
       final allRows = await SupabaseService.getAttendanceByEmployeeMonth(
         employeeId,
         widget.month.year,
         widget.month.month,
       );
+
+      // Fetch salary and rosters from the same authenticated Neon backend.
+      // Legacy PostgREST rejects Node-issued JWTs with PGRST301.
+      final dependencies = await AppService.instance.loadAttendanceSheetDependencies(
+        employeeId: employeeId,
+        year: widget.month.year,
+        month: widget.month.month,
+      );
+      final salary = dependencies['salary'];
+      if (salary is Map) {
+        final epfCategory = (salary['epf_category'] ?? '')
+            .toString().trim().toLowerCase();
+        final eisApplicable = _toBool(salary['eis_applicable']);
+        if (epfCategory == 'normal1' || eisApplicable) {
+          _requiredWorkHours = 7.5;
+          _isLocalStaff = true;
+        } else {
+          _requiredWorkHours = 10.5;
+          _isLocalStaff = false;
+        }
+      }
+      _salaryRuleLoaded = true;
+      final monthly = dependencies['monthly_rosters'] as List;
+      final daily = dependencies['daily_rosters'] as List;
+      _weeklyRoster
+        ..clear()
+        ..addEntries(monthly.map((value) {
+          final row = Map<String, dynamic>.from(value as Map);
+          return MapEntry(_intValue(row['week_number']), row);
+        }));
+      _dailyRoster
+        ..clear()
+        ..addEntries(daily.map((value) {
+          final row = Map<String, dynamic>.from(value as Map);
+          return MapEntry(DateTime.parse(row['roster_date'].toString()).day, row);
+        }));
+
       final rows = widget.editable
           ? allRows
           : allRows.where((row) => _toBool(row['is_submitted'])).toList();
