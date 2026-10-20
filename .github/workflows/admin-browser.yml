@@ -1,0 +1,82 @@
+name: Admin module browser checks
+on:
+  pull_request:
+    branches: [main]
+    paths: ['backend/**', 'lib/**', 'test/**', 'scripts/check-admin-browser.mjs', '.github/workflows/admin-browser.yml']
+  push:
+    branches: [codex/fix-admin-module-browser-requests]
+permissions:
+  contents: read
+concurrency:
+  group: admin-browser-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: bootstrap_test
+          POSTGRES_PASSWORD: local-ci-fixture-only
+          POSTGRES_DB: hasani_bootstrap_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bootstrap_test -d hasani_bootstrap_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      BOOTSTRAP_TEST_DATABASE_URL: postgresql://bootstrap_test:local-ci-fixture-only@127.0.0.1:5432/hasani_bootstrap_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - run: npm ci
+        working-directory: backend
+      - run: npm run db:generate
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://bootstrap_test:local-ci-fixture-only@127.0.0.1:5432/hasani_bootstrap_test
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format lib test
+      - name: Export formatted changes
+        run: |
+          python3 - <<'PY'
+          import base64,subprocess
+          for path in subprocess.check_output(['git','diff','--name-only'],text=True).splitlines():
+              if path.startswith(('lib/','test/')):
+                  value=base64.b64encode(open(path,'rb').read()).decode()
+                  print('FORMAT_FILE_BEGIN '+path)
+                  for i in range(0,len(value),2000): print('FORMAT_DATA '+value[i:i+2000])
+                  print('FORMAT_FILE_END')
+          PY
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - name: Start isolated fixture backend
+        run: |
+          node backend/scripts/start-browser-fixture.js > /tmp/hasani-module-api.log 2>&1 &
+          echo $! > /tmp/hasani-module-api.pid
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:3501/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/hasani-module-api.log
+          exit 1
+      - name: Build actual Flutter service checks for Chrome
+        run: flutter build web --release --no-pub --target=test/browser/admin_modules.dart --dart-define=API_BASE_URL=http://127.0.0.1:3501 --output=build/module-browser
+      - name: Run with browser CORS enforcement
+        run: node scripts/check-admin-browser.mjs
+      - name: Fixture diagnostics
+        if: failure()
+        run: cat /tmp/hasani-module-api.log || true
+      - name: Stop fixture backend
+        if: always()
+        run: |
+          if [ -f /tmp/hasani-module-api.pid ]; then kill "$(cat /tmp/hasani-module-api.pid)" || true; fi
