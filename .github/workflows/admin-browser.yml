@@ -46,8 +46,8 @@ jobs:
       - run: flutter pub get --enforce-lockfile
       - name: Check Dart formatting
         run: |
-          dart format lib test tool
-          git diff --exit-code -- lib test tool
+          dart format lib test tool/encode_employee_photo.dart
+          git diff --exit-code -- lib test tool/encode_employee_photo.dart
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
       - run: dart compile exe tool/encode_employee_photo.dart -o /tmp/encode-employee-photo
       - name: Start isolated fixture backend

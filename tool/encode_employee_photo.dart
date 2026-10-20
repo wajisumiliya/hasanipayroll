@@ -1,6 +1,5 @@
 // One-shot migration helper. Reads image bytes from stdin and writes a small JPEG.
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 Future<void> main() async {
@@ -10,7 +9,7 @@ Future<void> main() async {
       input.addAll(chunk);
       if (input.length > 5 * 1024 * 1024) throw StateError('Photo too large');
     }
-    final decoded = img.decodeImage(Uint8List.fromList(input));
+    final decoded = img.decodeImage(input);
     if (decoded == null || decoded.width * decoded.height > 40000000) {
       throw StateError('Invalid photo');
     }

@@ -44,7 +44,8 @@ void main() {
         throwsStateError);
   });
 
-  test('photo upload sends bytes and authentication only to the app backend', () async {
+  test('photo upload sends bytes and authentication only to the app backend',
+      () async {
     NeonApi.setAccessToken('private-session');
     final client = MockClient((request) async {
       expect(request.url.origin, Uri.parse(NeonApi.baseUrl).origin);
@@ -54,12 +55,16 @@ void main() {
       expect(request.bodyBytes, [255, 216, 255, 217]);
       return http.Response('{"ok":true}', 200);
     });
-    await NeonApi.photoRequest('FIX_E1', method: 'PUT',
+    await NeonApi.photoRequest('FIX_E1',
+        method: 'PUT',
         bytes: Uint8List.fromList([255, 216, 255, 217]),
-        contentType: 'image/jpeg', client: client);
+        contentType: 'image/jpeg',
+        client: client);
   });
 
-  test('photo read authenticates and returns bytes, missing photos use fallback', () async {
+  test(
+      'photo read authenticates and returns bytes, missing photos use fallback',
+      () async {
     NeonApi.setAccessToken('private-session');
     final client = MockClient((request) async {
       expect(request.headers['Authorization'], 'Bearer private-session');
@@ -70,6 +75,7 @@ void main() {
     expect(await NeonApi.photoRequest('FIX_E1', client: client), [1, 2, 3]);
     expect(await NeonApi.photoRequest('FIX_MISSING', client: client), null);
     NeonApi.setAccessToken(null);
-    await expectLater(NeonApi.photoRequest('FIX_E1', client: client), throwsStateError);
+    await expectLater(
+        NeonApi.photoRequest('FIX_E1', client: client), throwsStateError);
   });
 }

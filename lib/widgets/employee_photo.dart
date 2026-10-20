@@ -12,7 +12,8 @@ void invalidateEmployeePhoto(String employeeId) {
   _photoCache.removeWhere((key, _) => key.startsWith('$employeeId:'));
 }
 
-Future<Uint8List?> loadEmployeePhoto(String employeeId, String? reference) async {
+Future<Uint8List?> loadEmployeePhoto(
+    String employeeId, String? reference) async {
   if (_photoCacheSession != NeonApi.sessionVersion) {
     _photoCache.clear();
     _photoCacheSession = NeonApi.sessionVersion;
@@ -112,7 +113,8 @@ class _EmployeePhotoImageState extends State<EmployeePhotoImage> {
       builder: (context, snapshot) {
         final bytes = snapshot.data;
         if (snapshot.connectionState != ConnectionState.done ||
-            bytes == null || bytes.isEmpty) {
+            bytes == null ||
+            bytes.isEmpty) {
           return widget.fallbackBuilder(context);
         }
         return Image.memory(

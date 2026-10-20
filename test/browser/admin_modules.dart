@@ -2,6 +2,7 @@
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:convert';
 import 'dart:html' as html;
+import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:hasani_payroll_portal/services/neon_api.dart';
 import 'package:hasani_payroll_portal/widgets/employee_photo.dart';
@@ -31,14 +32,23 @@ Future<void> main() async {
     final loadedPhoto = await loadEmployeePhoto('FIX_E1', reference);
     require(base64Encode(loadedPhoto!) == base64Encode(photo),
         'Neon photo bytes did not roundtrip');
+    final codec = await ui.instantiateImageCodec(loadedPhoto);
+    final frame = await codec.getNextFrame();
+    require(frame.image.width == 1, 'Photo cannot be decoded for display');
+    frame.image.dispose();
+    codec.dispose();
+    final newPhoto = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC');
     final replacement = await SupabaseService.uploadEmployeePhoto(
-        employeeId: 'FIX_E1', bytes: photo, contentType: 'image/png');
-    require(await loadEmployeePhoto('FIX_E1', replacement) != null,
+        employeeId: 'FIX_E1', bytes: newPhoto, contentType: 'image/png');
+    final refreshed = await loadEmployeePhoto('FIX_E1', replacement);
+    require(base64Encode(refreshed!) == base64Encode(newPhoto),
         'Replacement photo did not reload');
     await SupabaseService.removeEmployeePhoto('FIX_E1');
     require(await NeonApi.photoRequest('FIX_E1') == null,
         'Deleted photo is still available');
-    completed.add('Neon photo upload, authenticated read, replacement and delete');
+    completed
+        .add('Neon photo upload, authenticated read, replacement and delete');
     final generated = await AttendancePayrollService.generateMonthlyPayroll(
       month: DateTime(2026, 10),
       employeeIds: ['FIX_E1'],

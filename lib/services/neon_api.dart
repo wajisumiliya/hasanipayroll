@@ -79,7 +79,8 @@ class NeonApi {
     }
     final request = http.Request(
       method,
-      Uri.parse('$baseUrl/api/employee-photos/${Uri.encodeComponent(employeeId)}'),
+      Uri.parse(
+          '$baseUrl/api/employee-photos/${Uri.encodeComponent(employeeId)}'),
     );
     request.headers['Authorization'] = 'Bearer $token';
     if (contentType != null) request.headers['Content-Type'] = contentType;
@@ -91,7 +92,8 @@ class NeonApi {
       );
       if (method == 'GET' && response.statusCode == 404) return null;
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Unable to $method employee photo (${response.statusCode}).');
+        throw StateError(
+            'Unable to $method employee photo (${response.statusCode}).');
       }
       return method == 'GET' ? response.bodyBytes : null;
     } finally {
