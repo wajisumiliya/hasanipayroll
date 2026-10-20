@@ -244,44 +244,53 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       }
 
-      // Both branch attendance and Admin need the salary rule to distinguish
-      // local automatic OT from foreign-staff manual OT.
-      if (!_salaryRuleLoaded) {
-        await _loadSalaryWorkingRule(employeeId);
-      }
-
-      final rosterRows = await SupabaseService.getMonthlyRosters(
-        branchId: _watermarkBranchName,
-        year: widget.month.year,
-        month: widget.month.month,
-        employeeId: employeeId,
-      );
-      _weeklyRoster
-        ..clear()
-        ..addEntries(rosterRows
-            .map((row) => MapEntry(_intValue(row['week_number']), row)));
-      final dailyRosterRows = await SupabaseService.getDailyRosters(
-        branchId: widget.branchId,
-        employeeId: employeeId,
-        start: DateTime(widget.month.year, widget.month.month, 1),
-        end: DateTime(widget.month.year, widget.month.month + 1, 1),
-      );
-      _dailyRoster
-        ..clear()
-        ..addEntries(dailyRosterRows.map((row) {
-          final date = DateTime.parse(row['roster_date'].toString());
-          return MapEntry(date.day, row);
-        }));
-
-      final start = DateTime(widget.month.year, widget.month.month, 1);
-      final end = DateTime(widget.month.year, widget.month.month + 1, 1);
-
-      // Attendance comes from Neon; the API enforces role/branch scope.
+      // Attendance must load independently of optional roster lookups.
+      // During the Neon cutover, legacy PostgREST can reject the Node JWT
+      // (PGRST301). Do not block the employee's attendance sheet on that.
       final allRows = await SupabaseService.getAttendanceByEmployeeMonth(
         employeeId,
         widget.month.year,
         widget.month.month,
       );
+
+      // Salary rules affect OT and target hours: do not silently substitute
+      // defaults when editing, as that could change payroll calculations.
+      if (!_salaryRuleLoaded) {
+        try {
+          await _loadSalaryWorkingRule(employeeId);
+        } catch (_) {
+          if (widget.editable) rethrow;
+        }
+      }
+
+      _weeklyRoster.clear();
+      _dailyRoster.clear();
+      try {
+        final rosterRows = await SupabaseService.getMonthlyRosters(
+          branchId: _watermarkBranchName,
+          year: widget.month.year,
+          month: widget.month.month,
+          employeeId: employeeId,
+        );
+        _weeklyRoster.addEntries(rosterRows
+            .map((row) => MapEntry(_intValue(row['week_number']), row)));
+        final dailyRosterRows = await SupabaseService.getDailyRosters(
+          branchId: widget.branchId,
+          employeeId: employeeId,
+          start: DateTime(widget.month.year, widget.month.month, 1),
+          end: DateTime(widget.month.year, widget.month.month + 1, 1),
+        );
+        _dailyRoster.addEntries(dailyRosterRows.map((row) {
+          final date = DateTime.parse(row['roster_date'].toString());
+          return MapEntry(date.day, row);
+        }));
+      } catch (_) {
+        // Missing roster data must not prevent viewing attendance.
+        // Editing is blocked until roster access is restored to avoid
+        // calculating attendance against an incorrect schedule.
+        if (widget.editable) rethrow;
+      }
+
       final rows = widget.editable
           ? allRows
           : allRows.where((row) => _toBool(row['is_submitted'])).toList();
