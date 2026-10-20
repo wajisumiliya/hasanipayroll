@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/app_service.dart';
 import '../services/ea_form_pdf_service.dart';
@@ -32,57 +31,25 @@ class _EaFormsPageState extends State<EaFormsPage> {
   String _search = '';
   final TextEditingController _searchController = TextEditingController();
   Future<List<Map<String, dynamic>>>? _future;
-  RealtimeChannel? _realtimeChannel;
-  Timer? _realtimeReloadTimer;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _reload();
-    _subscribeToEaFormChanges();
-  }
-
-  void _subscribeToEaFormChanges() {
-    final channel = SupabaseService.client.channel(
-      'ea-forms-${widget.isAdmin ? 'admin' : widget.employeeId}-$hashCode',
+    // EA forms load through the authenticated Neon-backed data service.
+    // Poll instead of listening to legacy Supabase database changes.
+    _refreshTimer = Timer.periodic(
+      const Duration(minutes: 5),
+      (_) {
+        if (mounted && !_busy) _reload();
+      },
     );
-    if (widget.isAdmin) {
-      channel.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: 'employee_ea_forms',
-        callback: (_) => _scheduleRealtimeReload(),
-      );
-    } else {
-      channel.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: 'employee_ea_forms',
-        filter: PostgresChangeFilter(
-          type: PostgresChangeFilterType.eq,
-          column: 'employee_id',
-          value: widget.employeeId!,
-        ),
-        callback: (_) => _scheduleRealtimeReload(),
-      );
-    }
-    _realtimeChannel = channel..subscribe();
-  }
-
-  void _scheduleRealtimeReload() {
-    _realtimeReloadTimer?.cancel();
-    _realtimeReloadTimer = Timer(const Duration(milliseconds: 500), () {
-      if (mounted) _reload();
-    });
   }
 
   @override
   void dispose() {
-    _realtimeReloadTimer?.cancel();
-    final channel = _realtimeChannel;
-    if (channel != null) {
-      SupabaseService.client.removeChannel(channel);
-    }
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
