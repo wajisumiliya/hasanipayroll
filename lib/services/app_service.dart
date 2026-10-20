@@ -6,7 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:postgrest/postgrest.dart';
+import 'neon_api.dart';
 
 import '../models/payroll.dart';
 import '../screens/supabase_service.dart';
@@ -181,8 +182,6 @@ class AppService extends ChangeNotifier {
   static const String _currentUserStorageKey = 'hasani_current_user';
 
   PostgrestClient get _database => SupabaseService.database;
-
-  SupabaseClient get _supabase => SupabaseService.client;
 
   static const String _authApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -706,12 +705,7 @@ class AppService extends ChangeNotifier {
       _accessToken = token;
       _dataAccessToken = session['data_access_token']?.toString();
       _currentUser = app_user.fromJson(Map<String, dynamic>.from(savedUser));
-      if (!SupabaseService.usesNeonDatabase ||
-          _dataAccessToken?.isNotEmpty == true) {
-        _applyDatabaseSession();
-      }
-      _supabase.storage.setAuth(token);
-      await _supabase.realtime.setAuth(token);
+      _applyDatabaseSession();
 
       try {
         final validation = await _getAuth('/api/auth/me');
@@ -721,7 +715,7 @@ class AppService extends ChangeNotifier {
           _accessToken = null;
           SupabaseService.setDatabaseAuth(null);
           _dataAccessToken = null;
-          await _supabase.realtime.setAuth(null);
+
           notifyListeners();
           return;
         }
@@ -755,7 +749,6 @@ class AppService extends ChangeNotifier {
       _accessToken = null;
       SupabaseService.setDatabaseAuth(null);
       _dataAccessToken = null;
-      await _supabase.realtime.setAuth(null);
     }
     notifyListeners();
   }
@@ -804,7 +797,9 @@ class AppService extends ChangeNotifier {
 
   Future<void> loadUsersFromSupabase() async {
     try {
-      final response = await _database.from('app_user').select();
+      final result =
+          await NeonApi.jsonRequest('/api/admin/users', method: 'GET');
+      final response = result['users'] as List;
 
       users.clear();
 
@@ -1594,8 +1589,6 @@ class AppService extends ChangeNotifier {
       }
       _dataAccessToken = data['dataAccessToken']?.toString();
       _applyDatabaseSession();
-      _supabase.storage.setAuth(_accessToken!);
-      await _supabase.realtime.setAuth(_accessToken);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -1795,8 +1788,6 @@ class AppService extends ChangeNotifier {
       }
       _dataAccessToken = data['dataAccessToken']?.toString();
       _applyDatabaseSession();
-      _supabase.storage.setAuth(_accessToken!);
-      await _supabase.realtime.setAuth(_accessToken);
 
       _firstLoginOtpState = null;
       await _persistCurrentUser();
@@ -1876,7 +1867,7 @@ class AppService extends ChangeNotifier {
     _employeeGardenProgress = const EmployeeGardenProgress();
     SupabaseService.setDatabaseAuth(null);
     _dataAccessToken = null;
-    await _supabase.realtime.setAuth(null);
+
     await _clearStoredUser();
 
     notifyListeners();
@@ -2270,10 +2261,10 @@ class AppService extends ChangeNotifier {
             employee.employeeId,
           );
 
-      await _database.from('app_user').delete().eq(
-            'employee_id',
-            employee.employeeId,
-          );
+      await NeonApi.jsonRequest(
+        '/api/admin/employees/${Uri.encodeComponent(employee.employeeId)}/account',
+        method: 'DELETE',
+      );
 
       await _database.from('employees').delete().eq(
             'employee_id',

@@ -3,9 +3,8 @@ import '../services/app_service.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../services/database_session.dart';
+import 'package:postgrest/postgrest.dart';
+import '../services/neon_api.dart';
 
 class SupabaseService {
   // Diagnostics are debug-only and must not include payroll or identity data.
@@ -81,120 +80,55 @@ class SupabaseService {
   // SUPABASE CONFIGURATION
   // ============================================================
 
-  static const String supabaseUrl = 'https://qychfoxygqzmtsqtxihp.supabase.co';
-
-  static const String supabaseAnonKey =
-      'sb_publishable_zZk97NP7edFidJ0HBCUKtQ_SAQ69tId';
-
-  /// Neon Data API endpoint used for PostgreSQL queries after cutover.
-  ///
-  /// Keep this empty in existing builds to retain the current Supabase REST
-  /// endpoint. Production Neon builds provide it with:
-  /// `--dart-define=NEON_DATA_API_URL=https://...`
-  static const String neonDataApiUrl = String.fromEnvironment(
-    'NEON_DATA_API_URL',
+  // Retain this class name for existing screens. Every query now goes to the
+  // authenticated Node/Neon backend; there is no legacy endpoint fallback.
+  static final PostgrestClient database = PostgrestClient(
+    '${NeonApi.baseUrl}/api/data',
   );
 
-  // ============================================================
-  // CLIENT
-  // ============================================================
+  static bool get usesNeonDatabase => true;
 
-  static SupabaseClient get client => Supabase.instance.client;
-
-  static bool get usesNeonDatabase => neonDataApiUrl.trim().isNotEmpty;
-
-  static final PostgrestClient? _neonDatabase =
-      neonDataApiUrl.trim().isEmpty ? null : PostgrestClient(neonDataApiUrl);
-
-  /// Database-only client. Auth, Storage, Realtime, and Edge Functions must
-  /// continue through [client] until their Neon adapters are enabled.
-  static PostgrestClient get database => _neonDatabase ?? client.rest;
-
-  /// API tokens remain on the Node API / legacy services. Neon accepts only
-  /// the separately signed data token verified through the backend JWKS.
   static void setDatabaseSession({
     required String? accessToken,
     required String? dataAccessToken,
   }) {
-    setDatabaseAuth(databaseSessionToken(
-      usesNeon: usesNeonDatabase,
-      accessToken: accessToken,
-      dataAccessToken: dataAccessToken,
-    ));
+    NeonApi.setAccessToken(accessToken);
+    database.setAuth(accessToken);
   }
 
   static void setDatabaseAuth(String? token) {
+    NeonApi.setAccessToken(token);
     database.setAuth(token);
   }
+
+  static Future<void> initialize() async {}
 
   static Future<String> uploadEmployeePhoto({
     required String employeeId,
     required Uint8List bytes,
     required String contentType,
   }) async {
-    final safeId = employeeId.trim().replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
-    if (safeId.isEmpty) throw ArgumentError('Employee ID is required.');
-
-    final path = '$safeId/profile';
-    await client.storage.from('employee-photos').uploadBinary(
-          path,
-          bytes,
-          fileOptions: FileOptions(
-            contentType: contentType,
-            cacheControl: '31536000',
-            upsert: true,
-          ),
-        );
-    // Store the object path, not a permanent public URL. EmployeePhoto resolves
-    // this path to a short-lived signed URL for authenticated viewers.
+    final signed = await NeonApi.jsonRequest(
+      '/api/employee-photos/${Uri.encodeComponent(employeeId)}/sign',
+      body: {'method': 'PUT', 'contentType': contentType},
+    );
+    await NeonApi.objectRequest(signed, method: 'PUT', bytes: bytes);
+    final objectKey = signed['objectKey'].toString();
     await database
         .from('employees')
-        .update({'photo_url': path}).eq('employee_id', employeeId.trim());
-    return path;
+        .update({'photo_url': objectKey}).eq('employee_id', employeeId);
+    return objectKey;
   }
 
   static Future<void> removeEmployeePhoto(String employeeId) async {
-    final safeId = employeeId.trim().replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
-    if (safeId.isEmpty) return;
-    await client.storage.from('employee-photos').remove(['$safeId/profile']);
+    final signed = await NeonApi.jsonRequest(
+      '/api/employee-photos/${Uri.encodeComponent(employeeId)}/sign',
+      body: {'method': 'DELETE'},
+    );
+    await NeonApi.objectRequest(signed, method: 'DELETE');
     await database
         .from('employees')
-        .update({'photo_url': null}).eq('employee_id', employeeId.trim());
-  }
-
-  // ============================================================
-  // INITIALIZE
-  // ============================================================
-
-  static Future<void> initialize() async {
-    try {
-      await Supabase.initialize(
-        url: supabaseUrl,
-        publishableKey: supabaseAnonKey,
-      );
-
-      _debugLog('======================================');
-      _debugLog('SUPABASE INITIALIZED');
-      _debugLog('======================================');
-    } catch (e, stackTrace) {
-      _debugLog('======================================');
-      _debugLog('SUPABASE INITIALIZATION ERROR');
-      _debugLog('======================================');
-      rethrow;
-    }
-  }
-
-  // ============================================================
-  // CURRENT USER
-  // ============================================================
-
-  static User? get currentUser {
-    try {
-      return client.auth.currentUser;
-    } catch (e) {
-      _debugLog('CURRENT USER ERROR');
-      return null;
-    }
+        .update({'photo_url': null}).eq('employee_id', employeeId);
   }
 
   // ============================================================
@@ -275,35 +209,6 @@ class SupabaseService {
   // ============================================================
   // AUTH
   // ============================================================
-
-  static Future<AuthResponse> signIn({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      final response = await client.auth.signInWithPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-      _debugLog('LOGIN SUCCESS');
-
-      return response;
-    } catch (e, stackTrace) {
-      _debugLog('LOGIN ERROR');
-      rethrow;
-    }
-  }
-
-  static Future<void> signOut() async {
-    try {
-      await client.auth.signOut();
-      _debugLog('LOGOUT SUCCESS');
-    } catch (e, stackTrace) {
-      _debugLog('LOGOUT ERROR');
-      rethrow;
-    }
-  }
 
   // ============================================================
   // CONNECTION TEST
@@ -1421,10 +1326,10 @@ class SupabaseService {
             'status': approve ? 'approved' : 'rejected',
             'approved_minutes': approve ? approvedOtMinutes : null,
             'reviewed_at': DateTime.now().toUtc().toIso8601String(),
-            'reviewed_by': currentUser?.id,
+            'reviewed_by': null,
             'admin_approved_at':
                 approve ? DateTime.now().toUtc().toIso8601String() : null,
-            'admin_approved_by': approve ? currentUser?.id : null,
+            'admin_approved_by': approve ? null : null,
           })
           .eq('id', requestId)
           .select('id,status,approved_minutes');
@@ -2275,27 +2180,14 @@ class SupabaseService {
   // ============================================================
 
   static Future<Map<String, dynamic>?> getApplicationUser(
-    String username,
-  ) async {
-    try {
-      final response = await database
-          .from('users')
-          .select()
-          .eq(
-            'username',
-            username.trim(),
-          )
-          .maybeSingle();
-
-      if (response == null) {
-        return null;
-      }
-
-      return _map(response);
-    } catch (e, stackTrace) {
-      _debugLog('GET APPLICATION USER ERROR');
-      rethrow;
-    }
+      String username) async {
+    final response = await NeonApi.jsonRequest(
+      '/api/auth/user/${Uri.encodeComponent(username.trim())}',
+      method: 'GET',
+    );
+    return response['user'] is Map
+        ? Map<String, dynamic>.from(response['user'] as Map)
+        : null;
   }
 
   // ============================================================

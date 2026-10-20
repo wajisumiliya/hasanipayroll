@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/neon_api.dart';
 
-// Share signed URLs between photo widgets for 50 minutes. A signed URL remains
-// valid for 60 minutes; refreshing early avoids displaying expired links.
+// Share signed URLs between photo widgets for four minutes. R2 URLs remain
+// valid for five minutes; refreshing early avoids displaying expired links.
 final Map<String, ({Future<String?> url, DateTime expiresAt})>
     _employeePhotoSignedUrlCache = {};
 
 Future<String?> _cachedEmployeePhotoSignedUrl(String path) async {
   final now = DateTime.now();
-  final existing = _employeePhotoSignedUrlCache[path];
+  final cacheKey = '${NeonApi.sessionVersion}:$path';
+  final existing = _employeePhotoSignedUrlCache[cacheKey];
   if (existing != null && existing.expiresAt.isAfter(now)) {
     return existing.url;
   }
@@ -16,17 +17,19 @@ Future<String?> _cachedEmployeePhotoSignedUrl(String path) async {
   _employeePhotoSignedUrlCache.removeWhere(
     (_, entry) => !entry.expiresAt.isAfter(now),
   );
-  final future = Supabase.instance.client.storage
-      .from('employee-photos')
-      .createSignedUrl(path, 3600);
-  _employeePhotoSignedUrlCache[path] = (
+  final employeeId = path.split('/').first;
+  final future = NeonApi.jsonRequest(
+    '/api/employee-photos/${Uri.encodeComponent(employeeId)}/sign',
+    body: {'method': 'GET'},
+  ).then<String?>((value) => value['url']?.toString());
+  _employeePhotoSignedUrlCache[cacheKey] = (
     url: future,
-    expiresAt: now.add(const Duration(minutes: 50)),
+    expiresAt: now.add(const Duration(minutes: 4)),
   );
   try {
     return await future;
   } catch (_) {
-    _employeePhotoSignedUrlCache.remove(path);
+    _employeePhotoSignedUrlCache.remove(cacheKey);
     return null;
   }
 }
@@ -36,6 +39,9 @@ Future<String?> resolveEmployeePhotoUrl(String? photoUrl) async {
   if (raw.isEmpty) return null;
 
   var path = raw;
+  if (path.startsWith('employee-photos/')) {
+    path = path.substring('employee-photos/'.length);
+  }
   const markers = [
     '/storage/v1/object/public/employee-photos/',
     '/storage/v1/object/authenticated/employee-photos/',
@@ -51,11 +57,13 @@ Future<String?> resolveEmployeePhotoUrl(String? photoUrl) async {
     }
   }
 
-  // Preserve genuinely external legacy photo URLs. Supabase Storage URLs are
-  // always converted back to an object path and freshly signed.
+  // Legacy object paths are resolved against the existing R2 backend.
+  // Never request or sign an object through the previous storage provider.
   if (!storagePathFound && Uri.tryParse(raw)?.hasAbsolutePath == true) {
     final uri = Uri.tryParse(raw);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      if (uri.host.endsWith('.supabase.co') ||
+          uri.host.endsWith('.supabase.in')) return null;
       return raw;
     }
   }

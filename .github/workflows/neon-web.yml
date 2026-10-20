@@ -1,0 +1,29 @@
+name: Neon web
+on:
+  pull_request:
+    branches: [main, neon-dev]
+    paths: ['lib/**', 'test/**', 'pubspec.*', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
+  push:
+    branches: [main, codex/remove-remaining-supabase]
+    paths: ['lib/**', 'test/**', 'pubspec.*', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
+permissions:
+  contents: read
+concurrency:
+  group: neon-web-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test
+      - run: bash scripts/render-build-web.sh
