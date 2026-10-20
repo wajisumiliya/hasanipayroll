@@ -12,7 +12,6 @@ import '../models/payroll.dart';
 import '../services/app_service.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
-import '../services/notification_presenter.dart';
 import 'employee_ot_request_page.dart';
 import 'employee_leave_request_page.dart';
 import 'login_screen.dart';
@@ -43,8 +42,6 @@ class _EmployeePortalState extends State<EmployeePortal>
   late final AnimationController _birthdayController;
   Timer? _birthdayCelebrationTimer;
   Timer? _notificationRefreshTimer;
-  Timer? _notificationRealtimeDebounce;
-  RealtimeChannel? _notificationChannel;
   Timer? _payrollRefreshTimer;
   bool _showBirthdayCelebration = false;
   List<Map<String, dynamic>> _notifications = const [];
@@ -70,7 +67,6 @@ class _EmployeePortalState extends State<EmployeePortal>
       });
     }
     _loadEmployeeNotifications();
-    _subscribeToNotifications();
     _subscribeToPayroll();
     unawaited(_refreshPayroll());
     _refreshGarden();
@@ -78,40 +74,6 @@ class _EmployeePortalState extends State<EmployeePortal>
       const Duration(minutes: 5),
       (_) => _loadEmployeeNotifications(),
     );
-  }
-
-  void _subscribeToNotifications() {
-    if (employeeId.isEmpty) return;
-    _notificationChannel = SupabaseService.client
-        .channel('employee-notifications-$employeeId-$hashCode')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'app_notifications',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'employee_id',
-            value: employeeId,
-          ),
-          callback: (payload) {
-            final title =
-                payload.newRecord['title']?.toString() ?? 'Hasani Payroll';
-            final body = payload.newRecord['body']?.toString() ?? '';
-            if (body.isNotEmpty) {
-              unawaited(
-                NotificationPresenter.show(title: title, body: body),
-              );
-            }
-            _notificationRealtimeDebounce?.cancel();
-            _notificationRealtimeDebounce = Timer(
-              const Duration(milliseconds: 500),
-              () {
-                if (mounted) _loadEmployeeNotifications();
-              },
-            );
-          },
-        )
-        .subscribe();
   }
 
   void _subscribeToPayroll() {
@@ -366,12 +328,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   void dispose() {
     _birthdayCelebrationTimer?.cancel();
     _notificationRefreshTimer?.cancel();
-    _notificationRealtimeDebounce?.cancel();
     _payrollRefreshTimer?.cancel();
-    final notificationChannel = _notificationChannel;
-    if (notificationChannel != null) {
-      SupabaseService.client.removeChannel(notificationChannel);
-    }
     _birthdayController.dispose();
     super.dispose();
   }
