@@ -2,7 +2,8 @@
 export function installPenguinPetApi(app,{pool,authenticate}) {
  const route='/api/employee/penguin';
  const employeeId=req => {
-  if (String(req.user?.role||'').toLowerCase()!=='employee' || req.auth?.app_metadata?.is_reviewer) return null;
+  const metadata=req.auth?.app_metadata||{};
+  if (String(req.user?.role||'').toLowerCase()!=='employee' || metadata.is_reviewer || ['attendance','requests'].includes(metadata.staff_scope)) return null;
   return String(req.user?.employeeId||req.user?.employee_id||req.auth?.employeeId||req.auth?.app_metadata?.employee_id||'').trim() || null;
  };
  const view=row=>{
@@ -17,8 +18,9 @@ export function installPenguinPetApi(app,{pool,authenticate}) {
  async function handler(req,res,action) {
   const id=employeeId(req);
   if(!id) return res.status(403).json({ok:false,message:'Employee access required'});
-  const client=await pool.connect();
+  let client;
   try {
+   client=await pool.connect();
    await client.query('BEGIN');
    // Serialize concurrent requests for this employee.
    const employee=await client.query('SELECT employee_id FROM public.employees WHERE employee_id=$1 AND is_active IS TRUE FOR UPDATE',[id]);
@@ -32,10 +34,10 @@ export function installPenguinPetApi(app,{pool,authenticate}) {
    await client.query('COMMIT');
    return res.set('Cache-Control','no-store').json({ok:true,pet:view(result.rows[0])});
   } catch(e) {
-   await client.query('ROLLBACK').catch(()=>{});
+   if(client) await client.query('ROLLBACK').catch(()=>{});
    console.error('PENGUIN PET ERROR',e.code||'unavailable');
    return res.status(503).json({ok:false,message:'Penguin pet temporarily unavailable'});
-  } finally {client.release();}
+  } finally {client?.release();}
  }
  app.get(route,authenticate,(req,res)=>handler(req,res,null));
  app.post(route+'/feed',authenticate,(req,res)=>handler(req,res,'feed'));
