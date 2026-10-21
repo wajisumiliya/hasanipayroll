@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,7 +66,6 @@ class _EmployeePortalState extends State<EmployeePortal>
     _loadEmployeeNotifications();
     _subscribeToPayroll();
     unawaited(_refreshPayroll());
-    _refreshGarden();
     _notificationRefreshTimer = Timer.periodic(
       const Duration(minutes: 5),
       (_) => _loadEmployeeNotifications(),
