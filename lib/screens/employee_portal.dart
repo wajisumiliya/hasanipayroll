@@ -1116,7 +1116,6 @@ class _EmployeePortalState extends State<EmployeePortal>
             const SizedBox(height: 16),
             _emptyPayroll(),
             const SizedBox(height: 16),
-            const SizedBox(height: 16),
             const EmployeePenguinPetCard(),
           ],
         ),
