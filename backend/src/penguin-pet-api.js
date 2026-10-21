@@ -3,12 +3,12 @@ export function installPenguinPetApi(app,{pool,authenticate}) {
  const route='/api/employee/penguin';
  const employeeId=req => {
   if (String(req.user?.role||'').toLowerCase()!=='employee' || req.auth?.app_metadata?.is_reviewer) return null;
-  return String(req.user?.employeeId||req.user?.employee_id||req.auth?.app_metadata?.employee_id||'').trim() || null;
+  return String(req.user?.employeeId||req.user?.employee_id||req.auth?.employeeId||req.auth?.app_metadata?.employee_id||'').trim() || null;
  };
  const view=row=>{
-  const days=Math.max(0,Math.floor((Date.now()-new Date(row.adopted_at).getTime())/86400000));
+  const days=Math.max(0,Math.floor((new Date(row.server_now).getTime()-new Date(row.adopted_at).getTime())/86400000));
   const stage=days<3?'egg':days<15?'chick':days<45?'juvenile':'adult';
-  const recently=(v)=>v && Date.now()-new Date(v).getTime()<86400000;
+  const recently=(v)=>v && new Date(row.server_now).getTime()-new Date(v).getTime()<86400000;
   return {nickname:row.nickname,adoptedAt:row.adopted_at,ageDays:days,stage,
    fedToday:!!recently(row.last_fed_at),playedToday:!!recently(row.last_played_at),
    nextFeedAt:row.last_fed_at?new Date(new Date(row.last_fed_at).getTime()+86400000).toISOString():null,
@@ -28,7 +28,7 @@ export function installPenguinPetApi(app,{pool,authenticate}) {
     const field=action==='feed'?'last_fed_at':'last_played_at';
     await client.query(`UPDATE app_private.employee_penguin_pets SET ${field}=now(),updated_at=now() WHERE employee_id=$1 AND (${field} IS NULL OR ${field}<=now()-interval '24 hours')`,[id]);
    }
-   const result=await client.query('SELECT * FROM app_private.employee_penguin_pets WHERE employee_id=$1',[id]);
+   const result=await client.query('SELECT *, now() AS server_now FROM app_private.employee_penguin_pets WHERE employee_id=$1',[id]);
    await client.query('COMMIT');
    return res.set('Cache-Control','no-store').json({ok:true,pet:view(result.rows[0])});
   } catch(e) {
