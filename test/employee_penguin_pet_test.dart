@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hasani_payroll/widgets/employee_penguin_pet_card.dart';
+import 'package:hasani_payroll_portal/widgets/employee_penguin_pet_card.dart';
 
 void main() {
   testWidgets('penguin growth illustration renders at every stage', (tester) async {
