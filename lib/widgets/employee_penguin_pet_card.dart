@@ -245,8 +245,10 @@ class _PenguinPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final body = Paint()..color = const Color(0xFF6B7280);
-    final detail = Paint()..color = const Color(0xFF26313A);\n    final belly = Paint()..color = const Color(0xFFFFFFFF);
-    final orange = Paint()..color = const Color(0xFFFF8A00);\n    final green = Paint()..color = const Color(0xFFA8E63E);
+    final detail = Paint()..color = const Color(0xFF26313A);
+    final belly = Paint()..color = const Color(0xFFFFFFFF);
+    final orange = Paint()..color = const Color(0xFFFF8A00);
+    final green = Paint()..color = const Color(0xFFA8E63E);
     final accent = Paint()..color = const Color(0xFF54B8DD);
     final shadow = Paint()..color = const Color(0x44265A78);
     final asleep = action == 'sleeping';
@@ -305,7 +307,9 @@ class _PenguinPainter extends CustomPainter {
 
     // Tail and body silhouette.
     canvas.drawOval(Rect.fromLTWH(88, 50, 45, 104), body);
-    canvas.drawOval(Rect.fromLTWH(59, 35, 102, 132), body);\n    // Orange crown and white face mask match the supplied penguin reference.\n    canvas.drawOval(Rect.fromLTWH(64, 29, 92, 82), orange);
+    canvas.drawOval(Rect.fromLTWH(59, 35, 102, 132), body);
+    // Orange crown and white face mask match the supplied penguin reference.
+    canvas.drawOval(Rect.fromLTWH(64, 29, 92, 82), orange);
 
     // Flippers swing while walking or playing.
     canvas.save();
