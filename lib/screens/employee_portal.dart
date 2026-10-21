@@ -19,7 +19,6 @@ import 'ea_forms_page.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
-import '../widgets/employee_garden_card.dart';
 import '../widgets/employee_penguin_pet_card.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../utils/app_reload.dart';
@@ -47,7 +46,6 @@ class _EmployeePortalState extends State<EmployeePortal>
   List<Map<String, dynamic>> _notifications = const [];
   bool _notificationsLoading = false;
   bool _payrollLoading = false;
-  bool _gardenLoading = false;
   bool _checkingSalaryIncrease = false;
 
   @override
@@ -172,19 +170,6 @@ class _EmployeePortalState extends State<EmployeePortal>
   void _selectTab(int value) {
     setState(() => tab = value);
     if (value == 1) unawaited(_refreshPayroll());
-  }
-
-  Future<void> _refreshGarden() async {
-    if (_gardenLoading) return;
-    setState(() => _gardenLoading = true);
-    await service.refreshEmployeeGarden();
-    if (mounted) setState(() => _gardenLoading = false);
-  }
-
-  Future<bool> _tendGarden() async {
-    final fed = await service.tendEmployeeGarden();
-    if (mounted) setState(() {});
-    return fed;
   }
 
   Future<void> _loadEmployeeNotifications() async {
@@ -1131,11 +1116,8 @@ class _EmployeePortalState extends State<EmployeePortal>
             const SizedBox(height: 16),
             _emptyPayroll(),
             const SizedBox(height: 16),
-            _gardenCard(),
             const SizedBox(height: 16),
-            EmployeePenguinPetCard(
-              crystalLevel: service.employeeGardenProgress.gardenLevel,
-            ),
+            const EmployeePenguinPetCard(),
           ],
         ),
       );
@@ -1158,13 +1140,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(height: 12),
                 _quickAccessPanel(),
                 const SizedBox(height: 12),
-                _myWorkdayCard(),
-                const SizedBox(height: 12),
-                _gardenCard(),
-                const SizedBox(height: 16),
-                EmployeePenguinPetCard(
-                  crystalLevel: service.employeeGardenProgress.gardenLevel,
-                ),
+
+                const EmployeePenguinPetCard(),
               ] else ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1188,13 +1165,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                   ],
                 ),
                 const SizedBox(height: 18),
-                _myWorkdayCard(),
-                const SizedBox(height: 18),
-                _gardenCard(),
-                const SizedBox(height: 16),
-                EmployeePenguinPetCard(
-                  crystalLevel: service.employeeGardenProgress.gardenLevel,
-                ),
+
+                const EmployeePenguinPetCard(),
               ],
             ],
           ),
@@ -1203,28 +1175,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     );
   }
 
-  Widget _gardenCard() {
-    final progress = service.employeeGardenProgress;
-    final now = DateTime.now();
-    final attendanceActive = service.employeeAttendance(employeeId).any(
-          (record) =>
-              record.date.year == now.year &&
-              record.date.month == now.month &&
-              record.date.day == now.day &&
-              record.effectiveCheckIn.trim().isNotEmpty,
-        );
-    return EmployeeGardenCard(
-      attendanceActive: attendanceActive,
-      streak: progress.weeklyVisits,
-      milestones: progress.totalCare + progress.gardenLevel,
-      availableCare: progress.availableCare,
-      loginsUntilUpgrade: progress.visitsUntilNextUnlock,
-      loading: _gardenLoading,
-      onCare: _tendGarden,
-    );
-  }
-
-  Widget _myWorkdayCard() {
+ {
     final now = DateTime.now();
     final attendance = service.employeeAttendance(employeeId);
     AttendanceRecord? today;
