@@ -271,7 +271,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                             tileColor: read
                                 ? null
                                 : const Color(0xFF1976E9)
-                                      .withValues(alpha: .06),
+                                    .withValues(alpha: .06),
                             leading: CircleAvatar(
                               backgroundColor: const Color(0xFF1976E9)
                                   .withValues(alpha: .10),
@@ -279,19 +279,18 @@ class _EmployeePortalState extends State<EmployeePortal>
                                 type == 'payslip' || type == 'payroll'
                                     ? Icons.receipt_long_outlined
                                     : type == 'increment'
-                                    ? Icons.trending_up_outlined
-                                    : title.toLowerCase().contains('leave')
-                                    ? Icons.flight_takeoff_outlined
-                                    : Icons.more_time_outlined,
+                                        ? Icons.trending_up_outlined
+                                        : title.toLowerCase().contains('leave')
+                                            ? Icons.flight_takeoff_outlined
+                                            : Icons.more_time_outlined,
                                 color: const Color(0xFF08255F),
                               ),
                             ),
                             title: Text(
                               title,
                               style: TextStyle(
-                                fontWeight: read
-                                    ? FontWeight.w600
-                                    : FontWeight.w900,
+                                fontWeight:
+                                    read ? FontWeight.w600 : FontWeight.w900,
                               ),
                             ),
                             subtitle: Text(item['body']?.toString() ?? ''),
@@ -303,21 +302,21 @@ class _EmployeePortalState extends State<EmployeePortal>
                                     color: Color(0xFF1976E9),
                                   ),
                             onTap: () async {
-                              await SupabaseService.markEmployeeNotificationRead(
+                              await SupabaseService
+                                  .markEmployeeNotificationRead(
                                 notificationId: item['id'].toString(),
                                 employeeId: employeeId,
                               );
                               if (!mounted || !sheetContext.mounted) return;
                               Navigator.pop(sheetContext);
                               item['is_read'] = true;
-                              final destination =
-                                  type == 'payslip' ||
+                              final destination = type == 'payslip' ||
                                       type == 'payroll' ||
                                       type == 'increment'
                                   ? 1
                                   : title.toLowerCase().contains('leave')
-                                  ? 3
-                                  : 6;
+                                      ? 3
+                                      : 6;
                               _selectTab(destination);
                             },
                           );
@@ -502,8 +501,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   for (var index = 0; index < 42; index++)
                     Positioned(
                       left: (index * 97.0) % size.width,
-                      top:
-                          (((progress + index * .047) % 1) *
+                      top: (((progress + index * .047) % 1) *
                               (size.height + 90)) -
                           60,
                       child: Transform.rotate(
@@ -520,8 +518,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                     right: 18,
                     child: Center(
                       child: Transform.scale(
-                        scale:
-                            .97 +
+                        scale: .97 +
                             ((math.sin(progress * math.pi * 2) + 1) / 2) * .03,
                         child: Container(
                           constraints: const BoxConstraints(maxWidth: 560),
@@ -611,15 +608,15 @@ class _EmployeePortalState extends State<EmployeePortal>
                         end: Alignment.bottomRight,
                         colors: tab == 0
                             ? (_isBirthdayToday
-                                  ? const [
-                                      Color(0xFFFFF3D6),
-                                      Color(0xFFFFE4EA),
-                                      Color(0xFFEDE4FF),
-                                    ]
-                                  : const [
-                                      Color(0xFFF3F8FF),
-                                      Color(0xFFFFFFFF),
-                                    ])
+                                ? const [
+                                    Color(0xFFFFF3D6),
+                                    Color(0xFFFFE4EA),
+                                    Color(0xFFEDE4FF),
+                                  ]
+                                : const [
+                                    Color(0xFFF3F8FF),
+                                    Color(0xFFFFFFFF),
+                                  ])
                             : [
                                 dailyTheme.surfaceTint.withValues(alpha: .96),
                                 const Color(0xFFF5F7FB),
@@ -747,8 +744,8 @@ class _EmployeePortalState extends State<EmployeePortal>
             color: title == 'Logout'
                 ? Colors.red
                 : selected
-                ? Colors.white
-                : Colors.white.withValues(alpha: .86),
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: .86),
           ),
         ),
         onTap: () {
@@ -850,12 +847,10 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget _mobile() {
     final dailyTheme = _dailyTheme;
     final narrowPhone = MediaQuery.sizeOf(context).width < 430;
-    final mobilePages = _isLocalEmployee
-        ? const [0, 1, 2, 6, 3]
-        : const [0, 1, 2, 6];
-    final selectedMobileIndex = mobilePages.contains(tab)
-        ? mobilePages.indexOf(tab)
-        : 0;
+    final mobilePages =
+        _isLocalEmployee ? const [0, 1, 2, 6, 3] : const [0, 1, 2, 6];
+    final selectedMobileIndex =
+        mobilePages.contains(tab) ? mobilePages.indexOf(tab) : 0;
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.white,
@@ -977,43 +972,43 @@ class _EmployeePortalState extends State<EmployeePortal>
   }
 
   Widget _mobileNavIcon(IconData icon, bool selected) => AnimatedContainer(
-    duration: const Duration(milliseconds: 220),
-    width: 42,
-    height: 36,
-    decoration: BoxDecoration(
-      gradient: selected
-          ? const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF315E8F), Color(0xFF061D4D)],
-            )
-          : const LinearGradient(
-              colors: [Color(0xFFFFFFFF), Color(0xFFE7EDF5)],
+        duration: const Duration(milliseconds: 220),
+        width: 42,
+        height: 36,
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF315E8F), Color(0xFF061D4D)],
+                )
+              : const LinearGradient(
+                  colors: [Color(0xFFFFFFFF), Color(0xFFE7EDF5)],
+                ),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(
+            color: selected ? const Color(0xFF6F94BE) : const Color(0xFFD3DDE9),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF08255F)
+                  .withValues(alpha: selected ? .32 : .14),
+              blurRadius: selected ? 9 : 5,
+              offset: Offset(0, selected ? 5 : 3),
             ),
-      borderRadius: BorderRadius.circular(13),
-      border: Border.all(
-        color: selected ? const Color(0xFF6F94BE) : const Color(0xFFD3DDE9),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: const Color(0xFF08255F)
-              .withValues(alpha: selected ? .32 : .14),
-          blurRadius: selected ? 9 : 5,
-          offset: Offset(0, selected ? 5 : 3),
+            const BoxShadow(
+              color: Color(0xCCFFFFFF),
+              blurRadius: 2,
+              offset: Offset(-1, -1),
+            ),
+          ],
         ),
-        const BoxShadow(
-          color: Color(0xCCFFFFFF),
-          blurRadius: 2,
-          offset: Offset(-1, -1),
+        child: Icon(
+          icon,
+          size: 21,
+          color: selected ? Colors.white : const Color(0xFF405570),
         ),
-      ],
-    ),
-    child: Icon(
-      icon,
-      size: 21,
-      color: selected ? Colors.white : const Color(0xFF405570),
-    ),
-  );
+      );
 
   // =============================================================
   // TITLES
@@ -1211,9 +1206,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget _gardenCard() {
     final progress = service.employeeGardenProgress;
     final now = DateTime.now();
-    final attendanceActive = service
-        .employeeAttendance(employeeId)
-        .any(
+    final attendanceActive = service.employeeAttendance(employeeId).any(
           (record) =>
               record.date.year == now.year &&
               record.date.month == now.month &&
@@ -1248,13 +1241,13 @@ class _EmployeePortalState extends State<EmployeePortal>
     final status = checkedOut
         ? 'Workday completed'
         : checkedIn
-        ? 'Currently at work'
-        : 'Not checked in';
+            ? 'Currently at work'
+            : 'Not checked in';
     final statusColor = checkedOut
         ? const Color(0xFF19764A)
         : checkedIn
-        ? const Color(0xFF2463C7)
-        : const Color(0xFFB76A13);
+            ? const Color(0xFF2463C7)
+            : const Color(0xFFB76A13);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -1606,8 +1599,8 @@ class _EmployeePortalState extends State<EmployeePortal>
     final greeting = hour < 12
         ? 'Good morning'
         : hour < 18
-        ? 'Good afternoon'
-        : 'Good evening';
+            ? 'Good afternoon'
+            : 'Good evening';
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
@@ -1667,9 +1660,8 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget _mobileIdentityCard(_EmployeeDailyTheme dailyTheme) {
     final branch = employee!.branchId.trim().isEmpty ? '-' : employee!.branchId;
     final active = employee!.isActive;
-    final statusColor = active
-        ? const Color(0xFF00A651)
-        : const Color(0xFFED1C24);
+    final statusColor =
+        active ? const Color(0xFF00A651) : const Color(0xFFED1C24);
     return Column(
       children: [
         Row(
@@ -1756,7 +1748,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                   employee!.joiningDate == null
                       ? '-'
                       : DateFormat('dd MMM yyyy')
-                            .format(employee!.joiningDate!),
+                          .format(employee!.joiningDate!),
                   width: fieldWidth,
                 ),
                 _identityField(
@@ -1802,9 +1794,8 @@ class _EmployeePortalState extends State<EmployeePortal>
     _EmployeeDailyTheme dailyTheme, {
     bool centered = false,
   }) {
-    final alignment = centered
-        ? CrossAxisAlignment.center
-        : CrossAxisAlignment.start;
+    final alignment =
+        centered ? CrossAxisAlignment.center : CrossAxisAlignment.start;
     final textAlign = centered ? TextAlign.center : TextAlign.start;
     final branch = employee!.branchId.trim().isEmpty ? '-' : employee!.branchId;
     return Column(
@@ -1978,9 +1969,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 Text(
                   value,
                   maxLines: multiline ? 2 : 1,
-                  overflow: multiline
-                      ? TextOverflow.visible
-                      : TextOverflow.ellipsis,
+                  overflow:
+                      multiline ? TextOverflow.visible : TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF08255F),
                     fontSize: 12,
@@ -2071,9 +2061,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 )
               else
                 Row(
-                  children: metrics
-                      .map((metric) => Expanded(child: metric))
-                      .toList(),
+                  children:
+                      metrics.map((metric) => Expanded(child: metric)).toList(),
                 ),
             ],
           ),
@@ -2629,10 +2618,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                 final columns = compact
                     ? (constraints.maxWidth < 360 ? 2 : 3)
                     : constraints.maxWidth >= 1100
-                    ? 6
-                    : constraints.maxWidth >= 700
-                    ? 3
-                    : 2;
+                        ? 6
+                        : constraints.maxWidth >= 700
+                            ? 3
+                            : 2;
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -2878,9 +2867,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                     builder: (context, constraints) {
                       final narrow = constraints.maxWidth < 360;
                       final month = Row(
-                        mainAxisSize: narrow
-                            ? MainAxisSize.min
-                            : MainAxisSize.max,
+                        mainAxisSize:
+                            narrow ? MainAxisSize.min : MainAxisSize.max,
                         children: [
                           const Icon(Icons.calendar_month_outlined, size: 20),
                           const SizedBox(width: 8),
