@@ -33,13 +33,17 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
             : '/api/employee/penguin/$action',
         method: action == null ? 'GET' : 'POST',
       );
-      if (mounted)
+      if (mounted) {
         setState(() => pet = Map<String, dynamic>.from(data['pet'] as Map));
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => error = 'Penguin home is temporarily unavailable.');
+      }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
 
@@ -107,9 +111,8 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: busy || pet == null || fed
-                      ? null
-                      : () => _load('feed'),
+                  onPressed:
+                      busy || pet == null || fed ? null : () => _load('feed'),
                   icon: const Icon(Icons.set_meal),
                   label: Text(fed ? 'Fed today' : 'Feed fish'),
                 ),
@@ -208,8 +211,8 @@ class _PenguinPainter extends CustomPainter {
     final double scale = stage == 'chick'
         ? 0.73
         : stage == 'juvenile'
-        ? 0.87
-        : 1.0;
+            ? 0.87
+            : 1.0;
     c.save();
     c.translate(s.width / 2, 166);
     c.scale(scale);
