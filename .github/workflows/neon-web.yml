@@ -2,10 +2,10 @@ name: Neon web
 on:
   pull_request:
     branches: [main, neon-dev]
-    paths: ['lib/**', 'test/**', 'pubspec.*', 'package*.json', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
+    paths: ['lib/**', 'test/**', 'web/**', 'pubspec.*', 'package*.json', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
   push:
     branches: [main, codex/remove-remaining-supabase]
-    paths: ['lib/**', 'test/**', 'pubspec.*', 'package*.json', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
+    paths: ['lib/**', 'test/**', 'web/**', 'pubspec.*', 'package*.json', 'scripts/render-build-web.sh', '.github/workflows/neon-web.yml']
 permissions:
   contents: read
 concurrency:
