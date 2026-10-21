@@ -146,8 +146,9 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed:
-                      busy || pet == null || fed ? null : () => _load('feed'),
+                  onPressed: busy || pet == null || fed
+                      ? null
+                      : () => _load('feed'),
                   icon: const Icon(Icons.set_meal),
                   label: Text(fed ? 'Fed today' : 'Feed fish'),
                 ),
@@ -298,16 +299,18 @@ class _PenguinPainter extends CustomPainter {
     final scale = stage == 'chick'
         ? .76
         : stage == 'juvenile'
-            ? .89
-            : 1.0;
+        ? .89
+        : 1.0;
     final center = Offset(size.width / 2, size.height * .88);
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(asleep
-        ? -.08
-        : walking
-            ? swing * .07
-            : swing * .012);
+    canvas.rotate(
+      asleep
+          ? -.08
+          : walking
+          ? swing * .07
+          : swing * .012,
+    );
     canvas.scale(scale * (1 + (asleep ? 0 : breath)));
     canvas.translate(-center.dx, -center.dy);
 
@@ -353,7 +356,12 @@ class _PenguinPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round;
       canvas.drawArc(Rect.fromLTWH(83, 75, 15, 8), 0, math.pi, false, eyePaint);
       canvas.drawArc(
-          Rect.fromLTWH(119, 75, 15, 8), 0, math.pi, false, eyePaint);
+        Rect.fromLTWH(119, 75, 15, 8),
+        0,
+        math.pi,
+        false,
+        eyePaint,
+      );
       _drawSleepyZ(canvas, 157, 48, 1);
       _drawSleepyZ(canvas, 169, 32, .72);
     } else {
