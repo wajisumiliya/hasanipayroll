@@ -6,7 +6,7 @@ import '../services/neon_api.dart';
 
 /// Server-backed penguin companion. Growth and care use server time.
 class EmployeePenguinPetCard extends StatefulWidget {
-
+  const EmployeePenguinPetCard({super.key});
 
   @override
   State<EmployeePenguinPetCard> createState() => _EmployeePenguinPetCardState();
