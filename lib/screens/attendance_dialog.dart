@@ -833,11 +833,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                         // Admin attendance view). The Neon API validates
                         // roster rows against employees.branch_id, just like
                         // the attendance save path below.
-                        final employeeBranchId = (widget.employee['branch_id'] ??
-                                widget.employee['branchId'] ??
-                                widget.branchId)
-                            .toString()
-                            .trim();
+                        final employeeBranchId =
+                            (widget.employee['branch_id'] ??
+                                    widget.employee['branchId'] ??
+                                    widget.branchId)
+                                .toString()
+                                .trim();
                         final rows = <Map<String, dynamic>>[];
                         for (var day = firstDay; day <= submissionEnd; day++) {
                           final choice = choices[day]!;
@@ -1065,6 +1066,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     });
 
     var savedRows = 0;
+    final attendanceRows = <Map<String, dynamic>>[];
 
     try {
       for (var day = 1; day <= daysInMonth; day++) {
@@ -1196,7 +1198,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             '${widget.month.year.toString().padLeft(4, '0')}-'
             '${widget.month.month.toString().padLeft(2, '0')}-'
             '${day.toString().padLeft(2, '0')}';
-        await AppService.instance.saveNeonAttendanceRow({
+        attendanceRows.add({
           'id': '${employeeId.trim()}_$attendanceDate',
           'employee_id': employeeId.trim(),
           'branch_id': employeeBranchId.trim(),
@@ -1255,6 +1257,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       }
 
+      String? submitStart;
+      String? submitEnd;
       if (submit) {
         final start = DateTime(widget.month.year, widget.month.month, 1);
         final end = DateTime(
@@ -1262,13 +1266,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           widget.month.month,
           submissionEnd! + 1,
         );
+        submitStart = start.toIso8601String().substring(0, 10);
+        submitEnd = end.toIso8601String().substring(0, 10);
+      }
 
-        await AppService.instance.submitNeonAttendance(
-          employeeId: employeeId,
-          start: start.toIso8601String().substring(0, 10),
-          end: end.toIso8601String().substring(0, 10),
-        );
+      // Persist all changed days, and submit them when requested, in one
+      // authenticated API call rather than one network round-trip per day.
+      await AppService.instance.saveNeonAttendanceRows(
+        attendanceRows,
+        submitStart: submitStart,
+        submitEnd: submitEnd,
+      );
 
+      if (submit) {
         _submittedDays.addAll(
           List<int>.generate(submissionEnd, (index) => index + 1),
         );

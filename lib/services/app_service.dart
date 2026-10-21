@@ -387,6 +387,29 @@ class AppService extends ChangeNotifier {
           data['message']?.toString() ?? 'Unable to save attendance.');
   }
 
+  /// Save all changed attendance days in one request. When the caller
+  /// supplies a submission range, the API saves and locks the days atomically.
+  Future<void> saveNeonAttendanceRows(
+    List<Map<String, dynamic>> attendanceRows, {
+    String? submitStart,
+    String? submitEnd,
+  }) async {
+    final data = await _postAuth(
+      '/api/attendance-sheet/save-batch',
+      {
+        'attendance_rows': attendanceRows,
+        if (submitStart != null) 'submit_start': submitStart,
+        if (submitEnd != null) 'submit_end': submitEnd,
+      },
+      authenticated: true,
+    );
+    if (data['ok'] != true) {
+      throw StateError(
+        data['message']?.toString() ?? 'Unable to save attendance.',
+      );
+    }
+  }
+
   Future<void> submitNeonAttendance({
     required String employeeId,
     required String start,

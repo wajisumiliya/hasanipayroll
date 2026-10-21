@@ -231,6 +231,10 @@ class _AdminDashboardState extends State<AdminDashboard>
       DateTime(DateTime.now().year, DateTime.now().month);
   String? selectedLogBranchId;
   DateTime? selectedLogDate;
+  Future<Map<String, dynamic>>? _dashboardDataFuture;
+  String? _dashboardDataFutureKey;
+  Future<List<dynamic>>? _payrollPageFuture;
+  String? _payrollPageFutureKey;
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
   Future<List<Map<String, dynamic>>>? _adminEmployeesFuture;
   Future<List<Map<String, dynamic>>>? _employeeRequestsFuture;
@@ -302,6 +306,10 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     setState(() {
       _adminEmployeesFuture = null;
+      _dashboardDataFuture = null;
+      _dashboardDataFutureKey = null;
+      _payrollPageFuture = null;
+      _payrollPageFutureKey = null;
     });
   }
 
@@ -1726,6 +1734,35 @@ class _AdminDashboardState extends State<AdminDashboard>
     };
   }
 
+  Future<Map<String, dynamic>> _dashboardPageData() {
+    final scope = service.currentUser?.staffScope?.trim().toLowerCase() ?? '';
+    final key = '${selectedDashboardMonth.year}-'
+        '${selectedDashboardMonth.month}|$scope';
+    if (_dashboardDataFuture == null || _dashboardDataFutureKey != key) {
+      _dashboardDataFutureKey = key;
+      _dashboardDataFuture = _loadDashboardData();
+    }
+    return _dashboardDataFuture!;
+  }
+
+  Future<List<dynamic>> _payrollPageData() {
+    final key = '${selectedPayrollMonth.year}-${selectedPayrollMonth.month}';
+    if (_payrollPageFuture == null || _payrollPageFutureKey != key) {
+      _payrollPageFutureKey = key;
+      _payrollPageFuture =
+          service.loadNeonPayrollPage(selectedPayrollMonth).then(
+                (data) => [
+                  data['branches'],
+                  data['employees'],
+                  data['payroll'],
+                  data['salary_defaults'],
+                  data['attendance'],
+                ],
+              );
+    }
+    return _payrollPageFuture!;
+  }
+
   bool _isActive(Map<String, dynamic> employee) {
     final value = employee['is_active'];
     if (value is bool) return value;
@@ -2160,7 +2197,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _dashboardPage() {
     return FutureBuilder<Map<String, dynamic>>(
-      future: _loadDashboardData(),
+      future: _dashboardPageData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -14921,13 +14958,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _payrollPage() {
     return FutureBuilder<List<dynamic>>(
-      future: service.loadNeonPayrollPage(selectedPayrollMonth).then((data) => [
-            data['branches'],
-            data['employees'],
-            data['payroll'],
-            data['salary_defaults'],
-            data['attendance'],
-          ]),
+      future: _payrollPageData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -15062,6 +15093,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
           return copy;
         }).toList();
+        final payrollByEmployee = <String, List<Map<String, dynamic>>>{};
+        for (final record in payrollRecords) {
+          final employeeId = _normalizeBranchValue(record['employee_id']);
+          if (employeeId.isEmpty) continue;
+          payrollByEmployee.putIfAbsent(employeeId, () => []).add(record);
+        }
 
         final visiblePayrollRecords = payrollRecords.where((record) {
           final branchMatches = selectedPayrollBranchId == null ||
@@ -15096,10 +15133,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               DateTime.tryParse(current['period']?.toString() ?? '');
           if (employeeId.isEmpty || currentPeriod == null) continue;
 
-          final history = payrollRecords.where((record) {
-            if (_normalizeBranchValue(record['employee_id']) != employeeId) {
-              return false;
-            }
+          final history =
+              (payrollByEmployee[employeeId] ?? const []).where((record) {
             final period =
                 DateTime.tryParse(record['period']?.toString() ?? '');
             return period != null && !period.isAfter(currentPeriod);
