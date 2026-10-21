@@ -106,7 +106,7 @@ class _PenguinPainter extends CustomPainter {
         Paint()..color=const Color(0xFFB6C9D3)..style=PaintingStyle.stroke..strokeWidth=3);
       return;
     }
-    final scale=stage=='chick'?.73:stage=='juvenile'?.87:1.0;
+    final double scale = stage == 'chick' ? 0.73 : stage == 'juvenile' ? 0.87 : 1.0;
     c.save();c.translate(s.width/2,166);c.scale(scale);c.translate(-s.width/2,-166);
     c.drawOval(Rect.fromLTWH(55,40,100,125),body);
     c.drawOval(Rect.fromLTWH(72,79,66,81),white);
