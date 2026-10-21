@@ -1159,7 +1159,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             const SizedBox(height: 16),
             _gardenCard(),
             const SizedBox(height: 16),
-            const EmployeePenguinPetCard(),
+            EmployeePenguinPetCard(crystalLevel: service.employeeGardenProgress.gardenLevel),
           ],
         ),
       );
@@ -1186,7 +1186,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(height: 12),
                 _gardenCard(),
             const SizedBox(height: 16),
-            const EmployeePenguinPetCard(),
+            EmployeePenguinPetCard(crystalLevel: service.employeeGardenProgress.gardenLevel),
               ] else ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1214,7 +1214,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(height: 18),
                 _gardenCard(),
             const SizedBox(height: 16),
-            const EmployeePenguinPetCard(),
+            EmployeePenguinPetCard(crystalLevel: service.employeeGardenProgress.gardenLevel),
               ],
             ],
           ),
