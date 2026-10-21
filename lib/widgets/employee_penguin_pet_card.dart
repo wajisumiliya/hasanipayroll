@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/neon_api.dart';
 
-/// Server-backed penguin companion. Pet age and care cooldowns are authoritative.
+/// Server-backed penguin companion. Growth and care use server time.
 class EmployeePenguinPetCard extends StatefulWidget {
   const EmployeePenguinPetCard({super.key, this.crystalLevel = 1});
   final int crystalLevel;
