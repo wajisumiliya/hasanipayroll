@@ -1,0 +1,84 @@
+name: Signed Android Play Store bundle
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: signed-android-playstore
+  cancel-in-progress: false
+jobs:
+  signed-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - name: Restore existing upload key from GitHub secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import os, base64
+          from pathlib import Path
+          names = ['ANDROID_KEYSTORE_BASE64', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD', 'ANDROID_STORE_PASSWORD']
+          if any(not os.environ.get(name) for name in names):
+              raise SystemExit('Missing Android upload-key secrets. This workflow will not create an unsigned or debug-signed Play Store bundle.')
+          key = Path('android/app/upload-keystore.jks')
+          key.write_bytes(base64.b64decode(os.environ['ANDROID_KEYSTORE_BASE64'], validate=True))
+          key.chmod(0o600)
+          def escape(value):
+              result = ''
+              for c in value:
+                  if c == '\\': result += '\\\\'
+                  elif c == '\n': result += '\\n'
+                  elif c == '\r': result += '\\r'
+                  elif c == '\t': result += '\\t'
+                  elif c in ' =:#!': result += '\\' + c
+                  elif ord(c) > 127: result += c.encode('unicode_escape').decode().replace('\\x', '\\u00')
+                  else: result += c
+              return result
+          values = {'storeFile': 'upload-keystore.jks', 'keyAlias': os.environ['ANDROID_KEY_ALIAS'], 'keyPassword': os.environ['ANDROID_KEY_PASSWORD'], 'storePassword': os.environ['ANDROID_STORE_PASSWORD']}
+          properties = Path('android/key.properties')
+          properties.write_text(''.join(k+'='+escape(v)+'\n' for k,v in values.items()), encoding='ascii')
+          properties.chmod(0o600)
+          PY
+          keytool -list -keystore android/app/upload-keystore.jks -storepass:env ANDROID_STORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" > /dev/null
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter test --no-pub
+      - name: Build signed release bundle
+        run: flutter build appbundle --release --no-pub
+      - name: Verify bundle signature and save upload certificate
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          mkdir -p playstore-release
+          cp build/app/outputs/bundle/release/app-release.aab playstore-release/hasani-payroll-1.0.5-12.aab
+          jarsigner -verify playstore-release/hasani-payroll-1.0.5-12.aab > /tmp/playstore-signature-check.txt
+          grep -F 'jar verified.' /tmp/playstore-signature-check.txt
+          keytool -exportcert -rfc -keystore android/app/upload-keystore.jks -storepass:env ANDROID_STORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" -file playstore-release/upload-certificate.pem
+          keytool -printcert -file playstore-release/upload-certificate.pem > playstore-release/upload-certificate-details.txt
+          sha256sum playstore-release/hasani-payroll-1.0.5-12.aab > playstore-release/SHA256SUMS.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: HASANI-PAYROLL-PLAYSTORE-SIGNED-1.0.5-12
+          if-no-files-found: error
+          retention-days: 14
+          path: playstore-release/
+      - name: Remove private signing material
+        if: always()
+        run: rm -f android/key.properties android/app/upload-keystore.jks

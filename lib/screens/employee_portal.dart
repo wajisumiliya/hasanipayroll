@@ -16,6 +16,7 @@ import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'ea_forms_page.dart';
 import '../widgets/employee_photo.dart';
+import '../widgets/payroll_year_summary.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
 import '../widgets/employee_penguin_pet_card.dart';
@@ -2382,116 +2383,17 @@ class _EmployeePortalState extends State<EmployeePortal>
     );
   }
 
-  Widget _yearSummaryItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFFFF), Color(0xFFE8EEF6)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD1DBE7)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x2208255F),
-            blurRadius: 9,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 17,
-            backgroundColor: color.withValues(alpha: .13),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(color: Colors.black54, fontSize: 10),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _yearSummary({
     required int year,
     required double gross,
     required double deductions,
     required double net,
   }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 900 ? 4 : 2;
-        final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            SizedBox(
-              width: width,
-              child: _yearSummaryItem(
-                icon: Icons.calendar_today_outlined,
-                label: 'Year',
-                value: '$year',
-                color: const Color(0xFF0B347C),
-              ),
-            ),
-            SizedBox(
-              width: width,
-              child: _yearSummaryItem(
-                icon: Icons.payments_outlined,
-                label: 'Gross',
-                value: _moneyText(gross),
-                color: const Color(0xFF214E7A),
-              ),
-            ),
-            SizedBox(
-              width: width,
-              child: _yearSummaryItem(
-                icon: Icons.remove_circle_outline,
-                label: 'Year Deduction',
-                value: _moneyText(deductions),
-                color: const Color(0xFF52657B),
-              ),
-            ),
-            SizedBox(
-              width: width,
-              child: _yearSummaryItem(
-                icon: Icons.account_balance_wallet_outlined,
-                label: 'Year Net',
-                value: _moneyText(net),
-                color: const Color(0xFF08255F),
-              ),
-            ),
-          ],
-        );
-      },
+    return PayrollYearSummary(
+      year: year,
+      gross: _moneyText(gross),
+      deductions: _moneyText(deductions),
+      net: _moneyText(net),
     );
   }
 
