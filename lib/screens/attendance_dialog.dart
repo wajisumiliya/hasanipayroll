@@ -828,13 +828,23 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                       try {
                         final updatedAt =
                             DateTime.now().toUtc().toIso8601String();
+                        // The selected screen branch can differ from the
+                        // employee's persisted branch (for example, in the
+                        // Admin attendance view). The Neon API validates
+                        // roster rows against employees.branch_id, just like
+                        // the attendance save path below.
+                        final employeeBranchId = (widget.employee['branch_id'] ??
+                                widget.employee['branchId'] ??
+                                widget.branchId)
+                            .toString()
+                            .trim();
                         final rows = <Map<String, dynamic>>[];
                         for (var day = firstDay; day <= submissionEnd; day++) {
                           final choice = choices[day]!;
                           final shift = shifts[choice];
                           final type = shift == null ? choice : 'SHIFT';
                           final row = <String, dynamic>{
-                            'branch_id': widget.branchId,
+                            'branch_id': employeeBranchId,
                             'employee_id': _employeeId(),
                             'roster_date': DateFormat('yyyy-MM-dd').format(
                                 DateTime(widget.month.year, widget.month.month,
