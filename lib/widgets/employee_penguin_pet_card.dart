@@ -3,7 +3,8 @@ import '../services/neon_api.dart';
 
 /// Server-backed penguin companion. Pet age and care cooldowns are authoritative.
 class EmployeePenguinPetCard extends StatefulWidget {
-  const EmployeePenguinPetCard({super.key});
+  const EmployeePenguinPetCard({super.key, this.crystalLevel = 1});
+  final int crystalLevel;
   @override
   State<EmployeePenguinPetCard> createState()=>_EmployeePenguinPetCardState();
 }
@@ -40,6 +41,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
         padding:const EdgeInsets.all(18),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           const Text('MY LIVING PENGUIN',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:Color(0xFF173D60))),
+          Text('Crystal Terrarium • Level ${widget.crystalLevel}',style:const TextStyle(color:Color(0xFF426680),fontSize:12,fontWeight:FontWeight.w600)),
           const SizedBox(height:12),
           Center(child:Semantics(
             label:'Penguin growth stage: $stage',
@@ -79,10 +81,15 @@ class _PenguinIllustrationState extends State<PenguinIllustration> with SingleTi
   @override
   void dispose(){motion.dispose();super.dispose();}
   @override
-  Widget build(BuildContext context)=>SizedBox(height:190,width:210,
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion && motion.isAnimating) motion.stop();
+    if (!reduceMotion && !motion.isAnimating) motion.repeat(reverse:true);
+    return SizedBox(height:190,width:210,
     child:AnimatedBuilder(animation:motion,builder:(context,child)=>
       Transform.translate(offset:Offset(0,motion.value*3),child:child),
       child:CustomPaint(painter:_PenguinPainter(widget.stage))));
+  }
 }
 class _PenguinPainter extends CustomPainter {
   _PenguinPainter(this.stage);
