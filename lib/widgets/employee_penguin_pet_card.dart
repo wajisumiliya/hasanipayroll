@@ -244,9 +244,9 @@ class _PenguinPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final body = Paint()..color = const Color(0xFF202F3A);
-    final belly = Paint()..color = const Color(0xFFF8FBFD);
-    final orange = Paint()..color = const Color(0xFFEFA547);
+    final body = Paint()..color = const Color(0xFF6B7280);
+    final detail = Paint()..color = const Color(0xFF26313A);\n    final belly = Paint()..color = const Color(0xFFFFFFFF);
+    final orange = Paint()..color = const Color(0xFFFF8A00);\n    final green = Paint()..color = const Color(0xFFA8E63E);
     final accent = Paint()..color = const Color(0xFF54B8DD);
     final shadow = Paint()..color = const Color(0x44265A78);
     final asleep = action == 'sleeping';
@@ -305,7 +305,7 @@ class _PenguinPainter extends CustomPainter {
 
     // Tail and body silhouette.
     canvas.drawOval(Rect.fromLTWH(88, 50, 45, 104), body);
-    canvas.drawOval(Rect.fromLTWH(59, 35, 102, 132), body);
+    canvas.drawOval(Rect.fromLTWH(59, 35, 102, 132), body);\n    // Orange crown and white face mask match the supplied penguin reference.\n    canvas.drawOval(Rect.fromLTWH(64, 29, 92, 82), orange);
 
     // Flippers swing while walking or playing.
     canvas.save();
@@ -334,8 +334,8 @@ class _PenguinPainter extends CustomPainter {
 
     // Feet alternate to create a readable waddling gait.
     final step = walking ? swing * 7 : 0.0;
-    canvas.drawOval(Rect.fromLTWH(73 + step, 154, 38, 17), orange);
-    canvas.drawOval(Rect.fromLTWH(110 - step, 154, 38, 17), orange);
+    canvas.drawOval(Rect.fromLTWH(73 + step, 154, 38, 17), green);
+    canvas.drawOval(Rect.fromLTWH(110 - step, 154, 38, 17), green);
 
     if (asleep) {
       final eyePaint = Paint()
@@ -358,8 +358,8 @@ class _PenguinPainter extends CustomPainter {
       canvas.drawOval(Rect.fromLTWH(83, 70, 14, eyeHeight), belly);
       canvas.drawOval(Rect.fromLTWH(119, 70, 14, eyeHeight), belly);
       if (!blink) {
-        canvas.drawCircle(const Offset(90, 75), 3.3, body);
-        canvas.drawCircle(const Offset(126, 75), 3.3, body);
+        canvas.drawCircle(const Offset(90, 75), 3.3, detail);
+        canvas.drawCircle(const Offset(126, 75), 3.3, detail);
         canvas.drawCircle(
           const Offset(91, 73),
           1.1,
@@ -376,7 +376,7 @@ class _PenguinPainter extends CustomPainter {
         ..lineTo(117, 89)
         ..lineTo(eating ? 107.5 : 107.5, eating ? 105 : 101)
         ..close();
-      canvas.drawPath(beak, orange);
+      canvas.drawPath(beak, green);
       if (eating) {
         canvas.drawCircle(const Offset(108, 112), 4, accent);
         canvas.drawCircle(const Offset(108, 112), 1.3, belly);
