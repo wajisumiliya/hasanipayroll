@@ -1140,7 +1140,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(height: 12),
                 _quickAccessPanel(),
                 const SizedBox(height: 12),
-
+                _myWorkdayCard(),
+                const SizedBox(height: 16),
                 const EmployeePenguinPetCard(),
               ] else ...[
                 Row(
@@ -1165,7 +1166,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                   ],
                 ),
                 const SizedBox(height: 18),
-
+                _myWorkdayCard(),
+                const SizedBox(height: 16),
                 const EmployeePenguinPetCard(),
               ],
             ],
@@ -1175,7 +1177,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     );
   }
 
- {
+  Widget _myWorkdayCard() {
     final now = DateTime.now();
     final attendance = service.employeeAttendance(employeeId);
     AttendanceRecord? today;
