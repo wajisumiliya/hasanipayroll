@@ -6,6 +6,7 @@ on:
       - 'lib/widgets/employee_penguin_pet_card.dart'
       - 'lib/screens/employee_portal.dart'
       - 'test/employee_penguin_pet_test.dart'
+      - '.github/workflows/penguin-format-fix.yml'
 permissions:
   contents: write
 jobs:
@@ -19,6 +20,8 @@ jobs:
         with:
           flutter-version: '3.47.0'
           channel: stable
+      - name: Resolve Flutter packages for formatter options
+        run: flutter pub get --enforce-lockfile
       - name: Format only changed Penguin files
         run: dart format lib/widgets/employee_penguin_pet_card.dart lib/screens/employee_portal.dart test/employee_penguin_pet_test.dart
       - name: Commit formatting only to feature branch
