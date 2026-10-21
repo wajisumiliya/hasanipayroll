@@ -33,8 +33,8 @@ class PayrollYearSummary extends StatelessWidget {
                 const Color(0xFF0B347C)),
             _item(width, Icons.payments_outlined, 'Gross', gross,
                 const Color(0xFF214E7A)),
-            _item(width, Icons.remove_circle_outline, 'Year Deduction', deductions,
-                const Color(0xFF52657B)),
+            _item(width, Icons.remove_circle_outline, 'Year Deduction',
+                deductions, const Color(0xFF52657B)),
             _item(width, Icons.account_balance_wallet_outlined, 'Year Net', net,
                 const Color(0xFF08255F)),
           ],
@@ -43,8 +43,8 @@ class PayrollYearSummary extends StatelessWidget {
     );
   }
 
-  Widget _item(double width, IconData icon, String label, String value,
-      Color color) {
+  Widget _item(
+      double width, IconData icon, String label, String value, Color color) {
     return SizedBox(
       width: width,
       child: Container(
