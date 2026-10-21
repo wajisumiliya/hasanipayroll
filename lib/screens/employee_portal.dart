@@ -20,6 +20,7 @@ import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
 import '../widgets/employee_garden_card.dart';
+import '../widgets/employee_penguin_pet_card.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../utils/app_reload.dart';
 
@@ -1157,6 +1158,8 @@ class _EmployeePortalState extends State<EmployeePortal>
             _emptyPayroll(),
             const SizedBox(height: 16),
             _gardenCard(),
+            const SizedBox(height: 16),
+            const EmployeePenguinPetCard(),
           ],
         ),
       );
@@ -1182,6 +1185,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 _myWorkdayCard(),
                 const SizedBox(height: 12),
                 _gardenCard(),
+            const SizedBox(height: 16),
+            const EmployeePenguinPetCard(),
               ] else ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1208,6 +1213,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                 _myWorkdayCard(),
                 const SizedBox(height: 18),
                 _gardenCard(),
+            const SizedBox(height: 16),
+            const EmployeePenguinPetCard(),
               ],
             ],
           ),
