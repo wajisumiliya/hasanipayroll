@@ -21,7 +21,7 @@ export function installPenguinPetApi(app,{pool,authenticate}) {
   try {
    await client.query('BEGIN');
    // Serialize concurrent requests for this employee.
-   const employee=await client.query('SELECT employee_id FROM public.employees WHERE employee_id=$1 FOR UPDATE',[id]);
+   const employee=await client.query('SELECT employee_id FROM public.employees WHERE employee_id=$1 AND is_active IS TRUE FOR UPDATE',[id]);
    if(!employee.rowCount){await client.query('ROLLBACK');return res.status(403).json({ok:false,message:'Employee unavailable'});}
    await client.query('INSERT INTO app_private.employee_penguin_pets(employee_id) VALUES($1) ON CONFLICT DO NOTHING',[id]);
    if(action){
