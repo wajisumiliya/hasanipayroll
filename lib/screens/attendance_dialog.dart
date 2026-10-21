@@ -1280,7 +1280,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
       if (submit) {
         _submittedDays.addAll(
-          List<int>.generate(submissionEnd, (index) => index + 1),
+          List<int>.generate(submissionEnd!, (index) => index + 1),
         );
         submitted = true;
       }
