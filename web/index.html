@@ -52,17 +52,13 @@
   </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
-
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
+    This is useful for the Flutter loader.
   -->
   <script>
-    // Remove Flutter's retired PWA cache once so phones do not keep loading an
-    // older payroll UI after a deployment.
+    // Remove Flutter's retired PWA cache once per web release so phones do not
+    // keep showing an older payroll UI after a deployment.
     (async () => {
-      const cacheVersion = '2026-09-23-employee-3d-v6';
+      const cacheVersion = '2026-10-21-penguin-pet-v7';
       const versionKey = 'hasani-payroll-cache-version';
       if (localStorage.getItem(versionKey) !== cacheVersion) {
         if ('serviceWorker' in navigator) {
