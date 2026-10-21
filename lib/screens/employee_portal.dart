@@ -20,6 +20,7 @@ import '../widgets/employee_photo.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
 import '../widgets/employee_garden_card.dart';
+import '../widgets/employee_penguin_pet_card.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../utils/app_reload.dart';
 
@@ -80,14 +81,11 @@ class _EmployeePortalState extends State<EmployeePortal>
     // Neon payroll changes are read through the authenticated Node API.
     // Until a Neon event stream is available, refresh while the portal is
     // open rather than subscribing to the old Supabase payroll table.
-    _payrollRefreshTimer = Timer.periodic(
-      const Duration(minutes: 2),
-      (_) {
-        if (mounted && !_payrollLoading) {
-          unawaited(_refreshPayroll());
-        }
-      },
-    );
+    _payrollRefreshTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      if (mounted && !_payrollLoading) {
+        unawaited(_refreshPayroll());
+      }
+    });
   }
 
   Future<void> _refreshPayroll() async {
@@ -236,9 +234,13 @@ class _EmployeePortalState extends State<EmployeePortal>
                 child: Row(
                   children: [
                     const Expanded(
-                      child: Text('Notifications',
-                          style: TextStyle(
-                              fontSize: 21, fontWeight: FontWeight.w900)),
+                      child: Text(
+                        'Notifications',
+                        style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                     IconButton(
                       onPressed: () async {
@@ -284,16 +286,21 @@ class _EmployeePortalState extends State<EmployeePortal>
                                 color: const Color(0xFF08255F),
                               ),
                             ),
-                            title: Text(title,
-                                style: TextStyle(
-                                    fontWeight: read
-                                        ? FontWeight.w600
-                                        : FontWeight.w900)),
+                            title: Text(
+                              title,
+                              style: TextStyle(
+                                fontWeight:
+                                    read ? FontWeight.w600 : FontWeight.w900,
+                              ),
+                            ),
                             subtitle: Text(item['body']?.toString() ?? ''),
                             trailing: read
                                 ? null
-                                : const Icon(Icons.circle,
-                                    size: 9, color: Color(0xFF1976E9)),
+                                : const Icon(
+                                    Icons.circle,
+                                    size: 9,
+                                    color: Color(0xFF1976E9),
+                                  ),
                             onTap: () async {
                               await SupabaseService
                                   .markEmployeeNotificationRead(
@@ -364,8 +371,10 @@ class _EmployeePortalState extends State<EmployeePortal>
   _EmployeeDailyTheme get _dailyTheme =>
       _EmployeeDailyTheme.forWeekday(DateTime.now().weekday);
 
-  DateTime _attendanceMonth =
-      DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime _attendanceMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  );
 
   /// =============================================================
   /// CURRENT EMPLOYEE
@@ -392,9 +401,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       return [];
     }
 
-    return service.employeePayroll(
-      employeeId,
-    );
+    return service.employeePayroll(employeeId);
   }
 
   /// =============================================================
@@ -407,9 +414,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     if (!mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
@@ -422,9 +427,7 @@ class _EmployeePortalState extends State<EmployeePortal>
   Widget build(BuildContext context) {
     if (employee == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Employee Portal'),
-        ),
+        appBar: AppBar(title: const Text('Employee Portal')),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -505,9 +508,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                         angle: (progress * math.pi * 2) + index,
                         child: Text(
                           const ['🎉', '✨', '🎊', '⭐', '🎈', '🎁'][index % 6],
-                          style: TextStyle(
-                            fontSize: 16.0 + (index % 5) * 4,
-                          ),
+                          style: TextStyle(fontSize: 16.0 + (index % 5) * 4),
                         ),
                       ),
                     ),
@@ -612,7 +613,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                                     Color(0xFFFFE4EA),
                                     Color(0xFFEDE4FF),
                                   ]
-                                : const [Color(0xFFF3F8FF), Color(0xFFFFFFFF)])
+                                : const [
+                                    Color(0xFFF3F8FF),
+                                    Color(0xFFFFFFFF),
+                                  ])
                             : [
                                 dailyTheme.surfaceTint.withValues(alpha: .96),
                                 const Color(0xFFF5F7FB),
@@ -693,41 +697,22 @@ class _EmployeePortalState extends State<EmployeePortal>
             ),
           ),
           const SizedBox(height: 18),
-          _side(
-            'Dashboard',
-            Icons.dashboard_outlined,
-            0,
-          ),
+          _side('Dashboard', Icons.dashboard_outlined, 0),
           if (_isLocalEmployee)
             _side('Leave', Icons.flight_takeoff_outlined, 3),
           _side('Attendance', Icons.calendar_month_outlined, 2),
           _side('OT Request', Icons.more_time_outlined, 6),
           _side('Payslip', Icons.receipt_long_outlined, 1),
-          _side(
-            'Bank Information',
-            Icons.account_balance_outlined,
-            4,
-          ),
-          _side(
-            'Change Password',
-            Icons.lock_outline,
-            5,
-          ),
+          _side('Bank Information', Icons.account_balance_outlined, 4),
+          _side('Change Password', Icons.lock_outline, 5),
           const Spacer(),
           const Divider(color: Colors.white24),
-          _side(
-            'Logout',
-            Icons.logout,
-            7,
-          ),
+          _side('Logout', Icons.logout, 7),
           const Padding(
             padding: EdgeInsets.all(18),
             child: Text(
               '© 2026 Hasani Books',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Colors.white54, fontSize: 11),
             ),
           ),
         ],
@@ -739,24 +724,15 @@ class _EmployeePortalState extends State<EmployeePortal>
   // DESKTOP MENU ITEM
   // =============================================================
 
-  Widget _side(
-    String title,
-    IconData icon,
-    int index,
-  ) {
+  Widget _side(String title, IconData icon, int index) {
     final selected = tab == index;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 2,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: ListTile(
         selected: selected,
         selectedTileColor: const Color(0xFF1976E9),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         leading: Icon(
           icon,
           color: title == 'Logout' ? Colors.red.shade200 : Colors.white,
@@ -801,9 +777,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 28,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Row(
         children: [
           Expanded(
@@ -851,10 +825,7 @@ class _EmployeePortalState extends State<EmployeePortal>
               ),
               Text(
                 employee!.employeeId,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF60759B),
-                ),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF60759B)),
               ),
             ],
           ),
@@ -918,7 +889,9 @@ class _EmployeePortalState extends State<EmployeePortal>
                 PopupMenuItem(value: 'reload', child: Text('Refresh')),
                 PopupMenuItem(value: 'bank', child: Text('Bank Information')),
                 PopupMenuItem(
-                    value: 'password', child: Text('Change Password')),
+                  value: 'password',
+                  child: Text('Change Password'),
+                ),
                 PopupMenuDivider(),
                 PopupMenuItem(value: 'logout', child: Text('Logout')),
               ],
@@ -932,10 +905,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             end: Alignment.bottomRight,
             colors: tab == 0
                 ? const [Color(0xFFF3F8FF), Color(0xFFFFFFFF)]
-                : [
-                    dailyTheme.surfaceTint,
-                    const Color(0xFFF5F7FB),
-                  ],
+                : [dailyTheme.surfaceTint, const Color(0xFFF5F7FB)],
           ),
         ),
         child: _page(),
@@ -989,8 +959,10 @@ class _EmployeePortalState extends State<EmployeePortal>
             if (_isLocalEmployee)
               NavigationDestination(
                 icon: _mobileNavIcon(Icons.flight_takeoff_outlined, false),
-                selectedIcon:
-                    _mobileNavIcon(Icons.flight_takeoff_rounded, true),
+                selectedIcon: _mobileNavIcon(
+                  Icons.flight_takeoff_rounded,
+                  true,
+                ),
                 label: 'Leave',
               ),
           ],
@@ -1031,8 +1003,11 @@ class _EmployeePortalState extends State<EmployeePortal>
             ),
           ],
         ),
-        child: Icon(icon,
-            size: 21, color: selected ? Colors.white : const Color(0xFF405570)),
+        child: Icon(
+          icon,
+          size: 21,
+          color: selected ? Colors.white : const Color(0xFF405570),
+        ),
       );
 
   // =============================================================
@@ -1157,6 +1132,10 @@ class _EmployeePortalState extends State<EmployeePortal>
             _emptyPayroll(),
             const SizedBox(height: 16),
             _gardenCard(),
+            const SizedBox(height: 16),
+            EmployeePenguinPetCard(
+              crystalLevel: service.employeeGardenProgress.gardenLevel,
+            ),
           ],
         ),
       );
@@ -1182,6 +1161,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                 _myWorkdayCard(),
                 const SizedBox(height: 12),
                 _gardenCard(),
+                const SizedBox(height: 16),
+                EmployeePenguinPetCard(
+                  crystalLevel: service.employeeGardenProgress.gardenLevel,
+                ),
               ] else ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1208,6 +1191,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                 _myWorkdayCard(),
                 const SizedBox(height: 18),
                 _gardenCard(),
+                const SizedBox(height: 16),
+                EmployeePenguinPetCard(
+                  crystalLevel: service.employeeGardenProgress.gardenLevel,
+                ),
               ],
             ],
           ),
@@ -1271,65 +1258,89 @@ class _EmployeePortalState extends State<EmployeePortal>
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 7)),
+            color: Color(0x22000000),
+            blurRadius: 16,
+            offset: Offset(0, 7),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('MY WORKDAY',
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MY WORKDAY',
                       style: TextStyle(
-                          color: Color(0xFFFFD56A),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.1)),
-                  Text('Today at a glance',
-                      style: TextStyle(color: Colors.white70, fontSize: 11)),
-                ],
+                        color: Color(0xFFFFD56A),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    Text(
+                      'Today at a glance',
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            FilledButton.icon(
-              onPressed: () => _selectTab(2),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF102B4A),
+              FilledButton.icon(
+                onPressed: () => _selectTab(2),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF102B4A),
+                ),
+                icon: const Icon(Icons.schedule_rounded, size: 18),
+                label: const Text('Attendance'),
               ),
-              icon: const Icon(Icons.schedule_rounded, size: 18),
-              label: const Text('Attendance'),
-            ),
-          ]),
+            ],
+          ),
           const SizedBox(height: 14),
-          Wrap(spacing: 9, runSpacing: 9, children: [
-            _workdayMetric(Icons.circle, status, 'Status', statusColor),
-            _workdayMetric(
+          Wrap(
+            spacing: 9,
+            runSpacing: 9,
+            children: [
+              _workdayMetric(Icons.circle, status, 'Status', statusColor),
+              _workdayMetric(
                 Icons.login_rounded,
                 today?.effectiveCheckIn.trim().isNotEmpty == true
                     ? today!.effectiveCheckIn
                     : '--:--',
                 'Check in',
-                const Color(0xFF56C596)),
-            _workdayMetric(
+                const Color(0xFF56C596),
+              ),
+              _workdayMetric(
                 Icons.logout_rounded,
                 today?.effectiveCheckOut.trim().isNotEmpty == true
                     ? today!.effectiveCheckOut
                     : '--:--',
                 'Check out',
-                const Color(0xFFFFBE55)),
-            _workdayMetric(Icons.notifications_active_outlined,
-                '$_unreadNotificationCount', 'Unread', const Color(0xFFEE7890)),
-          ]),
+                const Color(0xFFFFBE55),
+              ),
+              _workdayMetric(
+                Icons.notifications_active_outlined,
+                '$_unreadNotificationCount',
+                'Unread',
+                const Color(0xFFEE7890),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
   Widget _workdayMetric(
-      IconData icon, String value, String label, Color color) {
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
     return Container(
       width: 142,
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
@@ -1338,26 +1349,33 @@ class _EmployeePortalState extends State<EmployeePortal>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white12),
       ),
-      child: Row(children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800)),
-              Text(label,
-                  style: const TextStyle(color: Colors.white60, fontSize: 9)),
-            ],
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.white60, fontSize: 9),
+                ),
+              ],
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
@@ -1374,17 +1392,11 @@ class _EmployeePortalState extends State<EmployeePortal>
       ),
       child: const Column(
         children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 50,
-            color: Colors.black38,
-          ),
+          Icon(Icons.receipt_long_outlined, size: 50, color: Colors.black38),
           SizedBox(height: 12),
           Text(
             'No payroll records available.',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -1616,8 +1628,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                 const SizedBox(height: 4),
                 Text(
                   'Good to see you again! Here is your employee information and quick access to common features.',
-                  style:
-                      const TextStyle(color: Color(0xFF6079A4), fontSize: 12),
+                  style: const TextStyle(
+                    color: Color(0xFF6079A4),
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -1678,8 +1692,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                   ),
                   const SizedBox(height: 7),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor,
                       borderRadius: BorderRadius.circular(8),
@@ -1707,17 +1723,25 @@ class _EmployeePortalState extends State<EmployeePortal>
               runSpacing: 10,
               children: [
                 _identityField(
-                    Icons.badge_outlined, 'Employee ID', employee!.employeeId,
-                    width: fieldWidth),
+                  Icons.badge_outlined,
+                  'Employee ID',
+                  employee!.employeeId,
+                  width: fieldWidth,
+                ),
                 _identityField(
-                    Icons.business_outlined,
-                    'Department',
-                    employee!.department.trim().isEmpty
-                        ? '-'
-                        : employee!.department,
-                    width: fieldWidth),
-                _identityField(Icons.location_on_outlined, 'Branch', branch,
-                    width: fieldWidth),
+                  Icons.business_outlined,
+                  'Department',
+                  employee!.department.trim().isEmpty
+                      ? '-'
+                      : employee!.department,
+                  width: fieldWidth,
+                ),
+                _identityField(
+                  Icons.location_on_outlined,
+                  'Branch',
+                  branch,
+                  width: fieldWidth,
+                ),
                 _identityField(
                   Icons.calendar_month_outlined,
                   'Joining Date',
@@ -1727,12 +1751,19 @@ class _EmployeePortalState extends State<EmployeePortal>
                           .format(employee!.joiningDate!),
                   width: fieldWidth,
                 ),
-                _identityField(Icons.email_outlined, 'Email',
-                    employee!.email.trim().isEmpty ? '-' : employee!.email,
-                    width: constraints.maxWidth, multiline: true),
-                _identityField(Icons.phone_outlined, 'Contact',
-                    employee!.phone.trim().isEmpty ? '-' : employee!.phone,
-                    width: constraints.maxWidth),
+                _identityField(
+                  Icons.email_outlined,
+                  'Email',
+                  employee!.email.trim().isEmpty ? '-' : employee!.email,
+                  width: constraints.maxWidth,
+                  multiline: true,
+                ),
+                _identityField(
+                  Icons.phone_outlined,
+                  'Contact',
+                  employee!.phone.trim().isEmpty ? '-' : employee!.phone,
+                  width: constraints.maxWidth,
+                ),
               ],
             );
           },
@@ -1785,8 +1816,10 @@ class _EmployeePortalState extends State<EmployeePortal>
               ? 'Employee'
               : employee!.designation,
           textAlign: textAlign,
-          style:
-              TextStyle(color: dailyTheme.accent, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: dailyTheme.accent,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -1795,17 +1828,16 @@ class _EmployeePortalState extends State<EmployeePortal>
           runSpacing: 10,
           children: [
             _identityField(
-                Icons.badge_outlined, 'Employee ID', employee!.employeeId),
+              Icons.badge_outlined,
+              'Employee ID',
+              employee!.employeeId,
+            ),
             _identityField(
               Icons.business_outlined,
               'Department',
               employee!.department.trim().isEmpty ? '-' : employee!.department,
             ),
-            _identityField(
-              Icons.location_on_outlined,
-              'Branch',
-              branch,
-            ),
+            _identityField(Icons.location_on_outlined, 'Branch', branch),
             _identityField(
               Icons.calendar_month_outlined,
               'Joining Date',
@@ -1856,8 +1888,11 @@ class _EmployeePortalState extends State<EmployeePortal>
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFF08255F)),
             ),
-            child:
-                const Icon(Icons.qr_code_2, size: 48, color: Color(0xFF08255F)),
+            child: const Icon(
+              Icons.qr_code_2,
+              size: 48,
+              color: Color(0xFF08255F),
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -1896,7 +1931,10 @@ class _EmployeePortalState extends State<EmployeePortal>
           Text(
             active ? 'VALUED EMPLOYEE' : 'NOT ACTIVE',
             style: TextStyle(
-                color: color, fontSize: 9, fontWeight: FontWeight.w800),
+              color: color,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -1923,8 +1961,10 @@ class _EmployeePortalState extends State<EmployeePortal>
               children: [
                 Text(
                   label,
-                  style:
-                      const TextStyle(color: Color(0xFF60759B), fontSize: 10),
+                  style: const TextStyle(
+                    color: Color(0xFF60759B),
+                    fontSize: 10,
+                  ),
                 ),
                 Text(
                   value,
@@ -1949,18 +1989,25 @@ class _EmployeePortalState extends State<EmployeePortal>
   // SALARY
   // =============================================================
 
-  Widget _salary(
-    PayrollRecord payroll,
-  ) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final compact = constraints.maxWidth < 380;
-      final metrics = [
-        _metric(
-            'Gross Earnings', payroll.totalEarnings, const Color(0xFF08255F)),
-        _metric('Total Deductions', payroll.totalDeductions, Colors.red),
-        _metric('Net Pay', payroll.netPay, const Color(0xFF13B66B), big: true),
-      ];
-      return Container(
+  Widget _salary(PayrollRecord payroll) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 380;
+        final metrics = [
+          _metric(
+            'Gross Earnings',
+            payroll.totalEarnings,
+            const Color(0xFF08255F),
+          ),
+          _metric('Total Deductions', payroll.totalDeductions, Colors.red),
+          _metric(
+            'Net Pay',
+            payroll.netPay,
+            const Color(0xFF13B66B),
+            big: true,
+          ),
+        ];
+        return Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -2004,37 +2051,33 @@ class _EmployeePortalState extends State<EmployeePortal>
                   spacing: 8,
                   runSpacing: 12,
                   children: metrics
-                      .map((metric) => SizedBox(
-                            width: (constraints.maxWidth - 42) / 2,
-                            child: metric,
-                          ))
+                      .map(
+                        (metric) => SizedBox(
+                          width: (constraints.maxWidth - 42) / 2,
+                          child: metric,
+                        ),
+                      )
                       .toList(),
                 )
               else
                 Row(
-                    children: metrics
-                        .map((metric) => Expanded(child: metric))
-                        .toList()),
+                  children:
+                      metrics.map((metric) => Expanded(child: metric)).toList(),
+                ),
             ],
-          ));
-    });
+          ),
+        );
+      },
+    );
   }
 
-  Widget _metric(
-    String title,
-    double value,
-    Color color, {
-    bool big = false,
-  }) {
+  Widget _metric(String title, double value, Color color, {bool big = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.black54,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.black54, fontSize: 12),
         ),
         const SizedBox(height: 4),
         SizedBox(
@@ -2077,9 +2120,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: _dailyTheme.accent.withValues(alpha: .38),
-        ),
+        border: Border.all(color: _dailyTheme.accent.withValues(alpha: .38)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2122,11 +2163,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     );
   }
 
-  Widget _quick(
-    String title,
-    IconData icon,
-    VoidCallback onTap,
-  ) {
+  Widget _quick(String title, IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -2135,18 +2172,12 @@ class _EmployeePortalState extends State<EmployeePortal>
         decoration: BoxDecoration(
           color: const Color(0xFFF2F7FF),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: _dailyTheme.accent.withValues(alpha: .30),
-          ),
+          border: Border.all(color: _dailyTheme.accent.withValues(alpha: .30)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 20,
-              color: _dailyTheme.accent,
-            ),
+            Icon(icon, size: 20, color: _dailyTheme.accent),
             const SizedBox(height: 3),
             Text(
               title,
@@ -2175,10 +2206,7 @@ class _EmployeePortalState extends State<EmployeePortal>
       child: ListTile(
         leading: const CircleAvatar(
           backgroundColor: Color(0xFFEAF0FF),
-          child: Icon(
-            Icons.description_outlined,
-            color: Color(0xFF2D55D8),
-          ),
+          child: Icon(Icons.description_outlined, color: Color(0xFF2D55D8)),
         ),
         title: Text(
           DateFormat('MMMM yyyy').format(payroll.period),
@@ -2191,9 +2219,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           _showFinancialDetails
               ? 'Net pay ${_moneyText(payroll.netPay)}'
               : 'Net pay RM ••••••',
-          style: TextStyle(
-            color: tab == 0 ? Colors.white60 : Colors.black54,
-          ),
+          style: TextStyle(color: tab == 0 ? Colors.white60 : Colors.black54),
         ),
         trailing: IconButton(
           onPressed: () => _pdf(payroll),
@@ -2231,9 +2257,10 @@ class _EmployeePortalState extends State<EmployeePortal>
               borderRadius: BorderRadius.circular(12),
               boxShadow: const [
                 BoxShadow(
-                    color: Color(0x2408255F),
-                    blurRadius: 7,
-                    offset: Offset(0, 4)),
+                  color: Color(0x2408255F),
+                  blurRadius: 7,
+                  offset: Offset(0, 4),
+                ),
               ],
             ),
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
@@ -2421,7 +2448,10 @@ class _EmployeePortalState extends State<EmployeePortal>
         border: Border.all(color: const Color(0xFFD1DBE7)),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x2208255F), blurRadius: 9, offset: Offset(0, 5)),
+            color: Color(0x2208255F),
+            blurRadius: 9,
+            offset: Offset(0, 5),
+          ),
         ],
       ),
       child: Row(
@@ -2436,9 +2466,10 @@ class _EmployeePortalState extends State<EmployeePortal>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style:
-                        const TextStyle(color: Colors.black54, fontSize: 10)),
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.black54, fontSize: 10),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   value,
@@ -2676,10 +2707,7 @@ class _EmployeePortalState extends State<EmployeePortal>
               const Expanded(
                 child: Text(
                   'My Payslips',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
                 ),
               ),
               IconButton(
@@ -2697,9 +2725,7 @@ class _EmployeePortalState extends State<EmployeePortal>
           const SizedBox(height: 8),
           const Text(
             'View your monthly net pay and download payslips by year',
-            style: TextStyle(
-              color: Colors.black54,
-            ),
+            style: TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 18),
           if (records.isEmpty)
@@ -2743,10 +2769,7 @@ class _EmployeePortalState extends State<EmployeePortal>
             ),
             const SizedBox(height: 14),
             if (selectedYear != null)
-              _payslipYearSection(
-                selectedYear,
-                recordsByYear[selectedYear]!,
-              ),
+              _payslipYearSection(selectedYear, recordsByYear[selectedYear]!),
           ] else
             ...years.map(
               (year) => _payslipYearSection(year, recordsByYear[year]!),
@@ -2772,7 +2795,9 @@ class _EmployeePortalState extends State<EmployeePortal>
           Text(
             'My Attendance',
             style: TextStyle(
-                fontSize: compact ? 24 : 28, fontWeight: FontWeight.w800),
+              fontSize: compact ? 24 : 28,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -2793,26 +2818,35 @@ class _EmployeePortalState extends State<EmployeePortal>
                         name: currentEmployee.name,
                         photoUrl: currentEmployee.photoUrl,
                         radius: 30,
-                        backgroundColor:
-                            _dailyTheme.accent.withValues(alpha: .20),
+                        backgroundColor: _dailyTheme.accent.withValues(
+                          alpha: .20,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(currentEmployee.name,
-                                style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.w800)),
+                            Text(
+                              currentEmployee.name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                             const SizedBox(height: 3),
-                            Text(currentEmployee.employeeId,
-                                style: const TextStyle(color: Colors.black54)),
+                            Text(
+                              currentEmployee.employeeId,
+                              style: const TextStyle(color: Colors.black54),
+                            ),
                           ],
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 7),
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(20),
@@ -2820,9 +2854,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                         child: Text(
                           'Read Only',
                           style: TextStyle(
-                              color: Colors.green.shade700,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 11),
+                            color: Colors.green.shade700,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ],
@@ -2840,8 +2875,9 @@ class _EmployeePortalState extends State<EmployeePortal>
                           if (narrow)
                             Text(
                               DateFormat('MMM yyyy').format(_attendanceMonth),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             )
                           else
                             Expanded(
@@ -2849,7 +2885,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                                 DateFormat('MMMM yyyy')
                                     .format(_attendanceMonth),
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w700),
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                         ],
@@ -2865,8 +2902,10 @@ class _EmployeePortalState extends State<EmployeePortal>
                           );
                           if (picked != null && mounted) {
                             setState(() {
-                              _attendanceMonth =
-                                  DateTime(picked.year, picked.month);
+                              _attendanceMonth = DateTime(
+                                picked.year,
+                                picked.month,
+                              );
                             });
                           }
                         },
@@ -2882,7 +2921,11 @@ class _EmployeePortalState extends State<EmployeePortal>
                         );
                       }
                       return Row(
-                          children: [Expanded(child: month), changeButton]);
+                        children: [
+                          Expanded(child: month),
+                          changeButton,
+                        ],
+                      );
                     },
                   ),
                   const SizedBox(height: 20),
@@ -3005,55 +3048,27 @@ class _EmployeePortalState extends State<EmployeePortal>
           const SizedBox(height: 12),
           Text(
             employee!.name,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-            ),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 5),
           Text(
             employee!.designation,
-            style: const TextStyle(
-              color: Colors.black54,
-            ),
+            style: const TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 20),
-          _info(
-            'Employee ID',
-            employee!.employeeId,
-          ),
-          _info(
-            'Email',
-            employee!.email,
-          ),
-          _info(
-            'Designation',
-            employee!.designation,
-          ),
-          _info(
-            'Department',
-            employee!.department,
-          ),
-          _info(
-            'New IC Number',
-            employee!.newIcNo,
-          ),
-          _info(
-            'Phone',
-            employee!.phone,
-          ),
-          _info(
-            'Address',
-            employee!.address,
-          ),
+          _info('Employee ID', employee!.employeeId),
+          _info('Email', employee!.email),
+          _info('Designation', employee!.designation),
+          _info('Department', employee!.department),
+          _info('New IC Number', employee!.newIcNo),
+          _info('Phone', employee!.phone),
+          _info('Address', employee!.address),
           _info(
             'Joining Date',
             employee!.joiningDate == null
                 ? '-'
-                : DateFormat('dd MMM yyyy').format(
-                    employee!.joiningDate!,
-                  ),
+                : DateFormat('dd MMM yyyy').format(employee!.joiningDate!),
           ),
         ],
       ),
@@ -3076,17 +3091,12 @@ class _EmployeePortalState extends State<EmployeePortal>
             children: [
               const Text(
                 'Bank Information',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Salary payment information',
-                style: TextStyle(
-                  color: Colors.black54,
-                ),
+                style: TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 24),
               Card(
@@ -3095,30 +3105,20 @@ class _EmployeePortalState extends State<EmployeePortal>
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(
-                          Icons.account_balance,
-                        ),
+                        leading: const Icon(Icons.account_balance),
                         title: const Text('Bank Code'),
                         subtitle: Text(
                           _privateText(employee!.bankCode),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                       const Divider(),
                       ListTile(
-                        leading: const Icon(
-                          Icons.credit_card,
-                        ),
-                        title: const Text(
-                          'Bank Account Number',
-                        ),
+                        leading: const Icon(Icons.credit_card),
+                        title: const Text('Bank Account Number'),
                         subtitle: Text(
                           _privateText(employee!.bankAccount),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                       const Divider(),
@@ -3127,9 +3127,7 @@ class _EmployeePortalState extends State<EmployeePortal>
                         title: const Text('Employee ID'),
                         subtitle: Text(
                           employee!.employeeId,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -3147,25 +3145,17 @@ class _EmployeePortalState extends State<EmployeePortal>
   // INFO CARD
   // =============================================================
 
-  Widget _info(
-    String title,
-    String value,
-  ) {
+  Widget _info(String title, String value) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         title: Text(
           title,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black54,
-          ),
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
         subtitle: Text(
           value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -3204,9 +3194,8 @@ class _EmployeePortalState extends State<EmployeePortal>
       await Printing.sharePdf(bytes: bytes, filename: filename);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to open payslip: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Unable to open payslip: $e')));
     }
   }
 }
@@ -3252,23 +3241,17 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
     }
 
     if (newPassword.length < 6) {
-      _message(
-        'Password must contain at least 6 characters.',
-      );
+      _message('Password must contain at least 6 characters.');
       return;
     }
 
     if (newPassword != confirm) {
-      _message(
-        'New passwords do not match.',
-      );
+      _message('New passwords do not match.');
       return;
     }
 
     if (current == newPassword) {
-      _message(
-        'New password must be different from your current password.',
-      );
+      _message('New password must be different from your current password.');
       return;
     }
 
@@ -3276,9 +3259,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
     final user = service.currentUser;
 
     if (user == null) {
-      _message(
-        'Your session has expired. Please login again.',
-      );
+      _message('Your session has expired. Please login again.');
       return;
     }
 
@@ -3300,20 +3281,14 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
         newController.clear();
         confirmController.clear();
 
-        _message(
-          'Password updated successfully.',
-        );
+        _message('Password updated successfully.');
       } else {
-        _message(
-          'Unable to update password.',
-        );
+        _message('Unable to update password.');
       }
     } catch (e) {
       if (!mounted) return;
 
-      _message(
-        'Failed to update password. Please try again.',
-      );
+      _message('Failed to update password. Please try again.');
     } finally {
       if (mounted) {
         setState(() {
@@ -3327,10 +3302,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -3344,9 +3316,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
       border: const OutlineInputBorder(),
       suffixIcon: IconButton(
         onPressed: onToggle,
-        icon: Icon(
-          hidden ? Icons.visibility : Icons.visibility_off,
-        ),
+        icon: Icon(hidden ? Icons.visibility : Icons.visibility_off),
       ),
     );
   }
@@ -3355,9 +3325,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 600;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Change Password'),
-      ),
+      appBar: AppBar(title: const Text('Change Password')),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(compact ? 12 : 20),
         child: Center(
@@ -3416,13 +3384,9 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         ? const SizedBox(
                             width: 22,
                             height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text(
-                            'Update Password',
-                          ),
+                        : const Text('Update Password'),
                   ),
                 ),
               ],

@@ -16,6 +16,7 @@ import nodemailer from "nodemailer";
 import { installDataApi, withDatabaseIdentity, claimsForRequest } from "./data-api.js";
 import { ensureApplicationSchema, startPayslipReleaseWorker } from "./application-schema.js";
 import { installNotificationApi } from "./notification-api.js";
+import { installPenguinPetApi } from "./penguin-pet-api.js";
 import { buildAttendanceUpserts, withCanonicalBranchId } from "./attendance-batch.js";
 import {
   ensureAdminAccount,
@@ -4330,6 +4331,7 @@ app.get("/api/neon/preview/employees", authenticate, async (req, res) => {
 
 installDataApi(app, { pool, authenticate });
 installNotificationApi(app, { pool, authenticate });
+installPenguinPetApi(app, { pool, authenticate });
 
 app.get('/api/admin/users', authenticate, requireAdmin, async (req,res) => {
   try {

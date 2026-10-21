@@ -1,0 +1,36 @@
+name: Format Penguin Pet PR
+on:
+  push:
+    branches: [feature/realistic-penguin-pet]
+    paths:
+      - 'lib/widgets/employee_penguin_pet_card.dart'
+      - 'lib/screens/employee_portal.dart'
+      - 'test/employee_penguin_pet_test.dart'
+      - '.github/workflows/penguin-format-fix.yml'
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+      - name: Resolve Flutter packages for formatter options
+        run: flutter pub get --enforce-lockfile
+      - name: Format only changed Penguin files
+        run: dart format lib/widgets/employee_penguin_pet_card.dart lib/screens/employee_portal.dart test/employee_penguin_pet_test.dart
+      - name: Commit formatting only to feature branch
+        shell: bash
+        run: |
+          if ! git diff --quiet -- lib/widgets/employee_penguin_pet_card.dart lib/screens/employee_portal.dart test/employee_penguin_pet_test.dart; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add lib/widgets/employee_penguin_pet_card.dart lib/screens/employee_portal.dart test/employee_penguin_pet_test.dart
+            git commit -m "style: format penguin pet Dart files"
+            git push origin HEAD:feature/realistic-penguin-pet
+          fi
