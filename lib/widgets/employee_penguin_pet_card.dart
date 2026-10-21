@@ -254,9 +254,9 @@ class _PenguinPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final body = Paint()..color = const Color(0xFF202F3A);
+    final body = Paint()..color = const Color(0xFF6B7280);
     final belly = Paint()..color = const Color(0xFFF8FBFD);
-    final orange = Paint()..color = const Color(0xFFEFA547);
+    final lightGreen = Paint()..color = const Color(0xFFA8E63E);
     final accent = Paint()..color = const Color(0xFF54B8DD);
     final shadow = Paint()..color = const Color(0x44265A78);
     final asleep = action == 'sleeping';
@@ -329,6 +329,16 @@ class _PenguinPainter extends CustomPainter {
     canvas.drawOval(Rect.fromLTWH(-1, -8, 31, 70), body);
     canvas.restore();
 
+    // Orange head cover, with the white facial mask left visible.
+    final headCover = Paint()..color = const Color(0xFFFF8A00);
+    canvas.drawArc(
+      Rect.fromLTWH(60, 35, 100, 83),
+      math.pi,
+      math.pi,
+      true,
+      headCover,
+    );
+
     // Warm white facial mask and softly shaded belly.
     final chest = Rect.fromLTWH(76, 76, 68, 82);
     canvas.drawOval(
@@ -344,8 +354,8 @@ class _PenguinPainter extends CustomPainter {
 
     // Feet alternate to create a readable waddling gait.
     final step = walking ? swing * 7 : 0.0;
-    canvas.drawOval(Rect.fromLTWH(73 + step, 154, 38, 17), orange);
-    canvas.drawOval(Rect.fromLTWH(110 - step, 154, 38, 17), orange);
+    canvas.drawOval(Rect.fromLTWH(73 + step, 154, 38, 17), lightGreen);
+    canvas.drawOval(Rect.fromLTWH(110 - step, 154, 38, 17), lightGreen);
 
     if (asleep) {
       final eyePaint = Paint()
@@ -386,7 +396,7 @@ class _PenguinPainter extends CustomPainter {
         ..lineTo(117, 89)
         ..lineTo(eating ? 107.5 : 107.5, eating ? 105 : 101)
         ..close();
-      canvas.drawPath(beak, orange);
+      canvas.drawPath(beak, lightGreen);
       if (eating) {
         canvas.drawCircle(const Offset(108, 112), 4, accent);
         canvas.drawCircle(const Offset(108, 112), 1.3, belly);
