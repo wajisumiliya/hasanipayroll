@@ -6,9 +6,7 @@ import '../services/neon_api.dart';
 
 /// Server-backed penguin companion. Growth and care use server time.
 class EmployeePenguinPetCard extends StatefulWidget {
-  const EmployeePenguinPetCard({super.key, this.crystalLevel = 1});
 
-  final int crystalLevel;
 
   @override
   State<EmployeePenguinPetCard> createState() => _EmployeePenguinPetCardState();
@@ -99,14 +97,6 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: Color(0xFF173D60),
-              ),
-            ),
-            Text(
-              'Crystal Terrarium • Level ${widget.crystalLevel}',
-              style: const TextStyle(
-                color: Color(0xFF426680),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
