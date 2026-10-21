@@ -60,7 +60,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               icon:const Icon(Icons.refresh)),
           ]),
           const SizedBox(height:6),
-          const Text('Your penguin grows with time, even when you are away. Care resets every 24 hours.',
+          const Text('Your penguin grows with time, even when you are away. Feeding and play become available again after 24 hours.',
             style:TextStyle(fontSize:12,color:Color(0xFF425F74))),
         ]),
       ),
