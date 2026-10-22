@@ -12,6 +12,7 @@ import '../services/app_service.dart';
 import '../services/notification_service.dart';
 import '../services/play_update_service.dart';
 import '../theme/daily_portal_theme.dart';
+import '../widgets/mystery_egg_teaser.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
@@ -872,6 +873,32 @@ class _LoginScreenState extends State<LoginScreen>
               },
             ),
           ),
+          if (kIsWeb)
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 880) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final penguinWidth =
+                      (constraints.maxWidth * .18).clamp(160.0, 300.0);
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: SizedBox(
+                        width: penguinWidth,
+                        height: penguinWidth,
+                        child: IgnorePointer(
+                          child: MysteryEggTeaser(size: penguinWidth),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           if (kDebugMode)
             Positioned(
               left: 12,
