@@ -2,6 +2,11 @@
 
 The public login egg and all six branch dashboard eggs share one launch clock.
 They hatch 72 hours after the updated backend first initializes the campaign.
+A visible countdown updates every second in days, hours, minutes and seconds.
+It uses the saved server deadline and elapsed timer ticks, not the device wall
+clock. If timing has not loaded, the UI says so instead of inventing a deadline.
+At zero it shows “Hatching…” until the server confirms the reveal.
+
 The final five minutes show cracks and a stronger wobble; the hatch reveals a
 chick with a brief transition. Growth continues to juvenile on day 15 and adult
 on day 45, using server time, like the existing personal employee pet.

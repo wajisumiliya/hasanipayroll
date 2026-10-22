@@ -23,9 +23,30 @@ class MysteryEggHatchController extends ChangeNotifier
   Timer? _poll;
   Timer? _crack;
   Timer? _hatch;
+  Timer? _countdown;
+  Duration? _remaining;
+  bool _loadFailed = false;
 
   String get stage => _stage;
   bool get hatching => _hatching;
+  Duration? get remaining => _remaining;
+
+  String get countdownLabel {
+    if (_stage != 'egg') return 'Surprise revealed!';
+    final remaining = _remaining;
+    if (remaining == null) {
+      return _loadFailed ? 'Reveal time unavailable' : 'Syncing reveal time…';
+    }
+    if (remaining <= Duration.zero) return 'Hatching…';
+    // Round up: do not display zero before the authoritative deadline.
+    final seconds =
+        (remaining.inMicroseconds / Duration.microsecondsPerSecond).ceil();
+    final days = seconds ~/ 86400;
+    String pad(int value) => value.toString().padLeft(2, '0');
+    final clock =
+        '${pad(seconds ~/ 3600 % 24)}:${pad(seconds ~/ 60 % 60)}:${pad(seconds % 60)}';
+    return 'Reveal in ${days > 0 ? '${days}d ' : ''}$clock';
+  }
 
   static Future<Map<String, dynamic>> _fetch() async {
     final response = await http
@@ -40,6 +61,7 @@ class MysteryEggHatchController extends ChangeNotifier
   void attach() {
     if (_disposed) return;
     if (++_users != 1) return;
+    if (_stage == 'egg') _remaining = null;
     WidgetsBinding.instance.addObserver(this);
     _poll =
         Timer.periodic(const Duration(minutes: 5), (_) => unawaited(refresh()));
@@ -58,6 +80,7 @@ class MysteryEggHatchController extends ChangeNotifier
     _poll?.cancel();
     _crack?.cancel();
     _hatch?.cancel();
+    _countdown?.cancel();
   }
 
   @override
@@ -81,6 +104,21 @@ class MysteryEggHatchController extends ChangeNotifier
       }
       final remaining = hatchAt.difference(serverNow);
       _stage = stage as String;
+      _loadFailed = false;
+      _remaining = remaining > Duration.zero ? remaining : Duration.zero;
+      _countdown?.cancel();
+      if (stage == 'egg' && remaining > Duration.zero) {
+        var previousTick = 0;
+        _countdown = Timer.periodic(const Duration(seconds: 1), (timer) {
+          // tick accounts for delayed callbacks without consulting wall-clock time.
+          final elapsed = Duration(seconds: timer.tick - previousTick);
+          previousTick = timer.tick;
+          final next = (_remaining ?? Duration.zero) - elapsed;
+          _remaining = next > Duration.zero ? next : Duration.zero;
+          if (next <= Duration.zero) timer.cancel();
+          notifyListeners();
+        });
+      }
       _hatching = stage == 'egg' && remaining <= const Duration(minutes: 5);
       _crack?.cancel();
       _hatch?.cancel();
@@ -102,6 +140,10 @@ class MysteryEggHatchController extends ChangeNotifier
     } catch (_) {
       // Stay sealed if the first load fails. Periodic/resume refresh retries;
       // already confirmed hatch progress is kept through temporary outages.
+      if (!_disposed && _users > 0 && generation == _generation) {
+        _loadFailed = true;
+        notifyListeners();
+      }
     } finally {
       if (generation == _generation) _loading = false;
     }

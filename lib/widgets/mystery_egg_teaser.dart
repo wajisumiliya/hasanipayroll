@@ -75,6 +75,7 @@ class _MysteryEggTeaserState extends State<MysteryEggTeaser>
     }
 
     return Semantics(
+      value: _hatch.stage == 'egg' ? _hatch.countdownLabel : null,
       label: _hatch.stage != 'egg'
           ? 'Surprise! Your penguin has hatched'
           : _hatch.hatching
@@ -84,60 +85,96 @@ class _MysteryEggTeaserState extends State<MysteryEggTeaser>
         child: SizedBox(
           width: widget.size,
           height: widget.size,
-          child: AnimatedBuilder(
-            animation: _pulse,
-            builder: (context, _) {
-              final pulse = reduceMotion ? .5 : _pulse.value;
-              return AnimatedSwitcher(
-                duration: reduceMotion
-                    ? Duration.zero
-                    : const Duration(milliseconds: 800),
-                child: _hatch.stage != 'egg'
-                    ? SizedBox(
-                        key: ValueKey(_hatch.stage),
-                        width: widget.size,
-                        height: widget.size,
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          child: PenguinIllustration(
-                              stage: _hatch.stage, action: widget.action),
-                        ),
-                      )
-                    : Stack(
-                        key: const ValueKey('golden-egg'),
-                        children: [
-                          Positioned.fill(
-                            child: CustomPaint(
-                              painter: _EnchantedEggPainter(pulse),
-                            ),
-                          ),
-                          Positioned(
-                            left: widget.size * .28,
-                            top: widget.size * .17,
-                            width: widget.size * .44,
-                            height: widget.size * .66,
-                            child: Transform.translate(
-                              offset: Offset(0, -pulse * widget.size * .02),
-                              child: Transform.rotate(
-                                angle: math.sin(pulse * math.pi * 2) *
-                                    (_hatch.hatching ? .07 : .025),
-                                child: CustomPaint(
-                                  foregroundPainter: _hatch.hatching
-                                      ? const _EggCracksPainter()
-                                      : null,
-                                  child: Image.asset(
-                                    'assets/mystery_golden_egg.png',
-                                    fit: BoxFit.contain,
-                                    filterQuality: FilterQuality.high,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _pulse,
+                  builder: (context, _) {
+                    final pulse = reduceMotion ? .5 : _pulse.value;
+                    return AnimatedSwitcher(
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 800),
+                      child: _hatch.stage != 'egg'
+                          ? SizedBox(
+                              key: ValueKey(_hatch.stage),
+                              width: widget.size,
+                              height: widget.size,
+                              child: FittedBox(
+                                fit: BoxFit.contain,
+                                child: PenguinIllustration(
+                                    stage: _hatch.stage, action: widget.action),
+                              ),
+                            )
+                          : Stack(
+                              key: const ValueKey('golden-egg'),
+                              children: [
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter: _EnchantedEggPainter(pulse),
                                   ),
                                 ),
-                              ),
+                                Positioned(
+                                  left: widget.size * .28,
+                                  top: widget.size * .17,
+                                  width: widget.size * .44,
+                                  height: widget.size * .66,
+                                  child: Transform.translate(
+                                    offset:
+                                        Offset(0, -pulse * widget.size * .02),
+                                    child: Transform.rotate(
+                                      angle: math.sin(pulse * math.pi * 2) *
+                                          (_hatch.hatching ? .07 : .025),
+                                      child: CustomPaint(
+                                        foregroundPainter: _hatch.hatching
+                                            ? const _EggCracksPainter()
+                                            : null,
+                                        child: Image.asset(
+                                          'assets/mystery_golden_egg.png',
+                                          fit: BoxFit.contain,
+                                          filterQuality: FilterQuality.high,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+                    );
+                  },
+                ),
+              ),
+              if (_hatch.stage == 'egg')
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xEB172D4F),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0x99FFD76A)),
+                        ),
+                        child: Text(
+                          _hatch.countdownLabel,
+                          style: TextStyle(
+                            color: const Color(0xFFFFE7A4),
+                            fontSize: widget.size >= 180 ? 12 : 10,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
-                        ],
+                        ),
                       ),
-              );
-            },
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
