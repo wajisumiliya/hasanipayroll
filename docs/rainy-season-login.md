@@ -6,13 +6,16 @@ The existing `assets/login_days/<weekday>.png` mapping supplies the desktop logi
 
 | Day | Scene |
 | --- | --- |
-| Monday | Rainforest Dawn |
-| Tuesday | Rain on the Lake |
-| Wednesday | Monsoon Waterfall |
-| Thursday | Mountain Rain |
-| Friday | After the Rain |
-| Saturday | Night Rain |
-| Sunday | Quiet Rain Garden |
+| Monday | Tropical Cloudburst |
+| Tuesday | Rain over the Ocean |
+| Wednesday | City in the Rain |
+| Thursday | Above the Clouds |
+| Friday | Countryside Monsoon |
+| Saturday | Midnight Rain |
+| Sunday | Rain on the Window |
+
+Each day has a distinct location, palette, and viewpoint while retaining the
+cloudy, rainy-season theme.
 
 The backgrounds contain scenery only. The Hasani Books logo, sign-in form,
 golden mystery egg, hatch countdown, and penguin growth remain rendered by the
