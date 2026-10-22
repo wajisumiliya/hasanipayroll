@@ -752,6 +752,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _sevenDayLoginPage(BuildContext context) {
     final theme = _todayTheme;
+    final arcticLogin = MediaQuery.sizeOf(context).width < 880;
 
     return Scaffold(
       backgroundColor: theme.pageBackground,
@@ -759,7 +760,9 @@ class _LoginScreenState extends State<LoginScreen>
         children: [
           Positioned.fill(
             child: Image.asset(
-              theme.backgroundAsset,
+              arcticLogin
+                  ? 'assets/login_arctic/${theme.day.toLowerCase()}.png'
+                  : theme.backgroundAsset,
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
               errorBuilder: (_, __, ___) => DecoratedBox(
@@ -804,14 +807,25 @@ class _LoginScreenState extends State<LoginScreen>
                 if (compact) {
                   return Center(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(18, 22, 18, 110),
+                      padding: const EdgeInsets.fromLTRB(18, 22, 18, 24),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
                         child: Column(
                           children: [
-                            _sevenDayTopbar(theme, compact: true),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: .86),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: _sevenDayTopbar(theme, compact: true),
+                            ),
                             const SizedBox(height: 20),
                             _sevenDayAuthCard(theme, compact: true),
+                            const SizedBox(height: 10),
+                            const IgnorePointer(
+                              child: MysteryEggTeaser(size: 180),
+                            ),
                           ],
                         ),
                       ),
@@ -893,7 +907,6 @@ class _LoginScreenState extends State<LoginScreen>
                         child: IgnorePointer(
                           child: MysteryEggTeaser(
                             size: penguinWidth,
-                            enchanted: true,
                           ),
                         ),
                       ),
@@ -1030,7 +1043,7 @@ class _LoginScreenState extends State<LoginScreen>
     _DailyLoginTheme theme, {
     bool compact = false,
   }) {
-    final foreground = theme.foreground;
+    final foreground = compact ? const Color(0xFF10294D) : theme.foreground;
     return Row(
       children: [
         Container(
@@ -1147,11 +1160,12 @@ class _LoginScreenState extends State<LoginScreen>
     _DailyLoginTheme theme, {
     bool compact = false,
   }) {
-    final foreground = theme.foreground;
-    final fieldColor = theme.isLight
+    final foreground = compact ? const Color(0xFF10294D) : theme.foreground;
+    final fieldColor = compact || theme.isLight
         ? Colors.white.withValues(alpha: .30)
         : Colors.white.withValues(alpha: .10);
-    final fieldText = theme.isLight ? const Color(0xFF10294D) : Colors.white;
+    final fieldText =
+        compact || theme.isLight ? const Color(0xFF10294D) : Colors.white;
 
     InputDecoration decoration(String label, IconData icon) {
       final border = OutlineInputBorder(
@@ -1161,7 +1175,8 @@ class _LoginScreenState extends State<LoginScreen>
       return InputDecoration(
         hintText: label,
         hintStyle: TextStyle(color: fieldText.withValues(alpha: .58)),
-        prefixIcon: Icon(icon, color: theme.accent1, size: 20),
+        prefixIcon: Icon(icon,
+            color: compact ? const Color(0xFF195BD7) : theme.accent1, size: 20),
         filled: true,
         fillColor: fieldColor,
         contentPadding: const EdgeInsets.symmetric(vertical: 17),
@@ -1183,15 +1198,20 @@ class _LoginScreenState extends State<LoginScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: theme.isLight
+              colors: compact
                   ? [
-                      Colors.white.withValues(alpha: .48),
-                      Colors.white.withValues(alpha: .18),
+                      Colors.white.withValues(alpha: .90),
+                      Colors.white.withValues(alpha: .78)
                     ]
-                  : [
-                      Colors.white.withValues(alpha: .16),
-                      const Color(0xFF101722).withValues(alpha: .26),
-                    ],
+                  : theme.isLight
+                      ? [
+                          Colors.white.withValues(alpha: .48),
+                          Colors.white.withValues(alpha: .18),
+                        ]
+                      : [
+                          Colors.white.withValues(alpha: .16),
+                          const Color(0xFF101722).withValues(alpha: .26),
+                        ],
             ),
             borderRadius: BorderRadius.circular(26),
             border: Border.all(
@@ -1306,7 +1326,9 @@ class _LoginScreenState extends State<LoginScreen>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     gradient: LinearGradient(
-                      colors: [theme.buttonStart, theme.buttonEnd],
+                      colors: compact
+                          ? const [Color(0xFF247CFF), Color(0xFF1252CD)]
+                          : [theme.buttonStart, theme.buttonEnd],
                     ),
                   ),
                   child: ElevatedButton(
@@ -1343,42 +1365,53 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 21),
-              Row(
-                children: [
-                  Expanded(
-                      child: Divider(color: foreground.withValues(alpha: .18))),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Text(
-                      theme.footer,
-                      style: TextStyle(
-                        color: foreground.withValues(alpha: .58),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
+              if (!compact) ...[
+                const SizedBox(height: 21),
+                Row(
+                  children: [
+                    Expanded(
+                        child:
+                            Divider(color: foreground.withValues(alpha: .18))),
+                    Flexible(
+                      flex: 6,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          theme.footer,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: foreground.withValues(alpha: .58),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                      child: Divider(color: foreground.withValues(alpha: .18))),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shield_outlined,
-                      size: 14, color: foreground.withValues(alpha: .58)),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Protected  •  Reliable  •  Hasani Books',
-                    style: TextStyle(
-                      color: foreground.withValues(alpha: .58),
-                      fontSize: 10,
+                    Expanded(
+                        child:
+                            Divider(color: foreground.withValues(alpha: .18))),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.shield_outlined,
+                        size: 14, color: foreground.withValues(alpha: .58)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Protected  •  Reliable  •  Hasani Books',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: foreground.withValues(alpha: .58),
+                          fontSize: 10,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

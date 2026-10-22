@@ -101,10 +101,11 @@ class BranchPenguinCrew extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xD9D1F0FC),
+            color: const Color(0xE6FFF1C2),
             borderRadius: BorderRadius.circular(13),
           ),
-          child: const Icon(Icons.ac_unit_rounded, color: Color(0xFF1D648A)),
+          child:
+              const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9A6500)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -112,7 +113,7 @@ class BranchPenguinCrew extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'A LITTLE SURPRISE',
+                'SIX SECRETS. ONE LITTLE WONDER.',
                 style: TextStyle(
                   color: Color(0xFF173D60),
                   fontSize: 17,
@@ -121,7 +122,7 @@ class BranchPenguinCrew extends StatelessWidget {
                 ),
               ),
               Text(
-                '$branchName · Something special is growing',
+                '$branchName · Some surprises are worth waiting for',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

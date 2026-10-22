@@ -56,6 +56,7 @@ flutter:
     - assets/login_cat_open_eyes.png
     - assets/login_natural_tree.png
     - assets/login_days/
+    - assets/login_arctic/
     - assets/branch_stamps/
     - assets/ea_form_template/
     - assets/dashboard_epf_kwsp.png
@@ -70,6 +71,7 @@ flutter:
     - assets/garden_fountain_atmosphere.png
     - assets/employee_crystal_terrarium.png
     - assets/penguin_habitat.png
+    - assets/mystery_golden_egg.png
 
 # ============================================================================
 # APP ICON

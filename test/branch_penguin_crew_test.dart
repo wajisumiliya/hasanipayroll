@@ -15,10 +15,10 @@ void main() {
       ),
     );
 
-    expect(find.text('A LITTLE SURPRISE'), findsOneWidget);
-    expect(
-        find.text('ALOR SETAR · Something special is growing'), findsOneWidget);
-    expect(find.byType(PenguinIllustration), findsNWidgets(6));
+    expect(find.text('SIX SECRETS. ONE LITTLE WONDER.'), findsOneWidget);
+    expect(find.text('ALOR SETAR · Some surprises are worth waiting for'),
+        findsOneWidget);
+    expect(find.byType(PenguinIllustration), findsNothing);
     expect(find.byType(MysteryEggTeaser), findsNWidgets(6));
     expect(find.bySemanticsLabel('A little surprise is waiting'),
         findsNWidgets(6));
