@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../services/neon_api.dart';
+import '../services/penguin_growth.dart';
 
 /// Server-backed penguin companion. Growth and care use server time.
 class EmployeePenguinPetCard extends StatefulWidget {
@@ -91,7 +92,16 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
   void _scheduleHatch(DateTime? hatchAt, DateTime? serverNow, String stage) {
     _crackTimer?.cancel();
     _hatchTimer?.cancel();
-    if (stage != 'egg' || hatchAt == null || serverNow == null) return;
+    if (hatchAt == null || serverNow == null) return;
+    if (stage != 'egg') {
+      if (stage != 'adult') {
+        // Advance daily growth even if the employee keeps the portal open.
+        final nextDay = hatchAt
+            .add(Duration(days: serverNow.difference(hatchAt).inDays + 1));
+        _hatchTimer = Timer(nextDay.difference(serverNow), _refreshAtHatch);
+      }
+      return;
+    }
 
     final untilHatch = hatchAt.difference(serverNow);
     if (untilHatch <= Duration.zero) {
@@ -186,6 +196,8 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                       child: PenguinIllustration(
                         key: ValueKey(stage),
                         stage: stage,
+                        daysSinceHatch:
+                            ((days as num).toInt() - 3).clamp(0, 100000),
                         action: action,
                         hatching: _isHatching,
                         onTap: _toggleSleep,
@@ -268,12 +280,14 @@ class PenguinIllustration extends StatefulWidget {
     required this.stage,
     this.action = 'idle',
     this.hatching = false,
+    this.daysSinceHatch,
     this.onTap,
   });
 
   final String stage;
   final String action;
   final bool hatching;
+  final int? daysSinceHatch;
   final VoidCallback? onTap;
 
   @override
@@ -330,11 +344,12 @@ class _PenguinIllustrationState extends State<PenguinIllustration>
                   widget.action == 'waddling' || widget.action == 'playing';
               final eating = widget.action == 'eating';
               final swing = math.sin(phase * math.pi * 2);
-              final growth = widget.stage == 'chick'
-                  ? .84
-                  : widget.stage == 'juvenile'
-                      ? .94
-                      : 1.0;
+              final growth = penguinGrowthScale(widget.daysSinceHatch ??
+                  (widget.stage == 'adult'
+                      ? 42
+                      : widget.stage == 'juvenile'
+                          ? 12
+                          : 0));
               final assetStage = widget.stage == 'chick' ? 'chick' : 'adult';
               final asset =
                   'assets/penguins/$assetStage${sleeping ? '_sleep' : ''}.png';
@@ -361,20 +376,26 @@ class _PenguinIllustrationState extends State<PenguinIllustration>
                                     ? swing * .018
                                     : swing * .004,
                         alignment: Alignment.bottomCenter,
-                        child: Transform.scale(
-                          scale: growth *
-                              (1 +
-                                  (reduceMotion
-                                      ? 0
-                                      : swing * (sleeping ? .007 : .005))),
+                        child: AnimatedScale(
+                          scale: growth,
+                          duration: reduceMotion
+                              ? Duration.zero
+                              : const Duration(milliseconds: 800),
                           alignment: Alignment.bottomCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 3, 20, 8),
-                            child: Image.asset(
-                              asset,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
-                              cacheHeight: 512,
+                          child: Transform.scale(
+                            scale: (1 +
+                                (reduceMotion
+                                    ? 0
+                                    : swing * (sleeping ? .007 : .005))),
+                            alignment: Alignment.bottomCenter,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 3, 20, 8),
+                              child: Image.asset(
+                                asset,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                                cacheHeight: 512,
+                              ),
                             ),
                           ),
                         ),
@@ -383,9 +404,16 @@ class _PenguinIllustrationState extends State<PenguinIllustration>
                   ),
                   if (eating || widget.action == 'playing')
                     Positioned.fill(
-                        child: CustomPaint(
-                      painter: _PenguinCarePainter(
-                          action: widget.action, phase: phase),
+                        child: AnimatedScale(
+                      scale: growth,
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 800),
+                      alignment: Alignment.bottomCenter,
+                      child: CustomPaint(
+                        painter: _PenguinCarePainter(
+                            action: widget.action, phase: phase),
+                      ),
                     )),
                 ],
               );

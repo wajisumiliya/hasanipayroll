@@ -11,6 +11,36 @@ Map<String, dynamic> snapshot(DateTime now, DateTime hatchAt) => {
     };
 
 void main() {
+  testWidgets(
+      'public penguin size follows completed server days after hatching',
+      (tester) async {
+    final hatchAt = DateTime.utc(2026, 10, 25);
+    var serverNow = hatchAt
+        .add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+    final controller = MysteryEggHatchController(
+        load: () async => snapshot(serverNow, hatchAt));
+    await tester.pumpWidget(MaterialApp(
+        home: Center(child: MysteryEggTeaser(controller: controller))));
+    await tester.pump();
+    expect(controller.daysSinceHatch, 6);
+    expect(
+        tester
+            .widget<PenguinIllustration>(find.byType(PenguinIllustration))
+            .daysSinceHatch,
+        6);
+    serverNow = hatchAt.add(const Duration(days: 7));
+    await controller.refresh();
+    await tester.pump();
+    expect(controller.daysSinceHatch, 7);
+    expect(
+        tester
+            .widget<PenguinIllustration>(find.byType(PenguinIllustration))
+            .daysSinceHatch,
+        7);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
+
   testWidgets('countdown ticks every second and rolls across the day boundary',
       (tester) async {
     final start = DateTime.utc(2026, 10, 22);

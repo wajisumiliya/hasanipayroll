@@ -8,8 +8,12 @@ clock. If timing has not loaded, the UI says so instead of inventing a deadline.
 At zero it shows “Hatching…” until the server confirms the reveal.
 
 The final five minutes show cracks and a stronger wobble; the hatch reveals a
-chick with a brief transition. Growth continues to juvenile on day 15 and adult
-on day 45, using server time, like the existing personal employee pet.
+small chick with a brief transition. Hatch-day size is 30% of the mature bird.
+Size increases each completed day after hatching, reaching full size after 42
+days (45 days after adoption/launch). Daily size changes animate gently, and the
+chick-to-juvenile artwork change on adoption day 15 does not jump its scale.
+The existing personal employee pet uses the same daily size curve. Server age
+and saved adoption/launch timestamps determine growth, not app-open time.
 
 Startup stores one launch timestamp in `app_private.mystery_egg_campaign`.
 Initialization uses the application's existing transaction and advisory lock;

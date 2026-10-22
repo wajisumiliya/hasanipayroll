@@ -15,6 +15,7 @@ class MysteryEggHatchController extends ChangeNotifier
   static final shared = MysteryEggHatchController();
   final Future<Map<String, dynamic>> Function() _load;
   String _stage = 'egg';
+  int _daysSinceHatch = 0;
   bool _hatching = false;
   bool _loading = false;
   bool _disposed = false;
@@ -28,6 +29,7 @@ class MysteryEggHatchController extends ChangeNotifier
   bool _loadFailed = false;
 
   String get stage => _stage;
+  int get daysSinceHatch => _daysSinceHatch;
   bool get hatching => _hatching;
   Duration? get remaining => _remaining;
 
@@ -104,6 +106,8 @@ class MysteryEggHatchController extends ChangeNotifier
       }
       final remaining = hatchAt.difference(serverNow);
       _stage = stage as String;
+      final hatchedDays = serverNow.difference(hatchAt).inDays;
+      _daysSinceHatch = hatchedDays > 0 ? hatchedDays : 0;
       _loadFailed = false;
       _remaining = remaining > Duration.zero ? remaining : Duration.zero;
       _countdown?.cancel();

@@ -104,7 +104,10 @@ class _MysteryEggTeaserState extends State<MysteryEggTeaser>
                               child: FittedBox(
                                 fit: BoxFit.contain,
                                 child: PenguinIllustration(
-                                    stage: _hatch.stage, action: widget.action),
+                                  stage: _hatch.stage,
+                                  action: widget.action,
+                                  daysSinceHatch: _hatch.daysSinceHatch,
+                                ),
                               ),
                             )
                           : Stack(
