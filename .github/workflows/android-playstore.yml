@@ -1,6 +1,18 @@
 name: Signed Android Play Store bundle
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-playstore.yml'
+      - 'scripts/prepare-android-signing.py'
+      - 'scripts/android-release-version.py'
+      - 'pubspec.yaml'
   workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Optional unused Play version code (must be at least the pubspec code)'
+        required: false
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -12,16 +24,16 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Resolve release version
+        id: release
+        env:
+          REQUESTED_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: python3 scripts/android-release-version.py
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
-        with:
-          flutter-version: '3.47.0'
-          channel: stable
-          cache: true
       - name: Restore existing upload key from GitHub secrets
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -29,55 +41,57 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
-          python3 - <<'PY'
-          import os, base64
-          from pathlib import Path
-          names = ['ANDROID_KEYSTORE_BASE64', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD', 'ANDROID_STORE_PASSWORD']
-          if any(not os.environ.get(name) for name in names):
-              raise SystemExit('Missing Android upload-key secrets. This workflow will not create an unsigned or debug-signed Play Store bundle.')
-          key = Path('android/app/upload-keystore.jks')
-          key.write_bytes(base64.b64decode(os.environ['ANDROID_KEYSTORE_BASE64'], validate=True))
-          key.chmod(0o600)
-          def escape(value):
-              result = ''
-              for c in value:
-                  if c == '\\': result += '\\\\'
-                  elif c == '\n': result += '\\n'
-                  elif c == '\r': result += '\\r'
-                  elif c == '\t': result += '\\t'
-                  elif c in ' =:#!': result += '\\' + c
-                  elif ord(c) > 127:
-                      data = c.encode('utf-16-be')
-                      result += ''.join('\\u%04x' % int.from_bytes(data[i:i+2], 'big') for i in range(0, len(data), 2))
-                  else: result += c
-              return result
-          values = {'storeFile': 'upload-keystore.jks', 'keyAlias': os.environ['ANDROID_KEY_ALIAS'], 'keyPassword': os.environ['ANDROID_KEY_PASSWORD'], 'storePassword': os.environ['ANDROID_STORE_PASSWORD']}
-          properties = Path('android/key.properties')
-          properties.write_text(''.join(k+'='+escape(v)+'\n' for k,v in values.items()), encoding='ascii')
-          properties.chmod(0o600)
-          PY
+          python3 scripts/prepare-android-signing.py
           keytool -list -keystore android/app/upload-keystore.jks -storepass:env ANDROID_STORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" > /dev/null
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
       - run: flutter pub get --enforce-lockfile
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
       - run: flutter test --no-pub
       - name: Build signed release bundle
-        run: flutter build appbundle --release --no-pub
-      - name: Verify bundle signature and save upload certificate
+        env:
+          ORG_GRADLE_PROJECT_requireReleaseSigning: 'true'
+          RELEASE_VERSION_NAME: ${{ steps.release.outputs.version_name }}
+          RELEASE_VERSION_CODE: ${{ steps.release.outputs.version_code }}
+        run: |
+          flutter build appbundle --release --no-pub \
+            --build-name="$RELEASE_VERSION_NAME" --build-number="$RELEASE_VERSION_CODE" \
+            --dart-define=API_BASE_URL=https://hasaniworkhub.onrender.com
+      - name: Verify upload-key signature and save public certificate
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          BUNDLE_NAME: ${{ steps.release.outputs.bundle_name }}
+          RELEASE_VERSION_NAME: ${{ steps.release.outputs.version_name }}
+          RELEASE_VERSION_CODE: ${{ steps.release.outputs.version_code }}
         run: |
+          set -euo pipefail
           mkdir -p playstore-release
-          cp build/app/outputs/bundle/release/app-release.aab playstore-release/hasani-payroll-1.0.5-12.aab
-          jarsigner -verify playstore-release/hasani-payroll-1.0.5-12.aab > /tmp/playstore-signature-check.txt
+          cp build/app/outputs/bundle/release/app-release.aab "playstore-release/$BUNDLE_NAME"
+          jarsigner -verify "playstore-release/$BUNDLE_NAME" > /tmp/playstore-signature-check.txt
           grep -F 'jar verified.' /tmp/playstore-signature-check.txt
           keytool -exportcert -rfc -keystore android/app/upload-keystore.jks -storepass:env ANDROID_STORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" -file playstore-release/upload-certificate.pem
           keytool -printcert -file playstore-release/upload-certificate.pem > playstore-release/upload-certificate-details.txt
-          sha256sum playstore-release/hasani-payroll-1.0.5-12.aab > playstore-release/SHA256SUMS.txt
+          keytool -printcert -jarfile "playstore-release/$BUNDLE_NAME" > /tmp/bundle-certificate-details.txt
+          expected=$(awk '/SHA256:/{print $2; exit}' playstore-release/upload-certificate-details.txt)
+          actual=$(awk '/SHA256:/{print $2; exit}' /tmp/bundle-certificate-details.txt)
+          test -n "$expected" && test "$actual" = "$expected"
+          (cd playstore-release && sha256sum "$BUNDLE_NAME" > SHA256SUMS.txt)
+          {
+            echo '### Signed Google Play bundle'
+            echo "Version: $RELEASE_VERSION_NAME ($RELEASE_VERSION_CODE)"
+            echo 'Package: com.hasani.payroll'
+            echo "Source commit: $GITHUB_SHA"
+            echo 'Download the signed AAB from this run’s Artifacts section.'
+            echo 'This workflow does not publish to Google Play.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: HASANI-PAYROLL-PLAYSTORE-SIGNED-1.0.5-12
+          name: ${{ steps.release.outputs.artifact_name }}
           if-no-files-found: error
           retention-days: 14
           path: playstore-release/

@@ -1,6 +1,12 @@
 import java.io.FileInputStream
 import java.util.Properties
 
+plugins {
+    id("com.android.application")
+    id("com.google.gms.google-services")
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -15,10 +21,9 @@ val hasReleaseSigningConfig =
         !keystoreProperties.getProperty(it).isNullOrBlank()
     } && releaseStoreFile?.exists() == true
 
-plugins {
-    id("com.android.application")
-    id("com.google.gms.google-services")
-    id("dev.flutter.flutter-gradle-plugin")
+// The signed CI workflow requires this; ordinary compile-only CI may stay unsigned.
+if (providers.gradleProperty("requireReleaseSigning").orNull == "true" && !hasReleaseSigningConfig) {
+    throw GradleException("Release signing is required but android/key.properties or the upload keystore is missing")
 }
 
 android {
