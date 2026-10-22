@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { ensureMysteryEggCampaign } from './mystery-eggs.js';
 const VERSION = '20261020_neon_application_api_v1';
 export async function ensureApplicationSchema(pool) {
   const client = await pool.connect();
@@ -31,6 +32,7 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261021_employee_penguin_pet.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [penguinVersion]);
     }
+    await ensureMysteryEggCampaign(client);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK'); throw error;

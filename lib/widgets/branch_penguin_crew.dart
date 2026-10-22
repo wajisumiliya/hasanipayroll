@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'mystery_egg_teaser.dart';
 
-/// Unrevealed, animated surprises shown on every branch dashboard.
+/// Six golden eggs share the login screen's persistent server hatch clock.
 /// Branch accounts do not use the employee-only pet API.
 class BranchPenguinCrew extends StatelessWidget {
   const BranchPenguinCrew({super.key, required this.branchName});
@@ -79,8 +79,18 @@ class BranchPenguinCrew extends StatelessWidget {
                           mainAxisSpacing: 0,
                           mainAxisExtent: 144,
                         ),
-                        itemBuilder: (context, index) => const Center(
-                          child: MysteryEggTeaser(size: 128),
+                        itemBuilder: (context, index) => Center(
+                          child: MysteryEggTeaser(
+                            size: 128,
+                            action: const [
+                              'idle',
+                              'eating',
+                              'playing',
+                              'waddling',
+                              'idle',
+                              'sleeping'
+                            ][index],
+                          ),
                         ),
                       );
                     },

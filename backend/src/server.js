@@ -17,6 +17,7 @@ import { installDataApi, withDatabaseIdentity, claimsForRequest } from "./data-a
 import { ensureApplicationSchema, startPayslipReleaseWorker } from "./application-schema.js";
 import { installNotificationApi } from "./notification-api.js";
 import { installPenguinPetApi } from "./penguin-pet-api.js";
+import { installMysteryEggApi } from "./mystery-eggs.js";
 import { buildAttendanceUpserts, withCanonicalBranchId } from "./attendance-batch.js";
 import {
   ensureAdminAccount,
@@ -4332,6 +4333,7 @@ app.get("/api/neon/preview/employees", authenticate, async (req, res) => {
 installDataApi(app, { pool, authenticate });
 installNotificationApi(app, { pool, authenticate });
 installPenguinPetApi(app, { pool, authenticate });
+installMysteryEggApi(app, { pool });
 
 app.get('/api/admin/users', authenticate, requireAdmin, async (req,res) => {
   try {

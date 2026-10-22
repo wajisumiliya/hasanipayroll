@@ -2,15 +2,21 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// A wordless, animated teaser for the surprise being raised in the employee
-/// dashboard. The visual intentionally does not identify what is inside.
+import '../services/mystery_egg_hatch_controller.dart';
+import 'employee_penguin_pet_card.dart' show PenguinIllustration;
+
+/// A sealed golden surprise, revealed only when the shared server clock hatches it.
 class MysteryEggTeaser extends StatefulWidget {
   const MysteryEggTeaser({
     super.key,
     this.size = 132,
+    this.controller,
+    this.action = 'idle',
   });
 
   final double size;
+  final MysteryEggHatchController? controller;
+  final String action;
 
   @override
   State<MysteryEggTeaser> createState() => _MysteryEggTeaserState();
@@ -23,8 +29,35 @@ class _MysteryEggTeaserState extends State<MysteryEggTeaser>
     duration: const Duration(milliseconds: 1900),
   )..repeat(reverse: true);
 
+  late MysteryEggHatchController _hatch;
+
+  @override
+  void initState() {
+    super.initState();
+    _hatch = widget.controller ?? MysteryEggHatchController.shared;
+    _hatch.addListener(_changed);
+    _hatch.attach();
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant MysteryEggTeaser oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    _hatch.removeListener(_changed);
+    _hatch.detach();
+    _hatch = widget.controller ?? MysteryEggHatchController.shared;
+    _hatch.addListener(_changed);
+    _hatch.attach();
+  }
+
   @override
   void dispose() {
+    _hatch.removeListener(_changed);
+    _hatch.detach();
     _pulse.dispose();
     super.dispose();
   }
@@ -33,15 +66,20 @@ class _MysteryEggTeaserState extends State<MysteryEggTeaser>
   Widget build(BuildContext context) {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (reduceMotion && _pulse.isAnimating) {
+    final animateEgg = !reduceMotion && _hatch.stage == 'egg';
+    if (!animateEgg && _pulse.isAnimating) {
       _pulse.stop();
       _pulse.value = .5;
-    } else if (!reduceMotion && !_pulse.isAnimating) {
+    } else if (animateEgg && !_pulse.isAnimating) {
       _pulse.repeat(reverse: true);
     }
 
     return Semantics(
-      label: 'A little surprise is waiting',
+      label: _hatch.stage != 'egg'
+          ? 'Surprise! Your penguin has hatched'
+          : _hatch.hatching
+              ? 'Something is stirring inside the golden egg'
+              : 'A little surprise is waiting',
       child: ExcludeSemantics(
         child: SizedBox(
           width: widget.size,
@@ -50,31 +88,54 @@ class _MysteryEggTeaserState extends State<MysteryEggTeaser>
             animation: _pulse,
             builder: (context, _) {
               final pulse = reduceMotion ? .5 : _pulse.value;
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _EnchantedEggPainter(pulse),
-                    ),
-                  ),
-                  Positioned(
-                    left: widget.size * .28,
-                    top: widget.size * .17,
-                    width: widget.size * .44,
-                    height: widget.size * .66,
-                    child: Transform.translate(
-                      offset: Offset(0, -pulse * widget.size * .02),
-                      child: Transform.rotate(
-                        angle: math.sin(pulse * math.pi * 2) * .025,
-                        child: Image.asset(
-                          'assets/mystery_golden_egg.png',
+              return AnimatedSwitcher(
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 800),
+                child: _hatch.stage != 'egg'
+                    ? SizedBox(
+                        key: ValueKey(_hatch.stage),
+                        width: widget.size,
+                        height: widget.size,
+                        child: FittedBox(
                           fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
+                          child: PenguinIllustration(
+                              stage: _hatch.stage, action: widget.action),
                         ),
+                      )
+                    : Stack(
+                        key: const ValueKey('golden-egg'),
+                        children: [
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: _EnchantedEggPainter(pulse),
+                            ),
+                          ),
+                          Positioned(
+                            left: widget.size * .28,
+                            top: widget.size * .17,
+                            width: widget.size * .44,
+                            height: widget.size * .66,
+                            child: Transform.translate(
+                              offset: Offset(0, -pulse * widget.size * .02),
+                              child: Transform.rotate(
+                                angle: math.sin(pulse * math.pi * 2) *
+                                    (_hatch.hatching ? .07 : .025),
+                                child: CustomPaint(
+                                  foregroundPainter: _hatch.hatching
+                                      ? const _EggCracksPainter()
+                                      : null,
+                                  child: Image.asset(
+                                    'assets/mystery_golden_egg.png',
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.high,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                ],
               );
             },
           ),
@@ -143,4 +204,35 @@ class _EnchantedEggPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _EnchantedEggPainter oldDelegate) =>
       oldDelegate.phase != phase;
+}
+
+/// Cracks stay opaque until the server confirms that the hatch time has passed.
+class _EggCracksPainter extends CustomPainter {
+  const _EggCracksPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width, size.height);
+    final crack = Path()
+      ..moveTo(.5, .035)
+      ..lineTo(.46, .12)
+      ..lineTo(.53, .18)
+      ..lineTo(.45, .24)
+      ..lineTo(.52, .31)
+      ..moveTo(.45, .24)
+      ..lineTo(.35, .27)
+      ..lineTo(.31, .34);
+    canvas.drawPath(
+        crack,
+        Paint()
+          ..color = const Color(0xFF78500C)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .018
+          ..strokeJoin = StrokeJoin.round);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _EggCracksPainter oldDelegate) => false;
 }

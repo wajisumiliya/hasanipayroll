@@ -4,7 +4,7 @@ import 'package:hasani_payroll_portal/widgets/employee_penguin_pet_card.dart';
 import 'package:hasani_payroll_portal/widgets/mystery_egg_teaser.dart';
 
 void main() {
-  testWidgets('sealed golden surprise stays hidden after tapping and waiting',
+  testWidgets('unavailable hatch service keeps the golden surprise sealed',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(
