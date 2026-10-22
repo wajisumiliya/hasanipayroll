@@ -1,22 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'employee_penguin_pet_card.dart' show PenguinIllustration;
 import 'mystery_egg_teaser.dart';
 
-/// Decorative, animated penguin crew shown on every branch dashboard.
+/// Unrevealed, animated surprises shown on every branch dashboard.
 /// Branch accounts do not use the employee-only pet API.
 class BranchPenguinCrew extends StatelessWidget {
   const BranchPenguinCrew({super.key, required this.branchName});
 
   final String branchName;
-
-  static const _penguins = [
-    ('Pip', 'adult', 'waddling', 'Grown-up'),
-    ('Poppy', 'chick', 'eating', 'Little one'),
-    ('Pebble', 'juvenile', 'playing', 'Youngster'),
-    ('Nori', 'chick', 'idle', 'Little one'),
-    ('Skipper', 'juvenile', 'waddling', 'Youngster'),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -81,19 +72,16 @@ class BranchPenguinCrew extends StatelessWidget {
                       return GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _penguins.length + 1,
+                        itemCount: 6,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: columns,
                           crossAxisSpacing: 8,
                           mainAxisSpacing: 0,
                           mainAxisExtent: 144,
                         ),
-                        itemBuilder: (context, index) =>
-                            index < _penguins.length
-                                ? _penguinTile(_penguins[index])
-                                : const Center(
-                                    child: MysteryEggTeaser(size: 128),
-                                  ),
+                        itemBuilder: (context, index) => const Center(
+                          child: MysteryEggTeaser(size: 128),
+                        ),
                       );
                     },
                   ),
@@ -124,7 +112,7 @@ class BranchPenguinCrew extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'THE PENGUIN CREW',
+                'A LITTLE SURPRISE',
                 style: TextStyle(
                   color: Color(0xFF173D60),
                   fontSize: 17,
@@ -133,7 +121,7 @@ class BranchPenguinCrew extends StatelessWidget {
                 ),
               ),
               Text(
-                '$branchName · Five branch penguins',
+                '$branchName · Something special is growing',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -143,43 +131,6 @@ class BranchPenguinCrew extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _penguinTile((String, String, String, String) penguin) {
-    final (name, stage, action, label) = penguin;
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          height: 108,
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: PenguinIllustration(stage: stage, action: action),
-          ),
-        ),
-        Text(
-          name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xFF173D60),
-            fontWeight: FontWeight.w800,
-            shadows: [Shadow(color: Color(0xBFFFFFFF), blurRadius: 5)],
-          ),
-        ),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xFF426680),
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            shadows: [Shadow(color: Color(0xBFFFFFFF), blurRadius: 5)],
           ),
         ),
       ],
