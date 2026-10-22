@@ -5,20 +5,20 @@ allprojects {
     }
 }
 
-val newBuildDir: Directory =
-    rootProject.layout.buildDirectory
-        .dir("../../build")
+val flutterBuildDir =
+    providers.gradleProperty("flutterBuildDir")
+        .map { rootProject.file(it) }
+        .orElse(rootProject.file("../../build"))
         .get()
-rootProject.layout.buildDirectory.value(newBuildDir)
+rootProject.layout.buildDirectory.set(flutterBuildDir)
 
 subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
+    project.layout.buildDirectory.set(flutterBuildDir.resolve(project.name))
 }
 subprojects {
     project.evaluationDependsOn(":app")
 }
 
 tasks.register<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
+    delete(flutterBuildDir)
 }

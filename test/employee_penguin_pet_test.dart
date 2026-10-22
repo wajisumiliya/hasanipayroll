@@ -45,4 +45,46 @@ void main() {
       expect(tapped, isTrue);
     },
   );
+
+  testWidgets('egg cracks render during the final hatch window',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: PenguinIllustration(stage: 'egg', hatching: true),
+        ),
+      ),
+    );
+
+    expect(find.byType(CustomPaint), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  testWidgets('employee egg stage hides its age and previews a surprise',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: EmployeePenguinPetCard()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('A LITTLE SURPRISE'), findsOneWidget);
+    expect(
+        find.text('Your surprise is growing. Come back soon!'), findsOneWidget);
+    expect(find.textContaining('Day 0'), findsNothing);
+    expect(find.text('EGG'), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/penguin_habitat.png',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

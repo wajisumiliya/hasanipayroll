@@ -9,8 +9,10 @@ export function installPenguinPetApi(app,{pool,authenticate}) {
  const view=row=>{
   const days=Math.max(0,Math.floor((new Date(row.server_now).getTime()-new Date(row.adopted_at).getTime())/86400000));
   const stage=days<3?'egg':days<15?'chick':days<45?'juvenile':'adult';
+  const hatchAt=new Date(new Date(row.adopted_at).getTime()+3*86400000);
   const recently=(v)=>v && new Date(row.server_now).getTime()-new Date(v).getTime()<86400000;
   return {nickname:row.nickname,adoptedAt:row.adopted_at,ageDays:days,stage,
+   hatchAt:hatchAt.toISOString(),serverNow:row.server_now,
    fedToday:!!recently(row.last_fed_at),playedToday:!!recently(row.last_played_at),
    nextFeedAt:row.last_fed_at?new Date(new Date(row.last_fed_at).getTime()+86400000).toISOString():null,
    nextPlayAt:row.last_played_at?new Date(new Date(row.last_played_at).getTime()+86400000).toISOString():null};

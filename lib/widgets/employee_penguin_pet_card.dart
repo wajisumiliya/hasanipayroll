@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -18,6 +19,10 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
   bool sleeping = false;
   String action = 'idle';
   String? error;
+  bool _isHatching = false;
+  bool _showHatchWelcome = false;
+  Timer? _crackTimer;
+  Timer? _hatchTimer;
 
   @override
   void initState() {
@@ -43,7 +48,26 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
         method: careAction == null ? 'GET' : 'POST',
       );
       if (mounted) {
-        setState(() => pet = Map<String, dynamic>.from(data['pet'] as Map));
+        final nextPet = Map<String, dynamic>.from(data['pet'] as Map);
+        final hatchAt = DateTime.tryParse(nextPet['hatchAt']?.toString() ?? '');
+        final serverNow =
+            DateTime.tryParse(nextPet['serverNow']?.toString() ?? '');
+        final stage = nextPet['stage']?.toString() ?? 'egg';
+        final timeUntilHatch = hatchAt != null && serverNow != null
+            ? hatchAt.difference(serverNow)
+            : null;
+        setState(() {
+          pet = nextPet;
+          _isHatching = stage == 'egg' &&
+              timeUntilHatch != null &&
+              timeUntilHatch <= const Duration(minutes: 5);
+          _showHatchWelcome = stage == 'chick' &&
+              hatchAt != null &&
+              serverNow != null &&
+              !serverNow.isBefore(hatchAt) &&
+              serverNow.isBefore(hatchAt.add(const Duration(hours: 24)));
+        });
+        _scheduleHatch(hatchAt, serverNow, stage);
       }
     } catch (_) {
       if (mounted) {
@@ -64,6 +88,42 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
     }
   }
 
+  void _scheduleHatch(DateTime? hatchAt, DateTime? serverNow, String stage) {
+    _crackTimer?.cancel();
+    _hatchTimer?.cancel();
+    if (stage != 'egg' || hatchAt == null || serverNow == null) return;
+
+    final untilHatch = hatchAt.difference(serverNow);
+    if (untilHatch <= Duration.zero) {
+      _hatchTimer = Timer(const Duration(seconds: 1), _refreshAtHatch);
+      return;
+    }
+
+    const crackWindow = Duration(minutes: 5);
+    if (untilHatch > crackWindow) {
+      _crackTimer = Timer(untilHatch - crackWindow, () {
+        if (mounted) setState(() => _isHatching = true);
+      });
+    }
+    _hatchTimer = Timer(untilHatch, _refreshAtHatch);
+  }
+
+  void _refreshAtHatch() {
+    if (!mounted) return;
+    if (busy) {
+      _hatchTimer = Timer(const Duration(seconds: 1), _refreshAtHatch);
+      return;
+    }
+    unawaited(_load());
+  }
+
+  @override
+  void dispose() {
+    _crackTimer?.cancel();
+    _hatchTimer?.cancel();
+    super.dispose();
+  }
+
   void _toggleSleep() {
     setState(() {
       sleeping = !sleeping;
@@ -75,93 +135,127 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
   Widget build(BuildContext context) {
     final stage = pet?['stage']?.toString() ?? 'egg';
     final days = pet?['ageDays'] ?? 0;
+    final nickname = pet?['nickname'] ?? 'Pingu';
+    final hatched = stage != 'egg';
     final fed = pet?['fedToday'] == true;
     final played = pet?['playedToday'] == true;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFB6DFF4), Color(0xFFF3FBFF)],
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/penguin_habitat.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
           ),
-        ),
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'MY LIVING PENGUIN',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF173D60),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x77F1FAFF), Color(0xBFFFFFFF)],
+                  stops: [0, 1],
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Center(
-              child: Semantics(
-                label: 'Penguin growth stage: $stage',
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  child: PenguinIllustration(
-                    key: ValueKey(stage),
-                    stage: stage,
-                    action: action,
-                    onTap: _toggleSleep,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hatched ? 'MY LIVING PENGUIN' : 'A LITTLE SURPRISE',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF173D60),
                   ),
                 ),
-              ),
-            ),
-            Center(
-              child: Text(
-                '${pet?['nickname'] ?? 'Pingu'} • Day $days • ${stage.toUpperCase()}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-            const Center(
-              child: Text(
-                'Tap your penguin to let it nap or wake it up',
-                style: TextStyle(fontSize: 11, color: Color(0xFF426680)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (error != null)
-              Text(error!, style: const TextStyle(color: Colors.red)),
-            if (pet == null && busy)
-              const Center(child: CircularProgressIndicator()),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  onPressed:
-                      busy || pet == null || fed ? null : () => _load('feed'),
-                  icon: const Icon(Icons.set_meal),
-                  label: Text(fed ? 'Fed today' : 'Feed fish'),
+                const SizedBox(height: 8),
+                Center(
+                  child: Semantics(
+                    label: hatched
+                        ? 'Penguin growth stage: $stage'
+                        : 'A surprise is growing inside an egg.',
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      child: PenguinIllustration(
+                        key: ValueKey(stage),
+                        stage: stage,
+                        action: action,
+                        hatching: _isHatching,
+                        onTap: _toggleSleep,
+                      ),
+                    ),
+                  ),
                 ),
-                OutlinedButton.icon(
-                  onPressed: busy || pet == null || played
-                      ? null
-                      : () => _load('play'),
-                  icon: const Icon(Icons.sports_esports),
-                  label: Text(played ? 'Played today' : 'Play'),
+                if (hatched)
+                  Center(
+                    child: Text(
+                      '${pet?['nickname'] ?? 'Pingu'} • Day $days • ${stage.toUpperCase()}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                Center(
+                  child: Text(
+                    _showHatchWelcome
+                        ? 'Surprise! Welcome, $nickname — your penguin has hatched!'
+                        : hatched
+                            ? 'Tap your penguin to let it nap or wake it up'
+                            : _isHatching
+                                ? 'Something is stirring inside...'
+                                : 'Your surprise is growing. Come back soon!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: _showHatchWelcome ? 13 : 11,
+                      fontWeight: _showHatchWelcome ? FontWeight.w700 : null,
+                      color: const Color(0xFF426680),
+                    ),
+                  ),
                 ),
-                IconButton(
-                  tooltip: 'Refresh penguin',
-                  onPressed: busy ? null : () => _load(),
-                  icon: const Icon(Icons.refresh),
+                const SizedBox(height: 12),
+                if (error != null)
+                  Text(error!, style: const TextStyle(color: Colors.red)),
+                if (pet == null && busy)
+                  const Center(child: CircularProgressIndicator()),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: busy || pet == null || fed
+                          ? null
+                          : () => _load('feed'),
+                      icon: const Icon(Icons.set_meal),
+                      label: Text(fed ? 'Fed today' : 'Feed fish'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: busy || pet == null || played
+                          ? null
+                          : () => _load('play'),
+                      icon: const Icon(Icons.sports_esports),
+                      label: Text(played ? 'Played today' : 'Play'),
+                    ),
+                    IconButton(
+                      tooltip: 'Refresh penguin',
+                      onPressed: busy ? null : () => _load(),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Your penguin grows with time, even when you are away. Feeding and play become available again after 24 hours.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF425F74)),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            const Text(
-              'Your penguin grows with time, even when you are away. Feeding and play become available again after 24 hours.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF425F74)),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -173,11 +267,13 @@ class PenguinIllustration extends StatefulWidget {
     super.key,
     required this.stage,
     this.action = 'idle',
+    this.hatching = false,
     this.onTap,
   });
 
   final String stage;
   final String action;
+  final bool hatching;
   final VoidCallback? onTap;
 
   @override
@@ -222,6 +318,7 @@ class _PenguinIllustrationState extends State<PenguinIllustration>
                 stage: widget.stage,
                 action: widget.action,
                 phase: reduceMotion ? 0 : motion.value,
+                hatching: widget.hatching,
               ),
             ),
           ),
@@ -236,11 +333,13 @@ class _PenguinPainter extends CustomPainter {
     required this.stage,
     required this.action,
     required this.phase,
+    required this.hatching,
   });
 
   final String stage;
   final String action;
   final double phase;
+  final bool hatching;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -270,6 +369,13 @@ class _PenguinPainter extends CustomPainter {
         width: 79,
         height: 126,
       );
+      canvas.save();
+      if (hatching) {
+        canvas.translate(
+          math.sin(phase * math.pi * 2) * 1.8,
+          -math.sin(phase * math.pi * 2).abs() * 1.6,
+        );
+      }
       canvas.drawOval(
         egg,
         Paint()
@@ -284,6 +390,27 @@ class _PenguinPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2,
       );
+      if (hatching) {
+        final crackPaint = Paint()
+          ..color = const Color(0xFF82939A)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.2
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+        final crack = Path()
+          ..moveTo(egg.center.dx, egg.top + 4)
+          ..lineTo(egg.center.dx - 5, egg.top + 15)
+          ..lineTo(egg.center.dx + 3, egg.top + 22)
+          ..lineTo(egg.center.dx - 4, egg.top + 32)
+          ..lineTo(egg.center.dx + 2, egg.top + 40);
+        canvas.drawPath(crack, crackPaint);
+        final sideCrack = Path()
+          ..moveTo(egg.center.dx - 4, egg.top + 32)
+          ..lineTo(egg.center.dx - 13, egg.top + 35)
+          ..lineTo(egg.center.dx - 17, egg.top + 42);
+        canvas.drawPath(sideCrack, crackPaint);
+      }
+      canvas.restore();
       return;
     }
 
@@ -308,7 +435,7 @@ class _PenguinPainter extends CustomPainter {
     // Tail and body silhouette.
     canvas.drawOval(Rect.fromLTWH(88, 50, 45, 104), body);
     canvas.drawOval(Rect.fromLTWH(59, 35, 102, 132), body);
-    // Orange crown and white face mask match the supplied penguin reference.
+    // Bright orange crown with a white face mask, matching the reference.
     canvas.drawOval(Rect.fromLTWH(64, 29, 92, 82), orange);
 
     // Flippers swing while walking or playing.
@@ -411,5 +538,8 @@ class _PenguinPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PenguinPainter old) =>
-      old.stage != stage || old.action != action || old.phase != phase;
+      old.stage != stage ||
+      old.action != action ||
+      old.phase != phase ||
+      old.hatching != hatching;
 }

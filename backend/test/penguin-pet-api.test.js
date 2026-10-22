@@ -206,6 +206,16 @@ test('growth is derived from server time so offline time advances the pet', asyn
   const result = await h.request('/api/employee/penguin', { role: 'employee', employeeId: 'E001' });
   assert.equal(result.body.pet.ageDays, 51);
   assert.equal(result.body.pet.stage, 'adult');
+  assert.equal(result.body.pet.serverNow, now.toISOString());
+});
+
+test('egg hatch time is three days after adoption using server time', async () => {
+  const adoptedAt = new Date(now.getTime() - 2 * day).toISOString();
+  const h = harness({ adoptedAt });
+  const result = await h.request('/api/employee/penguin', { role: 'employee', employeeId: 'E001' });
+  assert.equal(result.body.pet.stage, 'egg');
+  assert.equal(result.body.pet.hatchAt, new Date(now.getTime() + day).toISOString());
+  assert.equal(result.body.pet.serverNow, now.toISOString());
 });
 
 test('feed cooldown blocks repeat actions and reports the existing cooldown state', async () => {
