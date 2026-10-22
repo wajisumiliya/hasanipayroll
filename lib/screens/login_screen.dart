@@ -891,7 +891,10 @@ class _LoginScreenState extends State<LoginScreen>
                         width: penguinWidth,
                         height: penguinWidth,
                         child: IgnorePointer(
-                          child: MysteryEggTeaser(size: penguinWidth),
+                          child: MysteryEggTeaser(
+                            size: penguinWidth,
+                            enchanted: true,
+                          ),
                         ),
                       ),
                     ),
