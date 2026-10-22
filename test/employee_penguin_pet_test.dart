@@ -4,7 +4,7 @@ import 'package:hasani_payroll_portal/widgets/employee_penguin_pet_card.dart';
 
 void main() {
   testWidgets(
-    'original penguin illustration renders every growth and care state',
+    'realistic artwork renders every growth and care state',
     (tester) async {
       for (final stage in ['egg', 'chick', 'juvenile', 'adult']) {
         for (final action in ['idle', 'eating', 'playing', 'sleeping']) {
@@ -15,7 +15,18 @@ void main() {
               ),
             ),
           );
-          expect(find.byType(CustomPaint), findsWidgets);
+          if (stage == 'egg') {
+            expect(find.byType(CustomPaint), findsWidgets);
+          } else {
+            final bird = stage == 'chick' ? 'chick' : 'adult';
+            final pose = action == 'sleeping' ? '_sleep' : '';
+            expect(
+                find.byWidgetPredicate((widget) =>
+                    widget is Image &&
+                    _assetPath(widget.image) ==
+                        'assets/penguins/$bird$pose.png'),
+                findsOneWidget);
+          }
           await tester.pump(const Duration(milliseconds: 50));
         }
       }
@@ -40,7 +51,13 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(CustomPaint), findsWidgets);
+      expect(
+          find.byWidgetPredicate((widget) =>
+              widget is Image &&
+              _assetPath(widget.image) == 'assets/penguins/adult_sleep.png'),
+          findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.binding.hasScheduledFrame, isFalse);
       await tester.tap(find.byType(GestureDetector).last);
       expect(tapped, isTrue);
     },
@@ -87,4 +104,10 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+}
+
+String? _assetPath(ImageProvider provider) {
+  if (provider is ResizeImage) return _assetPath(provider.imageProvider);
+  if (provider is AssetImage) return provider.assetName;
+  return null;
 }

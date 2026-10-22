@@ -261,7 +261,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
   }
 }
 
-/// Original vector penguin, animated locally without downloaded artwork.
+/// Detailed feathered artwork with local breathing, waddling and care motion.
 class PenguinIllustration extends StatefulWidget {
   const PenguinIllustration({
     super.key,
@@ -313,14 +313,83 @@ class _PenguinIllustrationState extends State<PenguinIllustration>
           width: 220,
           child: AnimatedBuilder(
             animation: motion,
-            builder: (context, _) => CustomPaint(
-              painter: _PenguinPainter(
-                stage: widget.stage,
-                action: widget.action,
-                phase: reduceMotion ? 0 : motion.value,
-                hatching: widget.hatching,
-              ),
-            ),
+            builder: (context, _) {
+              final phase = reduceMotion ? 0.0 : motion.value;
+              if (widget.stage == 'egg') {
+                return CustomPaint(
+                  painter: _PenguinPainter(
+                    stage: widget.stage,
+                    action: widget.action,
+                    phase: phase,
+                    hatching: widget.hatching,
+                  ),
+                );
+              }
+              final sleeping = widget.action == 'sleeping';
+              final walking =
+                  widget.action == 'waddling' || widget.action == 'playing';
+              final eating = widget.action == 'eating';
+              final swing = math.sin(phase * math.pi * 2);
+              final growth = widget.stage == 'chick'
+                  ? .84
+                  : widget.stage == 'juvenile'
+                      ? .94
+                      : 1.0;
+              final assetStage = widget.stage == 'chick' ? 'chick' : 'adult';
+              final asset =
+                  'assets/penguins/$assetStage${sleeping ? '_sleep' : ''}.png';
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: Transform.translate(
+                      offset: reduceMotion
+                          ? Offset.zero
+                          : Offset(
+                              walking ? swing * 4 : 0,
+                              walking
+                                  ? -swing.abs() * 2
+                                  : eating
+                                      ? -swing.abs() * 1.5
+                                      : 0,
+                            ),
+                      child: Transform.rotate(
+                        angle: reduceMotion
+                            ? 0
+                            : walking
+                                ? swing * .045
+                                : eating
+                                    ? swing * .018
+                                    : swing * .004,
+                        alignment: Alignment.bottomCenter,
+                        child: Transform.scale(
+                          scale: growth *
+                              (1 +
+                                  (reduceMotion
+                                      ? 0
+                                      : swing * (sleeping ? .007 : .005))),
+                          alignment: Alignment.bottomCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 3, 20, 8),
+                            child: Image.asset(
+                              asset,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
+                              cacheHeight: 512,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (eating || widget.action == 'playing')
+                    Positioned.fill(
+                        child: CustomPaint(
+                      painter: _PenguinCarePainter(
+                          action: widget.action, phase: phase),
+                    )),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -343,21 +412,7 @@ class _PenguinPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final body = Paint()..color = const Color(0xFF6B7280);
-    final detail = Paint()..color = const Color(0xFF26313A);
-    final belly = Paint()..color = const Color(0xFFFFFFFF);
-    final orange = Paint()..color = const Color(0xFFFF8A00);
-    final green = Paint()..color = const Color(0xFFA8E63E);
-    final accent = Paint()..color = const Color(0xFF54B8DD);
     final shadow = Paint()..color = const Color(0x44265A78);
-    final asleep = action == 'sleeping';
-    final eating = action == 'eating';
-    final playing = action == 'playing';
-    final walking = playing || action == 'waddling';
-    final swing = math.sin(phase * math.pi * 2);
-    final breath = math.sin(phase * math.pi * 2) * .018;
-    final blink = !asleep && !eating && phase > .49 && phase < .535;
-
     canvas.drawOval(
       Rect.fromLTWH(size.width * .13, size.height * .88, size.width * .74, 13),
       shadow,
@@ -413,127 +468,6 @@ class _PenguinPainter extends CustomPainter {
       canvas.restore();
       return;
     }
-
-    final scale = stage == 'chick'
-        ? .76
-        : stage == 'juvenile'
-            ? .89
-            : 1.0;
-    final center = Offset(size.width / 2, size.height * .88);
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(
-      asleep
-          ? -.08
-          : walking
-              ? swing * .07
-              : swing * .012,
-    );
-    canvas.scale(scale * (1 + (asleep ? 0 : breath)));
-    canvas.translate(-center.dx, -center.dy);
-
-    // Tail and body silhouette.
-    canvas.drawOval(Rect.fromLTWH(88, 50, 45, 104), body);
-    canvas.drawOval(Rect.fromLTWH(59, 35, 102, 132), body);
-    // Bright orange crown with a white face mask, matching the reference.
-    canvas.drawOval(Rect.fromLTWH(64, 29, 92, 82), orange);
-
-    // Flippers swing while walking or playing.
-    canvas.save();
-    canvas.translate(70, 108);
-    canvas.rotate(walking ? -.25 + swing * .24 : -.05 + swing * .035);
-    canvas.drawOval(Rect.fromLTWH(-15, -8, 31, 70), body);
-    canvas.restore();
-    canvas.save();
-    canvas.translate(150, 108);
-    canvas.rotate(walking ? .25 - swing * .24 : .05 - swing * .035);
-    canvas.drawOval(Rect.fromLTWH(-1, -8, 31, 70), body);
-    canvas.restore();
-
-    // Warm white facial mask and softly shaded belly.
-    final chest = Rect.fromLTWH(76, 76, 68, 82);
-    canvas.drawOval(
-      chest,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFE5EEF1)],
-        ).createShader(chest),
-    );
-    canvas.drawOval(Rect.fromLTWH(73, 52, 73, 55), belly);
-
-    // Feet alternate to create a readable waddling gait.
-    final step = walking ? swing * 7 : 0.0;
-    canvas.drawOval(Rect.fromLTWH(73 + step, 154, 38, 17), green);
-    canvas.drawOval(Rect.fromLTWH(110 - step, 154, 38, 17), green);
-
-    if (asleep) {
-      final eyePaint = Paint()
-        ..color = const Color(0xFF26333B)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.6
-        ..strokeCap = StrokeCap.round;
-      canvas.drawArc(Rect.fromLTWH(83, 75, 15, 8), 0, math.pi, false, eyePaint);
-      canvas.drawArc(
-        Rect.fromLTWH(119, 75, 15, 8),
-        0,
-        math.pi,
-        false,
-        eyePaint,
-      );
-      _drawSleepyZ(canvas, 157, 48, 1);
-      _drawSleepyZ(canvas, 169, 32, .72);
-    } else {
-      final eyeHeight = blink ? 2.0 : 10.0;
-      canvas.drawOval(Rect.fromLTWH(83, 70, 14, eyeHeight), belly);
-      canvas.drawOval(Rect.fromLTWH(119, 70, 14, eyeHeight), belly);
-      if (!blink) {
-        canvas.drawCircle(const Offset(90, 75), 3.3, detail);
-        canvas.drawCircle(const Offset(126, 75), 3.3, detail);
-        canvas.drawCircle(
-          const Offset(91, 73),
-          1.1,
-          Paint()..color = Colors.white,
-        );
-        canvas.drawCircle(
-          const Offset(127, 73),
-          1.1,
-          Paint()..color = Colors.white,
-        );
-      }
-      final beak = Path()
-        ..moveTo(98, 89)
-        ..lineTo(117, 89)
-        ..lineTo(eating ? 107.5 : 107.5, eating ? 105 : 101)
-        ..close();
-      canvas.drawPath(beak, green);
-      if (eating) {
-        canvas.drawCircle(const Offset(108, 112), 4, accent);
-        canvas.drawCircle(const Offset(108, 112), 1.3, belly);
-      }
-    }
-
-    if (playing) {
-      canvas.drawCircle(const Offset(39, 104), 9, accent);
-      canvas.drawCircle(const Offset(39, 104), 5, Paint()..color = belly.color);
-      canvas.drawCircle(const Offset(39, 104), 2, accent);
-    }
-    canvas.restore();
-  }
-
-  void _drawSleepyZ(Canvas canvas, double x, double y, double scale) {
-    final paint = Paint()
-      ..color = const Color(0xFF527B91)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2 * scale
-      ..strokeCap = StrokeCap.round;
-    final path = Path()
-      ..moveTo(x, y)
-      ..lineTo(x + 8 * scale, y)
-      ..lineTo(x, y + 9 * scale)
-      ..lineTo(x + 8 * scale, y + 9 * scale);
-    canvas.drawPath(path, paint);
   }
 
   @override
@@ -542,4 +476,51 @@ class _PenguinPainter extends CustomPainter {
       old.action != action ||
       old.phase != phase ||
       old.hatching != hatching;
+}
+
+/// Small care props accompany the realistic bird without redrawing its body.
+class _PenguinCarePainter extends CustomPainter {
+  const _PenguinCarePainter({required this.action, required this.phase});
+  final String action;
+  final double phase;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (action == 'eating') {
+      final x = size.width * .57;
+      final y = size.height * (.46 - phase * .12);
+      final fish = Rect.fromCenter(center: Offset(x, y), width: 16, height: 7);
+      canvas.drawOval(
+          fish,
+          Paint()
+            ..shader = const LinearGradient(
+              colors: [Color(0xFFD5EAF3), Color(0xFF51798A)],
+            ).createShader(fish));
+      canvas.drawPath(
+          Path()
+            ..moveTo(x + 7, y)
+            ..lineTo(x + 13, y - 5)
+            ..lineTo(x + 13, y + 5)
+            ..close(),
+          Paint()..color = const Color(0xFF63899A));
+      canvas.drawCircle(
+          Offset(x - 4, y - 1), .9, Paint()..color = const Color(0xFF26313A));
+    } else {
+      final center = Offset(size.width * .23,
+          size.height * (.80 - math.sin(phase * math.pi * 2).abs() * .16));
+      final bounds = Rect.fromCircle(center: center, radius: 8);
+      canvas.drawCircle(
+          center,
+          8,
+          Paint()
+            ..shader = const RadialGradient(
+              center: Alignment(-.4, -.5),
+              colors: [Color(0xFFDBF6FF), Color(0xFF368AB6)],
+            ).createShader(bounds));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PenguinCarePainter old) =>
+      old.action != action || old.phase != phase;
 }
