@@ -32,6 +32,8 @@ class _LoginPenguinWalkerState extends State<LoginPenguinWalker>
   PenguinWalkPath? _route;
   double _distance = 0;
   double _phase = 0;
+  // Twice the original walking speed; travel and footsteps share one clock.
+  static const _gaitCycleSeconds = .4;
 
   @override
   void initState() {
@@ -139,9 +141,10 @@ class _LoginPenguinWalkerState extends State<LoginPenguinWalker>
     // travels back by the same amount, preventing the photo-sliding effect.
     final stride = PenguinWalkPath.projectedStride(
         PenguinWalkPath.direction(tangent.vector));
-    _distance = (_distance + _height() * depth * .20 * stride / .8 * dt) %
+    _distance = (_distance +
+            _height() * depth * .20 * stride / _gaitCycleSeconds * dt) %
         _route!.length;
-    _phase = (_phase + dt / .8) % 1;
+    _phase = (_phase + dt / _gaitCycleSeconds) % 1;
     setState(() {});
   }
 

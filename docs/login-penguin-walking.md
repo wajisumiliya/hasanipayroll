@@ -22,7 +22,7 @@ with a stance foot, lifted swing foot, body weight transfer, head counterbalance
 and flipper movement. This is rendered animation, not real-time 3D and not a
 translated still photograph. See `tools/penguin_walk/README.md` for regeneration.
 
-The 0.8-second gait cycle advances in proportion to projected stride, viewport
+The 0.4-second gait cycle (twice the original speed) advances in proportion to projected stride, viewport
 size, depth and the current growth size. Towards/away movement is foreshortened
 using the render camera, preventing the feet from sliding along the ground.
 Pause/resume clamps elapsed time to avoid a sudden jump across the habitat.
