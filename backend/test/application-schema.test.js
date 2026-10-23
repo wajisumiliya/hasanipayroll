@@ -25,8 +25,11 @@ test('application startup applies the penguin migration once and records it', as
   const penguinVersion = '20261021_employee_penguin_pet_v1';
   assert.ok(applied.has(penguinVersion));
   assert.ok(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.employee_penguin_pets')));
+  assert.ok(applied.has('20261023_birthday_wishes_v1'));
+  assert.ok(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.birthday_wishes')));
 
   executed.length = 0;
   await ensureApplicationSchema(pool);
   assert.ok(!executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.employee_penguin_pets')));
+  assert.ok(!executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.birthday_wishes')));
 });

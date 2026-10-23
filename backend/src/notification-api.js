@@ -7,7 +7,7 @@ function fail(res,error) {
   res.status(error.status || 503).json({ok:false,message:error instanceof DataApiError ? error.message : 'Unable to send notification.'});
 }
 let firebaseToken;
-async function pushNotifications(pool, input) {
+export async function pushNotifications(pool, input) {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!raw) return { sent: 0, pushConfigured: false };
   const account = JSON.parse(raw);

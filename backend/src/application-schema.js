@@ -32,6 +32,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261021_employee_penguin_pet.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [penguinVersion]);
     }
+    const birthdayVersion = '20261023_birthday_wishes_v1';
+    const birthdayMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [birthdayVersion]);
+    if (!birthdayMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261023_birthday_wishes.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [birthdayVersion]);
+    }
     await ensureMysteryEggCampaign(client);
     await client.query('COMMIT');
   } catch (error) {
