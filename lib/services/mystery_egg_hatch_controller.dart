@@ -27,6 +27,12 @@ class MysteryEggHatchController extends ChangeNotifier
   Timer? _countdown;
   Duration? _remaining;
   bool _loadFailed = false;
+  DateTime? _hatchAt;
+  DateTime? _serverNow;
+  final Stopwatch _serverElapsed = Stopwatch();
+
+  DateTime? get hatchAt => _hatchAt;
+  DateTime? get serverNow => _serverNow?.add(_serverElapsed.elapsed);
 
   String get stage => _stage;
   int get daysSinceHatch => _daysSinceHatch;
@@ -105,6 +111,11 @@ class MysteryEggHatchController extends ChangeNotifier
         throw StateError('Invalid hatch state');
       }
       final remaining = hatchAt.difference(serverNow);
+      _hatchAt = hatchAt;
+      _serverNow = serverNow;
+      _serverElapsed
+        ..reset()
+        ..start();
       _stage = stage as String;
       final hatchedDays = serverNow.difference(hatchAt).inDays;
       _daysSinceHatch = hatchedDays > 0 ? hatchedDays : 0;
@@ -156,6 +167,7 @@ class MysteryEggHatchController extends ChangeNotifier
   @override
   void dispose() {
     _disposed = true;
+    _serverElapsed.stop();
     _generation++;
     _cancelTimers();
     if (_users > 0) WidgetsBinding.instance.removeObserver(this);

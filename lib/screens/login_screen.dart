@@ -11,6 +11,8 @@ import 'package:intl/intl.dart';
 import '../services/app_service.dart';
 import '../services/notification_service.dart';
 import '../services/play_update_service.dart';
+import '../services/login_habitat_scene.dart';
+import '../services/mystery_egg_hatch_controller.dart';
 import '../theme/daily_portal_theme.dart';
 import '../widgets/mystery_egg_teaser.dart';
 import 'admin_dashboard.dart';
@@ -19,7 +21,8 @@ import 'employee_portal.dart';
 import 'request_admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.hatchController});
+  final MysteryEggHatchController? hatchController;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -45,6 +48,20 @@ class _LoginScreenState extends State<LoginScreen>
   int? _weatherCode;
   bool _weatherLoading = true;
   int? _previewWeekday;
+  late final _hatchController =
+      widget.hatchController ?? MysteryEggHatchController.shared;
+  DateTime get _displayNow => malaysiaTime(_hatchController.serverNow ?? _now);
+
+  LoginHabitatScene get _habitatScene => loginHabitatScene(
+        instant: _hatchController.serverNow ?? _now,
+        hatchAt: _hatchController.hatchAt,
+        hatchConfirmed: _hatchController.stage != 'egg',
+        previewWeekday: kDebugMode ? _previewWeekday : null,
+      );
+
+  void _onHatchChanged() {
+    if (mounted) setState(() {});
+  }
 
   String? errorMessage;
 
@@ -58,6 +75,8 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    _hatchController.addListener(_onHatchChanged);
+    _hatchController.attach();
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -141,7 +160,11 @@ class _LoginScreenState extends State<LoginScreen>
     super.didChangeDependencies();
     if (_loginImagesPrecached) return;
     _loginImagesPrecached = true;
-    precacheImage(const AssetImage('assets/login_natural_tree.png'), context);
+    precacheImage(AssetImage(_habitatScene.asset), context);
+    precacheImage(
+      AssetImage(LoginHabitatScene(_habitatScene.weekday, 'evening').asset),
+      context,
+    );
   }
 
   Future<void> _restoreSession() async {
@@ -162,6 +185,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
+    _hatchController.removeListener(_onHatchChanged);
+    _hatchController.detach();
     _entranceController.dispose();
     _ambientController.dispose();
     _rainController.dispose();
@@ -554,7 +579,8 @@ class _LoginScreenState extends State<LoginScreen>
                 if (user != null) {
                   try {
                     await NotificationService.registerCurrentDevice(
-                      employeeId: user.employeeId, branchId: user.branchId,
+                      employeeId: user.employeeId,
+                      branchId: user.branchId,
                     );
                   } catch (_) {
                     // Notification setup must not block first-login completion.
@@ -748,9 +774,7 @@ class _LoginScreenState extends State<LoginScreen>
   _DailyLoginTheme get _todayTheme {
     // DateTime.weekday: Monday = 1 ... Sunday = 7.
     return _DailyLoginTheme.forWeekday(
-      kDebugMode && _previewWeekday != null
-          ? _previewWeekday!
-          : DateTime.now().weekday,
+      _habitatScene.weekday,
     );
   }
 
@@ -759,7 +783,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _sevenDayLoginPage(BuildContext context) {
     final theme = _todayTheme;
-    final arcticLogin = MediaQuery.sizeOf(context).width < 880;
+    final scene = _habitatScene;
 
     return Scaffold(
       backgroundColor: theme.pageBackground,
@@ -767,9 +791,8 @@ class _LoginScreenState extends State<LoginScreen>
         children: [
           Positioned.fill(
             child: Image.asset(
-              arcticLogin
-                  ? 'assets/login_arctic/${theme.day.toLowerCase()}.png'
-                  : theme.backgroundAsset,
+              scene.asset,
+              gaplessPlayback: true,
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
               errorBuilder: (_, __, ___) => DecoratedBox(
@@ -790,8 +813,12 @@ class _LoginScreenState extends State<LoginScreen>
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
-                    Colors.black.withValues(alpha: theme.isLight ? .05 : .20),
-                    theme.pageBackground.withValues(alpha: .18),
+                    Colors.black
+                        .withValues(alpha: scene.period == 'night' ? .12 : .24),
+                    (scene.period == 'night'
+                            ? const Color(0xFF081728)
+                            : theme.pageBackground)
+                        .withValues(alpha: .18),
                   ],
                 ),
               ),
@@ -830,8 +857,11 @@ class _LoginScreenState extends State<LoginScreen>
                             const SizedBox(height: 20),
                             _sevenDayAuthCard(theme, compact: true),
                             const SizedBox(height: 10),
-                            const IgnorePointer(
-                              child: MysteryEggTeaser(size: 180),
+                            IgnorePointer(
+                              child: MysteryEggTeaser(
+                                size: 180,
+                                controller: _hatchController,
+                              ),
                             ),
                           ],
                         ),
@@ -894,34 +924,34 @@ class _LoginScreenState extends State<LoginScreen>
               },
             ),
           ),
-          if (kIsWeb)
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < 880) {
-                    return const SizedBox.shrink();
-                  }
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 880) {
+                  return const SizedBox.shrink();
+                }
 
-                  final penguinWidth =
-                      (constraints.maxWidth * .18).clamp(160.0, 300.0);
-                  return Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: SizedBox(
-                        width: penguinWidth,
-                        height: penguinWidth,
-                        child: IgnorePointer(
-                          child: MysteryEggTeaser(
-                            size: penguinWidth,
-                          ),
+                final penguinWidth =
+                    (constraints.maxWidth * .18).clamp(160.0, 300.0);
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SizedBox(
+                      width: penguinWidth,
+                      height: penguinWidth,
+                      child: IgnorePointer(
+                        child: MysteryEggTeaser(
+                          size: penguinWidth,
+                          controller: _hatchController,
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
+          ),
           if (kDebugMode)
             Positioned(
               left: 12,
@@ -994,7 +1024,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _sevenDayVisual(_DailyLoginTheme theme) {
-    final visualForeground = theme.visualForeground;
+    const visualForeground = Colors.white;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -1021,6 +1051,7 @@ class _LoginScreenState extends State<LoginScreen>
                 theme.kicker,
                 style: TextStyle(
                   color: visualForeground.withValues(alpha: .70),
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2.1,
@@ -1031,6 +1062,9 @@ class _LoginScreenState extends State<LoginScreen>
                 theme.headline,
                 style: TextStyle(
                   color: visualForeground,
+                  shadows: const [
+                    Shadow(color: Colors.black54, blurRadius: 12)
+                  ],
                   fontSize: 34,
                   height: 1.08,
                   fontWeight: FontWeight.w900,
@@ -1050,7 +1084,11 @@ class _LoginScreenState extends State<LoginScreen>
     _DailyLoginTheme theme, {
     bool compact = false,
   }) {
-    final foreground = compact ? const Color(0xFF10294D) : theme.foreground;
+    final foreground = compact
+        ? const Color(0xFF10294D)
+        : _habitatScene.period == 'night'
+            ? Colors.white
+            : theme.foreground;
     return Row(
       children: [
         Container(
@@ -1083,7 +1121,7 @@ class _LoginScreenState extends State<LoginScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                DateFormat('EEEE').format(_now).toUpperCase(),
+                DateFormat('EEEE').format(_displayNow).toUpperCase(),
                 style: TextStyle(
                   color: foreground,
                   fontSize: 11,
@@ -1091,7 +1129,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               Text(
-                '${DateFormat('dd MMMM yyyy').format(_now)}  •  ${DateFormat('hh:mm:ss a').format(_now)}',
+                '${DateFormat('dd MMMM yyyy').format(_displayNow)}  •  ${DateFormat('hh:mm:ss a').format(_displayNow)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -2345,7 +2383,7 @@ class _LoginScreenState extends State<LoginScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  DateFormat('EEEE').format(_now).toUpperCase(),
+                  DateFormat('EEEE').format(_displayNow).toUpperCase(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -2355,8 +2393,8 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${DateFormat('dd MMMM yyyy').format(_now)}  •  '
-                  '${DateFormat('hh:mm:ss a').format(_now)}',
+                  '${DateFormat('dd MMMM yyyy').format(_displayNow)}  •  '
+                  '${DateFormat('hh:mm:ss a').format(_displayNow)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
