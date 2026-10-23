@@ -10,7 +10,6 @@ import 'package:intl/intl.dart';
 
 import '../services/app_service.dart';
 import '../services/notification_service.dart';
-import '../services/play_update_service.dart';
 import '../services/login_habitat_scene.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../theme/daily_portal_theme.dart';
@@ -491,8 +490,6 @@ class _LoginScreenState extends State<LoginScreen>
         }
       }
 
-      // Check Google Play after successful login without blocking the portal.
-      await PlayUpdateService.checkForUpdate(context);
       if (!mounted) return;
       _openCorrectPortal(user);
     } catch (_) {

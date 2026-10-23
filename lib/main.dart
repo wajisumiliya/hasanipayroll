@@ -11,6 +11,7 @@ import 'screens/request_admin_dashboard.dart';
 import 'screens/supabase_service.dart';
 import 'services/app_service.dart';
 import 'services/notification_service.dart';
+import 'widgets/play_update_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,9 @@ class HasaniPayrollApp extends StatelessWidget {
     return MaterialApp(
       title: 'Hasani Books Payroll Portal',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => PlayUpdateGate(
+        child: child ?? const SizedBox.shrink(),
+      ),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
