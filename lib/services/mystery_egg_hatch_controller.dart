@@ -10,9 +10,11 @@ import 'neon_api.dart';
 class MysteryEggHatchController extends ChangeNotifier
     with WidgetsBindingObserver {
   MysteryEggHatchController({Future<Map<String, dynamic>> Function()? load})
-      : _load = load ?? _fetch;
+      : _load = load ?? (() => _fetch());
 
   static final shared = MysteryEggHatchController();
+  static final branch =
+      MysteryEggHatchController(load: () => _fetch(scope: 'branch'));
   final Future<Map<String, dynamic>> Function() _load;
   String _stage = 'egg';
   int _daysSinceHatch = 0;
@@ -56,9 +58,10 @@ class MysteryEggHatchController extends ChangeNotifier
     return 'Reveal in ${days > 0 ? '${days}d ' : ''}$clock';
   }
 
-  static Future<Map<String, dynamic>> _fetch() async {
+  static Future<Map<String, dynamic>> _fetch({String scope = 'login'}) async {
     final response = await http
-        .get(Uri.parse('${NeonApi.baseUrl}/api/mystery-eggs'))
+        .get(Uri.parse('${NeonApi.baseUrl}/api/mystery-eggs').replace(
+            queryParameters: scope == 'branch' ? {'scope': 'branch'} : null))
         .timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) throw StateError('Surprise unavailable');
     final body = jsonDecode(response.body) as Map<String, dynamic>;

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import express from 'express';
 import { ensureMysteryEggCampaign, installMysteryEggApi } from '../src/mystery-eggs.js';
-import { sendDueMysteryEggReminder, REVEAL_REMINDER_TITLE, REVEAL_REMINDER_BODY } from '../src/mystery-egg-reminder.js';
+import { sendDueMysteryEggReminder, REVEAL_REMINDER_TITLE, REVEAL_REMINDER_BODY, BRANCH_REMINDER_TITLE } from '../src/mystery-egg-reminder.js';
 
 test('rescheduled public hatch and reminder share one persisted deadline', {
   skip: !process.env.BOOTSTRAP_TEST_DATABASE_URL,
@@ -61,6 +61,14 @@ test('rescheduled public hatch and reminder share one persisted deadline', {
     })).reminders, 1);
     assert.equal((await run('2026-10-23T07:38:10Z')).reminders, 0);
     assert.equal((await pool.query('SELECT * FROM app_notifications')).rowCount, 1);
+    assert.equal((await run('2026-10-23T08:36:10.999Z')).reminders, 0);
+    const branch = await Promise.all([run('2026-10-23T08:36:11Z'), run('2026-10-23T08:36:11Z')]);
+    assert.deepEqual(branch.map(r => r.reminders).sort(), [0, 1]);
+    assert.equal(calls.at(-1).title, BRANCH_REMINDER_TITLE);
+    assert.equal(calls.at(-1).type, 'branch_egg_reveal');
+    assert.equal((await run('2026-10-23T08:38:00Z')).reminders, 0);
+    assert.equal((await run('2026-10-23T08:39:11Z')).reminders, 0);
+    assert.equal((await pool.query('SELECT * FROM app_notifications')).rowCount, 2);
   } finally {
     if (server) await new Promise(resolve => server.close(resolve));
     await pool.end();

@@ -13,15 +13,17 @@ import '../services/notification_service.dart';
 import '../services/login_habitat_scene.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../theme/daily_portal_theme.dart';
-import '../widgets/mystery_egg_teaser.dart';
+import '../widgets/login_penguin_walker.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
 import 'request_admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.hatchController});
+  const LoginScreen(
+      {super.key, this.hatchController, this.showThemePreview = true});
   final MysteryEggHatchController? hatchController;
+  final bool showThemePreview;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -854,10 +856,12 @@ class _LoginScreenState extends State<LoginScreen>
                             const SizedBox(height: 20),
                             _sevenDayAuthCard(theme, compact: true),
                             const SizedBox(height: 10),
-                            IgnorePointer(
-                              child: MysteryEggTeaser(
-                                size: 180,
+                            SizedBox(
+                              width: double.infinity,
+                              height: 190,
+                              child: LoginPenguinWalker(
                                 controller: _hatchController,
+                                compact: true,
                               ),
                             ),
                           ],
@@ -928,28 +932,11 @@ class _LoginScreenState extends State<LoginScreen>
                   return const SizedBox.shrink();
                 }
 
-                final penguinWidth =
-                    (constraints.maxWidth * .18).clamp(160.0, 300.0);
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: SizedBox(
-                      width: penguinWidth,
-                      height: penguinWidth,
-                      child: IgnorePointer(
-                        child: MysteryEggTeaser(
-                          size: penguinWidth,
-                          controller: _hatchController,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
+                return LoginPenguinWalker(controller: _hatchController);
               },
             ),
           ),
-          if (kDebugMode)
+          if (kDebugMode && widget.showThemePreview)
             Positioned(
               left: 12,
               right: 12,

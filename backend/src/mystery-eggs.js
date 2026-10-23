@@ -14,11 +14,13 @@ export async function ensureMysteryEggCampaign(client) {
 
 export function installMysteryEggApi(app, { pool }) {
   // Public login-page metadata only. No accounts, employee IDs or mutations.
-  app.get('/api/mystery-eggs', async (_req, res) => {
+  app.get('/api/mystery-eggs', async (req, res) => {
+    const scope = req.query.scope || 'login';
+    if (!['login', 'branch'].includes(scope)) return res.status(400).json({ ok: false, message: 'Invalid surprise scope' });
     res.set('Cache-Control', 'no-store');
     try {
-      const { rows: [row] } = await pool.query(`SELECT started_at, now() AS server_now
-        FROM app_private.mystery_egg_campaign WHERE id = 1`);
+      const { rows: [row] } = await pool.query(`SELECT started_at + CASE WHEN $1 = 'branch' THEN interval '1 hour' ELSE interval '0' END AS started_at, now() AS server_now
+        FROM app_private.mystery_egg_campaign WHERE id = 1`, [scope]);
       if (!row) return res.status(503).json({ ok: false, message: 'Surprise temporarily unavailable' });
       const startedAt = new Date(row.started_at);
       const serverNow = new Date(row.server_now);

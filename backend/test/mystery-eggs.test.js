@@ -71,7 +71,12 @@ test('campaign clock survives initialization twice and cannot be reset through t
     await pool.query("UPDATE app_private.mystery_egg_campaign SET started_at = now() - interval '72 hours'");
     await ensureMysteryEggCampaign(pool);
     await serve(pool, async endpoint => {
-      assert.equal((await (await fetch(endpoint)).json()).egg.stage, 'chick');
+      const login = (await (await fetch(endpoint)).json()).egg;
+      const branch = (await (await fetch(endpoint + '?scope=branch')).json()).egg;
+      assert.equal(login.stage, 'chick');
+      assert.equal(branch.stage, 'egg');
+      assert.equal(Date.parse(branch.hatchAt) - Date.parse(login.hatchAt), 3600000);
+      assert.equal((await fetch(endpoint + '?scope=invalid')).status, 400);
       assert.equal((await fetch(endpoint, { method: 'DELETE' })).status, 404);
     });
   } finally {
