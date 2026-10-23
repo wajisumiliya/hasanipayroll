@@ -79,9 +79,40 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(seconds: 2));
     expect(tester.hasRunningAnimations, isFalse);
+    await tester.tap(find.text('Feed fish'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('1 fish eaten · Thank you!'), findsOneWidget);
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
+  });
+  testWidgets('Feed fish is exclusive until the meal and return are complete',
+      (tester) async {
+    final controller = clock('chick');
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: BranchPenguinCrew(
+                branchName: 'SP-EDAR', controller: controller))));
+    await tester.pump();
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
+    await tester.pump();
+    await tester.tap(find.text('Feed fish'));
+    await tester.pump();
+    expect(find.text('Feeding…'), findsOneWidget);
+    final button = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(button.onPressed, isNull);
+    for (var frame = 0; frame < 250; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('1 fish eaten · Thank you!'), findsOneWidget);
+    expect(find.text('Feed fish'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
   });
 }

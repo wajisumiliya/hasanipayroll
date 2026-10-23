@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../services/penguin_family_scene.dart';
+import '../services/penguin_feeding.dart';
 import 'mystery_egg_teaser.dart';
 
 /// A shared branch habitat, separate from employees' personal pet adoption.
@@ -25,10 +25,14 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
   late final Ticker _ticker = createTicker(_tick);
   final _time = ValueNotifier<double>(0);
   Map<String, ui.Image>? _images;
+  List<double> _swimRows = List.filled(16, .65);
   bool _loading = false;
   bool _failed = false;
   bool _reduced = false;
   Duration? _last;
+  PenguinFeeding? _feeding;
+  int _fishEaten = 0;
+  String get _feedLabel => _feeding != null ? 'Feeding…' : 'Feed fish';
   @override
   void initState() {
     super.initState();
@@ -40,6 +44,11 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
   @override
   void didUpdateWidget(covariant BranchPenguinCrew oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.branchName != widget.branchName ||
+        oldWidget.controller != widget.controller) {
+      _feeding = null;
+      _fishEaten = 0;
+    }
     if (oldWidget.controller != widget.controller) {
       final old = oldWidget.controller ?? MysteryEggHatchController.branch;
       old.removeListener(_changed);
@@ -55,6 +64,10 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _reduced = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (_reduced && _feeding != null) {
+      _feeding = null;
+      _fishEaten++;
+    }
     _sync();
   }
 
@@ -74,13 +87,17 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
     final loaded = <String, ui.Image>{};
     try {
       final keys = [
-        for (final action in ['walk', 'swim', 'eat', 'baby'])
-          for (final direction in [2, 6]) '${action}_$direction'
+        for (final variant in ['adult', 'young', 'baby'])
+          for (final action in [
+            'walk',
+            if (variant == 'adult') 'eat',
+            if (variant == 'adult') 'swim'
+          ])
+            '${variant}_${action}_2',
+        'herring'
       ];
       final decoded = await Future.wait(keys.map((key) async {
-        final path = key.startsWith('baby')
-            ? 'assets/penguins/walk/walk_${key.split('_').last}.png'
-            : 'assets/penguins/family/$key.png';
+        final path = 'assets/penguins/family/$key.png';
         final data = await rootBundle.load(path);
         final codec = await ui.instantiateImageCodec(
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
@@ -91,13 +108,48 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
         }
       }), cleanUp: (ui.Image image) => image.dispose());
       loaded.addAll(Map.fromIterables(keys, decoded));
+      // Generated swimming poses have different wing extents. Anchor each
+      // frame to its widest opaque torso row, not the wing's bounding box.
+      // This is render geometry; the original atlas pixels remain untouched.
+      final swimmer = loaded['adult_swim_2']!;
+      final pixels =
+          await swimmer.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final swimRows = List<double>.filled(16, .65);
+      if (pixels != null) {
+        for (var frame = 0; frame < 16; frame++) {
+          final left = (frame % 4 * swimmer.width / 4).floor();
+          final top = (frame ~/ 4 * swimmer.height / 4).floor();
+          final width = swimmer.width ~/ 4;
+          final height = swimmer.height ~/ 4;
+          var bestCount = 0;
+          var bestRow = height ~/ 2;
+          for (var y = 0; y < height; y++) {
+            var count = 0;
+            for (var x = (width * .08).floor(); x < width * .92; x++) {
+              if (pixels.getUint8(
+                      ((top + y) * swimmer.width + left + x) * 4 + 3) >
+                  150) {
+                count++;
+              }
+            }
+            if (count > bestCount) {
+              bestCount = count;
+              bestRow = y;
+            }
+          }
+          swimRows[frame] = bestRow / height;
+        }
+      }
       if (!mounted) {
         for (final image in loaded.values) {
           image.dispose();
         }
         return;
       }
-      setState(() => _images = loaded);
+      setState(() {
+        _images = loaded;
+        _swimRows = swimRows;
+      });
       _sync();
     } catch (_) {
       for (final image in loaded.values) {
@@ -127,6 +179,24 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
       _time.value += ((elapsed - _last!).inMicroseconds / 1e6).clamp(0, .1);
     }
     _last = elapsed;
+    if (_feeding?.phaseAt(_time.value) == PenguinFeedPhase.complete) {
+      setState(() {
+        _feeding = null;
+        _fishEaten++;
+      });
+    }
+  }
+
+  void _feed(double width, bool compact) {
+    if (_feeding != null || _images == null || _clock.stage == 'egg') return;
+    if (_reduced) {
+      setState(() => _fishEaten++);
+      return;
+    }
+    setState(() => _feeding = PenguinFeeding(
+        startedAt: _time.value,
+        sceneWidth: width,
+        adultHeight: compact ? 116 : 154));
   }
 
   @override
@@ -154,8 +224,8 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
             border: Border.all(color: const Color(0xFFB9DDED))),
         child: Stack(children: [
           Positioned.fill(
-              child:
-                  Image.asset('assets/penguin_habitat.png', fit: BoxFit.fill)),
+              child: Image.asset('assets/penguins/family/coast.png',
+                  fit: BoxFit.fill)),
           Positioned(
               top: 0,
               left: 0,
@@ -173,7 +243,7 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
           Positioned(
               top: 18,
               left: 20,
-              right: 20,
+              right: hatched && !compact ? 230 : 20,
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -213,8 +283,8 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                             'Adults swim and feed the baby; the young penguin plays on the ice.',
                         child: RepaintBoundary(
                             child: CustomPaint(
-                                painter: _FamilyPainter(
-                                    _images!, _time, compact)))))),
+                                painter: _FamilyPainter(_images!, _time,
+                                    compact, _feeding, _swimRows)))))),
           if (hatched && _images == null)
             Positioned(
                 bottom: 24,
@@ -224,6 +294,35 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                         ? 'The family scene is unavailable. Please reopen this page.'
                         : 'The penguin family is arriving…',
                     style: const TextStyle(color: Color(0xFF173D60)))),
+          if (hatched)
+            Positioned(
+                top: compact ? 108 : 18,
+                right: 16,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      FilledButton.icon(
+                          onPressed: _images == null || _feeding != null
+                              ? null
+                              : () => _feed(constraints.maxWidth, compact),
+                          icon: const Icon(Icons.set_meal_rounded, size: 19),
+                          label: Text(_feedLabel),
+                          style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF173D60),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(130, 46))),
+                      const SizedBox(height: 5),
+                      Semantics(
+                          liveRegion: true,
+                          child: Text(
+                              _feeding != null
+                                  ? 'Watch the penguin come for its fish'
+                                  : _fishEaten == 0
+                                      ? 'Offer a fish to the family'
+                                      : '$_fishEaten fish eaten · Thank you!',
+                              style: const TextStyle(
+                                  color: Color(0xFF173D60), fontSize: 10))),
+                    ])),
           if (hatched)
             Positioned(
                 top: 82,
@@ -246,24 +345,31 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
 }
 
 class _FamilyPainter extends CustomPainter {
-  _FamilyPainter(this.images, this.time, this.compact) : super(repaint: time);
+  _FamilyPainter(
+      this.images, this.time, this.compact, this.feeding, this.swimRows)
+      : super(repaint: time);
   final Map<String, ui.Image> images;
   final ValueNotifier<double> time;
   final bool compact;
+  final PenguinFeeding? feeding;
+  final List<double> swimRows;
   @override
   void paint(Canvas canvas, Size size) {
-    final members = penguinFamilyAt(time.value)
+    final members = (feeding?.familyAt(time.value) ??
+        penguinFamilyAt(time.value))
       ..sort((a, b) => a.position.dy.compareTo(b.position.dy));
     for (final member in members) {
       final swimming = member.activity == FamilyActivity.swimming;
       final anchor = Offset(
           member.position.dx * size.width, member.position.dy * size.height);
-      final feeding = !member.baby && member.activity == FamilyActivity.feeding;
-      final height = (compact ? 116.0 : 154.0) *
-          member.scale *
-          (feeding ? 4.1 / 3.15 : 1.0);
-      final image = images[
-          '${member.baby ? 'baby' : member.action}_${member.direction}']!;
+      final height = (compact ? 116.0 : 154.0) * member.scale;
+      final variant = member.baby
+          ? 'baby'
+          : member.scale < .9
+              ? 'young'
+              : 'adult';
+      final action = variant != 'adult' ? 'walk' : member.action;
+      final image = images['${variant}_${action}_2']!;
       final walking = member.activity == FamilyActivity.walking ||
           member.activity == FamilyActivity.playing;
       final phase = walking
@@ -275,18 +381,13 @@ class _FamilyPainter extends CustomPainter {
               ? 0
               : (phase * 16).floor() % 16;
       final cell = image.width / 4;
-      final source =
-          Rect.fromLTWH(frame % 4 * cell, frame ~/ 4 * cell, cell, cell);
+      final cellHeight = image.height / 4;
+      final source = Rect.fromLTWH(
+          frame % 4 * cell, frame ~/ 4 * cellHeight, cell, cellHeight);
       final target = Rect.fromLTWH(
-          anchor.dx - height / 2,
-          anchor.dy -
-              height *
-                  (swimming
-                      ? .87
-                      : feeding
-                          ? .80
-                          : .91),
-          height,
+          anchor.dx - height * cell / cellHeight / 2,
+          anchor.dy - height * (swimming ? .22 + swimRows[frame] : .96),
+          height * cell / cellHeight,
           height);
       if (swimming) {
         // Transparent surface glints and expanding wakes anchor strokes in water.
@@ -315,6 +416,10 @@ class _FamilyPainter extends CustomPainter {
         canvas.clipRect(
             Rect.fromLTRB(0, 0, size.width, anchor.dy - height * .22));
       }
+      if (member.direction == 6) {
+        canvas.translate(anchor.dx * 2, 0);
+        canvas.scale(-1, 1);
+      }
       canvas.drawImageRect(
           image, source, target, Paint()..filterQuality = FilterQuality.high);
       canvas.restore();
@@ -327,20 +432,25 @@ class _FamilyPainter extends CustomPainter {
             Paint()..color = const Color(0x70C2EAF6));
       }
     }
-    // A small silver fish is visible only during the parent's feeding routine.
-    final t = time.value % 80;
-    if (t >= 38 && t < 54) {
-      final p = Offset(
-          size.width * .445, size.height * .79 + math.sin(time.value * 3) * 2);
-      canvas.drawOval(
-          Rect.fromCenter(center: p, width: compact ? 9 : 15, height: 5),
-          Paint()..color = const Color(0xFF8EA7B8));
-      canvas.drawCircle(
-          p.translate(4, -1), .8, Paint()..color = const Color(0xFF203D50));
+    final feed = feeding;
+    if (feed != null && feed.fishVisible(time.value)) {
+      final p = feed.fishPosition(time.value);
+      final width = (compact ? 25.0 : 35.0) * feed.fishScale(time.value);
+      final image = images['herring']!;
+      canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          Rect.fromCenter(
+              center: Offset(p.dx * size.width, p.dy * size.height),
+              width: width,
+              height: width),
+          Paint()..filterQuality = FilterQuality.high);
     }
   }
 
   @override
   bool shouldRepaint(covariant _FamilyPainter oldDelegate) =>
-      oldDelegate.images != images || oldDelegate.compact != compact;
+      oldDelegate.images != images ||
+      oldDelegate.compact != compact ||
+      oldDelegate.feeding != feeding;
 }

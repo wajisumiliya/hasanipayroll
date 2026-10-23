@@ -1,38 +1,60 @@
 # Branch penguin family
 
-After the existing branch server-clock reveal, the branch habitat shows exactly
-four penguins: two adults, one juvenile, and one downy baby. The personal employee
-pet, login animation, and public reveal dates are separate and unchanged here.
+[Watch the 22-second click-to-feed preview](previews/photoreal-penguin-feeding.mp4).
+
+After the existing server-clock reveal, the branch habitat shows exactly four
+penguins: two adults, one juvenile, and one downy baby. The public reveal clock
+and employees' separate pet adoption are unchanged by this visual revision.
 Before reveal, four golden eggs continue to show the branch countdown.
 
-The family follows an 80-second continuous routine. One adult swims out and back,
-walks up the shore, feeds the baby, then returns to the water's edge. The other
-adult and juvenile move together on a gentle chase. The baby takes small steps
-towards its feeding parent and stays on dry ice. Swimming is restricted to the
-adult; the downy baby and young penguin never enter the water.
+The family follows an 80-second routine. One adult swims out and back, walks up
+the shore, feeds the baby, then returns to the water's edge. The other adult and
+juvenile move together on a gentle chase. The baby takes little steps towards
+its feeding parent and stays on the ice. Only the adult enters the water.
 
-These are original articulated 3D renders, not wildlife video or a real-time 3D
-simulation. Adult anatomy has a longer, sleeker torso and a smaller head than the
-fluffy baby. The requested orange, slate, ivory and green character colors remain.
-Actual joint poses animate feet, head, and flippers. Water clipping and expanding
-wakes place the swimmer in the surface. Animation travel follows rendered stride
-length; the routine uses the image's shoreline rather than terrain detection.
-The adult's feeding bow and small fish represent feeding without graphic detail.
+## Photoreal assets
 
-Six 768-pixel atlases add roughly 2.6 MB compressed. One decoded set is shared
-between all four animals in a habitat; the baby reuses the login chick's two side
-atlases. The canvas repaints without rebuilding the dashboard. Reduced motion
-freezes the scene, decorative movement ignores taps, and images/ticker/listeners
-are released with the widget. Scene load failure displays a recovery message.
+The old rounded orange-capped models are replaced by generated photoreal emperor
+penguin animation atlases: natural black/white/amber adults, a grey-throated
+juvenile, and a fluffy silver-grey chick with white cheeks and a dark cap. Five
+4-by-4 PNG atlases contain sixteen distinct poses each: adult walk, swim and eat,
+juvenile walk, and baby walk. The actual pixels are generated wildlife-style
+artwork, not recorded wildlife footage or a real-time 3D wildlife simulation.
+Walking uses changing leg/flipper poses, rather than translating a rigid photo.
+Direction changes mirror these symmetric side/three-quarter poses.
 
-Regenerate the original walk model first (see `tools/penguin_walk/README.md`), then:
+The photographic-style coastline and atlases were created with the image
+creation tool. Source PNGs are retained unmodified in `assets/penguins/family/`.
+The painter handles rectangular cells, preserves image proportions, and anchors
+swimming frames by their opaque torso row so changing flipper extents do not
+move the body above or below the waterline. Clipping, ripples, and snow contact
+shadows ground the animals. `render_family.py` is the legacy version's mesh
+source; it does not regenerate the current photoreal atlases.
+
+The separate herring is an original Blender mesh and can be regenerated:
 
 ```sh
-blender -b -t 4 --python tools/penguin_family/render_family.py -- \
-  --model /tmp/hasani-penguin-walk/penguin-walk.blend \
-  --output assets/penguins/family
+blender -b -t 4 --python tools/penguin_family/render_herring.py -- \
+  --output assets/penguins/family/herring.png
 ```
 
-Use `--actions eat` to regenerate just the feeding poses. The Flutter tests cover
-family count, movement continuity, terrain restrictions, all activity states,
-server-controlled pre-hatch eggs, mobile layout, and reduced motion.
+## Feed fish
+
+After hatch and asset loading, the **Feed fish** button tosses one visible silver
+herring onto the ice. The adult already on dry ice approaches it at a size-aware
+walking speed, bends down, opens/closes its bill, swallows the fish, then smoothly
+rejoins its normal route. The fish disappears during swallowing. The other three
+animals continue their activities. Feeding never redirects the baby into water.
+
+The button stays disabled until this sequence finishes, preventing stacked fish
+and overlapping meals. A live accessible status announces the result. With
+reduced motion, feeding completes immediately with the same visible count and
+no animated travel. The count belongs to the current scene/session; no backend
+pet hunger, payroll, notification, or employee records are changed. It resets
+when a different branch/controller is supplied.
+
+One decoded atlas set is shared by all animals in a habitat and released when
+the widget is disposed. The canvas repaints independently of the dashboard.
+Tests cover continuous routes, exact family count, terrain restrictions, reveal
+behavior, mobile layout, reduced motion, one-click feeding and blocked repeated
+clicks, swallowing timing, and a continuous return to the family route.
