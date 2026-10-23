@@ -42,6 +42,7 @@ export async function sendDueBirthdayWishes(pool, {
       if (!delivery.pushConfigured) {
         console.warn('Birthday wish saved to inbox; Firebase push is not configured.');
       } else if (delivery.sent === 0) {
+        console.warn('Automatic wish push status:', delivery.pushStatus || 'unavailable', delivery.pushErrors?.join(',') || '');
         console.warn('Birthday wish saved to inbox; no device accepted the push.');
       }
     } catch {

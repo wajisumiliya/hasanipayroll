@@ -1876,14 +1876,14 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
     if (confirmed != true || !mounted) return;
     try {
-      await NotificationService.send(
+      final delivery = await NotificationService.sendWithResult(
         title: title,
         body: body,
         audience: 'employee',
         employeeId: employeeId,
         type: anniversary ? 'work_anniversary' : 'birthday',
       );
-      if (mounted) _message('$title sent to $name.');
+      if (mounted) _message(delivery.message);
     } catch (error) {
       if (mounted) _message('Unable to send notification: $error');
     }
@@ -3705,7 +3705,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     String? branchId;
     String? employeeId;
     var sending = false;
-    final result = await showDialog<bool>(
+    final result = await showDialog<NotificationDelivery>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -3811,7 +3811,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       }
                       setDialogState(() => sending = true);
                       try {
-                        await NotificationService.send(
+                        final delivery = await NotificationService.sendWithResult(
                           title: titleController.text,
                           body: bodyController.text,
                           audience: audience,
@@ -3820,7 +3820,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           employeeId: employeeId,
                         );
                         if (dialogContext.mounted) {
-                          Navigator.pop(dialogContext, true);
+                          Navigator.pop(dialogContext, delivery);
                         }
                       } catch (error) {
                         setDialogState(() => sending = false);
@@ -3841,7 +3841,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
     titleController.dispose();
     bodyController.dispose();
-    if (result == true && mounted) _message('Notification sent.');
+    if (result != null && mounted) _message(result.message);
   }
 
   Widget _dashboardPulsePanel({

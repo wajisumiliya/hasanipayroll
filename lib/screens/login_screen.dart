@@ -552,7 +552,14 @@ class _LoginScreenState extends State<LoginScreen>
 
                 final user = service.currentUser;
                 if (user != null) {
-                  _openCorrectPortal(user);
+                  try {
+                    await NotificationService.registerCurrentDevice(
+                      employeeId: user.employeeId, branchId: user.branchId,
+                    );
+                  } catch (_) {
+                    // Notification setup must not block first-login completion.
+                  }
+                  if (mounted) _openCorrectPortal(user);
                 }
               }
 
