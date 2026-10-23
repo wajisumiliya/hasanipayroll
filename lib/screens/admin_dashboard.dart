@@ -1850,7 +1850,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final title = anniversary ? 'Work Anniversary' : 'Birthday Wishes';
     final body = anniversary
         ? (days == 0
-            ? 'Congratulations $name on your $years-year work anniversary! Thank you for being part of our team.'
+            ? '🎉 Happy Work Anniversary, $name! 🏆\nCongratulations on completing $years ${years == 1 ? 'year' : 'years'} with Hasani Books. Thank you for your dedication, hard work, and the difference you make every day. Wishing you continued growth and success!\n— From all of us at Hasani Books 💙'
             : 'Hi $name, your $years-year work anniversary is coming up in $days day${days == 1 ? '' : 's'}!')
         : (days == 0
             ? '🎂 Happy Birthday, $name! 🎉\nWishing you good health, happiness, and a wonderful year ahead. Thank you for being part of the Hasani Books family. Enjoy your special day!\n— From all of us at Hasani Books 💙'

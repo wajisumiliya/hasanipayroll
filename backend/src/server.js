@@ -17,6 +17,7 @@ import { installDataApi, withDatabaseIdentity, claimsForRequest } from "./data-a
 import { ensureApplicationSchema, startPayslipReleaseWorker } from "./application-schema.js";
 import { installNotificationApi } from "./notification-api.js";
 import { startBirthdayWishWorker } from "./birthday-wishes.js";
+import { startAnniversaryWishWorker } from "./anniversary-wishes.js";
 import { installPenguinPetApi } from "./penguin-pet-api.js";
 import { installMysteryEggApi } from "./mystery-eggs.js";
 import { buildAttendanceUpserts, withCanonicalBranchId } from "./attendance-batch.js";
@@ -4479,6 +4480,7 @@ async function startServer() {
   await ensureApplicationSchema(pool);
   startPayslipReleaseWorker(pool);
   startBirthdayWishWorker(pool);
+  startAnniversaryWishWorker(pool);
   const hashPassword = (password) => bcrypt.hash(password, 12);
   await ensureAdminAccount(pool, {
     email: process.env.ADMIN_EMAIL,
