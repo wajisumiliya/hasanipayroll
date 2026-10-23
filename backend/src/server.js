@@ -20,6 +20,7 @@ import { startBirthdayWishWorker } from "./birthday-wishes.js";
 import { startAnniversaryWishWorker } from "./anniversary-wishes.js";
 import { installPenguinPetApi } from "./penguin-pet-api.js";
 import { installMysteryEggApi } from "./mystery-eggs.js";
+import { startMysteryEggReminderWorker } from "./mystery-egg-reminder.js";
 import { buildAttendanceUpserts, withCanonicalBranchId } from "./attendance-batch.js";
 import {
   ensureAdminAccount,
@@ -4481,6 +4482,7 @@ async function startServer() {
   startPayslipReleaseWorker(pool);
   startBirthdayWishWorker(pool);
   startAnniversaryWishWorker(pool);
+  startMysteryEggReminderWorker(pool);
   const hashPassword = (password) => bcrypt.hash(password, 12);
   await ensureAdminAccount(pool, {
     email: process.env.ADMIN_EMAIL,

@@ -21,7 +21,7 @@ export function createPushSender({ env = process.env, request = (...args) => fet
     } catch { return { ...result, pushStatus: 'invalid_configuration' }; }
 
     const devices = await pool.query(`SELECT DISTINCT token, employee_id FROM public.notification_devices
-      WHERE ($1='all' OR ($1='branch' AND branch_id=$2) OR ($1='employee' AND employee_id=ANY($3::text[]))) LIMIT 1000`,
+      WHERE ($1='all' OR ($1='branch' AND branch_id=$2) OR ($1='employee' AND employee_id=ANY($3::text[])))`,
     [input.audience, input.branchId, input.employeeIds]);
     if (!devices.rows.length) return { ...result, pushStatus: 'no_devices' };
 

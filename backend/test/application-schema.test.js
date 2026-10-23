@@ -27,6 +27,8 @@ test('application startup applies the penguin migration once and records it', as
   assert.ok(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.employee_penguin_pets')));
   assert.ok(applied.has('20261023_birthday_wishes_v1'));
   assert.ok(applied.has('20261023_anniversary_wishes_v1'));
+  assert.ok(applied.has('20261023_mystery_egg_reveal_hour_v1'));
+  assert.ok(executed.some((sql) => sql.includes("timestamptz '2026-10-23 07:39:11+00'")));
   assert.ok(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.anniversary_wishes')));
   assert.ok(executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.birthday_wishes')));
 
@@ -35,4 +37,5 @@ test('application startup applies the penguin migration once and records it', as
   assert.ok(!executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.employee_penguin_pets')));
   assert.ok(!executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.birthday_wishes')));
   assert.ok(!executed.some((sql) => sql.includes('CREATE TABLE IF NOT EXISTS app_private.anniversary_wishes')));
+  assert.ok(!executed.some((sql) => sql.includes('UPDATE app_private.mystery_egg_campaign')));
 });

@@ -7,7 +7,7 @@ const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const account = { project_id: 'test-project', client_email: 'test@test-project.iam.gserviceaccount.com',
   private_key: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() };
 const input = { title: 'Test', body: 'Test body', audience: 'employee', type: 'birthday', employeeIds: ['TEST_EMP'], branchId: null };
-function setup({ env = {}, deviceRows = [{ token: 'TEST_DEVICE_TOKEN', employee_id: 'TEST_EMP' }], fcm } = {}) {
+function setup({ env = {}, deviceRows = [{ token: 'TEST_DEVICE_TOKEN', employee_id: 'TEST_EMP' }], fcm, notification = input } = {}) {
   const requests = [], queries = [];
   const pool = { async query(sql, values) { queries.push({ sql, values }); return { rows: deviceRows }; } };
   const send = createPushSender({ env: { FIREBASE_SERVICE_ACCOUNT_JSON: JSON.stringify(account), ...env }, request: async (url, options) => {
@@ -15,7 +15,7 @@ function setup({ env = {}, deviceRows = [{ token: 'TEST_DEVICE_TOKEN', employee_
     if (url.includes('oauth2')) return { ok: true, async json() { return { access_token: 'TEST_OAUTH', expires_in: 3600 }; } };
     return fcm ? fcm(url, options) : { ok: true };
   } });
-  return { send: () => send(pool, input), requests, queries };
+  return { send: () => send(pool, notification), requests, queries };
 }
 
 test('push explains absent/invalid credentials without contacting Firebase', async () => {
@@ -77,4 +77,13 @@ test('invalid signing key is reported as authentication failure', async () => {
   const t = setup({ env: { FIREBASE_SERVICE_ACCOUNT_JSON: JSON.stringify({ ...account, private_key: 'invalid' }) } });
   assert.equal((await t.send()).pushStatus, 'authentication_failed');
   assert.equal(t.requests.length, 0);
+});
+
+test('all-device broadcast is not silently limited to the first 1000 devices', async () => {
+  const t = setup({ deviceRows: Array.from({ length: 1001 }, (_, i) => ({ token: `TEST_${i}` })), notification: { ...input, audience: 'all', employeeIds: [] } });
+  const result = await t.send();
+  assert.equal(result.sent, 1001);
+  assert.equal(result.attempted, 1001);
+  assert.equal(t.queries[0].values[0], 'all');
+  assert.ok(!t.queries[0].sql.includes('LIMIT 1000'));
 });
