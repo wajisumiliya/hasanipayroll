@@ -9,9 +9,16 @@ import '../services/penguin_growth.dart';
 
 /// Server-backed penguin companion. Growth and care use server time.
 class EmployeePenguinPetCard extends StatefulWidget {
-  const EmployeePenguinPetCard({super.key, this.request});
+  const EmployeePenguinPetCard(
+      {super.key,
+      this.request,
+      this.compact = false,
+      this.localCare = false,
+      this.title = 'MY PENGUIN'});
+  final bool compact, localCare;
+  final String title;
 
-  /// Optional transport for isolated previews and tests; production uses NeonApi.
+  /// Employee care defaults to NeonApi; public companions supply local care.
   final Future<Map<String, dynamic>> Function(String? action)? request;
 
   @override
@@ -260,7 +267,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               1
             ])))),
         Padding(
-            padding: const EdgeInsets.all(18),
+            padding: EdgeInsets.all(widget.compact ? 12 : 18),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
@@ -268,7 +275,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Text(hatched ? 'MY PENGUIN' : 'A LITTLE SURPRISE',
+                      Text(hatched ? widget.title : 'A LITTLE SURPRISE',
                           style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
@@ -305,7 +312,11 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                                       color: Color(0xFF173D60),
                                       fontWeight: FontWeight.w700)))))),
               SizedBox(
-                  height: hatched ? 270 : 200,
+                  height: widget.compact
+                      ? 150
+                      : hatched
+                          ? 270
+                          : 200,
                   width: double.infinity,
                   child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
@@ -319,15 +330,19 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                         Align(
                             alignment: Alignment.bottomCenter,
                             child: SizedBox(
-                                width: 300,
-                                height: hatched ? 260 : 190,
+                                width: widget.compact ? 170 : 300,
+                                height: widget.compact
+                                    ? 145
+                                    : hatched
+                                        ? 260
+                                        : 190,
                                 child: FittedBox(
                                     fit: BoxFit.contain, child: character))),
                       ]))),
               if (hatched) ...[
                 Center(
                     child: Text(
-                        '$nickname • Day $days • ${stage.toUpperCase()}',
+                        '$nickname • Day ${widget.localCare ? (days - 3).clamp(0, 100000) : days} • ${stage.toUpperCase()}',
                         style: const TextStyle(
                             color: Color(0xFF173D60),
                             fontSize: 12,
@@ -389,7 +404,9 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               const SizedBox(height: 8),
               Text(
                   hatched
-                      ? 'Daily care: ${fed ? 'fed' : 'fish waiting'} · ${played ? 'played' : 'ready to play'}. Keep interacting whenever you like.'
+                      ? widget.localCare
+                          ? 'Feed, play and rest together. Care resets when you leave this page.'
+                          : 'Daily care: ${fed ? 'fed' : 'fish waiting'} · ${played ? 'played' : 'ready to play'}. Keep interacting whenever you like.'
                       : 'Your penguin grows with time, even when you are away.',
                   style:
                       const TextStyle(fontSize: 11, color: Color(0xFF425F74))),

@@ -2,8 +2,9 @@
 
 The desktop web and compact Android/web login share 28 bundled photorealistic
 Antarctic habitat backgrounds. The Hasani Books logo and sign-in form remain.
-As of 1.0.28+35, the login penguin and its egg/countdown widget are removed on
-both desktop and mobile; dashboard penguins remain available.
+As of 1.0.30+37, a silent interactive companion appears on desktop and mobile
+login at the user's request. See `penguin-companion.md` for public hatch timing
+and local care.
 
 | Day | Habitat |
 | --- | --- |

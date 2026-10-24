@@ -13,6 +13,7 @@ import '../services/notification_service.dart';
 import '../services/login_habitat_scene.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../theme/daily_portal_theme.dart';
+import '../widgets/portal_penguin_companion.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
@@ -856,6 +857,9 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 20),
                             _sevenDayAuthCard(theme, compact: true),
+                            const SizedBox(height: 16),
+                            PortalPenguinCompanion(
+                                controller: _hatchController, compact: true),
                           ],
                         ),
                       ),
@@ -1041,6 +1045,18 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           ),
         ),
+        Positioned(
+            left: 48,
+            right: 42,
+            top: 230,
+            bottom: 24,
+            child: SingleChildScrollView(
+                child: Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        child: PortalPenguinCompanion(
+                            controller: _hatchController, compact: true))))),
       ],
     );
   }

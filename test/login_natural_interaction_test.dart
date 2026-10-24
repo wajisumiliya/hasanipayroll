@@ -5,10 +5,11 @@ import 'package:hasani_payroll_portal/screens/login_screen.dart';
 import 'package:hasani_payroll_portal/services/login_habitat_scene.dart';
 import 'package:hasani_payroll_portal/services/mystery_egg_hatch_controller.dart';
 import 'package:hasani_payroll_portal/widgets/login_penguin_walker.dart';
+import 'package:hasani_payroll_portal/widgets/portal_penguin_companion.dart';
 
 void main() {
   testWidgets(
-      'desktop and mobile login have no penguin and retain usable fields',
+      'desktop and mobile login have a silent companion and usable fields',
       (tester) async {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -26,7 +27,14 @@ void main() {
           home: LoginScreen(
               hatchController: controller, showThemePreview: false)));
       await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
       expect(find.byType(LoginPenguinWalker), findsNothing);
+      expect(find.byType(PortalPenguinCompanion), findsOneWidget);
+      await tester.ensureVisible(find.text('Feed'));
+      await tester.tap(find.text('Feed'));
+      await tester.pump();
+      expect(find.text('Yum! Thank you for the fish!'), findsOneWidget);
+      expect(find.byIcon(Icons.mic), findsNothing);
       final username = find.byWidgetPredicate((w) =>
           w is TextField && w.decoration?.hintText == 'Username / Employee ID');
       final password =

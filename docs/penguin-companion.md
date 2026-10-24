@@ -2,7 +2,8 @@
 
 The employee dashboard offers Feed, Play, Pet and Rest/Wake. There is no Talk
 button, microphone, recording, voice playback or audio permission in this feature.
-The login stays penguin-free and the branch family habitat is unchanged.
+The login and branch dashboard also offer a public companion. The existing
+branch family habitat remains above the new companion.
 
 The existing orange crown, green bill/feet and gray-white body are retained.
 Chick and adult reaction sheets contain four expressions for each care action.
@@ -27,3 +28,13 @@ Reduced motion displays a static expressive pose and static care props.
 Tests cover four silent controls, care failures, duplicate request protection,
 sealed eggs, pose isolation, daily-care repeat interactions, and rest cancellation.
 Android clients need the new build for these bundled controls and artwork.
+
+## Public companions (1.0.30+37)
+
+Login uses the public login hatch clock; the branch companion uses the branch
+hatch clock. They attach to existing shared controllers, so no extra polling
+loop or private employee API call is introduced. Hatch confirmation and growth
+come from public server metadata. Before confirmation, the egg stays sealed.
+Feed/Play/Pet/Rest are page-local on these screens and reset on leaving.
+The login card uses a compact view below the mobile form or in the desktop
+left panel; the sign-in form and logo remain accessible and unobstructed.
