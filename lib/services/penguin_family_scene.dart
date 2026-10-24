@@ -58,6 +58,41 @@ Offset _caregiverAt(double seconds) {
 double _ease(double a, double b, double t) =>
     a + (b - a) * (t * t * (3 - 2 * t));
 
+double _babyOffsetAt(double seconds) {
+  final t = seconds % 80;
+  if (t < 2) return .10;
+  if (t < 7) return _ease(.10, .055, (t - 2) / 5);
+  if (t < 18) return .055;
+  if (t < 22) return _ease(.055, .085, (t - 18) / 4);
+  if (t < 26) return .085;
+  if (t < 32) return _ease(.085, .055, (t - 26) / 6);
+  if (t < 66) return .055;
+  if (t < 72) return _ease(.055, .10, (t - 66) / 6);
+  return .10;
+}
+
+Offset _babyAt(double seconds) =>
+    Offset(_caregiverAt(seconds - 2).dx + _babyOffsetAt(seconds), .94);
+
+/// Brief, staggered head/eyelid loops followed by an extended still pause.
+int penguinIdleFrameAt(double seconds,
+    {required bool baby, double identity = 1}) {
+  final local = seconds % 80;
+  final starts = baby
+      ? const [0.0, 7.0, 22.0, 32.0, 44.0, 72.0]
+      : identity < 1
+          ? const [0.0, 16.0, 42.0, 49.0, 66.0]
+          : const [0.0, 61.0, 74.0];
+  final start = starts.lastWhere((value) => value <= local);
+  final offset = baby
+      ? .3
+      : identity < 1
+          ? .8
+          : 0.0;
+  final t = (local - start + offset) % 14;
+  return t < 5 ? (t / 5 * 16).floor().clamp(0, 15) : 0;
+}
+
 /// Perspective belongs to the ground plane, not the age of the animal.
 double penguinGroundScale(double y) =>
     .86 + .14 * ((y - .72) / .22).clamp(0.0, 1.0);
@@ -119,11 +154,11 @@ List<FamilyPenguin> penguinFamilyAt(double seconds) {
       (parent - _caregiverAt(seconds + .01)).distance > .00000001;
   final parentRight = _caregiverAt(seconds + .01).dx >= parent.dx;
   final youngBase = _caregiverAt(seconds - 3);
-  final babyBase = _caregiverAt(seconds - 2);
+  final baby = _babyAt(seconds);
+  final babyNext = _babyAt(seconds + .01);
   final youngMoving =
       (youngBase - _caregiverAt(seconds - 2.99)).distance > .00000001;
-  final babyMoving =
-      (babyBase - _caregiverAt(seconds - 1.99)).distance > .00000001;
+  final babyMoving = (baby - babyNext).distance > .00000001;
   // A youngster explores a few steps, then returns to its parent's side.
   final playOffset = t >= 20 && t < 28
       ? -.025 * math.pow(math.sin((t - 20) / 8 * math.pi), 2).toDouble()
@@ -166,12 +201,10 @@ List<FamilyPenguin> penguinFamilyAt(double seconds) {
         gait),
     FamilyPenguin(
         'Baby staying beside its parent',
-        Offset(babyBase.dx + .10, .94),
+        baby,
         .43,
         babyMoving ? FamilyActivity.walking : FamilyActivity.resting,
-        babyMoving
-            ? (_caregiverAt(seconds - 1.99).dx >= babyBase.dx ? 2 : 6)
-            : 6,
+        babyMoving ? (babyNext.dx >= baby.dx ? 2 : 6) : 6,
         gait,
         baby: true),
   ];

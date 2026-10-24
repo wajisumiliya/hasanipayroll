@@ -1,6 +1,8 @@
 # Branch penguin family
 
-[Watch the 25-second habitat highlights: entry, exit, and feeding](previews/living-penguin-habitat.mp4).
+[Watch the 24-second quiet family and huddling preview](previews/penguin-family-bond.mp4).
+
+[Earlier water-entry and feeding highlights](previews/living-penguin-habitat.mp4).
 
 After the existing server-clock reveal, the branch habitat shows exactly four
 penguins: two adults, one juvenile, and one downy baby. The public reveal clock
@@ -12,7 +14,9 @@ walks. One adult watches the family, walks to the shore, swims out and back, the
 returns to feed and rest. The caregiver stays on dry ice, taking just a few steps
 before stopping again to observe, rest, or make a brief beak-down grooming gesture.
 The youngster follows after three seconds and explores a short distance before
-returning; the baby follows after two seconds and stays beside its caregiver.
+returning. The baby follows its caregiver after two seconds, takes a few steps
+closer to the parent’s legs, rests there, then makes a short curious excursion
+and comes back. Its path remains continuous and on dry ice.
 The caregiver is stationary for more than two thirds of its routine. All paths
 remain continuous through the loop, and the animals have distinct timings.
 
@@ -28,12 +32,26 @@ keeping the baby close and leaving space between the adults.
 
 The old rounded orange-capped models are replaced by generated photoreal emperor
 penguin animation atlases: natural black/white/amber adults, a grey-throated
-juvenile, and a fluffy silver-grey chick with white cheeks and a dark cap. Six
-PNG atlases contain sixteen distinct poses each: adult walk, swim, entry and eat,
-juvenile walk, and baby walk. The actual pixels are generated wildlife-style
+juvenile, and a fluffy silver-grey chick with white cheeks and a dark cap. Eight
+PNG atlases contain sixteen poses each: adult walk, swim, entry, eat and idle;
+juvenile walk; and baby walk and idle. The actual pixels are generated wildlife-style
 artwork, not recorded wildlife footage or a real-time 3D wildlife simulation.
 Walking uses changing leg/flipper poses, rather than translating a rigid photo.
 Direction changes mirror these symmetric side/three-quarter poses.
+
+Dedicated quiet poses add small head turns, natural blinks, downward glances from
+the adults, and upward/curious looks from the baby. These use actual changing
+photographic-style poses rather than rotating a rigid picture. A five-second
+motion sequence is followed by a nine-second still pause; the schedule restarts
+at rest stops and has different offsets for the two adults and baby. Walking,
+feeding, preening and swimming take precedence over idle gestures.
+
+Idle poses share the entry sheet's connected-silhouette extraction and clipping,
+which keeps planted feet anchored while isolating the feather edges. The two new
+sheets are decoded once and shared across the active scene. Quiet canvas updates
+are limited to about 30fps while retaining actual elapsed scene time; reduced
+motion freezes head poses, breathing, travel and atmospheric effects together.
+
 
 The photographic-style coastline and atlases were created with the image
 creation tool. Source PNGs are retained unmodified in `assets/penguins/family/`.
@@ -87,4 +105,5 @@ One decoded atlas set is shared by all animals in a habitat and released when
 the widget is disposed. The canvas repaints independently of the dashboard.
 Tests cover continuous routes, exact family count, terrain restrictions, reveal
 behavior, mobile layout, reduced motion, one-click feeding and blocked repeated
-clicks, swallowing timing, and a continuous return to the family route.
+clicks, swallowing timing, a continuous return to the family route, baby huddling
+and exploration, and staggered quiet pose sequences.

@@ -11,6 +11,8 @@ void main() {
       'adult_swim_2',
       'adult_eat_2',
       'adult_enter_2',
+      'adult_idle_2',
+      'baby_idle_2',
       'young_walk_2',
       'baby_walk_2'
     ]) {
@@ -46,7 +48,8 @@ void main() {
               reason: '$name frame $frame has alpha isolation');
           hashes.add(hash);
         }
-        expect(hashes, hasLength(16),
+        expect(
+            hashes.length, greaterThanOrEqualTo(name.contains('idle') ? 8 : 16),
             reason: '$name animates actual changing poses');
       } finally {
         image.dispose();

@@ -61,4 +61,42 @@ void main() {
       }
     }
   });
+  test('baby takes real steps into a huddle, rests, explores, and returns', () {
+    double gap(double t) {
+      final family = penguinFamilyAt(t);
+      return family[3].position.dx - family[1].position.dx;
+    }
+
+    expect(gap(8), lessThan(gap(0) * .65));
+    expect(penguinFamilyAt(4)[3].activity, FamilyActivity.walking);
+    expect(penguinFamilyAt(8)[3].activity, FamilyActivity.resting);
+    expect(penguinFamilyAt(20)[3].activity, FamilyActivity.walking);
+    expect(penguinFamilyAt(8)[3].position, penguinFamilyAt(11)[3].position);
+    expect(penguinIdleFrameAt(8, baby: true),
+        isNot(penguinIdleFrameAt(11, baby: true)));
+    expect(gap(24), greaterThan(gap(8)));
+    expect(gap(35), lessThan(gap(24)));
+    for (var tick = 0; tick < 1600; tick++) {
+      final t = tick / 10;
+      final before = penguinFamilyAt(t)[3].position;
+      final after = penguinFamilyAt(t + .001)[3].position;
+      expect((after - before).distance, lessThan(.001));
+    }
+  });
+  test('quiet pose loops pause between gestures and do not synchronize', () {
+    for (var tick = 0; tick < 280; tick++) {
+      final t = tick / 10;
+      for (final baby in [false, true]) {
+        expect(penguinIdleFrameAt(t, baby: baby), inInclusiveRange(0, 15));
+      }
+    }
+    for (var t = 5.1; t < 14; t += .1) {
+      expect(penguinIdleFrameAt(t, baby: false), 0);
+    }
+    expect({
+      penguinIdleFrameAt(1, baby: false),
+      penguinIdleFrameAt(1, baby: false, identity: .98),
+      penguinIdleFrameAt(1, baby: true)
+    }, hasLength(3));
+  });
 }

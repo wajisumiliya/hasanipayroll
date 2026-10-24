@@ -31,6 +31,7 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
   Map<String, ui.Image>? _images;
   List<double> _swimRows = List.filled(16, .65);
   List<PenguinEntryPose> _entryPoses = const [];
+  Map<String, List<PenguinEntryPose>> _idlePoses = const {};
   PenguinFeedPhase? _feedPhase;
   bool _loading = false;
   bool _failed = false;
@@ -112,6 +113,7 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
         for (final variant in ['adult', 'young', 'baby'])
           for (final action in [
             'walk',
+            if (variant != 'young') 'idle',
             if (variant == 'adult') 'eat',
             if (variant == 'adult') 'swim',
             if (variant == 'adult') 'enter'
@@ -174,6 +176,15 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
       if (entryPixels == null) throw StateError('Entry pose data unavailable');
       final entryPoses = penguinEntryGeometry(
           entryImage.width, entryImage.height, entryPixels);
+      final idlePoses = <String, List<PenguinEntryPose>>{};
+      for (final variant in ['adult', 'baby']) {
+        final idle = loaded['${variant}_idle_2']!;
+        final pixels =
+            await idle.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (pixels == null) throw StateError('Idle pose data unavailable');
+        idlePoses[variant] =
+            penguinEntryGeometry(idle.width, idle.height, pixels);
+      }
       if (!mounted) {
         for (final image in loaded.values) {
           image.dispose();
@@ -184,6 +195,7 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
         _images = loaded;
         _swimRows = swimRows;
         _entryPoses = entryPoses;
+        _idlePoses = idlePoses;
       });
       _sync();
     } catch (_) {
@@ -210,9 +222,15 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
   }
 
   void _tick(Duration elapsed) {
-    if (_last != null) {
-      _time.value += ((elapsed - _last!).inMicroseconds / 1e6).clamp(0, .1);
+    if (_last == null) {
+      _last = elapsed;
+      return;
     }
+    final delta = elapsed - _last!;
+    // Quiet head poses and ripples do not need a full display-rate redraw.
+    // Keep elapsed scene time intact while limiting canvas work to about 30fps.
+    if (delta.inMicroseconds < 32000) return;
+    _time.value += (delta.inMicroseconds / 1e6).clamp(0, .1);
     _last = elapsed;
     if (_feeding?.phaseAt(_time.value) == PenguinFeedPhase.complete) {
       setState(() {
@@ -331,7 +349,8 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                                     compact,
                                     _feeding,
                                     _swimRows,
-                                    _entryPoses)))))),
+                                    _entryPoses,
+                                    _idlePoses)))))),
           if (hatched && _images == null)
             Positioned(
                 bottom: 24,
@@ -390,7 +409,7 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
 
 class _FamilyPainter extends CustomPainter {
   _FamilyPainter(this.images, this.time, this.compact, this.feeding,
-      this.swimRows, this.entryPoses)
+      this.swimRows, this.entryPoses, this.idlePoses)
       : super(repaint: time);
   final Map<String, ui.Image> images;
   final ValueNotifier<double> time;
@@ -398,6 +417,7 @@ class _FamilyPainter extends CustomPainter {
   final PenguinFeeding? feeding;
   final List<double> swimRows;
   final List<PenguinEntryPose> entryPoses;
+  final Map<String, List<PenguinEntryPose>> idlePoses;
   @override
   void paint(Canvas canvas, Size size) {
     paintPenguinHabitat(canvas, size, time.value, images['coast']!);
@@ -424,15 +444,18 @@ class _FamilyPainter extends CustomPainter {
           : member.scale < .9
               ? 'young'
               : 'adult';
-      final action = variant != 'adult'
-          ? 'walk'
-          : transition
-              ? 'enter'
-              : water >= 1
-                  ? 'swim'
-                  : member.activity == FamilyActivity.swimming
-                      ? 'walk'
-                      : member.action;
+      final idle = resting && variant != 'young';
+      final action = idle
+          ? 'idle'
+          : variant != 'adult'
+              ? 'walk'
+              : transition
+                  ? 'enter'
+                  : water >= 1
+                      ? 'swim'
+                      : member.activity == FamilyActivity.swimming
+                          ? 'walk'
+                          : member.action;
       final image = images['${variant}_${action}_2']!;
       final walking = member.activity == FamilyActivity.walking ||
           member.activity == FamilyActivity.playing;
@@ -440,21 +463,30 @@ class _FamilyPainter extends CustomPainter {
           ? ((anchor.dx / (height * .20)) * (member.direction == 2 ? 1 : -1)) %
               1
           : member.phase;
-      final frame = transition
-          ? (water * 15).round()
-          : resting ||
-                  (member.baby && !walking) ||
-                  (member.activity == FamilyActivity.swimming && water == 0)
-              ? 0
-              : (phase * 16).floor() % 16;
+      final frame = idle
+          ? penguinIdleFrameAt(time.value,
+              baby: member.baby, identity: member.scale)
+          : transition
+              ? (water * 15).round()
+              : resting ||
+                      (member.baby && !walking) ||
+                      (member.activity == FamilyActivity.swimming && water == 0)
+                  ? 0
+                  : (phase * 16).floor() % 16;
       final cell = image.width / 4;
       final cellHeight = image.height / 4;
-      final source = transition
-          ? entryPoses[frame].source
+      final poses = transition
+          ? entryPoses
+          : idle
+              ? idlePoses[variant]
+              : null;
+      final source = poses != null
+          ? poses[frame].source
           : Rect.fromLTWH(
               frame % 4 * cell, frame ~/ 4 * cellHeight, cell, cellHeight);
-      final entry = transition ? entryPoses[frame] : null;
-      final entryScale = height * .96 / entryPoses.first.source.height;
+      final entry = poses == null ? null : poses[frame];
+      final entryScale =
+          poses == null ? 1.0 : height * .96 / poses.first.source.height;
       final drawWidth = entry == null
           ? height * cell / cellHeight
           : entry.source.width * entryScale;
