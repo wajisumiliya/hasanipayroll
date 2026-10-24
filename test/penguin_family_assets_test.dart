@@ -12,6 +12,8 @@ void main() {
       'adult_eat_2',
       'adult_enter_2',
       'adult_idle_2',
+      'adult_preen_2',
+      'young_idle_2',
       'baby_idle_2',
       'young_walk_2',
       'baby_walk_2'

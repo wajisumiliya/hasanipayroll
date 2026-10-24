@@ -1,109 +1,93 @@
 # Branch penguin family
 
-[Watch the 24-second quiet family and huddling preview](previews/penguin-family-bond.mp4).
+[Watch the complete habitat highlights](previews/complete-penguin-habitat.mp4).
 
-[Earlier water-entry and feeding highlights](previews/living-penguin-habitat.mp4).
+The branch habitat contains exactly two adults, one juvenile and one downy baby.
+It appears only after the existing branch server-clock hatch. Public reveal
+metadata and employees' independent personal pets are unchanged.
 
-After the existing server-clock reveal, the branch habitat shows exactly four
-penguins: two adults, one juvenile, and one downy baby. The public reveal clock
-and employees' separate pet adoption are unchanged by this visual revision.
-Before reveal, four golden eggs continue to show the branch countdown.
+## Completed behavior
 
-The family follows an 80-second routine with long genuine pauses between short
-walks. One adult watches the family, walks to the shore, swims out and back, then
-returns to feed and rest. The caregiver stays on dry ice, taking just a few steps
-before stopping again to observe, rest, or make a brief beak-down grooming gesture.
-The youngster follows after three seconds and explores a short distance before
-returning. The baby follows its caregiver after two seconds, takes a few steps
-closer to the parent’s legs, rests there, then makes a short curious excursion
-and comes back. Its path remains continuous and on dry ice.
-The caregiver is stationary for more than two thirds of its routine. All paths
-remain continuous through the loop, and the animals have distinct timings.
+The adults keep stable identities and share duties over a continuous 160-second
+routine. Adult A fishes while B watches the children, then B fishes while A
+watches. Each fishing trip has walking, gradual water entry, swimming, a return
+onto the ice, eating its catch, rest and feather grooming. The second adult uses
+a separate ice path behind the family. Both are home during reunions.
 
-Foreground animals render larger than animals near the distant waterline.
-Three soft shadow layers place weight under the feet and a faint cast on the
-snow. A subtle cool lighting tint matches the overcast scene. Resting animals
-have barely perceptible breathing; reduced motion freezes this as well as travel.
-Grooming uses the initial beak-down poses of the existing adult animation rather
-than introducing another asset set. The feeding spot is near the caregiver,
-keeping the baby close and leaving space between the adults.
+The children walk gradually between parents during the reunion instead of
+jumping when duties switch. The youngster follows, briefly explores and plays,
+and makes small head/eyelid and flipper gestures while standing. The baby takes
+small real steps into a huddle by the caregiver's legs, looks up, briefly explores
+and returns. A nearby parent remains on the ice throughout. Neither child swims.
 
-## Photoreal assets
+All three age groups have quiet head and blink poses, interspersed with long
+still pauses. The adults have a dedicated grooming sequence with the bill
+turned into shoulder/flank feathers, rather than reusing an eating pose.
+Foreground scaling, cool overcast lighting, small foot-contact shadows and soft
+cast shadows ground them in the photographic-style landscape.
 
-The old rounded orange-capped models are replaced by generated photoreal emperor
-penguin animation atlases: natural black/white/amber adults, a grey-throated
-juvenile, and a fluffy silver-grey chick with white cheeks and a dark cap. Eight
-PNG atlases contain sixteen poses each: adult walk, swim, entry, eat and idle;
-juvenile walk; and baby walk and idle. The actual pixels are generated wildlife-style
-artwork, not recorded wildlife footage or a real-time 3D wildlife simulation.
-Walking uses changing leg/flipper poses, rather than translating a rigid photo.
-Direction changes mirror these symmetric side/three-quarter poses.
+The waterline, wake and foot shadow change gradually over two-second entry and
+exit sequences. Cloud texture drifts only in a faded sky region; mountains stay
+fixed. Small moving reflection strokes are clipped to the open bay. A sparse
+25-second simulated snow flurry fades in and out once per 180 scene seconds;
+it is decorative polar weather, not a live weather report. Reduced motion
+freezes travel, head gestures, breathing, clouds, reflections and snow together.
 
-Dedicated quiet poses add small head turns, natural blinks, downward glances from
-the adults, and upward/curious looks from the baby. These use actual changing
-photographic-style poses rather than rotating a rigid picture. A five-second
-motion sequence is followed by a nine-second still pause; the schedule restarts
-at rest stops and has different offsets for the two adults and baby. Walking,
-feeding, preening and swimming take precedence over idle gestures.
+## Feeding
 
-Idle poses share the entry sheet's connected-silhouette extraction and clipping,
-which keeps planted feet anchored while isolating the feather edges. The two new
-sheets are decoded once and shared across the active scene. Quiet canvas updates
-are limited to about 30fps while retaining actual elapsed scene time; reduced
-motion freezes head poses, breathing, travel and atmospheric effects together.
+The fishing adult's returned catch is visible during its eating poses and
+disappears as it swallows. **Feed fish** offers one additional silver herring to
+the adult currently on caregiving duty, on whichever side it is staying.
+That adult notices the fish for 1.2 seconds, approaches, bends down, opens/closes
+its bill, swallows, then smoothly rejoins its own route. Fish orientation and
+placement follow the adult's facing direction, with the fish head towards the
+bill. The baby is not redirected into water or given a whole fish.
 
+A meal keeps the selected adult's stable identity even if duties change while it
+is feeding. Size-aware approach time is capped so it can finish and rejoin the
+ice path before that adult's next water entry. Food is placed on clear foreground ice away from the youngster. Approach
+footsteps use horizontal and depth travel, including near-vertical approaches.
+The other family members continue their activities. The button stays disabled through the sequence, preventing
+stacked fish. Accessible status changes announce notice, approach, eating and
+return. Reduced motion completes an offered meal immediately with a result count.
 
-The photographic-style coastline and atlases were created with the image
-creation tool. Source PNGs are retained unmodified in `assets/penguins/family/`.
-The painter handles rectangular cells, preserves image proportions, and anchors
-swimming frames by their opaque torso row so changing flipper extents do not
-move the body above or below the waterline. Clipping, ripples, and snow contact
-shadows ground the animals. `render_family.py` is the legacy version's mesh
-source; it does not regenerate the current photoreal atlases.
+The count tracks offered meals in the current scene/session, not wild catches,
+backend hunger or employee data. It resets for a different branch/controller.
+No payroll, notification or adoption records are changed.
 
-Cloud texture drifts slowly only within a faded top-sky mask; the mountains stay
-fixed. Small moving reflection strokes are clipped to an open-water polygon,
-keeping them off the snow and the family. Both use the same scene clock, so
-reduced motion freezes the effects as well as the animals.
+## Assets and rendering
 
-The fishing adult spends two seconds lowering into the water and two seconds
-climbing back out. Immersion changes smoothly, fading the foot shadow while the
-waterline and wake increase. An additional sixteen-pose generated transition
-sheet supplies changing standing-to-horizontal anatomy; exit replays those poses
-in reverse. Its row spacing is irregular. A one-time connected-silhouette scan
-extracts the actual pose bounds, isolated silhouette masks, feet anchor and
-torso row without changing the source PNG. The masks exclude neighboring pixels
-even when pose bounding rectangles overlap horizontally. This prevents neighboring sprites or abrupt framing changes from
-appearing during entry. The decoded coast image is also used for the cloud
-texture; all additional images are released with the scene.
+Ten generated PNG pose sheets contain sixteen poses each: adult walk, swim,
+entry, eat, idle and preen; juvenile walk and idle; baby walk and idle. These are
+generated photographic-style animation frames, not recorded wildlife footage or
+a real-time 3D simulation. Walking uses changing leg/flipper poses rather than a
+translated rigid photo. Direction changes mirror symmetric side/three-quarter
+poses. Source PNGs are kept unmodified under `assets/penguins/family/`.
 
-The separate herring is an original Blender mesh and can be regenerated:
+Entry, idle and grooming sheets have a one-time connected-silhouette scan for
+actual bounds, masks, foot anchors and torso rows. This handles unequal spacing,
+excludes neighboring fragments even where bounding boxes overlap, and keeps feet
+planted while heads turn. Swim poses anchor to their torso row at the waterline.
+Each decoded sheet is shared between the scene's animals; images and the ticker
+are released with the widget. Canvas redraws are limited to about 30fps without
+discarding elapsed scene time. The rest of the dashboard does not rebuild for
+every frame.
+
+The original Blender herring can be regenerated with:
 
 ```sh
 blender -b -t 4 --python tools/penguin_family/render_herring.py -- \
   --output assets/penguins/family/herring.png
 ```
 
-## Feed fish
+`render_family.py` is the legacy rounded-model source, not the generator for the
+current photographic-style poses.
 
-After hatch and asset loading, the **Feed fish** button tosses one visible silver
-herring onto the ice. The adult already on dry ice notices it for 1.2 seconds
-before approaching it at a size-aware
-walking speed, bends down, opens/closes its bill, swallows the fish, then smoothly
-rejoins its normal route. The fish disappears during swallowing. The other three
-animals continue their activities. Feeding never redirects the baby into water.
+## Verification
 
-The button stays disabled until this sequence finishes, preventing stacked fish
-and overlapping meals. A live accessible status announces noticing, approach, eating and returning. It
-updates only at phase changes, not every animation frame. With
-reduced motion, feeding completes immediately with the same visible count and
-no animated travel. The count belongs to the current scene/session; no backend
-pet hunger, payroll, notification, or employee records are changed. It resets
-when a different branch/controller is supplied.
-
-One decoded atlas set is shared by all animals in a habitat and released when
-the widget is disposed. The canvas repaints independently of the dashboard.
-Tests cover continuous routes, exact family count, terrain restrictions, reveal
-behavior, mobile layout, reduced motion, one-click feeding and blocked repeated
-clicks, swallowing timing, a continuous return to the family route, baby huddling
-and exploration, and staggered quiet pose sequences.
+Tests cover exact family count, both adults' duties over two cycles, continuous
+handover paths, nearby adult supervision, dry-ice restrictions, swimming direction,
+continuous immersion, isolated sprite geometry, changing poses, grooming and quiet
+motions, sparse weather fades, mobile layout, reduced motion, server-controlled
+hatching, one-click feeding, duplicate-tap blocking, both caregivers and feeding
+across duty boundaries at mobile, desktop and wide-screen sizes.

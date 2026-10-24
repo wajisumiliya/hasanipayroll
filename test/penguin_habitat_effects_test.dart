@@ -10,13 +10,16 @@ void main() {
     for (var index = 0; index <= 16000; index++) {
       final t = index / 100;
       final family = penguinFamilyAt(t);
-      final water = family[0].immersion;
-      expect(water, inInclusiveRange(0, 1));
-      expect((water - penguinImmersionAt(t + .001)).abs(), lessThan(.001));
-      for (final member in family.skip(1)) {
-        expect(member.immersion, 0);
+      for (var adult = 0; adult < 2; adult++) {
+        final water = family[adult].immersion;
+        expect(water, inInclusiveRange(0, 1));
+        expect((water - penguinImmersionAt(t + .001, adultIndex: adult)).abs(),
+            lessThan(.001));
+        if (water > 0) expect(family[adult].activity, FamilyActivity.swimming);
       }
-      if (water > 0) expect(family[0].activity, FamilyActivity.swimming);
+      for (final child in family.skip(2)) {
+        expect(child.immersion, 0);
+      }
     }
     expect(penguinImmersionAt(18), 0);
     expect(penguinImmersionAt(19), closeTo(.5, .00001));
@@ -32,7 +35,8 @@ void main() {
       expect(
           path.contains(Offset(size.width * .90, size.height * .60)), isTrue);
       for (var tick = 0; tick < 800; tick++) {
-        for (final p in penguinFamilyAt(tick / 10).skip(1)) {
+        for (final p
+            in penguinFamilyAt(tick / 10).where((p) => p.immersion == 0)) {
           expect(
               path.contains(Offset(
                   p.position.dx * size.width, p.position.dy * size.height)),
@@ -54,5 +58,17 @@ void main() {
     expect(feed.phaseAt(10 + PenguinFeeding.noticeSeconds + .001),
         PenguinFeedPhase.approaching);
     expect(feed.phaseAt(10 + feed.duration + .001), PenguinFeedPhase.complete);
+  });
+  test('light snow has a bounded gentle fade and long clear intervals', () {
+    expect(penguinSnowStrength(0), 0);
+    expect(penguinSnowStrength(39.99), 0);
+    expect(penguinSnowStrength(52.5), closeTo(1, .0001));
+    expect(penguinSnowStrength(65), 0);
+    for (var tick = 0; tick < 3600; tick++) {
+      final t = tick / 10;
+      expect(penguinSnowStrength(t), inInclusiveRange(0, 1));
+      expect((penguinSnowStrength(t + .001) - penguinSnowStrength(t)).abs(),
+          lessThan(.001));
+    }
   });
 }

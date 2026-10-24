@@ -29,7 +29,7 @@ void main() {
           expect(p.scale, greaterThan(.9));
           expect(p.position.dx, greaterThanOrEqualTo(.59));
         } else if (p.baby || p.scale < .9) {
-          expect(p.position.dx, lessThan(.5));
+          expect(p.position.dx, lessThan(.70));
           expect(p.position.dy, greaterThan(.8));
         }
       }
@@ -111,6 +111,31 @@ void main() {
     }
     expect(find.text('1 fish eaten · Thank you!'), findsOneWidget);
     expect(find.text('Feed fish'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
+  testWidgets('feeding remains available after adults exchange duties',
+      (tester) async {
+    final controller = clock('chick');
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: BranchPenguinCrew(
+                branchName: 'SP-EDAR', controller: controller))));
+    await tester.pump();
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
+    await tester.pump();
+    for (var frame = 0; frame < 900; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.text('Feed fish'));
+    await tester.pump();
+    expect(find.text('It noticed the fish'), findsOneWidget);
+    for (var frame = 0; frame < 250; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('1 fish eaten · Thank you!'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();

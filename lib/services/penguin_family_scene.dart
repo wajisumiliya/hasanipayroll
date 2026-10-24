@@ -14,7 +14,7 @@ enum FamilyActivity {
 class FamilyPenguin {
   const FamilyPenguin(this.name, this.position, this.scale, this.activity,
       this.direction, this.phase,
-      {this.baby = false, this.immersion = 0});
+      {this.baby = false, this.immersion = 0, this.caregiver = false});
   final String name;
   final Offset position;
   final double scale;
@@ -22,41 +22,57 @@ class FamilyPenguin {
   final int direction;
   final double phase;
   final bool baby;
-
-  /// Water entry/exit progresses continuously from standing (0) to floating (1).
+  final bool caregiver;
   final double immersion;
   String get action => switch (activity) {
         FamilyActivity.swimming => 'swim',
-        FamilyActivity.feeding || FamilyActivity.preening => 'eat',
+        FamilyActivity.feeding => 'eat',
+        FamilyActivity.preening => 'preen',
         _ => 'walk',
       };
 }
 
-/// A short walk with a gentle start/stop, followed by a long real pause.
-/// The family members use different timings rather than a synchronized chase.
-Offset _caregiverAt(double seconds) {
+double _ease(double a, double b, double t) => a + (b - a) * t * t * (3 - 2 * t);
+Offset _between(Offset a, Offset b, double t) =>
+    Offset.lerp(a, b, _ease(0, 1, t))!;
+
+Offset _guardianSteps(double seconds) {
   final t = seconds % 80;
-  double x;
-  if (t < 10) {
-    x = .29;
-  } else if (t < 16) {
-    x = _ease(.29, .32, (t - 10) / 6);
-  } else if (t < 34) {
-    x = .32;
-  } else if (t < 42) {
-    x = _ease(.32, .28, (t - 34) / 8);
-  } else if (t < 60) {
-    x = .28;
-  } else if (t < 66) {
-    x = _ease(.28, .29, (t - 60) / 6);
-  } else {
-    x = .29;
-  }
+  final x = t < 10
+      ? .29
+      : t < 16
+          ? _ease(.29, .32, (t - 10) / 6)
+          : t < 34
+              ? .32
+              : t < 42
+                  ? _ease(.32, .28, (t - 34) / 8)
+                  : t < 60
+                      ? .28
+                      : t < 66
+                          ? _ease(.28, .29, (t - 60) / 6)
+                          : .29;
   return Offset(x, .86);
 }
 
-double _ease(double a, double b, double t) =>
-    a + (b - a) * (t * t * (3 - 2 * t));
+/// Stable adult identities exchange duties every eighty seconds. Each adult
+/// remains at its own home position between its fishing and caregiving shifts.
+int penguinCaregiverIndexAt(double seconds) => seconds % 160 < 80 ? 1 : 0;
+Offset _guardianPosition(double seconds, int index) =>
+    _guardianSteps(seconds) +
+    (index == 0 ? const Offset(.22, .03) : Offset.zero);
+
+/// The young and baby walk between parents during reunions. They never jump to
+/// the new caregiver when a shift changes; both adults are home at that time.
+Offset _familyGuideAt(double seconds) {
+  final t = seconds % 160;
+  const left = Offset(.29, .86);
+  const right = Offset(.51, .89);
+  if (t < 8) return _between(right, left, (t + 8) / 16);
+  if (t < 72) return _guardianPosition(t, 1);
+  if (t < 88) return _between(left, right, (t - 72) / 16);
+  if (t < 152) return _guardianPosition(t - 80, 0);
+  return _between(right, left, (t - 152) / 16);
+}
 
 double _babyOffsetAt(double seconds) {
   final t = seconds % 80;
@@ -72,32 +88,38 @@ double _babyOffsetAt(double seconds) {
 }
 
 Offset _babyAt(double seconds) =>
-    Offset(_caregiverAt(seconds - 2).dx + _babyOffsetAt(seconds), .94);
+    Offset(_familyGuideAt(seconds - 2).dx + _babyOffsetAt(seconds), .94);
 
-/// Brief, staggered head/eyelid loops followed by an extended still pause.
 int penguinIdleFrameAt(double seconds,
-    {required bool baby, double identity = 1}) {
+    {required bool baby,
+    double identity = 1,
+    bool? caregiver,
+    bool juvenile = false}) {
   final local = seconds % 80;
+  final guarding = caregiver ?? identity < 1;
   final starts = baby
-      ? const [0.0, 7.0, 22.0, 32.0, 44.0, 72.0]
-      : identity < 1
-          ? const [0.0, 16.0, 42.0, 49.0, 66.0]
-          : const [0.0, 61.0, 74.0];
+      ? const [0.0, 10.0, 22.0, 32.0, 44.0, 72.0]
+      : juvenile
+          ? const [0.0, 11.0, 19.0, 28.0, 45.0, 69.0]
+          : guarding
+              ? const [0.0, 16.0, 42.0, 49.0, 66.0]
+              : const [0.0, 61.0, 74.0];
   final start = starts.lastWhere((value) => value <= local);
   final offset = baby
       ? .3
-      : identity < 1
-          ? .8
-          : 0.0;
+      : juvenile
+          ? 1.3
+          : guarding
+              ? .8
+              : 0.0;
   final t = (local - start + offset) % 14;
   return t < 5 ? (t / 5 * 16).floor().clamp(0, 15) : 0;
 }
 
-/// Perspective belongs to the ground plane, not the age of the animal.
 double penguinGroundScale(double y) =>
     .86 + .14 * ((y - .72) / .22).clamp(0.0, 1.0);
-
-double penguinImmersionAt(double seconds) {
+double penguinImmersionAt(double seconds, {int adultIndex = 0}) {
+  if (adultIndex == penguinCaregiverIndexAt(seconds)) return 0;
   final t = seconds % 80;
   if (t < 18 || t >= 42) return 0;
   if (t < 20) return _ease(0, 1, (t - 18) / 2);
@@ -105,107 +127,124 @@ double penguinImmersionAt(double seconds) {
   return 1;
 }
 
-/// An 80-second routine with long observation/rest stops, a fishing trip,
-/// a chick following its nearby caregiver, and a youngster's short playful walk.
-List<FamilyPenguin> penguinFamilyAt(double seconds) {
+FamilyPenguin _fishingAdult(double seconds, int index) {
   final t = seconds % 80;
-  final gait = (seconds / .9) % 1;
-  const nest = Offset(.51, .89);
-  const shore = Offset(.59, .77);
-  const water = Offset(.85, .73);
-  late Offset adult;
+  final home = index == 0 ? const Offset(.51, .89) : const Offset(.29, .86);
+  const shore = Offset(.59, .77),
+      water = Offset(.85, .73),
+      waypoint = Offset(.40, .70);
+  late Offset position;
   late FamilyActivity activity;
-  var direction = 6;
-  var phase = gait;
+  var direction = index == 0 ? 6 : 2;
+  var phase = (seconds / .9) % 1;
   if (t < 8) {
-    adult = nest;
+    position = home;
     activity = FamilyActivity.observing;
   } else if (t < 18) {
-    adult = Offset.lerp(nest, shore, _ease(0, 1, (t - 8) / 10))!;
+    if (index == 0) {
+      position = _between(home, shore, (t - 8) / 10);
+    } else if (t < 13) {
+      position = _between(home, waypoint, (t - 8) / 5);
+    } else {
+      position = _between(waypoint, shore, (t - 13) / 5);
+    }
     activity = FamilyActivity.walking;
     direction = 2;
   } else if (t < 30) {
-    adult = Offset.lerp(shore, water, (t - 18) / 12)!;
+    position = Offset.lerp(shore, water, (t - 18) / 12)!;
     activity = FamilyActivity.swimming;
     direction = 2;
   } else if (t < 42) {
-    adult = Offset.lerp(water, shore, (t - 30) / 12)!;
+    position = Offset.lerp(water, shore, (t - 30) / 12)!;
     activity = FamilyActivity.swimming;
+    direction = 6;
   } else if (t < 56) {
-    adult = Offset.lerp(shore, nest, _ease(0, 1, (t - 42) / 14))!;
+    if (index == 0) {
+      position = _between(shore, home, (t - 42) / 14);
+    } else if (t < 49) {
+      position = _between(shore, waypoint, (t - 42) / 7);
+    } else {
+      position = _between(waypoint, home, (t - 49) / 7);
+    }
     activity = FamilyActivity.walking;
+    direction = 6;
   } else if (t < 61) {
-    adult = nest;
+    position = home;
     activity = FamilyActivity.feeding;
     phase = (t - 56) / 5;
-  } else if (t < 70) {
-    adult = nest;
-    activity = FamilyActivity.resting;
-  } else if (t < 74) {
-    adult = nest;
+  } else if (t >= 70 && t < 74) {
+    position = home;
     activity = FamilyActivity.preening;
-    phase = .04 + .12 * math.sin((t - 70) / 4 * math.pi);
+    phase = (t - 70) / 4;
   } else {
-    adult = nest;
+    position = home;
     activity = FamilyActivity.resting;
   }
-  final parent = _caregiverAt(seconds);
-  final parentMoving =
-      (parent - _caregiverAt(seconds + .01)).distance > .00000001;
-  final parentRight = _caregiverAt(seconds + .01).dx >= parent.dx;
-  final youngBase = _caregiverAt(seconds - 3);
-  final baby = _babyAt(seconds);
-  final babyNext = _babyAt(seconds + .01);
-  final youngMoving =
-      (youngBase - _caregiverAt(seconds - 2.99)).distance > .00000001;
-  final babyMoving = (baby - babyNext).distance > .00000001;
-  // A youngster explores a few steps, then returns to its parent's side.
-  final playOffset = t >= 20 && t < 28
-      ? -.025 * math.pow(math.sin((t - 20) / 8 * math.pi), 2).toDouble()
-      : 0.0;
-  final young = Offset(youngBase.dx - .10 + playOffset, .90);
-  final parentActivity = parentMoving
+  return FamilyPenguin(index == 0 ? 'Adult A' : 'Adult B', position,
+      index == 0 ? 1 : .98, activity, direction, phase,
+      immersion: penguinImmersionAt(seconds, adultIndex: index));
+}
+
+FamilyPenguin _watchingAdult(double seconds, int index) {
+  final t = seconds % 80;
+  final p = _guardianPosition(seconds, index);
+  final next = _guardianPosition(seconds + .01, index);
+  final moving = (p - next).distance > .00000001;
+  final activity = moving
       ? FamilyActivity.walking
       : t >= 45 && t < 49
           ? FamilyActivity.preening
           : t >= 16 && t < 25
               ? FamilyActivity.observing
               : FamilyActivity.resting;
+  return FamilyPenguin(
+      index == 0 ? 'Adult A' : 'Adult B',
+      p,
+      index == 0 ? 1 : .98,
+      activity,
+      moving ? (next.dx >= p.dx ? 2 : 6) : 2,
+      activity == FamilyActivity.preening ? (t - 45) / 4 : (seconds / .9) % 1,
+      caregiver: true);
+}
+
+/// A continuous 160-second family routine: adults take turns fishing and
+/// watching while the youngsters gradually move between the reunited parents.
+List<FamilyPenguin> penguinFamilyAt(double seconds) {
+  final t = seconds % 80;
+  final guardian = penguinCaregiverIndexAt(seconds);
+  final youngBase = _familyGuideAt(seconds - 3);
+  final youngNext = _familyGuideAt(seconds - 2.99);
+  final baby = _babyAt(seconds), babyNext = _babyAt(seconds + .01);
+  final play = t >= 20 && t < 28
+      ? -.025 * math.pow(math.sin((t - 20) / 8 * math.pi), 2).toDouble()
+      : 0.0;
+  final youngMoving = (youngBase - youngNext).distance > .00000001;
+  final babyMoving = (baby - babyNext).distance > .00000001;
   return [
-    FamilyPenguin('Adult fishing and watching the family', adult, 1, activity,
-        direction, phase,
-        immersion: penguinImmersionAt(seconds)),
+    guardian == 0 ? _watchingAdult(seconds, 0) : _fishingAdult(seconds, 0),
+    guardian == 1 ? _watchingAdult(seconds, 1) : _fishingAdult(seconds, 1),
     FamilyPenguin(
-        'Adult staying close to the baby',
-        parent,
-        .98,
-        parentActivity,
-        parentMoving ? (parentRight ? 2 : 6) : 2,
-        parentActivity == FamilyActivity.preening
-            ? .04 + .12 * math.sin((t - 45) / 4 * math.pi)
-            : gait),
-    FamilyPenguin(
-        'Young penguin exploring near its parent',
-        young,
+        'Young penguin',
+        Offset(youngBase.dx - .10 + play, .90),
         .70,
-        playOffset < 0
+        play < 0
             ? FamilyActivity.playing
             : youngMoving
                 ? FamilyActivity.walking
                 : FamilyActivity.observing,
-        playOffset < 0
+        play < 0
             ? (t < 24 ? 6 : 2)
-            : _caregiverAt(seconds - 2.99).dx >= youngBase.dx
+            : youngNext.dx >= youngBase.dx
                 ? 2
                 : 6,
-        gait),
+        (seconds / .9) % 1),
     FamilyPenguin(
-        'Baby staying beside its parent',
+        'Baby penguin',
         baby,
         .43,
         babyMoving ? FamilyActivity.walking : FamilyActivity.resting,
         babyMoving ? (babyNext.dx >= baby.dx ? 2 : 6) : 6,
-        gait,
+        (seconds / .9) % 1,
         baby: true),
   ];
 }

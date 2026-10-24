@@ -113,7 +113,8 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
         for (final variant in ['adult', 'young', 'baby'])
           for (final action in [
             'walk',
-            if (variant != 'young') 'idle',
+            'idle',
+            if (variant == 'adult') 'preen',
             if (variant == 'adult') 'eat',
             if (variant == 'adult') 'swim',
             if (variant == 'adult') 'enter'
@@ -177,8 +178,9 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
       final entryPoses = penguinEntryGeometry(
           entryImage.width, entryImage.height, entryPixels);
       final idlePoses = <String, List<PenguinEntryPose>>{};
-      for (final variant in ['adult', 'baby']) {
-        final idle = loaded['${variant}_idle_2']!;
+      for (final variant in ['adult', 'baby', 'young', 'preen']) {
+        final idle =
+            loaded[variant == 'preen' ? 'adult_preen_2' : '${variant}_idle_2']!;
         final pixels =
             await idle.toByteData(format: ui.ImageByteFormat.rawRgba);
         if (pixels == null) throw StateError('Idle pose data unavailable');
@@ -340,7 +342,7 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                     child: Semantics(
                         label:
                             'Penguin family: two adults, one young and one baby. '
-                            'Adults swim and feed the baby; the young penguin plays on the ice.',
+                            'Adults take turns swimming and watching the young; the baby stays on the ice.',
                         child: RepaintBoundary(
                             child: CustomPaint(
                                 painter: _FamilyPainter(
@@ -444,7 +446,9 @@ class _FamilyPainter extends CustomPainter {
           : member.scale < .9
               ? 'young'
               : 'adult';
-      final idle = resting && variant != 'young';
+      final idle = resting;
+      final grooming =
+          member.activity == FamilyActivity.preening && variant == 'adult';
       final action = idle
           ? 'idle'
           : variant != 'adult'
@@ -459,13 +463,20 @@ class _FamilyPainter extends CustomPainter {
       final image = images['${variant}_${action}_2']!;
       final walking = member.activity == FamilyActivity.walking ||
           member.activity == FamilyActivity.playing;
-      final phase = walking
-          ? ((anchor.dx / (height * .20)) * (member.direction == 2 ? 1 : -1)) %
-              1
-          : member.phase;
+      final offeredWalking = walking && member.name == feeding?.responderName;
+      final phase = offeredWalking
+          ? feeding!.walkingPhase(time.value, size, height)
+          : walking
+              ? ((anchor.dx / (height * .20)) *
+                      (member.direction == 2 ? 1 : -1)) %
+                  1
+              : member.phase;
       final frame = idle
           ? penguinIdleFrameAt(time.value,
-              baby: member.baby, identity: member.scale)
+              baby: member.baby,
+              identity: member.scale,
+              caregiver: member.caregiver,
+              juvenile: variant == 'young')
           : transition
               ? (water * 15).round()
               : resting ||
@@ -479,7 +490,9 @@ class _FamilyPainter extends CustomPainter {
           ? entryPoses
           : idle
               ? idlePoses[variant]
-              : null;
+              : grooming
+                  ? idlePoses['preen']
+                  : null;
       final source = poses != null
           ? poses[frame].source
           : Rect.fromLTWH(
@@ -599,21 +612,46 @@ class _FamilyPainter extends CustomPainter {
             Paint()
               ..color = const Color(0xFFC2EAF6).withValues(alpha: .44 * water));
       }
+      final offeredActor = feeding?.responderName;
+      if (!member.caregiver &&
+          member.scale > .9 &&
+          member.name != offeredActor &&
+          member.activity == FamilyActivity.feeding &&
+          member.phase < .85) {
+        final progress = member.phase;
+        final sign = member.direction == 2 ? 1.0 : -1.0;
+        final lift = ((progress - .15) / .25).clamp(0.0, 1.0);
+        final point = Offset.lerp(member.position + Offset(sign * .05, .01),
+            member.position + Offset(sign * .06, -.09), lift)!;
+        final visible = 1 - ((progress - .6) / .25).clamp(0.0, 1.0);
+        _paintFish(canvas, size, point, visible, member.direction);
+      }
     }
     final feed = feeding;
     if (feed != null && feed.fishVisible(time.value)) {
-      final p = feed.fishPosition(time.value);
-      final width = (compact ? 25.0 : 35.0) * feed.fishScale(time.value);
-      final image = images['herring']!;
-      canvas.drawImageRect(
-          image,
-          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-          Rect.fromCenter(
-              center: Offset(p.dx * size.width, p.dy * size.height),
-              width: width,
-              height: width),
-          Paint()..filterQuality = FilterQuality.high);
+      _paintFish(canvas, size, feed.fishPosition(time.value),
+          feed.fishScale(time.value), feed.direction);
     }
+  }
+
+  void _paintFish(
+      Canvas canvas, Size size, Offset point, double scale, int direction) {
+    final width = (compact ? 25.0 : 35.0) * scale;
+    final image = images['herring']!;
+    canvas.save();
+    if (direction == 2) {
+      canvas.translate(point.dx * size.width * 2, 0);
+      canvas.scale(-1, 1);
+    }
+    canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Rect.fromCenter(
+            center: Offset(point.dx * size.width, point.dy * size.height),
+            width: width,
+            height: width),
+        Paint()..filterQuality = FilterQuality.high);
+    canvas.restore();
   }
 
   @override

@@ -12,6 +12,13 @@ Path penguinWaterMask(Size size) => Path()
   ..lineTo(size.width * .64, size.height * .60)
   ..close();
 
+/// A short, sparse polar flurry with gradual fade, not live weather data.
+double penguinSnowStrength(double seconds) {
+  final t = seconds % 180;
+  if (t < 40 || t >= 65) return 0;
+  return math.sin((t - 40) / 25 * math.pi);
+}
+
 /// Quiet photographic cloud drift and low-contrast surface reflections.
 /// The caller's stopped scene clock freezes both under reduced motion.
 void paintPenguinHabitat(
@@ -56,4 +63,23 @@ void paintPenguinHabitat(
           ..strokeCap = StrokeCap.round);
   }
   canvas.restore();
+  final snow = penguinSnowStrength(seconds);
+  if (snow > 0) {
+    canvas.save();
+    canvas.clipRect(
+        Rect.fromLTWH(0, size.height * .30, size.width, size.height * .70));
+    for (var i = 0; i < 16; i++) {
+      final x =
+          ((i * .618 + seconds * .0015 + math.sin(seconds / 55) * .025) % 1) *
+              size.width;
+      final y = ((i * .137 + seconds * .014) % 1) * size.height;
+      canvas.drawCircle(
+          Offset(x, y),
+          .45 + (i % 3) * .25,
+          Paint()
+            ..color = const Color(0xFFF4FAFF)
+                .withValues(alpha: snow * (.13 + (i % 3) * .06)));
+    }
+    canvas.restore();
+  }
 }

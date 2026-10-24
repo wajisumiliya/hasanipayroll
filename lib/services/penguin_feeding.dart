@@ -6,19 +6,49 @@ enum PenguinFeedPhase { noticing, approaching, eating, returning, complete }
 /// A local habitat interaction. The adult on dry ice responds; the downy baby
 /// is never sent swimming or given a whole fish. Feeding does not change pets.
 class PenguinFeeding {
-  PenguinFeeding(
-      {required this.startedAt,
+  factory PenguinFeeding(
+      {required double startedAt,
       required double sceneWidth,
-      required double adultHeight})
-      : origin = penguinFamilyAt(startedAt)[1].position,
-        approachSeconds =
-            ((penguinFamilyAt(startedAt)[1].position - destination).distance *
-                    sceneWidth /
-                    (adultHeight * .18 / .8))
-                .clamp(2.0, 9.0);
+      required double adultHeight}) {
+    final family = penguinFamilyAt(startedAt);
+    final index = family.indexWhere((member) => member.caregiver);
+    final origin = family[index].position;
+    final spot = index == 0 ? const Offset(.72, .95) : destination;
+    final approach =
+        ((origin - spot).distance * sceneWidth / (adultHeight * .18 / .8))
+            .clamp(2.0, 6.0);
+    return PenguinFeeding._(
+        startedAt, origin, spot, approach, index, spot.dx >= origin.dx ? 2 : 6);
+  }
+  PenguinFeeding._(this.startedAt, this.origin, this.feedingSpot,
+      this.approachSeconds, this.responderIndex, this.direction);
   final double startedAt;
   final Offset origin;
+  final Offset feedingSpot;
   final double approachSeconds;
+  final int responderIndex;
+  final int direction;
+  String get responderName => responderIndex == 0 ? 'Adult A' : 'Adult B';
+
+  /// Use actual ground travel, including depth movement, to animate the feet.
+  double walkingPhase(double time, Size viewport, double bodyHeight) {
+    double pixels(Offset offset) =>
+        Offset(offset.dx * viewport.width, offset.dy * viewport.height)
+            .distance;
+    final elapsed = time - startedAt - noticeSeconds;
+    final approach = pixels(feedingSpot - origin);
+    double distance;
+    if (elapsed <= approachSeconds) {
+      distance = approach * (elapsed / approachSeconds).clamp(0.0, 1.0);
+    } else if (elapsed < approachSeconds + mealSeconds) {
+      distance = approach;
+    } else {
+      distance = approach +
+          pixels(familyAt(time)[responderIndex].position - feedingSpot);
+    }
+    return (distance / (bodyHeight * .18)) % 1;
+  }
+
   static const destination = Offset(.34, .83);
   static const noticeSeconds = 1.2;
   static const mealSeconds = 2.4;
@@ -40,7 +70,7 @@ class PenguinFeeding {
     final family = penguinFamilyAt(time);
     final phase = phaseAt(time);
     if (phase == PenguinFeedPhase.complete) return family;
-    final base = family[1];
+    final base = family[responderIndex];
     final t = time - startedAt - noticeSeconds;
     final Offset position;
     final FamilyActivity activity;
@@ -48,31 +78,32 @@ class PenguinFeeding {
     if (phase == PenguinFeedPhase.noticing) {
       position = origin;
       activity = FamilyActivity.observing;
-      direction = 2;
+      direction = this.direction;
     } else if (phase == PenguinFeedPhase.approaching) {
-      position = Offset.lerp(origin, destination,
+      position = Offset.lerp(origin, feedingSpot,
           (t / approachSeconds).clamp(0.0, 1.0).toDouble())!;
       activity = FamilyActivity.walking;
-      direction = 2;
+      direction = this.direction;
     } else if (phase == PenguinFeedPhase.eating) {
-      position = destination;
+      position = feedingSpot;
       activity = FamilyActivity.feeding;
-      direction = 2;
+      direction = this.direction;
     } else {
       final p = ((t - approachSeconds - mealSeconds) / approachSeconds)
           .clamp(0.0, 1.0)
           .toDouble();
-      position = Offset.lerp(destination, base.position, p)!;
+      position = Offset.lerp(feedingSpot, base.position, p)!;
       activity = FamilyActivity.walking;
-      direction = 6;
+      direction = base.position.dx >= feedingSpot.dx ? 2 : 6;
     }
-    family[1] = FamilyPenguin(
+    family[responderIndex] = FamilyPenguin(
         base.name,
         position,
         base.scale,
         activity,
         direction,
-        phase == PenguinFeedPhase.eating ? mealProgress(time) : base.phase);
+        phase == PenguinFeedPhase.eating ? mealProgress(time) : base.phase,
+        caregiver: base.caregiver);
     return family;
   }
 
@@ -83,12 +114,12 @@ class PenguinFeeding {
     if (t < .7) {
       final p = t / .7;
       return Offset.lerp(const Offset(.90, .15),
-              (destination + const Offset(.05, .01)), p)! +
+              (feedingSpot + Offset(direction == 2 ? .05 : -.05, .01)), p)! +
           Offset(0, -.18 * 4 * p * (1 - p));
     }
     final p = (mealProgress(time) * 3).clamp(0.0, 1.0);
-    return Offset.lerp((destination + const Offset(.05, .01)),
-        (destination + const Offset(.06, -.09)), p)!;
+    return Offset.lerp((feedingSpot + Offset(direction == 2 ? .05 : -.05, .01)),
+        (feedingSpot + Offset(direction == 2 ? .06 : -.06, -.09)), p)!;
   }
 
   double fishScale(double time) =>

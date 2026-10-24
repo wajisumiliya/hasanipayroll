@@ -1,90 +1,130 @@
+import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/services/penguin_family_scene.dart';
 import 'package:hasani_payroll_portal/services/penguin_feeding.dart';
 
 void main() {
-  test('caregiver pauses and baby stays close while youngster explores', () {
-    var pauseSamples = 0;
-    var walks = 0;
-    var play = 0;
-    for (var tick = 0; tick < 1600; tick++) {
+  test(
+      'both adults share duties and youngsters stay near a parent through handovers',
+      () {
+    var pauses = 0, walks = 0, plays = 0;
+    final swimmers = <int>{};
+    for (var tick = 0; tick < 3200; tick++) {
       final t = tick / 10;
       final family = penguinFamilyAt(t);
-      final parent = family[1];
-      final young = family[2];
-      final baby = family[3];
-      if (parent.activity == FamilyActivity.walking) {
+      final parents = family.take(2).toList();
+      final guardian = parents.singleWhere((p) => p.caregiver);
+      if (guardian.activity == FamilyActivity.walking) {
         walks++;
       } else {
-        pauseSamples++;
+        pauses++;
       }
-      if (young.activity == FamilyActivity.playing) {
-        play++;
+      for (var index = 0; index < 2; index++) {
+        if (parents[index].immersion > 0) swimmers.add(index);
+        if (parents[index].activity == FamilyActivity.swimming) {
+          final dx = penguinFamilyAt(t + .001)[index].position.dx -
+              parents[index].position.dx;
+          expect(parents[index].direction, dx >= 0 ? 2 : 6);
+        }
+        expect(
+            (parents[index].position -
+                    penguinFamilyAt(t + .001)[index].position)
+                .distance,
+            lessThan(.001));
       }
-      expect((baby.position - parent.position).distance, lessThan(.15));
-      expect((young.position - parent.position).distance, lessThan(.15));
-      expect(baby.position.dx, greaterThan(parent.position.dx));
-      expect(young.position.dx, lessThan(parent.position.dx));
-      expect((family[0].position - parent.position).distance, greaterThan(.15));
+      for (final child in family.skip(2)) {
+        final closest = parents
+            .map((p) => (child.position - p.position).distance)
+            .reduce(math.min);
+        expect(closest, lessThan(.17));
+        expect(child.immersion, 0);
+      }
+      if (family[2].activity == FamilyActivity.playing) plays++;
+      expect((parents[0].position - parents[1].position).distance,
+          greaterThan(.10));
+      expect(guardian.immersion, 0);
     }
-    expect(pauseSamples, greaterThan(walks * 2));
-    expect(walks, greaterThan(0));
-    expect(play, greaterThan(0));
+    expect(swimmers, {0, 1});
+    expect(pauses, greaterThan(walks * 2));
+    expect(plays, greaterThan(0));
+    expect(penguinCaregiverIndexAt(79.9), 1);
+    expect(penguinCaregiverIndexAt(80), 0);
+    expect(penguinCaregiverIndexAt(160), 1);
   });
-  test('feet stay stationary throughout resting and observing intervals', () {
-    for (final interval in [
-      (0.0, 7.9),
-      (16.1, 24.9),
-      (49.1, 59.9),
-      (66.1, 79.9)
-    ]) {
-      final start = penguinFamilyAt(interval.$1)[1];
-      final end = penguinFamilyAt(interval.$2)[1];
-      expect(start.position, end.position);
-      expect(start.activity, isNot(FamilyActivity.walking));
-      expect(end.activity, isNot(FamilyActivity.walking));
+  test('each caregiver holds position during its quiet intervals', () {
+    for (final shift in [0.0, 80.0]) {
+      final index = penguinCaregiverIndexAt(shift);
+      for (final interval in [
+        (0.0, 7.9),
+        (16.1, 24.9),
+        (49.1, 59.9),
+        (66.1, 79.9)
+      ]) {
+        final first = penguinFamilyAt(shift + interval.$1)[index];
+        final last = penguinFamilyAt(shift + interval.$2)[index];
+        expect(first.position, last.position);
+        expect(first.activity, isNot(FamilyActivity.walking));
+      }
     }
     expect(penguinGroundScale(.94), greaterThan(penguinGroundScale(.73)));
   });
   test(
-      'offered fish keeps the responding parent near the baby and clear of the other adult',
+      'feeding selects the dry caregiver and does not interrupt other family members',
       () {
-    for (final start in [0.0, 15.0, 40.0, 58.0, 78.0]) {
+    for (final start in [
+      0.0,
+      15.0,
+      40.0,
+      58.0,
+      78.0,
+      79.9,
+      80.0,
+      95.0,
+      120.0,
+      159.9
+    ]) {
       final feed =
-          PenguinFeeding(startedAt: start, sceneWidth: 1280, adultHeight: 154);
+          PenguinFeeding(startedAt: start, sceneWidth: 4096, adultHeight: 154);
+      expect(feed.responderIndex, penguinCaregiverIndexAt(start));
       for (var sample = 0; sample <= 100; sample++) {
-        final family = feed.familyAt(start + feed.duration * sample / 100);
+        final t = start + feed.duration * sample / 100;
+        final family = feed.familyAt(t);
+        final other = 1 - feed.responderIndex;
+        expect(family[feed.responderIndex].immersion, 0);
         expect(
-            (family[1].position - family[3].position).distance, lessThan(.17));
-        expect((family[1].position - family[0].position).distance,
-            greaterThan(.14));
+            (family[feed.responderIndex].position - family[other].position)
+                .distance,
+            greaterThan(.10));
+        final child = family[3];
+        expect(
+            family
+                .take(2)
+                .map((p) => (p.position - child.position).distance)
+                .reduce(math.min),
+            lessThan(.18));
       }
     }
   });
-  test('baby takes real steps into a huddle, rests, explores, and returns', () {
-    double gap(double t) {
-      final family = penguinFamilyAt(t);
-      return family[3].position.dx - family[1].position.dx;
-    }
-
-    expect(gap(8), lessThan(gap(0) * .65));
+  test('baby huddles, explores and returns without a jump through either shift',
+      () {
+    final near = penguinFamilyAt(12);
+    expect((near[3].position - near[1].position).distance, lessThan(.13));
     expect(penguinFamilyAt(4)[3].activity, FamilyActivity.walking);
-    expect(penguinFamilyAt(8)[3].activity, FamilyActivity.resting);
+    expect(penguinFamilyAt(11)[3].activity, FamilyActivity.resting);
     expect(penguinFamilyAt(20)[3].activity, FamilyActivity.walking);
-    expect(penguinFamilyAt(8)[3].position, penguinFamilyAt(11)[3].position);
-    expect(penguinIdleFrameAt(8, baby: true),
-        isNot(penguinIdleFrameAt(11, baby: true)));
-    expect(gap(24), greaterThan(gap(8)));
-    expect(gap(35), lessThan(gap(24)));
-    for (var tick = 0; tick < 1600; tick++) {
+    for (var tick = 0; tick < 3200; tick++) {
       final t = tick / 10;
-      final before = penguinFamilyAt(t)[3].position;
-      final after = penguinFamilyAt(t + .001)[3].position;
-      expect((after - before).distance, lessThan(.001));
+      expect(
+          (penguinFamilyAt(t + .001)[3].position -
+                  penguinFamilyAt(t)[3].position)
+              .distance,
+          lessThan(.001));
     }
   });
-  test('quiet pose loops pause between gestures and do not synchronize', () {
-    for (var tick = 0; tick < 280; tick++) {
+  test(
+      'quiet poses are bounded and staggered while grooming has its own action',
+      () {
+    for (var tick = 0; tick < 320; tick++) {
       final t = tick / 10;
       for (final baby in [false, true]) {
         expect(penguinIdleFrameAt(t, baby: baby), inInclusiveRange(0, 15));
@@ -95,8 +135,10 @@ void main() {
     }
     expect({
       penguinIdleFrameAt(1, baby: false),
-      penguinIdleFrameAt(1, baby: false, identity: .98),
+      penguinIdleFrameAt(1, baby: false, caregiver: true),
       penguinIdleFrameAt(1, baby: true)
     }, hasLength(3));
+    expect(penguinFamilyAt(46)[1].action, 'preen');
+    expect(penguinFamilyAt(126)[0].action, 'preen');
   });
 }
