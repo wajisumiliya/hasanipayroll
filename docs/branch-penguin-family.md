@@ -1,16 +1,28 @@
 # Branch penguin family
 
-[Watch the 22-second click-to-feed preview](previews/photoreal-penguin-feeding.mp4).
+[Watch the 30-second natural family routine preview](previews/natural-penguin-family.mp4).
 
 After the existing server-clock reveal, the branch habitat shows exactly four
 penguins: two adults, one juvenile, and one downy baby. The public reveal clock
 and employees' separate pet adoption are unchanged by this visual revision.
 Before reveal, four golden eggs continue to show the branch countdown.
 
-The family follows an 80-second routine. One adult swims out and back, walks up
-the shore, feeds the baby, then returns to the water's edge. The other adult and
-juvenile move together on a gentle chase. The baby takes little steps towards
-its feeding parent and stays on the ice. Only the adult enters the water.
+The family follows an 80-second routine with long genuine pauses between short
+walks. One adult watches the family, walks to the shore, swims out and back, then
+returns to feed and rest. The caregiver stays on dry ice, taking just a few steps
+before stopping again to observe, rest, or make a brief beak-down grooming gesture.
+The youngster follows after three seconds and explores a short distance before
+returning; the baby follows after two seconds and stays beside its caregiver.
+The caregiver is stationary for more than two thirds of its routine. All paths
+remain continuous through the loop, and the animals have distinct timings.
+
+Foreground animals render larger than animals near the distant waterline.
+Three soft shadow layers place weight under the feet and a faint cast on the
+snow. A subtle cool lighting tint matches the overcast scene. Resting animals
+have barely perceptible breathing; reduced motion freezes this as well as travel.
+Grooming uses the initial beak-down poses of the existing adult animation rather
+than introducing another asset set. The feeding spot is near the caregiver,
+keeping the baby close and leaving space between the adults.
 
 ## Photoreal assets
 

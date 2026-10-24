@@ -38,7 +38,8 @@ void main() {
     final feed =
         PenguinFeeding(startedAt: 10, sceneWidth: 1280, adultHeight: 154);
     expect(feed.fishPosition(10), const Offset(.9, .15));
-    expect(feed.fishPosition(11), const Offset(.54, .89));
+    expect(feed.fishPosition(11),
+        PenguinFeeding.destination + const Offset(.05, .01));
     final eat = 10 + feed.approachSeconds;
     expect(feed.phaseAt(eat + .01), PenguinFeedPhase.eating);
     expect(feed.fishVisible(eat + .5), isTrue);

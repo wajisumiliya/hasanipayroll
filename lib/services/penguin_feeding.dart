@@ -19,7 +19,7 @@ class PenguinFeeding {
   final double startedAt;
   final Offset origin;
   final double approachSeconds;
-  static const destination = Offset(.49, .88);
+  static const destination = Offset(.34, .83);
   static const mealSeconds = 2.4;
   double get duration => approachSeconds * 2 + mealSeconds;
   PenguinFeedPhase phaseAt(double sceneTime) {
@@ -76,11 +76,13 @@ class PenguinFeeding {
     final t = (time - startedAt).clamp(0, duration);
     if (t < .7) {
       final p = t / .7;
-      return Offset.lerp(const Offset(.90, .15), const Offset(.54, .89), p)! +
+      return Offset.lerp(const Offset(.90, .15),
+              (destination + const Offset(.05, .01)), p)! +
           Offset(0, -.18 * 4 * p * (1 - p));
     }
     final p = (mealProgress(time) * 3).clamp(0.0, 1.0);
-    return Offset.lerp(const Offset(.54, .89), const Offset(.55, .79), p)!;
+    return Offset.lerp((destination + const Offset(.05, .01)),
+        (destination + const Offset(.06, -.09)), p)!;
   }
 
   double fishScale(double time) =>

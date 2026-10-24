@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -362,7 +363,15 @@ class _FamilyPainter extends CustomPainter {
       final swimming = member.activity == FamilyActivity.swimming;
       final anchor = Offset(
           member.position.dx * size.width, member.position.dy * size.height);
-      final height = (compact ? 116.0 : 154.0) * member.scale;
+      final resting = member.activity == FamilyActivity.resting ||
+          member.activity == FamilyActivity.observing;
+      final breathing = resting
+          ? 1 + .003 * math.sin(time.value * 1.8 + member.scale * 7)
+          : 1.0;
+      final height = (compact ? 116.0 : 154.0) *
+          member.scale *
+          penguinGroundScale(member.position.dy) *
+          breathing;
       final variant = member.baby
           ? 'baby'
           : member.scale < .9
@@ -377,9 +386,7 @@ class _FamilyPainter extends CustomPainter {
               1
           : member.phase;
       final frame =
-          member.activity == FamilyActivity.resting || (member.baby && !walking)
-              ? 0
-              : (phase * 16).floor() % 16;
+          resting || (member.baby && !walking) ? 0 : (phase * 16).floor() % 16;
       final cell = image.width / 4;
       final cellHeight = image.height / 4;
       final source = Rect.fromLTWH(
@@ -404,12 +411,30 @@ class _FamilyPainter extends CustomPainter {
                 ..color = Colors.white.withValues(alpha: (1 - p) * .65));
         }
       } else {
+        // A diffuse sky shadow, a small directional cast, then foot contact.
+        // Keep the darkest part under the feet so the animal does not float.
         canvas.drawOval(
             Rect.fromCenter(
-                center: anchor, width: height * .45, height: height * .055),
+                center: anchor.translate(2, 1),
+                width: height * .53,
+                height: height * .075),
             Paint()
-              ..color = const Color(0x30274659)
+              ..color = const Color(0x182F4659)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+        canvas.drawOval(
+            Rect.fromCenter(
+                center: anchor.translate(height * .10, 2),
+                width: height * .47,
+                height: height * .035),
+            Paint()
+              ..color = const Color(0x14344B60)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+        canvas.drawOval(
+            Rect.fromCenter(
+                center: anchor, width: height * .25, height: height * .025),
+            Paint()
+              ..color = const Color(0x32344655)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5));
       }
       canvas.save();
       if (swimming) {
@@ -421,7 +446,13 @@ class _FamilyPainter extends CustomPainter {
         canvas.scale(-1, 1);
       }
       canvas.drawImageRect(
-          image, source, target, Paint()..filterQuality = FilterQuality.high);
+          image,
+          source,
+          target,
+          Paint()
+            ..filterQuality = FilterQuality.high
+            ..colorFilter =
+                const ColorFilter.mode(Color(0xFFF1F5FA), BlendMode.modulate));
       canvas.restore();
       if (swimming) {
         canvas.drawOval(
