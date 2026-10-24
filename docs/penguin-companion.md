@@ -59,3 +59,21 @@ Pingu; Feed also starts the existing family feeding sequence when available.
 The embedded family hides its duplicate header/feed button and shows feeding
 status in the scene. Family swimming, walking and caregiving continue.
 Login and employee dashboard layouts are unchanged.
+
+## Daily growth on every screen (1.0.33+40)
+
+Login, employee and branch Pingu all use the same confirmed-hatch growth clock:
+30% size on hatch day, a small increase every completed 24 hours, juvenile on
+hatch day 12 and full-size adult on day 42. The age counter keeps advancing
+after adulthood while size stays capped. Every label counts from hatching,
+not from the employee's earlier adoption date. Existing hatch dates are retained.
+
+A daily timer uses the last server timestamp plus monotonic elapsed time;
+it does not wait for a five-minute poll or require the page to be reopened.
+Already-confirmed growth continues through a temporary network failure, and
+the employee card refreshes server metadata when the app resumes. A sealed
+egg never grows or hatches from this timer: server confirmation is still required.
+Stale snapshots for the same hatch cannot reduce its age; a new hatch date
+starts a new campaign. Daily public updates preserve care/rest and the shared
+family scene rather than recreating the card. Feeding and play never accelerate
+growth. Tests cover day boundaries, days 12/42, outages, resume and sealed eggs.

@@ -5,19 +5,26 @@ import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 
 import 'neon_api.dart';
+import 'penguin_growth.dart';
 
 /// Shared public launch clock. Device time never decides when to reveal a pet.
 class MysteryEggHatchController extends ChangeNotifier
     with WidgetsBindingObserver {
   MysteryEggHatchController({Future<Map<String, dynamic>> Function()? load})
-      : _load = load ?? (() => _fetch());
+      : _load = load ?? (() => _fetch()) {
+    _growth.addListener(_growthChanged);
+  }
 
   static final shared = MysteryEggHatchController();
   static final branch =
       MysteryEggHatchController(load: () => _fetch(scope: 'branch'));
   final Future<Map<String, dynamic>> Function() _load;
   String _stage = 'egg';
-  int _daysSinceHatch = 0;
+  final _growth = PenguinGrowthClock();
+  void _growthChanged() {
+    if (!_disposed && _users > 0) notifyListeners();
+  }
+
   bool _hatching = false;
   bool _loading = false;
   bool _disposed = false;
@@ -36,8 +43,8 @@ class MysteryEggHatchController extends ChangeNotifier
   DateTime? get hatchAt => _hatchAt;
   DateTime? get serverNow => _serverNow?.add(_serverElapsed.elapsed);
 
-  String get stage => _stage;
-  int get daysSinceHatch => _daysSinceHatch;
+  String get stage => _stage == 'egg' ? 'egg' : _growth.stage;
+  int get daysSinceHatch => _growth.daysSinceHatch;
   bool get hatching => _hatching;
   Duration? get remaining => _remaining;
 
@@ -73,6 +80,7 @@ class MysteryEggHatchController extends ChangeNotifier
     if (_disposed) return;
     if (++_users != 1) return;
     if (_stage == 'egg') _remaining = null;
+    _growth.resume();
     WidgetsBinding.instance.addObserver(this);
     _poll =
         Timer.periodic(const Duration(minutes: 5), (_) => unawaited(refresh()));
@@ -92,11 +100,17 @@ class MysteryEggHatchController extends ChangeNotifier
     _crack?.cancel();
     _hatch?.cancel();
     _countdown?.cancel();
+    _growth.suspend();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _users > 0) unawaited(refresh());
+    if (state == AppLifecycleState.resumed && _users > 0) {
+      _growth.resume();
+      unawaited(refresh());
+    } else if (state == AppLifecycleState.paused) {
+      _growth.suspend();
+    }
   }
 
   Future<void> refresh() async {
@@ -120,8 +134,8 @@ class MysteryEggHatchController extends ChangeNotifier
         ..reset()
         ..start();
       _stage = stage as String;
-      final hatchedDays = serverNow.difference(hatchAt).inDays;
-      _daysSinceHatch = hatchedDays > 0 ? hatchedDays : 0;
+      _growth.update(
+          hatchAt: hatchAt, serverNow: serverNow, hatched: stage != 'egg');
       _loadFailed = false;
       _remaining = remaining > Duration.zero ? remaining : Duration.zero;
       _countdown?.cancel();
@@ -175,6 +189,8 @@ class MysteryEggHatchController extends ChangeNotifier
     _cancelTimers();
     if (_users > 0) WidgetsBinding.instance.removeObserver(this);
     _users = 0;
+    _growth.removeListener(_growthChanged);
+    _growth.dispose();
     super.dispose();
   }
 }

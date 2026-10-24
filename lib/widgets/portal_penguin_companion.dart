@@ -51,13 +51,7 @@ class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
   Future<Map<String, dynamic>> _request(String? kind) async {
     final clock = widget.controller;
     final days = clock.daysSinceHatch;
-    final stage = clock.stage == 'egg'
-        ? 'egg'
-        : days < 12
-            ? 'chick'
-            : days < 42
-                ? 'juvenile'
-                : 'adult';
+    final stage = clock.stage;
     if (stage != 'egg') {
       if (kind == 'feed') _fed = true;
       if (kind == 'play') _played = true;
@@ -86,8 +80,9 @@ class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
   Widget build(BuildContext context) =>
       Column(mainAxisSize: MainAxisSize.min, children: [
         EmployeePenguinPetCard(
-            key: ValueKey(
-                '${widget.controller.stage}|${widget.controller.daysSinceHatch}|${widget.controller.hatchAt}'),
+            key: ValueKey(widget.controller.hatchAt),
+            metadataVersion:
+                '${widget.controller.stage}|${widget.controller.daysSinceHatch}',
             request: _request,
             localCare: true,
             compact: widget.compact,

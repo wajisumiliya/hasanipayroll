@@ -16,7 +16,8 @@ Map<String, dynamic> data(
         'ageDays': stage == 'adult' ? 50 : 8,
         'nickname': 'Pingu',
         'serverNow': '2026-10-24T04:00:00Z',
-        'hatchAt': '2026-10-19T04:00:00Z',
+        'hatchAt':
+            stage == 'adult' ? '2026-09-07T04:00:00Z' : '2026-10-19T04:00:00Z',
         'fedToday': fed,
         'playedToday': played,
       }

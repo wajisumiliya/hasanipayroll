@@ -18,7 +18,9 @@ class EmployeePenguinPetCard extends StatefulWidget {
       this.localCare = false,
       this.title = 'MY PENGUIN',
       this.loginScene,
-      this.habitatBuilder});
+      this.habitatBuilder,
+      this.metadataVersion});
+  final Object? metadataVersion;
   final Widget Function(Widget character, String action, int reactionId)?
       habitatBuilder;
   final LoginHabitatScene? loginScene;
@@ -32,9 +34,30 @@ class EmployeePenguinPetCard extends StatefulWidget {
   State<EmployeePenguinPetCard> createState() => _EmployeePenguinPetCardState();
 }
 
-class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
+class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard>
+    with WidgetsBindingObserver {
+  final _growth = PenguinGrowthClock();
+  void _growthChanged() {
+    if (mounted) {
+      setState(() {
+        if (_growth.daysSinceHatch > 0) _showHatchWelcome = false;
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _growth.resume();
+      unawaited(_load());
+    } else if (state == AppLifecycleState.paused) {
+      _growth.suspend();
+    }
+  }
+
   Map<String, dynamic>? pet;
   bool busy = false;
+  bool _refreshQueued = false;
   bool sleeping = false;
   String action = 'idle';
   String? error;
@@ -50,7 +73,21 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
   @override
   void initState() {
     super.initState();
+    _growth.addListener(_growthChanged);
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant EmployeePenguinPetCard old) {
+    super.didUpdateWidget(old);
+    if (old.metadataVersion != widget.metadataVersion) {
+      if (busy) {
+        _refreshQueued = true;
+      } else {
+        unawaited(_load());
+      }
+    }
   }
 
   Future<void> _load([String? careAction]) async {
@@ -88,6 +125,10 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               !serverNow.isBefore(hatchAt) &&
               serverNow.isBefore(hatchAt.add(const Duration(hours: 24)));
         });
+        if (hatchAt != null && serverNow != null) {
+          _growth.update(
+              hatchAt: hatchAt, serverNow: serverNow, hatched: stage != 'egg');
+        }
         _scheduleHatch(hatchAt, serverNow, stage);
         if (careAction != null && stage != 'egg') {
           _react(
@@ -104,6 +145,10 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
     } finally {
       if (mounted) {
         setState(() => busy = false);
+        if (_refreshQueued) {
+          _refreshQueued = false;
+          unawaited(_load());
+        }
       }
     }
   }
@@ -151,6 +196,9 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
     _crackTimer?.cancel();
     _hatchTimer?.cancel();
     _reactionTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _growth.removeListener(_growthChanged);
+    _growth.dispose();
     super.dispose();
   }
 
@@ -209,8 +257,11 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
 
   @override
   Widget build(BuildContext context) {
-    final stage = pet?['stage']?.toString() ?? 'egg';
-    final days = (pet?['ageDays'] as num?)?.toInt() ?? 0;
+    final stage =
+        _growth.confirmed ? _growth.stage : pet?['stage']?.toString() ?? 'egg';
+    final days = _growth.confirmed
+        ? _growth.daysSinceHatch + 3
+        : (pet?['ageDays'] as num?)?.toInt() ?? 0;
     final nickname = pet?['nickname']?.toString() ?? 'Pingu';
     final hatched = stage != 'egg';
     final fed = pet?['fedToday'] == true;
@@ -362,7 +413,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               if (hatched) ...[
                 Center(
                     child: Text(
-                        '$nickname • Day ${widget.localCare ? (days - 3).clamp(0, 100000) : days} • ${stage.toUpperCase()}',
+                        '$nickname • Day ${(days - 3).clamp(0, 100000)} • ${stage.toUpperCase()}',
                         style: const TextStyle(
                             color: Color(0xFF173D60),
                             fontSize: 12,
