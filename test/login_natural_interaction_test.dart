@@ -1,0 +1,84 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hasani_payroll_portal/screens/login_screen.dart';
+import 'package:hasani_payroll_portal/services/login_habitat_scene.dart';
+import 'package:hasani_payroll_portal/services/mystery_egg_hatch_controller.dart';
+import 'package:hasani_payroll_portal/widgets/login_penguin_walker.dart';
+
+void main() {
+  testWidgets('only username focus triggers the welcome cue', (tester) async {
+    tester.view.physicalSize = const Size(1600, 830);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final controller = MysteryEggHatchController(
+        load: () async => {
+              'hatchAt': '2026-10-23T07:39:11Z',
+              'serverNow': '2026-10-24T03:30:00Z',
+              'stage': 'chick',
+            });
+    await tester.pumpWidget(MaterialApp(
+        home:
+            LoginScreen(hatchController: controller, showThemePreview: false)));
+    await tester.pump(const Duration(seconds: 1));
+    LoginPenguinWalker walker() =>
+        tester.widget<LoginPenguinWalker>(find.byType(LoginPenguinWalker));
+    expect(walker().scene.period, 'morning');
+    expect(walker().scene.weekday, DateTime.saturday);
+    expect(walker().lookAtForm, isFalse);
+    final username = find.byWidgetPredicate((widget) =>
+        widget is TextField &&
+        widget.decoration?.hintText == 'Username / Employee ID');
+    final password = find.byWidgetPredicate(
+        (widget) => widget is TextField && widget.obscureText);
+    await tester.tap(username);
+    await tester.pump();
+    expect(walker().lookAtForm, isTrue);
+    await tester.enterText(password, 'private-test-value');
+    await tester.pump();
+    expect(walker().lookAtForm, isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 500)));
+    controller.dispose();
+  });
+
+  testWidgets('rapid scene changes and compact adult rendering dispose safely',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = MysteryEggHatchController(
+        load: () async => {
+              'hatchAt': '2026-09-01T00:00:00Z',
+              'serverNow': '2026-10-24T03:30:00Z',
+              'stage': 'chick',
+            });
+    Widget app(LoginHabitatScene scene) => MaterialApp(
+        home: Scaffold(
+            body: SizedBox(
+                width: 354,
+                height: 190,
+                child: LoginPenguinWalker(
+                    controller: controller, scene: scene, compact: true))));
+    await tester.pumpWidget(app(const LoginHabitatScene(6, 'morning')));
+    await tester.pump();
+    await tester.pumpWidget(app(const LoginHabitatScene(6, 'evening')));
+    await tester.pumpWidget(app(const LoginHabitatScene(7, 'night')));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
+    await tester.pump();
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Your penguin is resting.'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
+}

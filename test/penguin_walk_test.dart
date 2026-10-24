@@ -1,61 +1,60 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/services/penguin_walk_path.dart';
+import 'package:hasani_payroll_portal/services/login_penguin_terrain.dart';
+import 'package:hasani_payroll_portal/services/login_habitat_scene.dart';
 import 'package:hasani_payroll_portal/services/mystery_egg_hatch_controller.dart';
 import 'package:hasani_payroll_portal/widgets/login_penguin_walker.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  test('the marked route loops smoothly and stays clear of the login card', () {
-    const size = Size(1595, 827);
-    final route = PenguinWalkPath(size);
-    expect(route.length, greaterThan(2500));
-    for (var i = 0; i < 1000; i++) {
-      final point = route.at(route.length * i / 1000).position;
-      expect(point.dx, inInclusiveRange(size.width * .025, size.width * .60));
-      expect(point.dy, inInclusiveRange(size.height * .34, size.height));
-    }
-    expect(
-        (route.at(0).position - route.at(route.length - .001).position)
-            .distance,
-        lessThan(.01));
-    expect(PenguinWalkPath.direction(const Offset(1, 0)), 2);
-    expect(PenguinWalkPath.direction(const Offset(0, -1)), 4);
-    expect(PenguinWalkPath.direction(const Offset(-1, 0)), 6);
-    expect(PenguinWalkPath.direction(const Offset(0, 1)), 0);
-  });
-
-  test('all eight 3D walk atlases are packaged as 16-pose grids', () async {
-    for (var d = 0; d < 8; d++) {
-      final data = await rootBundle.load('assets/penguins/walk/walk_$d.png');
-      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-      final frame = await codec.getNextFrame();
-      expect(frame.image.width, 1024);
-      expect(frame.image.height, 1024);
-      if (d == 2) {
-        final pixels = (await frame.image.toByteData())!.buffer.asUint8List();
-        final poses = <int>{};
-        for (var pose = 0; pose < 16; pose++) {
-          final row = pose ~/ 4, col = pose % 4;
-          poses.add(Object.hashAll(List.generate(256, (y) {
-            final start = ((row * 256 + y) * 1024 + col * 256) * 4;
-            return Object.hashAll(pixels.sublist(start, start + 256 * 4));
-          })));
+  test('all 28 terrain trails stay visible and clear of the login card', () {
+    final trails = <String>{};
+    for (var day = 1; day <= 7; day++) {
+      for (final period in ['morning', 'afternoon', 'evening', 'night']) {
+        final scene = LoginHabitatScene(day, period);
+        trails.add(LoginPenguinTerrain.forScene(scene)
+            .points
+            .map((p) => '${p.dx},${p.dy}')
+            .join(';'));
+        for (final size in [
+          const Size(1599, 827),
+          const Size(1000, 700),
+          const Size(1920, 1080)
+        ]) {
+          final route = PenguinWalkPath(size, scene: scene);
+          expect(route.length, greaterThan(10));
+          expect(
+              (route.at(0).position - route.at(route.length).position).distance,
+              greaterThan(10));
+          for (var i = 0; i <= 100; i++) {
+            final point = route.at(route.length * i / 100).position;
+            expect(point.dx, inInclusiveRange(109.9, size.width * .55 - 109.9));
+            expect(point.dy, inInclusiveRange(0, size.height));
+          }
         }
-        expect(poses.length, 16,
-            reason:
-                'A walk must contain changing articulated poses, not repeated stills.');
       }
-      frame.image.dispose();
-      codec.dispose();
     }
+    expect(trails.length, 28);
+    final compact = PenguinWalkPath(const Size(354, 190), compact: true);
+    expect(compact.at(0).position.dy, greaterThan(150));
   });
 
-  testWidgets(
-      'rendered pose frames move; reduced motion freezes the 3D penguin',
+  test('cover projection retains the photographed foreground and growth ages',
+      () {
+    final projection =
+        LoginPhotoProjection(const Size(1672, 941), const Size(1000, 700));
+    expect(projection.project(const Offset(0, 1)), const Offset(0, 700));
+    expect(projection.project(const Offset(1, 0)).dx, greaterThan(1000));
+    expect(loginPenguinVariant(0), 'baby');
+    expect(loginPenguinVariant(11), 'baby');
+    expect(loginPenguinVariant(12), 'young');
+    expect(loginPenguinVariant(41), 'young');
+    expect(loginPenguinVariant(42), 'adult');
+  });
+
+  testWidgets('natural poses move; reduced motion freezes the penguin',
       (tester) async {
     tester.view.physicalSize = const Size(1000, 700);
     tester.view.devicePixelRatio = 1;
@@ -94,8 +93,9 @@ void main() {
       return Object.hashAll(data!.buffer.asUint8List());
     }
 
-    final first = await tester.runAsync(pixels);
     await tester.pump(const Duration(milliseconds: 100));
+    final first = await tester.runAsync(pixels);
+    await tester.pump(const Duration(milliseconds: 200));
     final next = await tester.runAsync(pixels);
     expect(next, isNot(first));
     reduce = true;

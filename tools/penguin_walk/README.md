@@ -1,3 +1,6 @@
+> Archived renderer: the login now uses the photographic family pose sheets.
+> These Blender outputs are not bundled in the app.
+
 # Original 3D walking penguin
 
 `render_walk.py` authors the character from original meshes, procedural down,

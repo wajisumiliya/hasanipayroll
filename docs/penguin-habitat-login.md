@@ -54,3 +54,11 @@ reveal schedule and three-minute notification reminder remain unchanged.
 Tests cover all four period boundaries, Malaysia date rollover, 28 unique asset
 selections, the confirmed hatch-time switch, night at 20:00, normal slots on the
 next day, and compact login logo/form placement.
+
+## Natural login refinement (1.0.25+32)
+
+All seven morning photos now use cool daylight rather than sunrise lighting.
+The Malaysia time boundaries and confirmed reveal-day exception are unchanged.
+The background uses bottom-left cover alignment to retain foreground terrain.
+Each scene has its own authored walking trail; see `login-penguin-walking.md`.
+The mobile layout keeps its below-form penguin slot on a photographed snow perch.

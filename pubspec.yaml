@@ -4,7 +4,7 @@ description: Hasani Books payroll portal for Android, iOS and Web.
 
 publish_to: "none"
 
-version: 1.0.24+31
+version: 1.0.25+32
 environment:
   sdk: ">=3.5.0 <4.0.0"
 
@@ -58,7 +58,6 @@ flutter:
     - assets/login_days/
     - assets/login_arctic/
     - assets/login_habitats/
-    - assets/penguins/walk/
     - assets/penguins/family/
     - assets/branch_stamps/
     - assets/ea_form_template/

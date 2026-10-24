@@ -37,6 +37,12 @@ class _LoginScreenState extends State<LoginScreen>
 
   final TextEditingController passwordController = TextEditingController();
 
+  final FocusNode _usernameFocus = FocusNode();
+  bool _usernameHasFocus = false;
+  void _onUsernameFocus() {
+    if (mounted) setState(() => _usernameHasFocus = _usernameFocus.hasFocus);
+  }
+
   bool obscurePassword = true;
   bool loading = false;
   bool _idleCatAwake = false;
@@ -76,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    _usernameFocus.addListener(_onUsernameFocus);
     _hatchController.addListener(_onHatchChanged);
     _hatchController.attach();
     _entranceController = AnimationController(
@@ -195,6 +202,8 @@ class _LoginScreenState extends State<LoginScreen>
     _idleBlinkTimer?.cancel();
     _clockTimer?.cancel();
     _weatherTimer?.cancel();
+    _usernameFocus.removeListener(_onUsernameFocus);
+    _usernameFocus.dispose();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -791,6 +800,7 @@ class _LoginScreenState extends State<LoginScreen>
           Positioned.fill(
             child: Image.asset(
               scene.asset,
+              alignment: Alignment.bottomLeft,
               gaplessPlayback: true,
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
@@ -836,7 +846,8 @@ class _LoginScreenState extends State<LoginScreen>
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final compact = constraints.maxWidth < 880;
+                final compact = constraints.maxWidth < 880 ||
+                    constraints.maxWidth / constraints.maxHeight < 1.25;
                 if (compact) {
                   return Center(
                     child: SingleChildScrollView(
@@ -862,6 +873,8 @@ class _LoginScreenState extends State<LoginScreen>
                               child: LoginPenguinWalker(
                                 controller: _hatchController,
                                 compact: true,
+                                scene: scene,
+                                lookAtForm: _usernameHasFocus,
                               ),
                             ),
                           ],
@@ -928,11 +941,15 @@ class _LoginScreenState extends State<LoginScreen>
           Positioned.fill(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                if (constraints.maxWidth < 880) {
+                if (constraints.maxWidth < 880 ||
+                    constraints.maxWidth / constraints.maxHeight < 1.25) {
                   return const SizedBox.shrink();
                 }
 
-                return LoginPenguinWalker(controller: _hatchController);
+                return LoginPenguinWalker(
+                    controller: _hatchController,
+                    scene: scene,
+                    lookAtForm: _usernameHasFocus);
               },
             ),
           ),
@@ -1191,8 +1208,8 @@ class _LoginScreenState extends State<LoginScreen>
   }) {
     final foreground = compact ? const Color(0xFF10294D) : theme.foreground;
     final fieldColor = compact || theme.isLight
-        ? Colors.white.withValues(alpha: .30)
-        : Colors.white.withValues(alpha: .10);
+        ? Colors.white.withValues(alpha: .80)
+        : Colors.white.withValues(alpha: .18);
     final fieldText =
         compact || theme.isLight ? const Color(0xFF10294D) : Colors.white;
 
@@ -1203,9 +1220,12 @@ class _LoginScreenState extends State<LoginScreen>
       );
       return InputDecoration(
         hintText: label,
-        hintStyle: TextStyle(color: fieldText.withValues(alpha: .58)),
+        hintStyle: TextStyle(color: fieldText.withValues(alpha: .80)),
         prefixIcon: Icon(icon,
-            color: compact ? const Color(0xFF195BD7) : theme.accent1, size: 20),
+            color: compact
+                ? const Color(0xFF195BD7)
+                : Color.lerp(theme.accent1, const Color(0xFF9EB9CE), .45)!,
+            size: 20),
         filled: true,
         fillColor: fieldColor,
         contentPadding: const EdgeInsets.symmetric(vertical: 17),
@@ -1234,12 +1254,12 @@ class _LoginScreenState extends State<LoginScreen>
                     ]
                   : theme.isLight
                       ? [
-                          Colors.white.withValues(alpha: .48),
+                          Colors.white.withValues(alpha: .80),
                           Colors.white.withValues(alpha: .18),
                         ]
                       : [
-                          Colors.white.withValues(alpha: .16),
-                          const Color(0xFF101722).withValues(alpha: .26),
+                          const Color(0xFF24384D).withValues(alpha: .82),
+                          const Color(0xFF152536).withValues(alpha: .90),
                         ],
             ),
             borderRadius: BorderRadius.circular(26),
@@ -1256,7 +1276,7 @@ class _LoginScreenState extends State<LoginScreen>
                 offset: const Offset(0, 24),
               ),
               BoxShadow(
-                color: theme.accent1.withValues(alpha: .12),
+                color: theme.accent1.withValues(alpha: .04),
                 blurRadius: 28,
                 spreadRadius: -8,
                 offset: const Offset(-8, -8),
@@ -1291,6 +1311,7 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(height: 25),
               TextField(
                 controller: usernameController,
+                focusNode: _usernameFocus,
                 enabled: !loading,
                 textInputAction: TextInputAction.next,
                 autocorrect: false,
@@ -1357,7 +1378,12 @@ class _LoginScreenState extends State<LoginScreen>
                     gradient: LinearGradient(
                       colors: compact
                           ? const [Color(0xFF247CFF), Color(0xFF1252CD)]
-                          : [theme.buttonStart, theme.buttonEnd],
+                          : [
+                              Color.lerp(theme.buttonStart,
+                                  const Color(0xFF27465F), .45)!,
+                              Color.lerp(theme.buttonEnd,
+                                  const Color(0xFF263B54), .55)!
+                            ],
                     ),
                   ),
                   child: ElevatedButton(
@@ -2499,7 +2525,7 @@ class _LoginScreenState extends State<LoginScreen>
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
-              color.withValues(alpha: .38),
+              color.withValues(alpha: .10),
               color.withValues(alpha: 0),
             ],
           ),
