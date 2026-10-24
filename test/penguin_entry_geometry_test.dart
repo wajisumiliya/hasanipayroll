@@ -5,6 +5,44 @@ import 'package:hasani_payroll_portal/services/penguin_entry_geometry.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('login walk and idle sheets have sixteen isolated grounded silhouettes',
+      () async {
+    for (final name in [
+      'baby_walk_natural',
+      'baby_idle_natural',
+      'young_walk_2',
+      'young_idle_2',
+      'adult_walk_2',
+      'adult_idle_2'
+    ]) {
+      final data = await rootBundle.load('assets/penguins/family/$name.png');
+      final codec = await ui.instantiateImageCodec(
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
+      final image = (await codec.getNextFrame()).image;
+      codec.dispose();
+      try {
+        final bytes =
+            (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        final poses = penguinEntryGeometry(image.width, image.height, bytes);
+        expect(poses, hasLength(16), reason: name);
+        final heights = poses.map((p) => p.source.height).toList()..sort();
+        for (var index = 0; index < poses.length; index++) {
+          final pose = poses[index];
+          expect(pose.footX, inInclusiveRange(.05, .95),
+              reason: '$name foot contact');
+          expect(pose.source.height / heights[8], inInclusiveRange(.75, 1.25),
+              reason: '$name stable animal scale');
+          if (index >= 4) {
+            expect(poses[index - 4].source.bottom, lessThan(pose.source.top),
+                reason: '$name no adjacent row overlap');
+          }
+        }
+      } finally {
+        image.dispose();
+      }
+    }
+  });
+
   test('entry poses isolate each penguin despite unequal vertical spacing',
       () async {
     final data =

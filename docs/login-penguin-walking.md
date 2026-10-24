@@ -1,8 +1,9 @@
 # Login penguin walking
 
-After server-confirmed hatching, the login uses the same photographic-style
-penguin pose sheets as the branch family. It is a frame animation, not wildlife
-footage or real-time 3D. Baby, young and adult artwork changes at days 12 and 42;
+After server-confirmed hatching, the login uses photographic-style
+penguin pose sheets. The login chick has dedicated natural-anatomy artwork;
+young and adult stages share the branch family artwork. It is a frame animation,
+not wildlife footage or real-time 3D. Baby, young and adult artwork changes at days 12 and 42;
 the existing daily growth scale starts at 30% and reaches full size on day 42.
 The branch crew and personal employee pet remain separate widgets.
 
@@ -25,8 +26,9 @@ has no animation listener. Subtle cloud drift and water highlights are confined
 to the landscape, away from the form. The Hasani Books logo and card retain their
 layout; field contrast is stronger and the purple accents are softer.
 
-Only the current age's walk/idle atlases and current photo are decoded. Quiet
-poses use connected silhouette bounds to avoid adjacent sprite fragments. Image
+Only the current age's walk/idle atlases and current photo are decoded. Walk and idle
+poses use connected silhouette bounds and actual foot contact points to avoid
+adjacent sprite fragments, floating feet and size changes when stopping. Image
 loads are generation-checked and disposed on scene changes or close. Asset
 failures never block sign-in. The former eight-view Blender assets are archived
 in the renderer source and are no longer bundled.
@@ -35,3 +37,7 @@ Flutter tests cover all scene trails, cover projection, age stages, changing
 rendered poses, reduced motion, username-only focus, compact adult rendering,
 and safe scene changes. This feature requires the new web/client build; an old
 Android installation cannot receive bundled artwork through a server-only change.
+
+The revised chick (1.0.26+33) has smaller natural eyes, a narrower head,
+scaly feet and irregular down feathers rather than smooth plush proportions.
+Its new walking and quiet sheets are separate from the branch chick assets.

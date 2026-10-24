@@ -31,9 +31,17 @@ class LoginPenguinWalker extends StatefulWidget {
 }
 
 class _LoginPenguinAssets {
-  _LoginPenguinAssets(this.walk, this.idle, this.photo, this.poses);
+  _LoginPenguinAssets(
+      this.walk, this.idle, this.photo, this.walkPoses, this.idlePoses);
+  static double _medianHeight(List<PenguinEntryPose> poses) {
+    final heights = poses.map((pose) => pose.source.height).toList()..sort();
+    return (heights[7] + heights[8]) / 2;
+  }
+
+  late final double walkHeight = _medianHeight(walkPoses);
+  late final double idleHeight = _medianHeight(idlePoses);
   final ui.Image walk, idle, photo;
-  final List<PenguinEntryPose> poses;
+  final List<PenguinEntryPose> walkPoses, idlePoses;
   void dispose() {
     walk.dispose();
     idle.dispose();
@@ -127,8 +135,8 @@ class _LoginPenguinWalkerState extends State<LoginPenguinWalker>
     try {
       final images = await Future.wait(
           [
-            'assets/penguins/family/${variant}_walk_2.png',
-            'assets/penguins/family/${variant}_idle_2.png',
+            'assets/penguins/family/${variant == 'baby' ? 'baby_walk_natural' : '${variant}_walk_2'}.png',
+            'assets/penguins/family/${variant == 'baby' ? 'baby_idle_natural' : '${variant}_idle_2'}.png',
             photo,
           ].map((path) async {
             final bytes = await rootBundle.load(path);
@@ -142,11 +150,13 @@ class _LoginPenguinWalkerState extends State<LoginPenguinWalker>
           }),
           cleanUp: (ui.Image image) => image.dispose());
       decoded.addAll(images);
-      final pixels =
-          await images[1].toByteData(format: ui.ImageByteFormat.rawRgba);
-      if (pixels == null) throw StateError('Quiet pose data unavailable');
-      final poses =
-          penguinEntryGeometry(images[1].width, images[1].height, pixels);
+      final poses = <List<PenguinEntryPose>>[];
+      for (final image in images.take(2)) {
+        final pixels =
+            await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (pixels == null) throw StateError('Penguin pose data unavailable');
+        poses.add(penguinEntryGeometry(image.width, image.height, pixels));
+      }
       if (!mounted || version != _generation) {
         for (final image in decoded) {
           image.dispose();
@@ -154,7 +164,8 @@ class _LoginPenguinWalkerState extends State<LoginPenguinWalker>
         return;
       }
       setState(() {
-        _assets = _LoginPenguinAssets(images[0], images[1], images[2], poses);
+        _assets = _LoginPenguinAssets(
+            images[0], images[1], images[2], poses[0], poses[1]);
         _route = null;
       });
       _sync();
@@ -319,7 +330,7 @@ class _NaturalLoginPainter extends CustomPainter {
   final bool quiet, compact;
   final LoginHabitatScene scene;
   Color get tint => scene.period == 'night'
-      ? const Color(0xFF8A9FBC)
+      ? const Color(0xFF526478)
       : scene.period == 'evening'
           ? const Color(0xFFFFE6D0)
           : const Color(0xFFF3F7FC);
@@ -358,46 +369,39 @@ class _NaturalLoginPainter extends CustomPainter {
           ..color = const Color(0x38304350)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.3));
     final image = quiet ? assets.idle : assets.walk;
-    final pose = quiet ? assets.poses[frame] : null;
-    final source = pose?.source ??
-        Rect.fromLTWH(frame % 4 * image.width / 4,
-            frame ~/ 4 * image.height / 4, image.width / 4, image.height / 4);
-    final scale = quiet
-        ? side * .96 / assets.poses.first.source.height
-        : side / (image.height / 4);
+    // Both gait and idle poses use their actual silhouettes. Transparent cell
+    // padding must not lift the feet or change the animal's scale at rest.
+    final pose = (quiet ? assets.idlePoses : assets.walkPoses)[frame];
+    final source = pose.source;
+    final scale = side * .90 / (quiet ? assets.idleHeight : assets.walkHeight);
     final drawSize = Size(source.width * scale, source.height * scale);
-    final target = Rect.fromLTWH(
-        foot.dx - drawSize.width * (pose?.footX ?? .5),
-        foot.dy - drawSize.height * (quiet ? .99 : .96),
-        drawSize.width,
-        drawSize.height);
+    final target = Rect.fromLTWH(foot.dx - drawSize.width * pose.footX,
+        foot.dy - drawSize.height, drawSize.width, drawSize.height);
     canvas.save();
     if (direction == 6) {
       canvas.translate(foot.dx * 2, 0);
       canvas.scale(-1, 1);
     }
-    if (pose != null) {
-      canvas.clipPath(
-          pose.silhouette.transform(Float64List.fromList([
-            scale,
-            0,
-            0,
-            0,
-            0,
-            scale,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            target.left - source.left * scale,
-            target.top - source.top * scale,
-            0,
-            1,
-          ])),
-          doAntiAlias: false);
-    }
+    canvas.clipPath(
+        pose.silhouette.transform(Float64List.fromList([
+          scale,
+          0,
+          0,
+          0,
+          0,
+          scale,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          target.left - source.left * scale,
+          target.top - source.top * scale,
+          0,
+          1,
+        ])),
+        doAntiAlias: false);
     canvas.drawImageRect(
         image,
         source,
