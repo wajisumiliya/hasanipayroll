@@ -44,7 +44,7 @@ class _PenguinCompanionReactionState extends State<PenguinCompanionReaction>
   }
 
   void _start() {
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (MediaQuery.disableAnimationsOf(context) || widget.action == 'idle') {
       _motion.stop();
       _motion.value = 1;
     } else {
@@ -109,6 +109,7 @@ class _PenguinCompanionReactionState extends State<PenguinCompanionReaction>
   Widget build(BuildContext context) {
     final row = switch (widget.action) {
       'eating' => 0,
+      'idle' => 0,
       'playing' => 1,
       'petting' => 2,
       _ => 3

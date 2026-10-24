@@ -38,3 +38,14 @@ come from public server metadata. Before confirmation, the egg stays sealed.
 Feed/Play/Pet/Rest are page-local on these screens and reset on leaving.
 The login card uses a compact view below the mobile form or in the desktop
 left panel; the sign-in form and logo remain accessible and unobstructed.
+
+## Login habitat refinement (1.0.31+38)
+
+Only the login companion uses the immersive treatment: slate/warm dusk panels,
+quiet gold controls and thin mood indicators replace the bright white sections.
+Its habitat photo follows the exact same weekday/period as the login background.
+The penguin stands on the photographed dry-ground trail using the shared
+bottom-left cover projection, with planted feet and consistent idle/care pose
+scales. The original orange/green/gray-white palette and daily growth remain.
+Idle uses a resting open-eyed pose from the care sheet, avoiding a size/texture
+change when interacting. Employee and branch companion layouts are unchanged.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/mystery_egg_hatch_controller.dart';
+import '../services/login_habitat_scene.dart';
 import 'employee_penguin_pet_card.dart';
 
 /// Public/session-only companion. Never calls the private employee care API.
@@ -8,7 +9,9 @@ class PortalPenguinCompanion extends StatefulWidget {
       {super.key,
       required this.controller,
       this.compact = false,
-      this.title = 'YOUR PENGUIN'});
+      this.title = 'YOUR PENGUIN',
+      this.loginScene});
+  final LoginHabitatScene? loginScene;
   final MysteryEggHatchController controller;
   final bool compact;
   final String title;
@@ -85,7 +88,8 @@ class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
             request: _request,
             localCare: true,
             compact: widget.compact,
-            title: widget.title),
+            title: widget.title,
+            loginScene: widget.loginScene),
         if (widget.controller.stage == 'egg')
           Container(
               margin: const EdgeInsets.all(6),

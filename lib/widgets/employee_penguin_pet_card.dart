@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../services/neon_api.dart';
+import '../services/login_habitat_scene.dart';
+import '../services/login_penguin_terrain.dart';
 import 'penguin_companion_reaction.dart';
 import '../services/penguin_growth.dart';
 
@@ -14,7 +16,9 @@ class EmployeePenguinPetCard extends StatefulWidget {
       this.request,
       this.compact = false,
       this.localCare = false,
-      this.title = 'MY PENGUIN'});
+      this.title = 'MY PENGUIN',
+      this.loginScene});
+  final LoginHabitatScene? loginScene;
   final bool compact, localCare;
   final String title;
 
@@ -221,7 +225,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                     ? 'Something is stirring inside...'
                     : 'Your surprise is growing. Come back soon!');
     final enabled = !busy && pet != null && hatched;
-    final character = hatched && action != 'idle'
+    final character = hatched && (widget.loginScene != null || action != 'idle')
         ? Semantics(
             button: true,
             label: sleeping
@@ -243,6 +247,10 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
             hatching: _isHatching,
             onTap: hatched ? _pet : null,
             tapLabel: hatched ? 'Penguin. Tap to pet.' : null);
+    if (widget.loginScene != null) {
+      return _naturalLogin(context, character, hatched, message, days, nickname,
+          happiness, energy, enabled);
+    }
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -413,6 +421,180 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
             ])),
       ]),
     );
+  }
+
+  Widget _naturalLogin(
+      BuildContext context,
+      Widget character,
+      bool hatched,
+      String message,
+      int days,
+      String nickname,
+      double happiness,
+      double energy,
+      bool enabled) {
+    final scene = widget.loginScene!;
+    final warm = scene.period == 'evening';
+    final base = warm ? const Color(0xFF302A32) : const Color(0xFF132B3C);
+    const ink = Color(0xFFF2F5F7);
+    const muted = Color(0xFFC0CCD4);
+    Widget meter(String label, double value, Color color) => Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: const TextStyle(fontSize: 10, color: muted)),
+          const SizedBox(height: 5),
+          ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                  value: value,
+                  minHeight: 4,
+                  color: color,
+                  backgroundColor: const Color(0x334C667A),
+                  semanticsLabel: label)),
+        ]));
+    Widget control(String label, IconData icon, VoidCallback? callback) =>
+        Expanded(
+            child: TextButton(
+                onPressed: callback,
+                style: TextButton.styleFrom(
+                    foregroundColor: ink,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 2)),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(icon,
+                      size: 21,
+                      color: callback == null
+                          ? const Color(0xFF77838C)
+                          : const Color(0xFFE4C784)),
+                  const SizedBox(height: 5),
+                  Text(label, style: const TextStyle(fontSize: 11))
+                ])));
+    return Container(
+        margin: const EdgeInsets.all(4),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+            color: base.withValues(alpha: .94),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0x40FFFFFF)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x40000000),
+                  blurRadius: 25,
+                  offset: Offset(0, 10))
+            ]),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 8, 6),
+              child: Row(children: [
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(hatched ? widget.title : 'A LITTLE SURPRISE',
+                          style: const TextStyle(
+                              color: ink,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              letterSpacing: .6)),
+                      const SizedBox(height: 3),
+                      Text(
+                          hatched
+                              ? '$nickname · Day ${(days - 3).clamp(0, 100000)} on the ice'
+                              : 'Something special is growing',
+                          style: const TextStyle(fontSize: 11, color: muted))
+                    ])),
+                IconButton(
+                    tooltip: 'Refresh penguin',
+                    onPressed: busy ? null : () => _load(),
+                    icon: const Icon(Icons.refresh, size: 19, color: muted)),
+              ])),
+          SizedBox(
+              height: 240,
+              child: LayoutBuilder(builder: (context, constraints) {
+                final size = Size(constraints.maxWidth, 240);
+                final projection =
+                    LoginPhotoProjection(const Size(1672, 941), size);
+                final trail = LoginPenguinTerrain.forScene(scene).points;
+                final foot = projection.project(trail[2]);
+                // A high, distant ledge needs a smaller animal so its head stays in
+                // the photo and its feet remain on the authored ground.
+                final actorHeight =
+                    math.min(235.0, math.max(60.0, foot.dy - 12));
+                return ClipRect(
+                    child: Stack(children: [
+                  Positioned.fill(
+                      child: Image.asset(scene.asset,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.bottomLeft,
+                          gaplessPlayback: true)),
+                  const Positioned.fill(
+                      child: DecoratedBox(
+                          decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                        Color(0x66081420),
+                        Color(0x00081420)
+                      ],
+                                  stops: [
+                        0,
+                        .6
+                      ])))),
+                  Positioned(
+                      left: foot.dx - 140,
+                      top: foot.dy - actorHeight * .96,
+                      width: 280,
+                      height: actorHeight,
+                      child: FittedBox(fit: BoxFit.contain, child: character)),
+                  Positioned(
+                      top: 10,
+                      left: 14,
+                      right: 14,
+                      child: Semantics(
+                          liveRegion: true,
+                          child: Text(message,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  shadows: [
+                                    Shadow(color: Colors.black87, blurRadius: 6)
+                                  ])))),
+                ]));
+              })),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(children: [
+                meter('Happiness', happiness, const Color(0xFFD3B66F)),
+                const SizedBox(width: 22),
+                meter('Energy', energy, const Color(0xFF9DBBC9))
+              ])),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+              child: Row(children: [
+                control('Feed', Icons.set_meal,
+                    enabled ? () => _care('feed') : null),
+                control('Play', Icons.sports_baseball,
+                    enabled ? () => _care('play') : null),
+                control('Pet', Icons.front_hand, enabled ? _pet : null),
+                control(
+                    sleeping ? 'Wake' : 'Rest',
+                    sleeping ? Icons.wb_sunny : Icons.nightlight_round,
+                    enabled ? _toggleSleep : null),
+              ])),
+          if (error != null)
+            Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(error!,
+                    style: const TextStyle(
+                        color: Color(0xFFFFB4AB), fontSize: 11))),
+          const Padding(
+              padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: Text('A little company before your day begins',
+                  style: TextStyle(color: muted, fontSize: 10))),
+        ]));
   }
 
   Widget _meter(String label, double value, IconData icon, Color color) =>

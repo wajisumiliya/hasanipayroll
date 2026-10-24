@@ -30,21 +30,22 @@ void main() {
       await tester.pumpWidget(
           MaterialApp(home: LoginScreen(hatchController: controller)));
       await tester.pump(const Duration(seconds: 1));
-      expect(
-          image('assets/login_habitats/friday_afternoon.png'), findsOneWidget);
+      expect(image('assets/login_habitats/friday_afternoon.png'),
+          findsNWidgets(2));
       now = hatch;
       await controller.refresh();
       await tester.pump();
-      expect(image('assets/login_habitats/friday_evening.png'), findsOneWidget);
+      expect(
+          image('assets/login_habitats/friday_evening.png'), findsNWidgets(2));
       now = DateTime.parse('2026-10-23T12:00:00Z');
       await controller.refresh();
       await tester.pump();
-      expect(image('assets/login_habitats/friday_night.png'), findsOneWidget);
+      expect(image('assets/login_habitats/friday_night.png'), findsNWidgets(2));
       now = DateTime.parse('2026-10-24T02:00:00Z');
       await controller.refresh();
       await tester.pump();
-      expect(
-          image('assets/login_habitats/saturday_morning.png'), findsOneWidget);
+      expect(image('assets/login_habitats/saturday_morning.png'),
+          findsNWidgets(2));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       controller.dispose();
@@ -82,7 +83,7 @@ void main() {
               (widget.image as AssetImage)
                   .assetName
                   .startsWith('assets/login_habitats/${day}_')),
-          findsOneWidget);
+          findsNWidgets(2));
       final logo = find.byWidgetPredicate((widget) =>
           widget is Image &&
           widget.image is ResizeImage &&

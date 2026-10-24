@@ -859,7 +859,9 @@ class _LoginScreenState extends State<LoginScreen>
                             _sevenDayAuthCard(theme, compact: true),
                             const SizedBox(height: 16),
                             PortalPenguinCompanion(
-                                controller: _hatchController, compact: true),
+                                controller: _hatchController,
+                                compact: true,
+                                loginScene: _habitatScene),
                           ],
                         ),
                       ),
@@ -1056,7 +1058,9 @@ class _LoginScreenState extends State<LoginScreen>
                     child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
                         child: PortalPenguinCompanion(
-                            controller: _hatchController, compact: true))))),
+                            controller: _hatchController,
+                            compact: true,
+                            loginScene: _habitatScene))))),
       ],
     );
   }
