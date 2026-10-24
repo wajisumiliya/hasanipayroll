@@ -17,7 +17,10 @@ class EmployeePenguinPetCard extends StatefulWidget {
       this.compact = false,
       this.localCare = false,
       this.title = 'MY PENGUIN',
-      this.loginScene});
+      this.loginScene,
+      this.habitatBuilder});
+  final Widget Function(Widget character, String action, int reactionId)?
+      habitatBuilder;
   final LoginHabitatScene? loginScene;
   final bool compact, localCare;
   final String title;
@@ -225,7 +228,10 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                     ? 'Something is stirring inside...'
                     : 'Your surprise is growing. Come back soon!');
     final enabled = !busy && pet != null && hatched;
-    final character = hatched && (widget.loginScene != null || action != 'idle')
+    final character = hatched &&
+            (widget.loginScene != null ||
+                widget.habitatBuilder != null ||
+                action != 'idle')
         ? Semantics(
             button: true,
             label: sleeping
@@ -289,8 +295,11 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                               fontWeight: FontWeight.w900,
                               color: Color(0xFF173D60))),
                       if (hatched)
-                        const Text('Your little daily companion',
-                            style: TextStyle(
+                        Text(
+                            widget.habitatBuilder == null
+                                ? 'Your little daily companion'
+                                : 'A living family, with Pingu by their side',
+                            style: const TextStyle(
                                 fontSize: 12, color: Color(0xFF426680))),
                     ])),
                 IconButton(
@@ -319,34 +328,37 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
                                   style: const TextStyle(
                                       color: Color(0xFF173D60),
                                       fontWeight: FontWeight.w700)))))),
-              SizedBox(
-                  height: widget.compact
-                      ? 150
-                      : hatched
-                          ? 270
-                          : 200,
-                  width: double.infinity,
-                  child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Stack(children: [
-                        if (hatched)
-                          Positioned.fill(
-                              child: Image.asset(
-                                  'assets/penguins/family/coast.png',
-                                  fit: BoxFit.cover,
-                                  alignment: Alignment.bottomLeft)),
-                        Align(
-                            alignment: Alignment.bottomCenter,
-                            child: SizedBox(
-                                width: widget.compact ? 170 : 300,
-                                height: widget.compact
-                                    ? 145
-                                    : hatched
-                                        ? 260
-                                        : 190,
-                                child: FittedBox(
-                                    fit: BoxFit.contain, child: character))),
-                      ]))),
+              if (widget.habitatBuilder != null)
+                widget.habitatBuilder!(character, action, _reactionSerial)
+              else
+                SizedBox(
+                    height: widget.compact
+                        ? 150
+                        : hatched
+                            ? 270
+                            : 200,
+                    width: double.infinity,
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Stack(children: [
+                          if (hatched)
+                            Positioned.fill(
+                                child: Image.asset(
+                                    'assets/penguins/family/coast.png',
+                                    fit: BoxFit.cover,
+                                    alignment: Alignment.bottomLeft)),
+                          Align(
+                              alignment: Alignment.bottomCenter,
+                              child: SizedBox(
+                                  width: widget.compact ? 170 : 300,
+                                  height: widget.compact
+                                      ? 145
+                                      : hatched
+                                          ? 260
+                                          : 190,
+                                  child: FittedBox(
+                                      fit: BoxFit.contain, child: character))),
+                        ]))),
               if (hatched) ...[
                 Center(
                     child: Text(

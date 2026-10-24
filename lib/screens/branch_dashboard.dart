@@ -17,7 +17,6 @@ import 'daily_report_page.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/employee_profile_details.dart';
-import '../widgets/branch_penguin_crew.dart';
 import '../widgets/portal_penguin_companion.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../widgets/garden_ambience.dart';
@@ -903,11 +902,10 @@ class _BranchPortalState extends State<BranchPortal>
           const SizedBox(height: 24),
           _branchCelebrationPanels(),
           const SizedBox(height: 24),
-          BranchPenguinCrew(branchName: branchDisplayName),
-          const SizedBox(height: 16),
           PortalPenguinCompanion(
               controller: MysteryEggHatchController.branch,
-              title: 'BRANCH COMPANION'),
+              title: 'OUR BRANCH FAMILY',
+              familyBranchName: branchDisplayName),
           const SizedBox(height: 24),
           _dashboardAttendanceRegister(),
         ],

@@ -2,8 +2,8 @@
 
 The employee dashboard offers Feed, Play, Pet and Rest/Wake. There is no Talk
 button, microphone, recording, voice playback or audio permission in this feature.
-The login and branch dashboard also offer a public companion. The existing
-branch family habitat remains above the new companion.
+The login and branch dashboard also offer a public companion. The branch family
+and Pingu share one habitat and one set of care controls.
 
 The existing orange crown, green bill/feet and gray-white body are retained.
 Chick and adult reaction sheets contain four expressions for each care action.
@@ -49,3 +49,13 @@ bottom-left cover projection, with planted feet and consistent idle/care pose
 scales. The original orange/green/gray-white palette and daily growth remain.
 Idle uses a resting open-eyed pose from the care sheet, avoiding a size/texture
 change when interacting. Employee and branch companion layouts are unchanged.
+
+## Joined branch habitat (1.0.32+39)
+
+The branch dashboard has one card: the original two adults, young penguin and
+baby live alongside Pingu in the same coastal scene. Pingu keeps the orange
+crown, green bill/feet and gradual growth. One Feed/Play/Pet/Rest dock controls
+Pingu; Feed also starts the existing family feeding sequence when available.
+The embedded family hides its duplicate header/feed button and shows feeding
+status in the scene. Family swimming, walking and caregiving continue.
+Login and employee dashboard layouts are unchanged.

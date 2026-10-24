@@ -15,7 +15,17 @@ import 'penguin_habitat_effects.dart';
 /// A shared branch habitat, separate from employees' personal pet adoption.
 class BranchPenguinCrew extends StatefulWidget {
   const BranchPenguinCrew(
-      {super.key, required this.branchName, this.controller});
+      {super.key,
+      required this.branchName,
+      this.controller,
+      this.embedded = false,
+      this.companion,
+      this.companionAction = 'idle',
+      this.reactionId = 0});
+  final bool embedded;
+  final Widget? companion;
+  final String companionAction;
+  final int reactionId;
   final String branchName;
   final MysteryEggHatchController? controller;
   @override
@@ -39,6 +49,8 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
   Duration? _last;
   PenguinFeeding? _feeding;
   int _fishEaten = 0;
+  double _sceneWidth = 0;
+  bool _sceneCompact = false;
   String get _feedLabel => _feeding == null
       ? 'Feed fish'
       : _feedPhase == PenguinFeedPhase.returning
@@ -65,6 +77,12 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
   @override
   void didUpdateWidget(covariant BranchPenguinCrew oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.embedded &&
+        widget.companionAction == 'eating' &&
+        (oldWidget.reactionId != widget.reactionId ||
+            oldWidget.companionAction != widget.companionAction)) {
+      _feed(_sceneWidth, _sceneCompact);
+    }
     if (oldWidget.branchName != widget.branchName ||
         oldWidget.controller != widget.controller) {
       _feeding = null;
@@ -278,6 +296,8 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
     final hatched = _clock.stage != 'egg';
     return LayoutBuilder(builder: (context, constraints) {
       final compact = constraints.maxWidth < 600;
+      _sceneWidth = constraints.maxWidth;
+      _sceneCompact = compact;
       return Container(
         height: compact ? 310 : 360,
         clipBehavior: Clip.antiAlias,
@@ -302,29 +322,30 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                     Colors.white.withValues(alpha: .85),
                     Colors.white.withValues(alpha: 0)
                   ])))),
-          Positioned(
-              top: 18,
-              left: 20,
-              right: hatched && !compact ? 230 : 20,
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                        hatched
-                            ? 'A LITTLE FAMILY. A LIVING WORLD.'
-                            : 'A LITTLE SURPRISE IS GROWING.',
-                        style: const TextStyle(
-                            color: Color(0xFF173D60),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 5),
-                    Text(
-                        hatched
-                            ? '${widget.branchName} · Two adults, one young penguin and one baby'
-                            : '${widget.branchName} · Some surprises are worth waiting for',
-                        style: const TextStyle(
-                            color: Color(0xFF426680), fontSize: 11)),
-                  ])),
+          if (!widget.embedded)
+            Positioned(
+                top: 18,
+                left: 20,
+                right: hatched && !compact ? 230 : 20,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          hatched
+                              ? 'A LITTLE FAMILY. A LIVING WORLD.'
+                              : 'A LITTLE SURPRISE IS GROWING.',
+                          style: const TextStyle(
+                              color: Color(0xFF173D60),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 5),
+                      Text(
+                          hatched
+                              ? '${widget.branchName} · Two adults, one young penguin and one baby'
+                              : '${widget.branchName} · Some surprises are worth waiting for',
+                          style: const TextStyle(
+                              color: Color(0xFF426680), fontSize: 11)),
+                    ])),
           if (!hatched)
             Positioned(
                 left: 10,
@@ -335,7 +356,11 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                     children: List.generate(
                         4,
                         (_) => MysteryEggTeaser(
-                            size: compact ? 76 : 128, controller: _clock)))),
+                            size: compact
+                                ? math.min(
+                                    76.0, (constraints.maxWidth - 24) / 4)
+                                : 128,
+                            controller: _clock)))),
           if (hatched && _images != null)
             Positioned.fill(
                 child: IgnorePointer(
@@ -362,7 +387,7 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                         ? 'The family scene is unavailable. Please reopen this page.'
                         : 'The penguin family is arriving…',
                     style: const TextStyle(color: Color(0xFF173D60)))),
-          if (hatched)
+          if (hatched && !widget.embedded)
             Positioned(
                 top: compact ? 108 : 18,
                 right: 16,
@@ -388,9 +413,33 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                               style: const TextStyle(
                                   color: Color(0xFF173D60), fontSize: 10))),
                     ])),
-          if (hatched)
+          if (hatched && widget.companion != null)
             Positioned(
-                top: 82,
+                left: constraints.maxWidth * .44 - 90,
+                top: (compact ? 310.0 : 360.0) * .94 -
+                    (compact ? 128 : 158) * .96,
+                width: 180,
+                height: compact ? 128 : 158,
+                child:
+                    FittedBox(fit: BoxFit.contain, child: widget.companion!)),
+          if (hatched && widget.embedded && _feeding != null)
+            Positioned(
+                top: 12,
+                right: 16,
+                child: Semantics(
+                    liveRegion: true,
+                    child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .9),
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Text(_feedStatus,
+                            style: const TextStyle(
+                                color: Color(0xFF173D60), fontSize: 11))))),
+          if (hatched && !(widget.embedded && compact && _feeding != null))
+            Positioned(
+                top: widget.embedded ? 14 : 82,
                 left: 20,
                 child: Container(
                     padding:
@@ -398,8 +447,11 @@ class _BranchPenguinCrewState extends State<BranchPenguinCrew>
                     decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: .75),
                         borderRadius: BorderRadius.circular(20)),
-                    child: const Text('ICE SHORE  ·  FAMILY HABITAT',
-                        style: TextStyle(
+                    child: Text(
+                        widget.embedded
+                            ? 'FAMILY & PINGU  ·  ONE HOME'
+                            : 'ICE SHORE  ·  FAMILY HABITAT',
+                        style: const TextStyle(
                             fontSize: 9,
                             color: Color(0xFF426680),
                             letterSpacing: 1.2)))),
