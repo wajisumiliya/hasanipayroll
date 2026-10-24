@@ -1,6 +1,6 @@
 # Branch penguin family
 
-[Watch the 30-second natural family routine preview](previews/natural-penguin-family.mp4).
+[Watch the 25-second habitat highlights: entry, exit, and feeding](previews/living-penguin-habitat.mp4).
 
 After the existing server-clock reveal, the branch habitat shows exactly four
 penguins: two adults, one juvenile, and one downy baby. The public reveal clock
@@ -28,8 +28,8 @@ keeping the baby close and leaving space between the adults.
 
 The old rounded orange-capped models are replaced by generated photoreal emperor
 penguin animation atlases: natural black/white/amber adults, a grey-throated
-juvenile, and a fluffy silver-grey chick with white cheeks and a dark cap. Five
-4-by-4 PNG atlases contain sixteen distinct poses each: adult walk, swim and eat,
+juvenile, and a fluffy silver-grey chick with white cheeks and a dark cap. Six
+PNG atlases contain sixteen distinct poses each: adult walk, swim, entry and eat,
 juvenile walk, and baby walk. The actual pixels are generated wildlife-style
 artwork, not recorded wildlife footage or a real-time 3D wildlife simulation.
 Walking uses changing leg/flipper poses, rather than translating a rigid photo.
@@ -43,6 +43,22 @@ move the body above or below the waterline. Clipping, ripples, and snow contact
 shadows ground the animals. `render_family.py` is the legacy version's mesh
 source; it does not regenerate the current photoreal atlases.
 
+Cloud texture drifts slowly only within a faded top-sky mask; the mountains stay
+fixed. Small moving reflection strokes are clipped to an open-water polygon,
+keeping them off the snow and the family. Both use the same scene clock, so
+reduced motion freezes the effects as well as the animals.
+
+The fishing adult spends two seconds lowering into the water and two seconds
+climbing back out. Immersion changes smoothly, fading the foot shadow while the
+waterline and wake increase. An additional sixteen-pose generated transition
+sheet supplies changing standing-to-horizontal anatomy; exit replays those poses
+in reverse. Its row spacing is irregular. A one-time connected-silhouette scan
+extracts the actual pose bounds, isolated silhouette masks, feet anchor and
+torso row without changing the source PNG. The masks exclude neighboring pixels
+even when pose bounding rectangles overlap horizontally. This prevents neighboring sprites or abrupt framing changes from
+appearing during entry. The decoded coast image is also used for the cloud
+texture; all additional images are released with the scene.
+
 The separate herring is an original Blender mesh and can be regenerated:
 
 ```sh
@@ -53,13 +69,15 @@ blender -b -t 4 --python tools/penguin_family/render_herring.py -- \
 ## Feed fish
 
 After hatch and asset loading, the **Feed fish** button tosses one visible silver
-herring onto the ice. The adult already on dry ice approaches it at a size-aware
+herring onto the ice. The adult already on dry ice notices it for 1.2 seconds
+before approaching it at a size-aware
 walking speed, bends down, opens/closes its bill, swallows the fish, then smoothly
 rejoins its normal route. The fish disappears during swallowing. The other three
 animals continue their activities. Feeding never redirects the baby into water.
 
 The button stays disabled until this sequence finishes, preventing stacked fish
-and overlapping meals. A live accessible status announces the result. With
+and overlapping meals. A live accessible status announces noticing, approach, eating and returning. It
+updates only at phase changes, not every animation frame. With
 reduced motion, feeding completes immediately with the same visible count and
 no animated travel. The count belongs to the current scene/session; no backend
 pet hunger, payroll, notification, or employee records are changed. It resets

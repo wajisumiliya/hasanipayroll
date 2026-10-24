@@ -14,7 +14,7 @@ enum FamilyActivity {
 class FamilyPenguin {
   const FamilyPenguin(this.name, this.position, this.scale, this.activity,
       this.direction, this.phase,
-      {this.baby = false});
+      {this.baby = false, this.immersion = 0});
   final String name;
   final Offset position;
   final double scale;
@@ -22,6 +22,9 @@ class FamilyPenguin {
   final int direction;
   final double phase;
   final bool baby;
+
+  /// Water entry/exit progresses continuously from standing (0) to floating (1).
+  final double immersion;
   String get action => switch (activity) {
         FamilyActivity.swimming => 'swim',
         FamilyActivity.feeding || FamilyActivity.preening => 'eat',
@@ -58,6 +61,14 @@ double _ease(double a, double b, double t) =>
 /// Perspective belongs to the ground plane, not the age of the animal.
 double penguinGroundScale(double y) =>
     .86 + .14 * ((y - .72) / .22).clamp(0.0, 1.0);
+
+double penguinImmersionAt(double seconds) {
+  final t = seconds % 80;
+  if (t < 18 || t >= 42) return 0;
+  if (t < 20) return _ease(0, 1, (t - 18) / 2);
+  if (t > 40) return _ease(1, 0, (t - 40) / 2);
+  return 1;
+}
 
 /// An 80-second routine with long observation/rest stops, a fishing trip,
 /// a chick following its nearby caregiver, and a youngster's short playful walk.
@@ -127,7 +138,8 @@ List<FamilyPenguin> penguinFamilyAt(double seconds) {
               : FamilyActivity.resting;
   return [
     FamilyPenguin('Adult fishing and watching the family', adult, 1, activity,
-        direction, phase),
+        direction, phase,
+        immersion: penguinImmersionAt(seconds)),
     FamilyPenguin(
         'Adult staying close to the baby',
         parent,

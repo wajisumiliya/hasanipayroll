@@ -1,7 +1,7 @@
 import 'package:flutter/painting.dart';
 import 'penguin_family_scene.dart';
 
-enum PenguinFeedPhase { approaching, eating, returning, complete }
+enum PenguinFeedPhase { noticing, approaching, eating, returning, complete }
 
 /// A local habitat interaction. The adult on dry ice responds; the downy baby
 /// is never sent swimming or given a whole fish. Feeding does not change pets.
@@ -20,18 +20,20 @@ class PenguinFeeding {
   final Offset origin;
   final double approachSeconds;
   static const destination = Offset(.34, .83);
+  static const noticeSeconds = 1.2;
   static const mealSeconds = 2.4;
-  double get duration => approachSeconds * 2 + mealSeconds;
+  double get duration => noticeSeconds + approachSeconds * 2 + mealSeconds;
   PenguinFeedPhase phaseAt(double sceneTime) {
-    final t = sceneTime - startedAt;
+    final t = sceneTime - startedAt - noticeSeconds;
+    if (t < 0) return PenguinFeedPhase.noticing;
     if (t < approachSeconds) return PenguinFeedPhase.approaching;
     if (t < approachSeconds + mealSeconds) return PenguinFeedPhase.eating;
-    if (t < duration) return PenguinFeedPhase.returning;
+    if (t < duration - noticeSeconds) return PenguinFeedPhase.returning;
     return PenguinFeedPhase.complete;
   }
 
   double mealProgress(double time) =>
-      ((time - startedAt - approachSeconds) / mealSeconds)
+      ((time - startedAt - noticeSeconds - approachSeconds) / mealSeconds)
           .clamp(0.0, 1.0)
           .toDouble();
   List<FamilyPenguin> familyAt(double time) {
@@ -39,11 +41,15 @@ class PenguinFeeding {
     final phase = phaseAt(time);
     if (phase == PenguinFeedPhase.complete) return family;
     final base = family[1];
-    final t = time - startedAt;
+    final t = time - startedAt - noticeSeconds;
     final Offset position;
     final FamilyActivity activity;
     final int direction;
-    if (phase == PenguinFeedPhase.approaching) {
+    if (phase == PenguinFeedPhase.noticing) {
+      position = origin;
+      activity = FamilyActivity.observing;
+      direction = 2;
+    } else if (phase == PenguinFeedPhase.approaching) {
       position = Offset.lerp(origin, destination,
           (t / approachSeconds).clamp(0.0, 1.0).toDouble())!;
       activity = FamilyActivity.walking;
@@ -88,6 +94,7 @@ class PenguinFeeding {
   double fishScale(double time) =>
       (1 - ((mealProgress(time) - .6) / .25).clamp(0.0, 1.0).toDouble());
   bool fishVisible(double time) =>
+      phaseAt(time) == PenguinFeedPhase.noticing ||
       phaseAt(time) == PenguinFeedPhase.approaching ||
       (phaseAt(time) == PenguinFeedPhase.eating && mealProgress(time) < .85);
 }

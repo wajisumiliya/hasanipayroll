@@ -10,6 +10,7 @@ void main() {
       'adult_walk_2',
       'adult_swim_2',
       'adult_eat_2',
+      'adult_enter_2',
       'young_walk_2',
       'baby_walk_2'
     ]) {
