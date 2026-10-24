@@ -330,7 +330,7 @@ class _NaturalLoginPainter extends CustomPainter {
   final bool quiet, compact;
   final LoginHabitatScene scene;
   Color get tint => scene.period == 'night'
-      ? const Color(0xFF526478)
+      ? const Color(0xFF8A9FBC)
       : scene.period == 'evening'
           ? const Color(0xFFFFE6D0)
           : const Color(0xFFF3F7FC);

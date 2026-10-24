@@ -41,3 +41,8 @@ Android installation cannot receive bundled artwork through a server-only change
 The revised chick (1.0.26+33) has smaller natural eyes, a narrower head,
 scaly feet and irregular down feathers rather than smooth plush proportions.
 Its new walking and quiet sheets are separate from the branch chick assets.
+
+Color preservation (1.0.27+34): the detailed login chick retains the original
+light silver-gray down, white cheek/belly and black crown, beak and feet.
+The brown cast introduced with the anatomy revision is removed. Scene tinting
+uses the original login lighting palette.
