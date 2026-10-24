@@ -4,11 +4,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../services/neon_api.dart';
+import 'penguin_companion_reaction.dart';
 import '../services/penguin_growth.dart';
 
 /// Server-backed penguin companion. Growth and care use server time.
 class EmployeePenguinPetCard extends StatefulWidget {
-  const EmployeePenguinPetCard({super.key});
+  const EmployeePenguinPetCard({super.key, this.request});
+
+  /// Optional transport for isolated previews and tests; production uses NeonApi.
+  final Future<Map<String, dynamic>> Function(String? action)? request;
 
   @override
   State<EmployeePenguinPetCard> createState() => _EmployeePenguinPetCardState();
@@ -24,6 +28,10 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
   bool _showHatchWelcome = false;
   Timer? _crackTimer;
   Timer? _hatchTimer;
+  Timer? _reactionTimer;
+  String? _speech;
+  bool _petted = false;
+  int _reactionSerial = 0;
 
   @override
   void initState() {
@@ -36,18 +44,16 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
     setState(() {
       busy = true;
       error = null;
-      if (careAction != null) {
-        action = careAction == 'feed' ? 'eating' : 'playing';
-        sleeping = false;
-      }
     });
     try {
-      final data = await NeonApi.jsonRequest(
-        careAction == null
-            ? '/api/employee/penguin'
-            : '/api/employee/penguin/$careAction',
-        method: careAction == null ? 'GET' : 'POST',
-      );
+      final data = await (widget.request != null
+          ? widget.request!(careAction)
+          : NeonApi.jsonRequest(
+              careAction == null
+                  ? '/api/employee/penguin'
+                  : '/api/employee/penguin/$careAction',
+              method: careAction == null ? 'GET' : 'POST',
+            ));
       if (mounted) {
         final nextPet = Map<String, dynamic>.from(data['pet'] as Map);
         final hatchAt = DateTime.tryParse(nextPet['hatchAt']?.toString() ?? '');
@@ -69,6 +75,13 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
               serverNow.isBefore(hatchAt.add(const Duration(hours: 24)));
         });
         _scheduleHatch(hatchAt, serverNow, stage);
+        if (careAction != null && stage != 'egg') {
+          _react(
+              careAction == 'feed' ? 'eating' : 'playing',
+              careAction == 'feed'
+                  ? 'Yum! Thank you for the fish!'
+                  : 'A snowball! Let’s play!');
+        }
       }
     } catch (_) {
       if (mounted) {
@@ -77,14 +90,6 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
     } finally {
       if (mounted) {
         setState(() => busy = false);
-        if (careAction != null) {
-          Future<void>.delayed(
-            Duration(milliseconds: careAction == 'feed' ? 2200 : 3000),
-            () {
-              if (mounted) setState(() => action = 'idle');
-            },
-          );
-        }
       }
     }
   }
@@ -131,146 +136,311 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard> {
   void dispose() {
     _crackTimer?.cancel();
     _hatchTimer?.cancel();
+    _reactionTimer?.cancel();
     super.dispose();
   }
 
   void _toggleSleep() {
+    if (busy || pet == null || pet?['stage'] == 'egg') return;
+    _reactionTimer?.cancel();
     setState(() {
       sleeping = !sleeping;
       action = sleeping ? 'sleeping' : 'idle';
+      _speech = sleeping
+          ? 'Zzz… a little rest on the ice.'
+          : 'Hello again! Ready to play?';
+      _reactionSerial++;
     });
+  }
+
+  void _react(String next, String message) {
+    _reactionTimer?.cancel();
+    setState(() {
+      sleeping = false;
+      action = next;
+      _speech = message;
+      if (next == 'petting') {
+        _petted = true;
+      }
+      _reactionSerial++;
+    });
+    _reactionTimer = Timer(const Duration(milliseconds: 3400), () {
+      if (mounted) {
+        setState(() {
+          action = 'idle';
+          _speech = null;
+        });
+      }
+    });
+  }
+
+  void _pet() {
+    if (busy || pet == null || pet?['stage'] == 'egg') return;
+    if (sleeping) {
+      _toggleSleep();
+      return;
+    }
+    _react('petting', 'That feels lovely. Thank you!');
+  }
+
+  void _care(String kind) {
+    if (busy || pet == null || pet?['stage'] == 'egg') return;
+    if (pet?[kind == 'feed' ? 'fedToday' : 'playedToday'] == true) {
+      _react(kind == 'feed' ? 'eating' : 'playing',
+          kind == 'feed' ? 'Another little fish? Yum!' : 'Let’s play again!');
+    } else {
+      unawaited(_load(kind));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final stage = pet?['stage']?.toString() ?? 'egg';
-    final days = pet?['ageDays'] ?? 0;
-    final nickname = pet?['nickname'] ?? 'Pingu';
+    final days = (pet?['ageDays'] as num?)?.toInt() ?? 0;
+    final nickname = pet?['nickname']?.toString() ?? 'Pingu';
     final hatched = stage != 'egg';
     final fed = pet?['fedToday'] == true;
     final played = pet?['playedToday'] == true;
+    final happiness =
+        (.40 + (fed ? .25 : 0) + (played ? .25 : 0) + (_petted ? .10 : 0));
+    final energy =
+        sleeping ? .95 : (.65 + (fed ? .20 : 0) - (played ? .10 : 0));
+    final message = _speech ??
+        (_showHatchWelcome
+            ? 'Surprise! Welcome, $nickname — your penguin has hatched!'
+            : hatched
+                ? 'Hello! Ready for today?'
+                : _isHatching
+                    ? 'Something is stirring inside...'
+                    : 'Your surprise is growing. Come back soon!');
+    final enabled = !busy && pet != null && hatched;
+    final character = hatched && action != 'idle'
+        ? Semantics(
+            button: true,
+            label: sleeping
+                ? 'Sleeping penguin. Tap to wake.'
+                : 'Penguin. Tap to pet.',
+            child: GestureDetector(
+                onTap: _pet,
+                child: PenguinCompanionReaction(
+                    key: ValueKey(stage),
+                    reactionId: _reactionSerial,
+                    stage: stage,
+                    action: action,
+                    daysSinceHatch: (days - 3).clamp(0, 100000))))
+        : PenguinIllustration(
+            key: ValueKey(stage),
+            stage: stage,
+            daysSinceHatch: (days - 3).clamp(0, 100000),
+            action: action,
+            hatching: _isHatching,
+            onTap: hatched ? _pet : null,
+            tapLabel: hatched ? 'Penguin. Tap to pet.' : null);
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/penguin_habitat.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
-          ),
-          const Positioned.fill(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Stack(children: [
+        Positioned.fill(
+            child:
+                Image.asset('assets/penguin_habitat.png', fit: BoxFit.cover)),
+        const Positioned.fill(
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x77F1FAFF), Color(0xBFFFFFFF)],
-                  stops: [0, 1],
-                ),
-              ),
-            ),
-          ),
-          Padding(
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+              Color(0xA6F0F9FF),
+              Color(0x38F0F9FF),
+              Color(0xD9F7FBFF)
+            ],
+                        stops: [
+              0,
+              .5,
+              1
+            ])))),
+        Padding(
             padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hatched ? 'MY LIVING PENGUIN' : 'A LITTLE SURPRISE',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF173D60),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Center(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(hatched ? 'MY PENGUIN' : 'A LITTLE SURPRISE',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF173D60))),
+                      if (hatched)
+                        const Text('Your little daily companion',
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFF426680))),
+                    ])),
+                IconButton(
+                    tooltip: 'Refresh penguin',
+                    onPressed: busy ? null : () => _load(),
+                    icon: const Icon(Icons.refresh, color: Color(0xFF173D60))),
+              ]),
+              const SizedBox(height: 10),
+              Center(
                   child: Semantics(
-                    label: hatched
-                        ? 'Penguin growth stage: $stage'
-                        : 'A surprise is growing inside an egg.',
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      child: PenguinIllustration(
-                        key: ValueKey(stage),
-                        stage: stage,
-                        daysSinceHatch:
-                            ((days as num).toInt() - 3).clamp(0, 100000),
-                        action: action,
-                        hatching: _isHatching,
-                        onTap: _toggleSleep,
-                      ),
-                    ),
-                  ),
-                ),
-                if (hatched)
-                  Center(
-                    child: Text(
-                      '${pet?['nickname'] ?? 'Pingu'} • Day $days • ${stage.toUpperCase()}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                      liveRegion: true,
+                      child: AnimatedSwitcher(
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : const Duration(milliseconds: 180),
+                          child: Container(
+                              key: ValueKey(message),
+                              constraints: const BoxConstraints(maxWidth: 380),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 12),
+                              decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: .94),
+                                  borderRadius: BorderRadius.circular(18)),
+                              child: Text(message,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: Color(0xFF173D60),
+                                      fontWeight: FontWeight.w700)))))),
+              SizedBox(
+                  height: hatched ? 270 : 200,
+                  width: double.infinity,
+                  child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Stack(children: [
+                        if (hatched)
+                          Positioned.fill(
+                              child: Image.asset(
+                                  'assets/penguins/family/coast.png',
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.bottomLeft)),
+                        Align(
+                            alignment: Alignment.bottomCenter,
+                            child: SizedBox(
+                                width: 300,
+                                height: hatched ? 260 : 190,
+                                child: FittedBox(
+                                    fit: BoxFit.contain, child: character))),
+                      ]))),
+              if (hatched) ...[
                 Center(
-                  child: Text(
-                    _showHatchWelcome
-                        ? 'Surprise! Welcome, $nickname — your penguin has hatched!'
-                        : hatched
-                            ? 'Tap your penguin to let it nap or wake it up'
-                            : _isHatching
-                                ? 'Something is stirring inside...'
-                                : 'Your surprise is growing. Come back soon!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: _showHatchWelcome ? 13 : 11,
-                      fontWeight: _showHatchWelcome ? FontWeight.w700 : null,
-                      color: const Color(0xFF426680),
-                    ),
-                  ),
-                ),
+                    child: Text(
+                        '$nickname • Day $days • ${stage.toUpperCase()}',
+                        style: const TextStyle(
+                            color: Color(0xFF173D60),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700))),
                 const SizedBox(height: 12),
-                if (error != null)
-                  Text(error!, style: const TextStyle(color: Colors.red)),
-                if (pet == null && busy)
-                  const Center(child: CircularProgressIndicator()),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: busy || pet == null || fed
-                          ? null
-                          : () => _load('feed'),
-                      icon: const Icon(Icons.set_meal),
-                      label: Text(fed ? 'Fed today' : 'Feed fish'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: busy || pet == null || played
-                          ? null
-                          : () => _load('play'),
-                      icon: const Icon(Icons.sports_esports),
-                      label: Text(played ? 'Played today' : 'Play'),
-                    ),
-                    IconButton(
-                      tooltip: 'Refresh penguin',
-                      onPressed: busy ? null : () => _load(),
-                      icon: const Icon(Icons.refresh),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Your penguin grows with time, even when you are away. Feeding and play become available again after 24 hours.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF425F74)),
-                ),
+                Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .90),
+                        borderRadius: BorderRadius.circular(16)),
+                    child: Row(children: [
+                      Expanded(
+                          child: _meter('Happiness', happiness, Icons.favorite,
+                              const Color(0xFFD4A52D))),
+                      const SizedBox(width: 18),
+                      Expanded(
+                          child: _meter('Energy', energy, Icons.bolt,
+                              const Color(0xFF4578B6)))
+                    ])),
               ],
-            ),
-          ),
-        ],
-      ),
+              if (error != null)
+                Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(error!,
+                        style: const TextStyle(color: Color(0xFFAA263B)))),
+              if (pet == null && busy)
+                const Center(
+                    child: Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator())),
+              const SizedBox(height: 12),
+              Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .96),
+                      borderRadius: BorderRadius.circular(20)),
+                  child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _careButton(
+                            'Feed',
+                            Icons.set_meal,
+                            enabled ? () => _care('feed') : null,
+                            const Color(0xFFB88A21)),
+                        _careButton(
+                            'Play',
+                            Icons.sports_baseball,
+                            enabled ? () => _care('play') : null,
+                            const Color(0xFF467FB5)),
+                        _careButton('Pet', Icons.front_hand,
+                            enabled ? _pet : null, const Color(0xFFB88A21)),
+                        _careButton(
+                            sleeping ? 'Wake' : 'Rest',
+                            sleeping ? Icons.wb_sunny : Icons.nightlight_round,
+                            enabled ? _toggleSleep : null,
+                            const Color(0xFF183B60)),
+                      ])),
+              const SizedBox(height: 8),
+              Text(
+                  hatched
+                      ? 'Daily care: ${fed ? 'fed' : 'fish waiting'} · ${played ? 'played' : 'ready to play'}. Keep interacting whenever you like.'
+                      : 'Your penguin grows with time, even when you are away.',
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFF425F74))),
+            ])),
+      ]),
     );
   }
+
+  Widget _meter(String label, double value, IconData icon, Color color) =>
+      Row(children: [
+        Icon(icon, size: 19, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF173D60))),
+          const SizedBox(height: 5),
+          ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                  value: value.clamp(0.0, 1.0),
+                  minHeight: 7,
+                  color: color,
+                  backgroundColor: const Color(0xFFE1E8F0),
+                  semanticsLabel: label)),
+        ])),
+      ]);
+
+  Widget _careButton(
+          String label, IconData icon, VoidCallback? onTap, Color color) =>
+      Expanded(
+          child: TextButton(
+              onPressed: onTap,
+              style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                  foregroundColor: const Color(0xFF173D60)),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: onTap == null ? const Color(0xFFCCD5DF) : color),
+                    child: Icon(icon, color: Colors.white, size: 23)),
+                const SizedBox(height: 6),
+                Text(label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 12)),
+              ])));
 }
 
 /// Detailed feathered artwork with local breathing, waddling and care motion.
@@ -282,6 +452,7 @@ class PenguinIllustration extends StatefulWidget {
     this.hatching = false,
     this.daysSinceHatch,
     this.onTap,
+    this.tapLabel,
   });
 
   final String stage;
@@ -289,6 +460,7 @@ class PenguinIllustration extends StatefulWidget {
   final bool hatching;
   final int? daysSinceHatch;
   final VoidCallback? onTap;
+  final String? tapLabel;
 
   @override
   State<PenguinIllustration> createState() => _PenguinIllustrationState();
@@ -316,9 +488,10 @@ class _PenguinIllustrationState extends State<PenguinIllustration>
 
     return Semantics(
       button: widget.onTap != null,
-      label: widget.action == 'sleeping'
-          ? 'Sleeping penguin. Tap to wake.'
-          : 'Penguin. Tap to sleep.',
+      label: widget.tapLabel ??
+          (widget.action == 'sleeping'
+              ? 'Sleeping penguin. Tap to wake.'
+              : 'Penguin. Tap to sleep.'),
       onTap: widget.onTap,
       child: GestureDetector(
         onTap: widget.onTap,
