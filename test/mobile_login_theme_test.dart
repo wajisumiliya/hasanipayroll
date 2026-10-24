@@ -94,7 +94,7 @@ void main() {
           lessThan(tester.getCenter(find.byType(TextField).first).dy));
       expect(tester.getCenter(logo).dx,
           closeTo(tester.getCenter(find.byType(TextField).first).dx, 1));
-      expect(find.byType(MysteryEggTeaser), findsOneWidget);
+      expect(find.byType(MysteryEggTeaser), findsNothing);
       expect(tester.takeException(), isNull);
     }
     // The keyboard must leave the form scrollable instead of hiding sign in.

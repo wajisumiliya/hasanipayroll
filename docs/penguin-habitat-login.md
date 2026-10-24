@@ -1,8 +1,9 @@
 # Penguin habitat login scenes
 
 The desktop web and compact Android/web login share 28 bundled photorealistic
-Antarctic habitat backgrounds. The Hasani Books logo, sign-in form, golden egg,
-countdown and hatched penguin keep their existing layout and behaviour.
+Antarctic habitat backgrounds. The Hasani Books logo and sign-in form remain.
+As of 1.0.28+35, the login penguin and its egg/countdown widget are removed on
+both desktop and mobile; dashboard penguins remain available.
 
 | Day | Habitat |
 | --- | --- |

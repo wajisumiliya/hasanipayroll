@@ -1,3 +1,7 @@
+> Removed from the login screen in 1.0.28+35 at the user's request.
+> The implementation notes below describe the archived login walker.
+> Branch and employee dashboard penguins are unaffected.
+
 # Login penguin walking
 
 After server-confirmed hatching, the login uses photographic-style

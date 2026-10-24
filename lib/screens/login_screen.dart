@@ -13,7 +13,6 @@ import '../services/notification_service.dart';
 import '../services/login_habitat_scene.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../theme/daily_portal_theme.dart';
-import '../widgets/login_penguin_walker.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
@@ -36,12 +35,6 @@ class _LoginScreenState extends State<LoginScreen>
   final TextEditingController usernameController = TextEditingController();
 
   final TextEditingController passwordController = TextEditingController();
-
-  final FocusNode _usernameFocus = FocusNode();
-  bool _usernameHasFocus = false;
-  void _onUsernameFocus() {
-    if (mounted) setState(() => _usernameHasFocus = _usernameFocus.hasFocus);
-  }
 
   bool obscurePassword = true;
   bool loading = false;
@@ -82,7 +75,6 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _usernameFocus.addListener(_onUsernameFocus);
     _hatchController.addListener(_onHatchChanged);
     _hatchController.attach();
     _entranceController = AnimationController(
@@ -202,8 +194,6 @@ class _LoginScreenState extends State<LoginScreen>
     _idleBlinkTimer?.cancel();
     _clockTimer?.cancel();
     _weatherTimer?.cancel();
-    _usernameFocus.removeListener(_onUsernameFocus);
-    _usernameFocus.dispose();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -866,17 +856,6 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 20),
                             _sevenDayAuthCard(theme, compact: true),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 190,
-                              child: LoginPenguinWalker(
-                                controller: _hatchController,
-                                compact: true,
-                                scene: scene,
-                                lookAtForm: _usernameHasFocus,
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -935,21 +914,6 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ],
                 );
-              },
-            ),
-          ),
-          Positioned.fill(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 880 ||
-                    constraints.maxWidth / constraints.maxHeight < 1.25) {
-                  return const SizedBox.shrink();
-                }
-
-                return LoginPenguinWalker(
-                    controller: _hatchController,
-                    scene: scene,
-                    lookAtForm: _usernameHasFocus);
               },
             ),
           ),
@@ -1311,7 +1275,6 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(height: 25),
               TextField(
                 controller: usernameController,
-                focusNode: _usernameFocus,
                 enabled: !loading,
                 textInputAction: TextInputAction.next,
                 autocorrect: false,
