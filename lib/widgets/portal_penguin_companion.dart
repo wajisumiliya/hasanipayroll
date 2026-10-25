@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../services/login_habitat_scene.dart';
 import 'employee_penguin_pet_card.dart';
-import 'branch_penguin_crew.dart';
 
 /// Public/session-only companion. Never calls the private employee care API.
 class PortalPenguinCompanion extends StatefulWidget {
@@ -12,8 +12,10 @@ class PortalPenguinCompanion extends StatefulWidget {
       this.compact = false,
       this.title = 'YOUR PENGUIN',
       this.loginScene,
-      this.familyBranchName});
-  final String? familyBranchName;
+      this.matchLoginScene = false,
+      this.sceneController});
+  final bool matchLoginScene;
+  final MysteryEggHatchController? sceneController;
   final LoginHabitatScene? loginScene;
   final MysteryEggHatchController controller;
   final bool compact;
@@ -24,11 +26,40 @@ class PortalPenguinCompanion extends StatefulWidget {
 
 class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
   bool _fed = false, _played = false;
+  Timer? _sceneTimer;
+  String? _lastSceneAsset;
+  MysteryEggHatchController get _sceneClock =>
+      widget.sceneController ?? MysteryEggHatchController.shared;
+  LoginHabitatScene? get _scene => widget.matchLoginScene
+      ? loginHabitatScene(
+          instant: _sceneClock.serverNow ??
+              widget.controller.serverNow ??
+              DateTime.now(),
+          hatchAt: _sceneClock.hatchAt,
+          hatchConfirmed: _sceneClock.stage != 'egg')
+      : widget.loginScene;
+  void _bindScene() {
+    if (!widget.matchLoginScene) return;
+    if (_sceneClock != widget.controller) {
+      _sceneClock.addListener(_changed);
+      _sceneClock.attach();
+    }
+    _lastSceneAsset = _scene?.asset;
+    _sceneTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final asset = _scene?.asset;
+      if (mounted && asset != _lastSceneAsset) {
+        _lastSceneAsset = asset;
+        setState(() {});
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_changed);
     widget.controller.attach();
+    _bindScene();
   }
 
   void _changed() {
@@ -38,6 +69,15 @@ class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
   @override
   void didUpdateWidget(covariant PortalPenguinCompanion old) {
     super.didUpdateWidget(old);
+    final rebind = old.matchLoginScene != widget.matchLoginScene ||
+        old.sceneController != widget.sceneController ||
+        old.controller != widget.controller;
+    final oldScene = old.sceneController ?? MysteryEggHatchController.shared;
+    if (rebind && old.matchLoginScene && oldScene != old.controller) {
+      oldScene.removeListener(_changed);
+      oldScene.detach();
+    }
+    if (rebind) _sceneTimer?.cancel();
     if (old.controller != widget.controller) {
       old.controller.removeListener(_changed);
       old.controller.detach();
@@ -46,6 +86,7 @@ class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
       _fed = false;
       _played = false;
     }
+    if (rebind) _bindScene();
   }
 
   Future<Map<String, dynamic>> _request(String? kind) async {
@@ -71,6 +112,11 @@ class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
 
   @override
   void dispose() {
+    _sceneTimer?.cancel();
+    if (widget.matchLoginScene && _sceneClock != widget.controller) {
+      _sceneClock.removeListener(_changed);
+      _sceneClock.detach();
+    }
     widget.controller.removeListener(_changed);
     widget.controller.detach();
     super.dispose();
@@ -87,16 +133,7 @@ class _PortalPenguinCompanionState extends State<PortalPenguinCompanion> {
             localCare: true,
             compact: widget.compact,
             title: widget.title,
-            loginScene: widget.loginScene,
-            habitatBuilder: widget.familyBranchName == null
-                ? null
-                : (character, action, reactionId) => BranchPenguinCrew(
-                    branchName: widget.familyBranchName!,
-                    controller: widget.controller,
-                    embedded: true,
-                    companion: character,
-                    companionAction: action,
-                    reactionId: reactionId)),
+            loginScene: _scene),
         if (widget.controller.stage == 'egg')
           Container(
               margin: const EdgeInsets.all(6),

@@ -533,6 +533,7 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard>
                   Text(label, style: const TextStyle(fontSize: 11))
                 ])));
     return Container(
+        constraints: const BoxConstraints(maxWidth: 1000),
         margin: const EdgeInsets.all(4),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
@@ -571,19 +572,21 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard>
                     onPressed: busy ? null : () => _load(),
                     icon: const Icon(Icons.refresh, size: 19, color: muted)),
               ])),
-          SizedBox(
-              height: 240,
-              child: LayoutBuilder(builder: (context, constraints) {
-                final size = Size(constraints.maxWidth, 240);
-                final projection =
-                    LoginPhotoProjection(const Size(1672, 941), size);
-                final trail = LoginPenguinTerrain.forScene(scene).points;
-                final foot = projection.project(trail[2]);
-                // A high, distant ledge needs a smaller animal so its head stays in
-                // the photo and its feet remain on the authored ground.
-                final actorHeight =
-                    math.min(235.0, math.max(60.0, foot.dy - 12));
-                return ClipRect(
+          LayoutBuilder(builder: (context, constraints) {
+            final height = widget.compact
+                ? 240.0
+                : math.max(240.0, constraints.maxWidth * .44);
+            final size = Size(constraints.maxWidth, height);
+            final projection =
+                LoginPhotoProjection(const Size(1672, 941), size);
+            final trail = LoginPenguinTerrain.forScene(scene).points;
+            final foot = projection.project(trail[2]);
+            // A high, distant ledge needs a smaller animal so its head stays in
+            // the photo and its feet remain on the authored ground.
+            final actorHeight = math.min(235.0, math.max(60.0, foot.dy - 12));
+            return SizedBox(
+                height: height,
+                child: ClipRect(
                     child: Stack(children: [
                   Positioned.fill(
                       child: Image.asset(scene.asset,
@@ -625,8 +628,8 @@ class _EmployeePenguinPetCardState extends State<EmployeePenguinPetCard>
                                   shadows: [
                                     Shadow(color: Colors.black87, blurRadius: 6)
                                   ])))),
-                ]));
-              })),
+                ])));
+          }),
           Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(children: [

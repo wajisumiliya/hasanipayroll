@@ -904,8 +904,8 @@ class _BranchPortalState extends State<BranchPortal>
           const SizedBox(height: 24),
           PortalPenguinCompanion(
               controller: MysteryEggHatchController.branch,
-              title: 'OUR BRANCH FAMILY',
-              familyBranchName: branchDisplayName),
+              title: 'LITTLE PINGU',
+              matchLoginScene: true),
           const SizedBox(height: 24),
           _dashboardAttendanceRegister(),
         ],

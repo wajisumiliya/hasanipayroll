@@ -2,8 +2,8 @@
 
 The employee dashboard offers Feed, Play, Pet and Rest/Wake. There is no Talk
 button, microphone, recording, voice playback or audio permission in this feature.
-The login and branch dashboard also offer a public companion. The branch family
-and Pingu share one habitat and one set of care controls.
+The login and branch dashboard also offer a public companion. Only little
+Pingu appears on the branch dashboard, with the same habitat as the login.
 
 The existing orange crown, green bill/feet and gray-white body are retained.
 Chick and adult reaction sheets contain four expressions for each care action.
@@ -77,3 +77,14 @@ Stale snapshots for the same hatch cannot reduce its age; a new hatch date
 starts a new campaign. Daily public updates preserve care/rest and the shared
 family scene rather than recreating the card. Feeding and play never accelerate
 growth. Tests cover day boundaries, days 12/42, outages, resume and sealed eggs.
+
+## Little Pingu only on branches (1.0.34+41)
+
+The branch dashboard no longer renders the four-member family or a separate
+companion habitat. It shows only Pingu with Feed/Play/Pet/Rest, preserving
+colour and daily growth. Its background uses the login public clock and
+`loginHabitatScene`, including the Malaysia weekday/time boundaries and login
+reveal-day exception. A lightweight timer checks for scene changes while the
+page remains open; changing the scene preserves local rest/care state.
+The branch hatch/growth clock remains separate and retains its existing date.
+A bounded-width, responsive habitat keeps Pingu visible on all 28 photographs.

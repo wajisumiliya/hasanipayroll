@@ -8,7 +8,68 @@ import 'package:hasani_payroll_portal/widgets/employee_penguin_pet_card.dart';
 import 'package:hasani_payroll_portal/widgets/mystery_egg_teaser.dart';
 
 void main() {
-  testWidgets('joined mobile habitat fits all sealed eggs before confirmation',
+  testWidgets('branch shows only Pingu with the same public login background',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var now = '2026-10-25T03:59:59Z';
+    final branch = MysteryEggHatchController(
+        load: () async => {
+              'stage': 'chick',
+              'hatchAt': '2026-10-23T08:39:11Z',
+              'serverNow': now
+            });
+    final login = MysteryEggHatchController(
+        load: () async => {
+              'stage': 'chick',
+              'hatchAt': '2026-10-23T07:39:11Z',
+              'serverNow': now
+            });
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SingleChildScrollView(
+                child: PortalPenguinCompanion(
+                    controller: branch,
+                    sceneController: login,
+                    matchLoginScene: true,
+                    title: 'LITTLE PINGU')))));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(EmployeePenguinPetCard), findsOneWidget);
+    expect(find.byType(BranchPenguinCrew), findsNothing);
+    expect(find.text('LITTLE PINGU'), findsOneWidget);
+    Finder scene(String period) => find.byWidgetPredicate((w) =>
+        w is Image &&
+        w.image is AssetImage &&
+        (w.image as AssetImage).assetName ==
+            'assets/login_habitats/sunday_$period.png');
+    expect(scene('morning'), findsOneWidget);
+    await tester.ensureVisible(find.text('Rest'));
+    await tester.tap(find.text('Rest'));
+    await tester.pump();
+    now = '2026-10-25T04:00:00Z';
+    await login.refresh();
+    await tester.pump();
+    await tester.pump();
+    expect(scene('afternoon'), findsOneWidget);
+    expect(find.text('Wake'), findsOneWidget);
+    final actor = tester.widget<Positioned>(
+        find.byWidgetPredicate((w) => w is Positioned && w.width == 280).first);
+    expect(actor.top!, greaterThan(0),
+        reason:
+            'Pingu must not be cropped off the ice arch ledge on a wide branch card');
+    expect(find.byType(MysteryEggTeaser), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 500)));
+    branch.dispose();
+    login.dispose();
+  });
+
+  testWidgets('a sealed branch shows one egg rather than the old family',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -17,81 +78,28 @@ void main() {
     final clock = MysteryEggHatchController(
         load: () async => {
               'stage': 'egg',
-              'hatchAt': '2026-10-25T07:39:11Z',
-              'serverNow': '2026-10-24T09:42:00Z'
+              'hatchAt': '2026-10-26T07:39:11Z',
+              'serverNow': '2026-10-25T02:00:00Z'
             });
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(
             body: SingleChildScrollView(
                 child: PortalPenguinCompanion(
                     controller: clock,
-                    familyBranchName: 'SP-EDAR',
-                    title: 'OUR BRANCH FAMILY')))));
+                    sceneController: clock,
+                    matchLoginScene: true,
+                    title: 'LITTLE PINGU')))));
     await tester.pump();
     await tester.pump();
-    expect(find.byType(MysteryEggTeaser), findsNWidgets(4));
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-    clock.dispose();
-  });
-
-  testWidgets('branch family and Pingu share one habitat and one care dock',
-      (tester) async {
-    tester.view.physicalSize = const Size(1000, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final clock = MysteryEggHatchController(
-        load: () async => {
-              'stage': 'chick',
-              'hatchAt': '2026-10-23T07:39:11Z',
-              'serverNow': '2026-10-24T09:42:00Z'
-            });
-    await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-            body: SingleChildScrollView(
-                child: PortalPenguinCompanion(
-                    controller: clock,
-                    familyBranchName: 'SP-EDAR',
-                    title: 'OUR BRANCH FAMILY')))));
-    await tester.pump();
-    await tester.pump();
-    await tester
-        .runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
-    await tester.pump();
-    await tester
-        .runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
-    await tester.pump();
-    expect(find.byType(EmployeePenguinPetCard), findsOneWidget);
-    expect(find.byType(BranchPenguinCrew), findsOneWidget);
+    expect(find.byType(BranchPenguinCrew), findsNothing);
+    expect(find.byType(PenguinIllustration), findsOneWidget);
     expect(
         tester
-            .widget<BranchPenguinCrew>(find.byType(BranchPenguinCrew))
-            .companion,
-        isNotNull);
-    expect(
-        find.byWidgetPredicate((w) =>
-            w is Image &&
-            w.image is AssetImage &&
-            (w.image as AssetImage).assetName ==
-                'assets/penguins/family/coast.png'),
-        findsOneWidget);
-    expect(find.text('Feed'), findsOneWidget);
-    expect(find.text('Feed fish'), findsNothing,
-        reason: 'A merged habitat has one feeding control');
-    await tester.ensureVisible(find.text('Feed'));
-    await tester.tap(find.text('Feed'));
-    await tester.pump();
-    expect(find.text('It noticed the fish'), findsOneWidget);
-    await tester.ensureVisible(find.text('Rest'));
-    await tester.tap(find.text('Rest'));
-    await tester.pump();
-    expect(find.text('Wake'), findsOneWidget);
-    expect(find.byType(BranchPenguinCrew), findsOneWidget);
+            .widget<PenguinIllustration>(find.byType(PenguinIllustration))
+            .stage,
+        'egg');
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 500)));
     clock.dispose();
   });
 
