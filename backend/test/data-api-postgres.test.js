@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { ensureApplicationSchema } from '../src/application-schema.js';
+import { installLateReportApi } from '../src/late-report.js';
 import { installDataApi } from '../src/data-api.js';
 import { installNeonPhotoApi, MAX_PHOTO_BYTES } from '../src/neon-employee-photos.js';
 import { copyPhotos } from '../scripts/copy-employee-photos-to-neon.js';
@@ -46,11 +47,38 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
     };
     installDataApi(app, { pool, authenticate });
     installNeonPhotoApi(app, { pool, authenticate });
+    installLateReportApi(app, { pool, authenticate });
     server = await new Promise(resolve => { const s=app.listen(0,'127.0.0.1',()=>resolve(s)); });
     const base=`http://127.0.0.1:${server.address().port}/api/data`;
     async function request(path, identity='admin', options={}) {
       return fetch(base+path,{...options,headers:{Authorization:'Bearer '+identity,'Content-Type':'application/json',...options.headers}});
     }
+    await t.test('late report and durable admin review round trip preserve attendance and protect private history',async()=>{
+      await pool.query(`INSERT INTO monthly_rosters(branch_id,employee_id,roster_year,roster_month,week_number,shift_start,shift_end,break_minutes)
+        VALUES ('FIX_A','FIX_E1',2026,10,1,'09:00','18:00',60);
+        INSERT INTO attendance(employee_id,branch_id,attendance_date,check_in,check_out,status,break_minutes)
+        VALUES ('FIX_E1','FIX_A','2026-10-01','09:10','18:00','Late',75),
+               ('FIX_E1','FIX_A','2026-10-02','09:05','18:00','Late',80);`);
+      const endpoint=base.replace('/api/data','')+'/api/attendance/late-report';
+      const reportResponse=await fetch(endpoint+'?year=2026&month=10',{headers:{Authorization:'Bearer admin'}});
+      assert.equal(reportResponse.status,200);
+      const report=await reportResponse.json();
+      assert.equal(report.reports[0].count,4);
+      const event=report.reports[0].events[0];
+      const body={branch_id:'FIX_A',employee_id:'FIX_E1',date:event.date,type:event.type,fingerprint:event.fingerprint,status:'approved',reason_code:'transport',reason:'Train delayed'};
+      const save=await fetch(endpoint+'/reviews',{method:'POST',headers:{Authorization:'Bearer admin','Content-Type':'application/json'},body:JSON.stringify(body)});
+      assert.equal(save.status,200);
+      const refreshed=await (await fetch(endpoint+'?year=2026&month=10',{headers:{Authorization:'Bearer admin'}})).json();
+      assert.equal(refreshed.reports[0].count,4);assert.equal(refreshed.reports[0].events[0].review.reviewed_by,'FIX_ADMIN');
+      assert.equal((await pool.query("SELECT check_in FROM attendance WHERE employee_id='FIX_E1' AND attendance_date='2026-10-01'")).rows[0].check_in,'09:10');
+      assert.equal((await fetch(endpoint+'?year=2026&month=10',{headers:{Authorization:'Bearer employee'}})).status,403);
+      assert.equal((await request('/late_report_reviews','employee')).status,404);
+      const permissions=await pool.query("SELECT has_table_privilege('authenticated','app_private.late_report_reviews','SELECT') AS readable");
+      assert.equal(permissions.rows[0].readable,false);
+      await pool.query("UPDATE attendance SET check_in='09:15' WHERE employee_id='FIX_E1' AND attendance_date='2026-10-01'");
+      const outdated=await fetch(endpoint+'/reviews',{method:'POST',headers:{Authorization:'Bearer admin','Content-Type':'application/json'},body:JSON.stringify(body)});
+      assert.equal(outdated.status,409);
+    });
     await t.test('requires authentication and never exposes accounts or passwords',async()=>{
       assert.equal((await request('/employees','unknown')).status,401);
       assert.equal((await request('/app_user')).status,404);

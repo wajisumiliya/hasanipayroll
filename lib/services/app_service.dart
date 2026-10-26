@@ -442,6 +442,14 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  Future<void> saveLateReportReview(Map<String, dynamic> review) async {
+    final data = await _postAuth('/api/attendance/late-report/reviews', review,
+        authenticated: true);
+    if (data['ok'] != true) {
+      throw StateError(data['message']?.toString() ?? 'Unable to save review.');
+    }
+  }
+
   /// Salary and roster data for one employee, scoped by the Node JWT.
   Future<Map<String, dynamic>> loadAttendanceSheetDependencies({
     required String employeeId,
