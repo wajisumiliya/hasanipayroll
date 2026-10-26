@@ -17,6 +17,7 @@ import '../services/payroll_calculation_service.dart';
 import '../services/pdf_service.dart';
 import '../services/notification_service.dart';
 import 'login_screen.dart';
+import 'late_report_page.dart';
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:flutter/services.dart' show ByteData, rootBundle;
@@ -9700,6 +9701,16 @@ class _AdminDashboardState extends State<AdminDashboard>
                 const Text(
                   'Attendance',
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  icon: const Icon(Icons.schedule),
+                  label: const Text('Late Report'),
+                  onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                          builder: (_) => LateReportPage(
+                              month: selectedAttendanceMonth,
+                              branches: branches))),
                 ),
                 const SizedBox(height: 8),
                 const Text(

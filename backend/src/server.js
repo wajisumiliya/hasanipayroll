@@ -1,3 +1,4 @@
+import { installLateReportApi } from './late-report.js';
 import { createApiCorsOptions } from "./api-cors.js";
 import { isDailyReportPin } from "./daily-report-pin.js";
 import { findAccountByLogin, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
@@ -1856,6 +1857,8 @@ app.get("/api/branches", authenticate, async (req, res) => {
     return genericError(res, 503);
   }
 });
+
+installLateReportApi(app, { authenticate, pool });
 
 // Neon attendance-sheet dependencies: read only within the authenticated scope.
 app.get("/api/attendance-sheet/dependencies", authenticate, async (req, res) => {

@@ -428,6 +428,20 @@ class AppService extends ChangeNotifier {
           data['message']?.toString() ?? 'Unable to submit attendance.');
   }
 
+  Future<Map<String, dynamic>> loadLateReport(DateTime month) async {
+    final data = await _getAuth(Uri(
+        path: '/api/attendance/late-report',
+        queryParameters: {
+          'year': '${month.year}',
+          'month': '${month.month}'
+        }).toString());
+    if (data['ok'] != true) {
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to load late report.');
+    }
+    return data;
+  }
+
   /// Salary and roster data for one employee, scoped by the Node JWT.
   Future<Map<String, dynamic>> loadAttendanceSheetDependencies({
     required String employeeId,
