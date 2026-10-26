@@ -24,9 +24,8 @@ count. Break excess minutes exclude the permitted portion of the break.
 Monthly comparisons use the same employee's recorded branch in the previous
 calendar month, including previous totals below the three-occurrence threshold.
 January correctly compares the previous December. The current month may still
-be in progress; missing previous records are listed separately, not treated as
-proof of improvement. Comparisons reflect saved attendance, not guaranteed
-complete submissions.
+be in progress. Comparisons reflect saved attendance, not guaranteed complete
+submissions.
 
 ## Rosters and incomplete data
 
@@ -37,13 +36,10 @@ follow the attendance sheet's non-working-day rules. Recorded break pairs
 stored daily total. Legacy rows without pairs use `break_minutes`. Overnight
 break periods and shifts are supported.
 
-Incomplete-record sections identify the employee, branch, date, and precise
-issues: missing roster, invalid/missing shift start, break allowance, check-in,
-break duration, or an unmatched break start/end. Independently measurable events
-still count: an incomplete break does not suppress a known late arrival. Unknown
-values are never assumed to be zero. Completely blank, non-working days are not
-invented as missing records. This reports incomplete **saved rows**, not entirely
-absent attendance dates. Complete records in Attendance/Roster, then refresh.
+Independently measurable events still count: an incomplete break does not suppress
+a known late arrival. Unknown values are not assumed to be zero. Incomplete current
+or previous records are not listed on the screen, sent in the report response,
+or included in exports.
 
 ## Admin reviews and audit history
 
@@ -61,21 +57,30 @@ make deductions, or send messages. Correct attendance separately if appropriate.
 
 ## Exports
 
-PDF and Excel export the selected month and branch. They include summaries,
-severity, previous counts, detailed event timings, current reviews and reasons,
-reviewer names/times, review history, and incomplete current/previous records.
-Excel has Summary, Events, Incomplete records, and Review history sheets. Values
-and notes are written as literal cells, never evaluated as formulas. PDF supports
-multiple pages with repeated table headings and page numbers; bundled fonts
-support Latin names and typographic punctuation without a font network request.
+PDF and Excel export only flagged employees for the selected month and branch.
+They include summaries, severity, previous counts, detailed event timings,
+current reviews/reasons, reviewer names/times, and review history. There are no
+incomplete-record sections or sheets. Excel has Summary, Events, and Review
+history sheets; strings are literal values, not formulas. PDF supports multiple
+pages, page numbers, and bundled fonts without a font-network request.
+
+Generation runs in a Node worker thread using PDFKit and ExcelJS, not in Flutter
+or the HTTP event loop. Only filtered report data reaches the worker. Up to two
+workers run concurrently, with a 30-second deadline and a 256 MB heap limit per
+worker. Errors/timeouts release capacity and the app re-enables export buttons.
+The client asynchronously downloads the completed file through its authenticated
+API and saves it using the existing file-save flow. Month/branch navigation stays
+available while the export runs; the file retains the selection at click time.
 
 ## API and deployment
 
 - `GET /api/attendance/late-report?year=2026&month=10`
+- `GET /api/attendance/late-report/export?year=2026&month=10&format=pdf`
+  (format is pdf or xlsx; optional branch_id restricts to one branch).
 - `POST /api/attendance/late-report/reviews` with branch_id, employee_id, date,
   type, fingerprint, status, reason_code, reason.
 
-Both endpoints require an authenticated ADMIN with attendance access; employee,
+All endpoints require an authenticated ADMIN with attendance access; employee,
 branch, reviewer-preview, and requests-only accounts receive HTTP 403 before queries. Recorded branches preserve historical
 locations when employees transfer. Saved attendance includes submitted and
 unsubmitted rows and does not omit inactive employees' historical events.

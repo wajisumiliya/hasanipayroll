@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/screens/late_report_page.dart';
@@ -101,7 +102,7 @@ Future<void> chooseBranch(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-      'shows summaries, severity, comparison, detailed events and branch-filtered missing lists',
+      'shows summaries and details without incomplete sections even from older servers',
       (tester) async {
     final months = <DateTime>[];
     await tester.pumpWidget(MaterialApp(
@@ -117,10 +118,9 @@ void main() {
     expect(find.text('Late arrivals'), findsOneWidget);
     expect(find.text('Exceeded breaks'), findsOneWidget);
     expect(find.text('Excess minutes'), findsOneWidget);
-    await tester.ensureVisible(find.text('Incomplete current records (1)'));
-    await tester.tap(find.text('Incomplete current records (1)'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Missing roster'), findsOneWidget);
+    expect(find.textContaining('Incomplete current records'), findsNothing);
+    expect(
+        find.textContaining('Incomplete previous-month records'), findsNothing);
     await tester.ensureVisible(find.text('Employee A · E1'));
     expect(find.textContaining('2 late arrivals + 2 exceeded breaks = 4'),
         findsOneWidget);
@@ -223,8 +223,7 @@ void main() {
     expect(exports.first.branchLabel, 'ALOR SETAR');
     expect(exports.first.reports.length, 1);
     expect(exports.first.reports.single['employee_id'], 'E1');
-    expect(exports.first.missing, isEmpty);
-    expect(exports.first.previousMissing, isEmpty);
+    expect(exports.first.branchId, 'A');
     expect(exports.first.month, DateTime(2026, 10));
   });
   testWidgets(
@@ -279,5 +278,39 @@ void main() {
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
     expect(find.textContaining('No employees with 3'), findsOneWidget);
+  });
+  testWidgets(
+      'pending export leaves page responsive and failure re-enables export controls',
+      (tester) async {
+    final pending = Completer<void>();
+    await tester.pumpWidget(MaterialApp(
+        home: LateReportPage(
+            month: DateTime(2026, 10),
+            branches: branches,
+            loader: (_) async => fixture(),
+            exporter: (_, __) => pending.future)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Export PDF'));
+    await tester.pump();
+    expect(
+        tester
+            .widget<OutlinedButton>(
+                find.widgetWithText(OutlinedButton, 'Export Excel'))
+            .onPressed,
+        isNull);
+    await tester.tap(find.byTooltip('Previous month'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('September 2026'), findsOneWidget);
+    pending.completeError(StateError('offline'));
+    await tester.pumpAndSettle();
+    expect(find.text('Unable to export report. Please retry.'), findsOneWidget);
+    expect(
+        tester
+            .widget<OutlinedButton>(
+                find.widgetWithText(OutlinedButton, 'Export Excel'))
+            .onPressed,
+        isNotNull);
+    expect(tester.takeException(), isNull);
   });
 }

@@ -70,6 +70,14 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
       assert.equal(save.status,200);
       const refreshed=await (await fetch(endpoint+'?year=2026&month=10',{headers:{Authorization:'Bearer admin'}})).json();
       assert.equal(refreshed.reports[0].count,4);assert.equal(refreshed.reports[0].events[0].review.reviewed_by,'FIX_ADMIN');
+      assert.equal('missing_records' in refreshed,false);
+      for(const format of ['pdf','xlsx']) {
+        const exported=await fetch(endpoint+`/export?year=2026&month=10&format=${format}&branch_id=FIX_A`,{headers:{Authorization:'Bearer admin'}});
+        assert.equal(exported.status,200);
+        const bytes=Buffer.from((await exported.json()).file_base64,'base64');
+        assert.ok(bytes.length>500);assert.equal(bytes.subarray(0,format==='pdf'?5:2).toString(),format==='pdf'?'%PDF-':'PK');
+      }
+
       assert.equal((await pool.query("SELECT check_in FROM attendance WHERE employee_id='FIX_E1' AND attendance_date='2026-10-01'")).rows[0].check_in,'09:10');
       assert.equal((await fetch(endpoint+'?year=2026&month=10',{headers:{Authorization:'Bearer employee'}})).status,403);
       assert.equal((await request('/late_report_reviews','employee')).status,404);

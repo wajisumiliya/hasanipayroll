@@ -35,9 +35,9 @@ test('three late arrivals alone and three break excesses alone qualify',()=>{
  assert.equal(report([1,2,3].map(d=>day(d,'09:00',61))).reports[0].break_count,3);
 });
 
-function api(pool) {
+function api(pool, renderExport) {
   const routes = {};
-  installLateReportApi({get:(path,auth,fn)=>{routes.get=fn;},post:(path,auth,fn)=>{routes.post=fn;}}, {authenticate:()=>{},pool});
+  installLateReportApi({get:(path,auth,fn)=>{routes[path.endsWith('/export')?'export':'get']=fn;},post:(path,auth,fn)=>{routes.post=fn;}}, {authenticate:()=>{},pool,renderExport});
   return routes;
 }
 function response() {return {status(n){this.code=n;return this;},json(v){this.body=v;return this;}};}
@@ -49,6 +49,7 @@ function fakePool(current=[day(1,'09:05'),day(2,'09:05'),day(3,'09:05')], previo
     if(sql.includes('FROM public.attendance')) return {rows:(params[0]==='2026-10-01'?current:previous).map(data=>({data}))};
     if(sql.includes('FROM public.daily_rosters')) return {rows:[]};
     if(sql.includes('FROM public.monthly_rosters')) return {rows:[{data:{...roster,roster_year:params[0],roster_month:params[1]}}]};
+    if(sql.includes('FROM public.branches')) return {rows:[{id:'A',name:'ALOR SETAR'},{id:'B',name:'ASTANA'}]};
     if(sql.includes('FROM public.employees')) return {rows:[{employee_id:'E1',name:'Employee A'}]};
     if(sql.includes('FROM app_private.late_report_reviews')) return {rows:reviews};
     throw Error('Unexpected SQL');
@@ -138,4 +139,25 @@ test('reviewer preview and requests-only admin accounts cannot read or review em
    const res=response();await route({user:{role:'ADMIN'},auth:{app_metadata:metadata},query:{year:2026,month:10}},res);assert.equal(res.code,403);
  }
  assert.equal(pool.calls.length,0);
+});
+
+test('report and export exclude thousands of incomplete rows and keep selected branch/month',async()=>{
+ const incomplete=Array.from({length:5000},(_,i)=>({...day(1,'09:05'),employee_id:`M${i}`,branch_id:'B'}));
+ const pool=fakePool([...Array.from({length:3},(_,i)=>day(i+1,'09:05')),...incomplete]);
+ let payload;
+ const routes=api(pool,async data=>{payload=data;return Buffer.from('test-file');});
+ const res=response();await routes.get({user:{role:'ADMIN'},query:{year:2026,month:10}},res);
+ assert.equal(res.body.reports.length,1);assert.equal('missing_records' in res.body,false);assert.equal('previous_missing_records' in res.body,false);
+ const file=response();await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'xlsx',branch_id:'A'}},file);
+ assert.equal(file.body.ok,true);assert.equal(Buffer.from(file.body.file_base64,'base64').toString(),'test-file');
+ assert.equal(payload.branchLabel,'ALOR SETAR');assert.equal(payload.reports.length,1);assert.equal(payload.month,10);
+ assert.equal('missing_records' in payload,false);assert.equal(JSON.stringify(payload).includes('Missing roster'),false);
+});
+test('export rejects invalid formats, periods, and unknown branches',async()=>{
+ const pool=fakePool(),routes=api(pool,async()=>{throw Error('Must not render');});
+ for(const query of [{year:2026,month:13,format:'pdf'},{year:2026,month:10,format:'csv'}]) {
+   const res=response();await routes.export({user:{role:'ADMIN'},query},res);assert.equal(res.code,400);
+ }
+ assert.equal(pool.calls.length,0);
+ const res=response();await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',branch_id:'unknown'}},res);assert.equal(res.code,404);
 });

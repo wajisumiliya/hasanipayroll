@@ -76,22 +76,15 @@ class _LateReportPageState extends State<LateReportPage> {
     final payload = LateReportExportData(
         month: _month,
         branchLabel: _branch == null ? 'All branches' : _branchName(_branch),
-        branchNames: {
-          for (final b in widget.branches)
-            '${b['id'] ?? b['branch_id']}'.toUpperCase():
-                '${b['name'] ?? b['branch_name']}'
-        },
-        reports: _filtered(data['reports']),
-        missing: _filtered(data['missing_records']),
-        previousMissing: _filtered(data['previous_missing_records']));
+        branchId: _branch,
+        reports: _filtered(data['reports']));
     setState(() => _exporting = true);
     try {
       if (widget.exporter != null) {
         await widget.exporter!(format, payload);
       } else {
-        final bytes = format == 'pdf'
-            ? await LateReportExportService.pdf(payload)
-            : LateReportExportService.excel(payload);
+        final bytes = await AppService.instance.loadLateReportExport(
+            month: payload.month, branchId: payload.branchId, format: format);
         final scope =
             payload.branchLabel.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
         await FileSaver.instance.saveFile(
@@ -157,21 +150,6 @@ class _LateReportPageState extends State<LateReportPage> {
     ]);
   }
 
-  Widget _missing(List<Map<String, dynamic>> rows, String title) => Card(
-        color: const Color(0xFFFFF8E5),
-        child: ExpansionTile(
-            title: Text('$title (${rows.length})'),
-            subtitle: const Text(
-                'Results may be incomplete. Complete these records and refresh.'),
-            children: rows
-                .map((r) => ListTile(
-                      title: Text('${r['name']} · ${r['employee_id']}'),
-                      subtitle: Text(
-                          '${_branchName(r['branch_id'])} · ${r['date']}\n${(r['issues'] as List).join(', ')}'),
-                    ))
-                .toList()),
-      );
-
   Widget _event(Map<String, dynamic> person, dynamic value) {
     final e = Map<String, dynamic>.from(value as Map);
     final review = e['review'] as Map?;
@@ -235,8 +213,6 @@ class _LateReportPageState extends State<LateReportPage> {
 
   Widget _results(Map<String, dynamic> data) {
     final reports = _filtered(data['reports']);
-    final missing = _filtered(data['missing_records']);
-    final previousMissing = _filtered(data['previous_missing_records']);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Wrap(spacing: 8, runSpacing: 8, children: [
         OutlinedButton.icon(
@@ -255,19 +231,11 @@ class _LateReportPageState extends State<LateReportPage> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2))),
       ]),
-      const SizedBox(height: 16), _summary(reports),
+      const SizedBox(height: 16),
+      _summary(reports),
       const SizedBox(height: 12),
       const Text(
           'Severity: Low 3–4 · Medium 5–6 · High 7+. Reviews and approvals retain the recorded totals. Comparisons use saved records; the current month may still be in progress.'),
-      if (missing.isNotEmpty) _missing(missing, 'Incomplete current records'),
-      if (previousMissing.isNotEmpty)
-        _missing(previousMissing, 'Incomplete previous-month records'),
-      // Older servers expose only a count; keep that warning during a rolling deployment.
-      if (missing.isEmpty &&
-          data['missing_records'] == null &&
-          (data['missing_schedules'] ?? 0) != 0)
-        const Text(
-            'Some attendance days could not be assessed. Complete missing schedule details and refresh.'),
       const SizedBox(height: 12),
       Text('${reports.length} employee(s) meet the monthly threshold',
           style: const TextStyle(fontWeight: FontWeight.bold)),

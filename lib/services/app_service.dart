@@ -442,6 +442,24 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  Future<Uint8List> loadLateReportExport(
+      {required DateTime month,
+      required String format,
+      String? branchId}) async {
+    final data = await _getAuth(
+        Uri(path: '/api/attendance/late-report/export', queryParameters: {
+      'year': '${month.year}',
+      'month': '${month.month}',
+      'format': format,
+      if (branchId != null) 'branch_id': branchId
+    }).toString());
+    if (data['ok'] != true || data['file_base64'] is! String) {
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to export report.');
+    }
+    return base64Decode(data['file_base64'] as String);
+  }
+
   Future<void> saveLateReportReview(Map<String, dynamic> review) async {
     final data = await _postAuth('/api/attendance/late-report/reviews', review,
         authenticated: true);

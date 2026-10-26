@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { renderLateReport } from './late-report-export.js';
 
 const nonWorking = new Set(['OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'PH-OFF', 'PH-SPL', 'UNPAID']);
 const key = (...parts) => parts.map(v => String(v ?? '').trim().toUpperCase()).join('|');
@@ -124,24 +125,54 @@ const admin = req => String(req.user?.role ?? '').toUpperCase() === 'ADMIN' &&
   !req.auth?.app_metadata?.is_reviewer && req.auth?.app_metadata?.staff_scope !== 'requests';
 const validPeriod = (year, month) => Number.isInteger(year) && year >= 2000 && year <= 2100 && Number.isInteger(month) && month >= 1 && month <= 12;
 
-export function installLateReportApi(app, { authenticate, pool }) {
+async function reportForMonth(pool, year, month) {
+  const previousDate = new Date(Date.UTC(year, month - 2, 1));
+  const [current, previous] = await Promise.all([
+    loadPeriod(pool, year, month), loadPeriod(pool, previousDate.getUTCFullYear(), previousDate.getUTCMonth() + 1),
+  ]);
+  const oldCounts = new Map(previous.reports.map(r => [key(r.branch_id, r.employee_id), r.count]));
+  const reports = current.reports.filter(r => r.count >= 3).map(r => ({ ...r,
+    previous_count: oldCounts.get(key(r.branch_id, r.employee_id)) ?? 0,
+    change: r.count - (oldCounts.get(key(r.branch_id, r.employee_id)) ?? 0) }));
+  // Do not transmit thousands of unrequested incomplete records to the app.
+  return {reports, threshold: 3,
+    previous_period: {year: previousDate.getUTCFullYear(), month: previousDate.getUTCMonth() + 1}};
+}
+
+export function installLateReportApi(app, { authenticate, pool, renderExport = renderLateReport }) {
   app.get('/api/attendance/late-report', authenticate, async (req, res) => {
     if (!admin(req)) return res.status(403).json({ ok: false, message: 'Administrator access required.' });
     const year = Number(req.query.year), month = Number(req.query.month);
     if (!validPeriod(year, month)) return res.status(400).json({ ok: false, message: 'Invalid report month.' });
     try {
-      const previousDate = new Date(Date.UTC(year, month - 2, 1));
-      const [current, previous] = await Promise.all([loadPeriod(pool, year, month), loadPeriod(pool, previousDate.getUTCFullYear(), previousDate.getUTCMonth() + 1)]);
-      const oldCounts = new Map(previous.reports.map(r => [key(r.branch_id, r.employee_id), r.count]));
-      const reports = current.reports.filter(r => r.count >= 3).map(r => ({ ...r,
-        previous_count: oldCounts.get(key(r.branch_id, r.employee_id)) ?? 0,
-        change: r.count - (oldCounts.get(key(r.branch_id, r.employee_id)) ?? 0) }));
-      return res.json({ ok: true, ...current, reports,
-        previous_period: { year: previousDate.getUTCFullYear(), month: previousDate.getUTCMonth() + 1 },
-        previous_missing_records: previous.missing_records });
+      return res.json({ok: true, ...await reportForMonth(pool, year, month)});
     } catch (error) {
       console.error('LATE REPORT ERROR:', error.message);
       return res.status(503).json({ ok: false, message: 'Unable to load late report. Please retry.' });
+    }
+  });
+
+  app.get('/api/attendance/late-report/export', authenticate, async (req, res) => {
+    if (!admin(req)) return res.status(403).json({ok: false, message: 'Administrator access required.'});
+    const year = Number(req.query.year), month = Number(req.query.month);
+    const format = String(req.query.format ?? '');
+    const branchId = String(req.query.branch_id ?? '').trim();
+    if (!validPeriod(year, month) || !['pdf','xlsx'].includes(format) || branchId.length > 100) {
+      return res.status(400).json({ok: false, message: 'Invalid export period, branch, or format.'});
+    }
+    try {
+      const [report, branchRows] = await Promise.all([
+        reportForMonth(pool, year, month), pool.query('SELECT id,name FROM public.branches'),
+      ]);
+      const branches = Object.fromEntries(branchRows.rows.map(b => [key(b.id), b.name === 'SUNGAI PETANI' ? 'SP-EDAR' : b.name]));
+      if (branchId && !Object.hasOwn(branches, key(branchId))) return res.status(404).json({ok: false, message: 'Branch not found.'});
+      const reports = report.reports.filter(r => !branchId || key(r.branch_id) === key(branchId));
+      const bytes = await renderExport({year, month, format, reports, branches,
+        branchLabel: branchId ? branches[key(branchId)] : 'All branches'});
+      return res.json({ok: true, file_base64: bytes.toString('base64')});
+    } catch (error) {
+      console.error('LATE EXPORT ERROR:', error.message);
+      return res.status(503).json({ok: false, message: 'Unable to export report. Please retry.'});
     }
   });
 
