@@ -33,11 +33,12 @@ import 'monthly_roster_page.dart';
 import 'leave_requests_approval_page.dart';
 import 'daily_report_page.dart';
 import 'ea_forms_page.dart';
-import '../dashboard_brand_logos.dart';
 import '../widgets/employee_photo.dart';
 import '../widgets/employee_profile_details.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/premium_portal_sidebar.dart';
+import '../widgets/modern_admin_overview.dart';
+import '../widgets/modern_admin_navigation.dart';
 
 class _DashboardHeaderPainter extends CustomPainter {
   const _DashboardHeaderPainter();
@@ -234,6 +235,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   DateTime? selectedLogDate;
   Future<Map<String, dynamic>>? _dashboardDataFuture;
   String? _dashboardDataFutureKey;
+  Future<Map<String, dynamic>>? _dashboardActivityFuture;
+  String? _dashboardActivityKey;
   Future<List<dynamic>>? _payrollPageFuture;
   String? _payrollPageFutureKey;
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
@@ -309,6 +312,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       _adminEmployeesFuture = null;
       _dashboardDataFuture = null;
       _dashboardDataFutureKey = null;
+      _dashboardActivityFuture = null;
       _payrollPageFuture = null;
       _payrollPageFutureKey = null;
     });
@@ -477,6 +481,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Status View';
       case 17:
         return 'Branch Passwords';
+      case 18:
+        return 'Late Report';
       default:
         return 'Dashboard';
     }
@@ -590,6 +596,8 @@ class _AdminDashboardState extends State<AdminDashboard>
 
       case 17:
         return _branchPasswordPage();
+      case 18:
+        return _modernLateReportPage();
 
       default:
         return _dashboardPage();
@@ -807,45 +815,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Widget _portalPage(Widget child) {
-    final dashboard = selectedPage == 0;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: dashboard ? _warmBackground : null,
-            gradient: dashboard
-                ? null
-                : const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [_warmBackground, Color(0xFFEDE7D8)],
-                  ),
-          ),
-        ),
-        if (dashboard)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Center(
-                child: Opacity(
-                  opacity: .025,
-                  child: FractionallySizedBox(
-                    widthFactor: .72,
-                    heightFactor: .60,
-                    child: Image.asset(
-                      'assets/hasani_books_logo.jpg',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        Positioned.fill(child: child),
-      ],
-    );
-  }
+  Widget _portalPage(Widget child) =>
+      ColoredBox(color: adminCanvas, child: child);
 
   // ===========================================================================
   // MOBILE LAYOUT
@@ -854,17 +825,14 @@ class _AdminDashboardState extends State<AdminDashboard>
   Widget _mobileLayout() {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: selectedPage == 0
-            ? const Color(0xFF121626)
-            : _portalTheme.header.first,
+        backgroundColor: adminNavy,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(
-          _pageTitle(),
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+        title: selectedPage == 0
+            ? Image.asset('assets/hasani_books_logo.jpg',
+                height: 32, width: 156, fit: BoxFit.contain)
+            : Text(_pageTitle(),
+                style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           const AppReloadButton(color: Colors.white),
           IconButton(
@@ -874,134 +842,42 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         ],
       ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: Column(
-            children: [
-              _drawerHeader(),
-              const Divider(),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: _attendanceOnly
-                      ? [
-                          _drawerItem(
-                            'Attendance',
-                            Icons.event_available_rounded,
-                            3,
-                          ),
-                          _drawerItem(
-                            'Status View',
-                            Icons.view_sidebar_rounded,
-                            16,
-                          ),
-                        ]
-                      : [
-                          _drawerItem(
-                            'Dashboard',
-                            Icons.dashboard_outlined,
-                            0,
-                          ),
-                          _drawerItem(
-                            'Employees',
-                            Icons.people_outline,
-                            1,
-                          ),
-                          _drawerItem(
-                            'Payroll',
-                            Icons.payments_outlined,
-                            2,
-                          ),
-                          _drawerItem(
-                            'Employee Payslips',
-                            Icons.receipt_long_outlined,
-                            12,
-                          ),
-                          _drawerItem(
-                            'EA Forms',
-                            Icons.description_outlined,
-                            15,
-                          ),
-                          _drawerActionItem(
-                            'Edit Payroll',
-                            Icons.edit_note_rounded,
-                            onTap: () {
-                              Navigator.pop(context);
-                              _showEditPayrollDialog();
-                            },
-                          ),
-                          _drawerItem(
-                            'RHB Layout',
-                            Icons.account_balance_outlined,
-                            8,
-                          ),
-                          _drawerItem(
-                            'Attendance',
-                            Icons.access_time,
-                            3,
-                          ),
-                          _drawerItem(
-                            'Branch Logs',
-                            Icons.manage_history_outlined,
-                            9,
-                          ),
-                          _drawerItem(
-                            'Employee Requests',
-                            Icons.how_to_reg_outlined,
-                            10,
-                          ),
-                          _drawerItem(
-                            'OT Requests',
-                            Icons.more_time_outlined,
-                            11,
-                          ),
-                          _drawerItem(
-                            'Leave Requests',
-                            Icons.flight_takeoff_outlined,
-                            13,
-                          ),
-                          _drawerItem(
-                            'Daily Reports',
-                            Icons.assignment_outlined,
-                            14,
-                          ),
-                          _drawerItem(
-                            'Reports',
-                            Icons.bar_chart_outlined,
-                            6,
-                          ),
-                          _drawerItem(
-                            'Settings',
-                            Icons.settings_outlined,
-                            7,
-                          ),
-                          _drawerItem(
-                            'Branch Passwords',
-                            Icons.password_rounded,
-                            17,
-                          ),
-                        ],
-                ),
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(
-                  Icons.logout,
-                  color: Colors.red,
-                ),
-                title: const Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onTap: logout,
-              ),
-            ],
-          ),
-        ),
-      ),
+      drawer: Drawer(backgroundColor: adminNavy, child: _sidebar()),
+      bottomNavigationBar: _attendanceOnly
+          ? null
+          : Builder(
+              builder: (context) => NavigationBar(
+                    backgroundColor: Colors.white,
+                    indicatorColor: const Color(0xFFE7F0FF),
+                    selectedIndex: selectedPage == 0
+                        ? 0
+                        : selectedPage == 3
+                            ? 1
+                            : selectedPage == 2
+                                ? 2
+                                : 3,
+                    onDestinationSelected: (index) {
+                      if (index == 3) {
+                        Scaffold.of(context).openDrawer();
+                      } else {
+                        changePage([0, 3, 2][index]);
+                      }
+                    },
+                    destinations: const [
+                      NavigationDestination(
+                          icon: Icon(Icons.home_outlined),
+                          selectedIcon: Icon(Icons.home),
+                          label: 'Home'),
+                      NavigationDestination(
+                          icon: Icon(Icons.event_available_outlined),
+                          label: 'Attendance'),
+                      NavigationDestination(
+                          icon: Icon(Icons.account_balance_wallet_outlined),
+                          label: 'Payroll'),
+                      NavigationDestination(
+                          icon: Icon(Icons.more_horiz), label: 'More')
+                    ],
+                  )),
       body: _portalPage(_currentPage()),
     );
   }
@@ -1016,21 +892,26 @@ class _AdminDashboardState extends State<AdminDashboard>
           label: label,
           icon: icon,
           selected: selectedPage == page,
-          onTap: () => changePage(page),
+          onTap: () {
+            if (MediaQuery.sizeOf(context).width < 850) {
+              Navigator.of(context).pop();
+            }
+            changePage(page);
+          },
         );
-    return PremiumPortalSidebar(
-      portalLabel: 'Payroll Portal',
-      profileName: _adminScopeName,
-      profileDetail: _adminScopeLabel,
-      profileIcon: Icons.admin_panel_settings_outlined,
+    return ModernAdminSidebar(
+      name: _adminScopeName,
+      detail: _adminScopeLabel,
       items: _attendanceOnly
           ? [
               item('Attendance', Icons.event_available_rounded, 3),
               item('Status View', Icons.view_sidebar_rounded, 16),
             ]
           : [
-              item('Dashboard', Icons.grid_view_rounded, 0),
+              item('Overview', Icons.grid_view_rounded, 0),
               item('Employees', Icons.groups_rounded, 1),
+              item('Attendance', Icons.event_available_rounded, 3),
+              item('Late Report', Icons.schedule_outlined, 18),
               item('Payroll', Icons.account_balance_wallet_rounded, 2),
               item('Employee Payslips', Icons.badge_rounded, 12),
               item('EA Forms', Icons.description_rounded, 15),
@@ -1041,7 +922,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                 onTap: _showEditPayrollDialog,
               ),
               item('RHB Layout', Icons.account_balance_rounded, 8),
-              item('Attendance', Icons.event_available_rounded, 3),
               item('Branch Logs', Icons.store_rounded, 9),
               item('Employee Requests', Icons.approval_rounded, 10),
               item('OT Requests', Icons.more_time_rounded, 11),
@@ -1052,128 +932,6 @@ class _AdminDashboardState extends State<AdminDashboard>
               item('Branch Passwords', Icons.password_rounded, 17),
             ],
       onLogout: logout,
-    );
-
-    // Legacy sidebar retained below temporarily for safe source comparison.
-    return Container(
-      width: 245,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _portalTheme.sidebar,
-        ),
-        border: Border(
-          right: BorderSide(color: _portalTheme.glassBorder),
-        ),
-      ),
-      child: Column(
-        children: [
-          _drawerHeader(),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              children: [
-                _sidebarItem(
-                  'Dashboard',
-                  Icons.dashboard_outlined,
-                  0,
-                ),
-                _sidebarItem(
-                  'Employees',
-                  Icons.people_outline,
-                  1,
-                ),
-                _sidebarItem(
-                  'Payroll',
-                  Icons.payments_outlined,
-                  2,
-                ),
-                _sidebarItem(
-                  'Employee Payslips',
-                  Icons.receipt_long_outlined,
-                  12,
-                ),
-                _sidebarActionItem(
-                  'Edit Payroll',
-                  Icons.edit_note_rounded,
-                  _showEditPayrollDialog,
-                ),
-                _sidebarItem(
-                  'RHB Layout',
-                  Icons.account_balance_outlined,
-                  8,
-                ),
-                _sidebarItem(
-                  'Attendance',
-                  Icons.access_time,
-                  3,
-                ),
-                _sidebarItem(
-                  'Branch Logs',
-                  Icons.manage_history_outlined,
-                  9,
-                ),
-                _sidebarItem(
-                  'Employee Requests',
-                  Icons.how_to_reg_outlined,
-                  10,
-                ),
-                _sidebarItem(
-                  'OT Requests',
-                  Icons.more_time_outlined,
-                  11,
-                ),
-                _sidebarItem(
-                  'Leave Requests',
-                  Icons.flight_takeoff_outlined,
-                  13,
-                ),
-                _sidebarItem(
-                  'Daily Reports',
-                  Icons.assignment_outlined,
-                  14,
-                ),
-                _sidebarItem(
-                  'Reports',
-                  Icons.bar_chart_outlined,
-                  6,
-                ),
-                _sidebarItem(
-                  'Settings',
-                  Icons.settings_outlined,
-                  7,
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(
-              Icons.logout,
-              color: Colors.red,
-            ),
-            title: const Text(
-              'Logout',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            onTap: logout,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Â© Hasani Books Edar Sdn Bhd - 2026',
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.black45,
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
     );
   }
 
@@ -1430,89 +1188,37 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   Widget _topBar() {
-    final theme = _portalTheme;
     return Container(
-      height: 78,
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        boxShadow: [
-          BoxShadow(
-            color: theme.headerShadow,
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withValues(alpha: .20),
-          ),
-        ),
-      ),
-      child: CustomPaint(
-        painter: const _DashboardHeaderPainter(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Row(
-            children: [
-              Text(
-                _pageTitle().toUpperCase(),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              const Spacer(),
-              const AppReloadButton(color: Colors.white),
-              const SizedBox(width: 8),
-              PortalDayIndicator(theme: theme),
-              const SizedBox(width: 24),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white.withValues(alpha: .22),
-                child: Icon(
-                  Icons.admin_panel_settings,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _adminScopeName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    _adminScopeLabel,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 20),
-              IconButton(
-                tooltip: 'Logout',
-                onPressed: logout,
-                icon: const Icon(Icons.logout, color: Colors.white),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+        height: 72,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Color(0xFFE2E9F2)))),
+        child: Row(children: [
+          Text(_pageTitle(),
+              style: const TextStyle(
+                  color: adminNavy, fontWeight: FontWeight.w700, fontSize: 19)),
+          const Spacer(),
+          IconButton(
+              tooltip: 'Send notification',
+              onPressed: _showNotificationComposer,
+              icon: const Icon(Icons.notifications_none, color: adminNavy)),
+          const AppReloadButton(color: adminNavy),
+          const SizedBox(width: 16),
+          const CircleAvatar(
+              radius: 17,
+              backgroundColor: Color(0xFFE9F0FA),
+              child: Icon(Icons.person_outline, color: adminNavy, size: 20)),
+          const SizedBox(width: 9),
+          Text(_adminScopeName,
+              style: const TextStyle(
+                  color: adminNavy, fontWeight: FontWeight.w600)),
+          IconButton(
+              tooltip: 'Settings',
+              onPressed: () => changePage(7),
+              icon: const Icon(Icons.keyboard_arrow_down, color: adminNavy)),
+        ]));
   }
-
-  // ===========================================================================
-  // DASHBOARD
-  // ===========================================================================
 
   Future<void> _changeEmployeeStatus(
     Map<String, dynamic> employee,
@@ -1745,6 +1451,83 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
     return _dashboardDataFuture!;
   }
+
+  Future<Map<String, dynamic>> _dashboardActivityData() {
+    final today = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final key =
+        '${selectedDashboardMonth.year}-${selectedDashboardMonth.month}|${DateFormat('yyyy-MM-dd').format(today)}|${service.currentUser?.staffScope}';
+    if (_dashboardActivityFuture == null || _dashboardActivityKey != key) {
+      _dashboardActivityKey = key;
+      Future<dynamic> safe(Future<dynamic> future) async {
+        try {
+          return await future;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      dynamic canonical(dynamic value) => value is List
+          ? value
+              .map((row) => {
+                    ...Map<String, dynamic>.from(row as Map),
+                    'branch_id': _dashboardBranchKey(row['branch_id'])
+                  })
+              .toList()
+          : null;
+      final month = selectedDashboardMonth;
+      _dashboardActivityFuture = Future.wait([
+        safe(service.loadNeonAttendance(
+            date: DateFormat('yyyy-MM-dd').format(today))),
+        safe(service.loadLateReport(month).then((r) => r['reports'])),
+        safe(service.fetchLeaveRequestsFromNeon()),
+        safe(service.fetchOtRequestsFromNeon()),
+        safe(SupabaseService.getEmployeeRequests(status: 'PENDING')),
+      ]).then((rows) => {
+            'attendance': canonical(rows[0]),
+            'late': canonical(rows[1]),
+            'leave': canonical(rows[2]),
+            'ot': canonical(rows[3]),
+            'employee': canonical(rows[4]),
+            'staff_scope': service.currentUser?.staffScope,
+          });
+    }
+    return _dashboardActivityFuture!;
+  }
+
+  Future<void> _refreshModernDashboard() async {
+    setState(() {
+      _dashboardDataFuture = null;
+      _dashboardActivityFuture = null;
+    });
+    try {
+      await Future.wait([_dashboardPageData(), _dashboardActivityData()]);
+    } catch (_) {/* The dashboard FutureBuilder presents retry. */}
+  }
+
+  Widget _modernLateReportPage() => FutureBuilder<List<Map<String, dynamic>>>(
+      future: _attendanceBranchesFuture ??= SupabaseService.getBranches(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+              child: TextButton(
+                  onPressed: () =>
+                      setState(() => _attendanceBranchesFuture = null),
+                  child: const Text('Unable to load branches. Retry')));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return LateReportPage(
+            month: selectedDashboardMonth,
+            branches: snapshot.data!,
+            initialBranchId: snapshot.data!
+                .where((b) =>
+                    _dashboardBranchKey(b['id'] ?? b['branch_id']) ==
+                    selectedDashboardBranchId)
+                .map((b) => (b['id'] ?? b['branch_id']).toString())
+                .firstOrNull,
+            embedded: true);
+      });
 
   Future<List<dynamic>> _payrollPageData() {
     final key = '${selectedPayrollMonth.year}-${selectedPayrollMonth.month}';
@@ -2206,11 +1989,12 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         if (snapshot.hasError) {
           return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text('Unable to load dashboard: ${snapshot.error}'),
-            ),
-          );
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Unable to load dashboard.'),
+            TextButton(
+                onPressed: () => setState(() => _dashboardDataFuture = null),
+                child: const Text('Retry')),
+          ]));
         }
 
         final data = snapshot.data ?? {};
@@ -2257,8 +2041,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           return branchId == selectedDashboardBranchId;
         }).toList();
 
-        final activeEmployees = employees.where(_isActive).length;
-        final inactiveEmployees = employees.length - activeEmployees;
         final selectedActiveEmployees = employees.where((employee) {
           if (!_isActive(employee)) return false;
           if (selectedDashboardBranchId == null) return true;
@@ -2298,12 +2080,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                 !isTempId(employee) &&
                 !isForeign(employee))
             .toList();
-
-        final departments = employees
-            .map((e) => e['department']?.toString().trim() ?? '')
-            .where((v) => v.isNotEmpty)
-            .toSet()
-            .length;
 
         final upcomingBirthdays = _upcomingEmployeeEvents(
           selectedActiveEmployees,
@@ -2363,204 +2139,86 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
         final totalNet = totalGross - totalDeductions;
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            setState(() {
-              _attendanceBranchesFuture = SupabaseService.getBranches();
-            });
-            await _attendanceBranchesFuture;
+        return ModernAdminOverview(
+          month: selectedDashboardMonth,
+          branch: selectedDashboardBranchId,
+          branches: dashboardBranches,
+          employees: employees
+              .map((e) =>
+                  {...e, 'branch_id': _dashboardBranchKey(e['branch_id'])})
+              .toList(),
+          gross: totalGross,
+          deductions: totalDeductions,
+          net: totalNet,
+          activity: _dashboardActivityData(),
+          onMonth: (value) => setState(() => selectedDashboardMonth = value),
+          onBranch: (value) =>
+              setState(() => selectedDashboardBranchId = value),
+          onRefresh: _refreshModernDashboard,
+          onNavigate: (page) {
+            if (page == 2) selectedPayrollMonth = selectedDashboardMonth;
+            if (page == 6) selectedReportMonth = selectedDashboardMonth;
+            if (page == 12) selectedPayslipMonth = selectedDashboardMonth;
+            if (page == 3) {
+              selectedAttendanceMonth =
+                  DateTime.now().toUtc().add(const Duration(hours: 8));
+            }
+            changePage(page);
           },
-          color: _portalTheme.accent,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 720;
-
-              return SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.all(compact ? 12 : 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _dashboardCommandHero(
-                      totalGross: totalGross,
-                      totalNet: totalNet,
-                      basicPay: basicPay,
-                      allowances: allowances,
-                      overtime: overtime,
-                      bonus: bonus,
-                      totalDeductions: totalDeductions,
-                      epf: epf,
-                      epfEmployer: epfEmployer,
-                      socso: socso,
-                      socsoEmployer: socsoEmployer,
-                      eis: eis,
-                      eisEmployer: eisEmployer,
-                      pcb: pcb,
-                      employerContributions: employerContributions,
-                      payrollRecords: periodPayroll.length,
-                      activeLocalEmployees: activeLocalEmployees,
-                      activeTempEmployees: activeTempEmployees,
-                      activeManagementEmployees: activeManagementEmployees,
-                      activeForeignEmployees: activeForeignEmployees,
-                      selectedActiveEmployees: selectedActiveEmployees,
-                      availableYears: payroll
-                          .map((row) => DateTime.tryParse(
-                              (row['period'] ?? '').toString()))
-                          .whereType<DateTime>()
-                          .map((date) => date.year)
-                          .toSet()
-                          .toList()
-                        ..sort((a, b) => b.compareTo(a)),
-                      branchOptions: dashboardBranches,
-                      compact: compact,
-                      onGrossTap: () => _showPayrollFlow(
-                        employees,
-                        periodPayroll,
-                        title: 'Gross Payroll',
-                        metric: 'gross',
-                      ),
-                      onNetTap: () => _showPayrollFlow(
-                        employees,
-                        periodPayroll,
-                        title: 'Net Payroll',
-                        metric: 'net',
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _dashboardSectionTitle(
-                      'Workforce intelligence',
-                      'Tap any metric to explore the live records',
-                    ),
-                    const SizedBox(height: 10),
-                    _dashboardWorkforceOverview(
-                      compact: compact,
-                      employees: employees,
-                      activeEmployees: activeEmployees,
-                      inactiveEmployees: inactiveEmployees,
-                      departments: departments,
-                      birthdays: upcomingBirthdays,
-                      anniversaries: upcomingAnniversaries,
-                    ),
-                    const SizedBox(height: 16),
-                    _dashboardSectionTitle(
-                      'Payroll reports',
-                      'Preview a month before exporting or printing',
-                    ),
-                    const SizedBox(height: 10),
-                    LayoutBuilder(
-                      builder: (context, reportConstraints) {
-                        final columns = reportConstraints.maxWidth >= 1250
-                            ? 6
-                            : reportConstraints.maxWidth >= 760
-                                ? 3
-                                : reportConstraints.maxWidth >= 480
-                                    ? 2
-                                    : 1;
-                        final width = (reportConstraints.maxWidth -
-                                (10 * (columns - 1))) /
-                            columns;
-                        return Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            _dashboardReportCard(
-                              width,
-                              'Payroll',
-                              Icons.payments_outlined,
-                              const Color(0xFF1B2234),
-                              assetName: 'assets/hb_payroll_icon.png',
-                            ),
-                            _dashboardReportCard(
-                              width,
-                              'EPF',
-                              Icons.savings_outlined,
-                              const Color(0xFFD6B24F),
-                              imageBytes: dashboardEpfLogoBytes,
-                              fallbackLabel: 'KWSP',
-                            ),
-                            _dashboardReportCard(
-                              width,
-                              'SOCSO',
-                              Icons.health_and_safety_outlined,
-                              const Color(0xFF1B2234),
-                              imageBytes: dashboardSocsoLogoBytes,
-                              fallbackLabel: 'SOCSO',
-                            ),
-                            _dashboardReportCard(
-                              width,
-                              'EIS',
-                              Icons.shield_outlined,
-                              const Color(0xFFD6B24F),
-                              imageBytes: dashboardEisLogoBytes,
-                              fallbackLabel: 'EIS',
-                            ),
-                            _dashboardReportCard(
-                              width,
-                              'HRDF',
-                              Icons.account_balance_outlined,
-                              const Color(0xFF1B2234),
-                              imageBytes: dashboardHrdfLogoBytes,
-                              fallbackLabel: 'HRD',
-                            ),
-                            _dashboardReportCard(
-                              width,
-                              'Payroll Summary',
-                              Icons.summarize_outlined,
-                              const Color(0xFFD6B24F),
-                              assetName: 'assets/hb_payroll_icon.png',
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    if (compact) ...[
-                      _dashboardActionDock(),
-                      const SizedBox(height: 16),
-                      _dashboardPulsePanel(
-                        employees: employees.length,
-                        activeEmployees: activeEmployees,
-                        payrollRecords: periodPayroll.length,
-                        departments: departments,
-                        onDepartmentsTap: () => _showDepartmentFlow(employees),
-                        onPayrollTap: () => _showPayrollFlow(
-                          employees,
-                          periodPayroll,
-                          title: 'Payroll Records',
-                          metric: 'generate',
-                        ),
-                      ),
-                    ] else
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(flex: 3, child: _dashboardActionDock()),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              flex: 2,
-                              child: _dashboardPulsePanel(
-                                employees: employees.length,
-                                activeEmployees: activeEmployees,
-                                payrollRecords: periodPayroll.length,
-                                departments: departments,
-                                onDepartmentsTap: () =>
-                                    _showDepartmentFlow(employees),
-                                onPayrollTap: () => _showPayrollFlow(
-                                  employees,
-                                  periodPayroll,
-                                  title: 'Payroll Records',
-                                  metric: 'generate',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
+          onLateReport: () => changePage(18),
+          onGross: () => _showPayrollFlow(employees, periodPayroll,
+              title: 'Gross Payroll', metric: 'gross'),
+          onNet: () => _showPayrollFlow(employees, periodPayroll,
+              title: 'Net Payroll', metric: 'net'),
+          birthdays: upcomingBirthdays,
+          anniversaries: upcomingAnniversaries,
+          onCelebrate: (person, anniversary) =>
+              _sendCelebrationNotification(person, anniversary: anniversary),
+          tools: _dashboardActionDock(),
+          breakdown: _dashboardCommandHero(
+            totalGross: totalGross,
+            totalNet: totalNet,
+            basicPay: basicPay,
+            allowances: allowances,
+            overtime: overtime,
+            bonus: bonus,
+            totalDeductions: totalDeductions,
+            epf: epf,
+            epfEmployer: epfEmployer,
+            socso: socso,
+            socsoEmployer: socsoEmployer,
+            eis: eis,
+            eisEmployer: eisEmployer,
+            pcb: pcb,
+            employerContributions: employerContributions,
+            payrollRecords: periodPayroll.length,
+            activeLocalEmployees: activeLocalEmployees,
+            activeTempEmployees: activeTempEmployees,
+            activeManagementEmployees: activeManagementEmployees,
+            activeForeignEmployees: activeForeignEmployees,
+            selectedActiveEmployees: selectedActiveEmployees,
+            availableYears: payroll
+                .map((row) =>
+                    DateTime.tryParse((row['period'] ?? '').toString()))
+                .whereType<DateTime>()
+                .map((date) => date.year)
+                .toSet()
+                .toList()
+              ..sort((a, b) => b.compareTo(a)),
+            branchOptions: dashboardBranches,
+            compact: MediaQuery.sizeOf(context).width < 720,
+            onGrossTap: () => _showPayrollFlow(
+              employees,
+              periodPayroll,
+              title: 'Gross Payroll',
+              metric: 'gross',
+            ),
+            onNetTap: () => _showPayrollFlow(
+              employees,
+              periodPayroll,
+              title: 'Net Payroll',
+              metric: 'net',
+            ),
           ),
         );
       },
@@ -3812,7 +3470,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                       }
                       setDialogState(() => sending = true);
                       try {
-                        final delivery = await NotificationService.sendWithResult(
+                        final delivery =
+                            await NotificationService.sendWithResult(
                           title: titleController.text,
                           body: bodyController.text,
                           audience: audience,

@@ -10,8 +10,12 @@ class LateReportPage extends StatefulWidget {
       required this.month,
       required this.branches,
       this.loader,
+      this.embedded = false,
+      this.initialBranchId,
       this.reviewSaver,
       this.exporter});
+  final bool embedded;
+  final String? initialBranchId;
   final DateTime month;
   final List<Map<String, dynamic>> branches;
   final Future<Map<String, dynamic>> Function(DateTime)? loader;
@@ -30,6 +34,7 @@ class _LateReportPageState extends State<LateReportPage> {
   void initState() {
     super.initState();
     _month = widget.month;
+    _branch = widget.initialBranchId;
     _load();
   }
 
@@ -295,16 +300,25 @@ class _LateReportPageState extends State<LateReportPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Late Report'), actions: [
-          IconButton(
-              tooltip: 'Refresh',
-              onPressed: () => setState(_load),
-              icon: const Icon(Icons.refresh))
-        ]),
+        appBar: widget.embedded
+            ? null
+            : AppBar(title: const Text('Late Report'), actions: [
+                IconButton(
+                    tooltip: 'Refresh',
+                    onPressed: () => setState(_load),
+                    icon: const Icon(Icons.refresh))
+              ]),
         body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (widget.embedded)
+                Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                        tooltip: 'Refresh report',
+                        onPressed: () => setState(_load),
+                        icon: const Icon(Icons.refresh))),
               Row(children: [
                 IconButton(
                     tooltip: 'Previous month',

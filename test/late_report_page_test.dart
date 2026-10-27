@@ -313,4 +313,20 @@ void main() {
         isNotNull);
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+      'embedded report carries the dashboard branch and retains refresh',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: LateReportPage(
+            month: DateTime(2026, 10),
+            branches: branches,
+            embedded: true,
+            initialBranchId: 'A',
+            loader: (_) async => fixture())));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byTooltip('Refresh report'), findsOneWidget);
+    expect(find.text('Employee A · E1'), findsOneWidget);
+    expect(find.text('Employee B · E2'), findsNothing);
+  });
 }
