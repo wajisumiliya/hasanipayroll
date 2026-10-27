@@ -38,6 +38,7 @@ import '../widgets/employee_profile_details.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../widgets/modern_admin_overview.dart';
+import '../dashboard_brand_logos.dart';
 import '../widgets/modern_admin_navigation.dart';
 
 class _DashboardHeaderPainter extends CustomPainter {
@@ -2174,6 +2175,27 @@ class _AdminDashboardState extends State<AdminDashboard>
           anniversaries: upcomingAnniversaries,
           onCelebrate: (person, anniversary) =>
               _sendCelebrationNotification(person, anniversary: anniversary),
+          reports: AdminDashboardReportCards(itemBuilder: (width, report) {
+            final bytes = switch (report) {
+              'EPF' => dashboardEpfLogoBytes,
+              'SOCSO' => dashboardSocsoLogoBytes,
+              'EIS' => dashboardEisLogoBytes,
+              'HRDF' => dashboardHrdfLogoBytes,
+              _ => null
+            };
+            final icon = switch (report) {
+              'EPF' => Icons.savings_outlined,
+              'SOCSO' => Icons.health_and_safety_outlined,
+              'EIS' => Icons.shield_outlined,
+              'HRDF' => Icons.account_balance_outlined,
+              'Payroll Summary' => Icons.summarize_outlined,
+              _ => Icons.payments_outlined
+            };
+            return _dashboardReportCard(width, report, icon, adminBlue,
+                imageBytes: bytes,
+                assetName: bytes == null ? 'assets/hb_payroll_icon.png' : null,
+                fallbackLabel: bytes != null ? report : null);
+          }),
           tools: _dashboardActionDock(),
           breakdown: _dashboardCommandHero(
             totalGross: totalGross,
@@ -10663,6 +10685,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
+            selectedPayrollMonth = selectedDashboardMonth;
             if (const {'EPF', 'SOCSO', 'EIS'}.contains(title)) {
               _showStatutoryReport(title);
               return;

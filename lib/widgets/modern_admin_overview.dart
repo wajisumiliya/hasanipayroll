@@ -124,7 +124,8 @@ class ModernAdminOverview extends StatelessWidget {
       required this.anniversaries,
       required this.onCelebrate,
       required this.breakdown,
-      required this.tools});
+      required this.tools,
+      this.reports});
   final DateTime month;
   final String? branch;
   final Map<String, String> branches;
@@ -138,6 +139,7 @@ class ModernAdminOverview extends StatelessWidget {
   final VoidCallback onLateReport, onGross, onNet;
   final void Function(Map<String, dynamic>, bool) onCelebrate;
   final Widget breakdown, tools;
+  final Widget? reports;
   String money(double v) =>
       NumberFormat.currency(locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
           .format(v);
@@ -733,6 +735,20 @@ class ModernAdminOverview extends StatelessWidget {
                     const SizedBox(height: 22),
                     filters(context),
                     const SizedBox(height: 22),
+                    if (reports != null) ...[
+                      const Text('Payroll reports',
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: adminNavy)),
+                      const SizedBox(height: 5),
+                      const Text('Preview or export each report separately',
+                          style: TextStyle(
+                              color: Color(0xFF687C92), fontSize: 12)),
+                      const SizedBox(height: 12),
+                      reports!,
+                      const SizedBox(height: 22),
+                    ],
                     FutureBuilder<Map<String, dynamic>>(
                         future: activity,
                         builder: (_, s) {
@@ -825,4 +841,34 @@ class _AttendanceRing extends CustomPainter {
   @override
   bool shouldRepaint(covariant _AttendanceRing old) =>
       old.values.toString() != values.toString();
+}
+
+/// Always-visible report entry points retained from the original dashboard.
+class AdminDashboardReportCards extends StatelessWidget {
+  const AdminDashboardReportCards({super.key, required this.itemBuilder});
+  final Widget Function(double width, String report) itemBuilder;
+  static const reports = [
+    'Payroll',
+    'EPF',
+    'SOCSO',
+    'EIS',
+    'HRDF',
+    'Payroll Summary'
+  ];
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        final columns = c.maxWidth >= 1250
+            ? 6
+            : c.maxWidth >= 760
+                ? 3
+                : c.maxWidth >= 480
+                    ? 2
+                    : 1;
+        final width = (c.maxWidth - 10 * (columns - 1)) / columns;
+        return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children:
+                reports.map((report) => itemBuilder(width, report)).toList());
+      });
 }

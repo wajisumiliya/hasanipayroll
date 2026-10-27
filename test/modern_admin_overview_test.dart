@@ -117,6 +117,10 @@ ModernAdminOverview overviewWidget(
       anniversaries: const [],
       onCelebrate: (_, __) {},
       breakdown: const Text('Existing payroll details'),
+      reports: AdminDashboardReportCards(
+          itemBuilder: (width, report) => SizedBox(
+              width: width,
+              child: OutlinedButton(onPressed: () {}, child: Text(report)))),
       tools: tools ?? const Text('Existing import and notification tools'),
     );
 void main() {
@@ -219,5 +223,37 @@ void main() {
     await tester.tap(find.text('Astana').last);
     await tester.pumpAndSettle();
     expect(branch, 'B');
+  });
+  testWidgets(
+      'all six separate payroll reports stay visible and clickable on mobile',
+      (tester) async {
+    final selected = <String>[];
+    tester.view.physicalSize = const Size(390, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SingleChildScrollView(
+                child: AdminDashboardReportCards(
+                    itemBuilder: (width, report) => SizedBox(
+                        width: width,
+                        child: OutlinedButton(
+                            onPressed: () => selected.add(report),
+                            child: Text(report))))))));
+    for (final report in [
+      'Payroll',
+      'EPF',
+      'SOCSO',
+      'EIS',
+      'HRDF',
+      'Payroll Summary'
+    ]) {
+      expect(find.text(report), findsOneWidget);
+      await tester.tap(find.text(report));
+    }
+    expect(selected,
+        ['Payroll', 'EPF', 'SOCSO', 'EIS', 'HRDF', 'Payroll Summary']);
+    expect(tester.takeException(), isNull);
   });
 }

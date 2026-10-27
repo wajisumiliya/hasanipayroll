@@ -6,7 +6,9 @@ navigation moves into a matching drawer, with Home, Attendance, Payroll, and
 More available in bottom navigation. Employee and branch portal themes are
 unchanged. The existing Hasani Books logo is used.
 
-The overview includes reporting month/year and branch controls, four workforce
+The overview includes reporting month/year and branch controls, always-visible
+individual Payroll, EPF, SOCSO, EIS, HRDF, and Payroll Summary report cards with
+their original preview/export handlers and logos, followed by four workforce
 cards, payroll totals and comparison bars, an attendance ring, a five-row Late
 Report preview, pending admin approvals, and upcoming birthdays/anniversaries.
 It becomes one column on narrow screens; metric cards become a two-by-two grid,
