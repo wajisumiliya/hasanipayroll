@@ -1,16 +1,22 @@
 # Modern admin dashboard
 
-The approved navy-and-white dashboard is implemented for the admin portal.
+The selected **B — Ivory & Champagne** design is implemented for the admin portal.
+Warm ivory backgrounds, white softly elevated panels, charcoal text, champagne
+accents, and a dark espresso sidebar replace the earlier blue treatment.
 Desktop uses a 232 px sidebar and white account header. Below 850 px the full
 navigation moves into a matching drawer, with Home, Attendance, Payroll, and
 More available in bottom navigation. Employee and branch portal themes are
 unchanged. The existing Hasani Books logo is used.
 
-The overview includes reporting month/year and branch controls, always-visible
-individual Payroll, EPF, SOCSO, EIS, HRDF, and Payroll Summary report cards with
-their original preview/export handlers and logos, followed by four workforce
-cards, payroll totals and comparison bars, an attendance ring, a five-row Late
-Report preview, pending admin approvals, and upcoming birthdays/anniversaries.
+The overview includes reporting month/year and branch controls and an always-visible
+three-column/two-row desktop library for Payroll, EPF, SOCSO, EIS, HRDF, and Payroll
+Summary. Cards retain independent preview/export handlers and official agency marks.
+Payroll shows net payroll; Payroll Summary shows gross payroll; EPF, SOCSO, and EIS
+show the selected records' employee-plus-employer totals. HRDF shows its existing
+1% levy rate and links to the eligibility/levy report, without inventing a total.
+Below the library, the desktop left column contains a grouped workforce snapshot,
+payroll comparison, and Late Report preview. The right column contains attendance,
+admin approvals, and celebrations.
 It becomes one column on narrow screens; metric cards become a two-by-two grid,
 and Late Report rows become compact employee cards. Tests cover 320, 768, and
 1440 px widths. Month/year selection is grouped in a reporting-period dialog.

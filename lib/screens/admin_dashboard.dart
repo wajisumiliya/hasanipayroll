@@ -826,7 +826,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   Widget _mobileLayout() {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: adminNavy,
+        backgroundColor: adminInk,
         foregroundColor: Colors.white,
         elevation: 0,
         title: selectedPage == 0
@@ -843,13 +843,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         ],
       ),
-      drawer: Drawer(backgroundColor: adminNavy, child: _sidebar()),
+      drawer: Drawer(backgroundColor: adminInk, child: _sidebar()),
       bottomNavigationBar: _attendanceOnly
           ? null
           : Builder(
               builder: (context) => NavigationBar(
                     backgroundColor: Colors.white,
-                    indicatorColor: const Color(0xFFE7F0FF),
+                    indicatorColor: const Color(0xFFF1E7D3),
                     selectedIndex: selectedPage == 0
                         ? 0
                         : selectedPage == 3
@@ -1194,30 +1194,30 @@ class _AdminDashboardState extends State<AdminDashboard>
         padding: const EdgeInsets.symmetric(horizontal: 24),
         decoration: const BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: Color(0xFFE2E9F2)))),
+            border: Border(bottom: BorderSide(color: adminBorder))),
         child: Row(children: [
           Text(_pageTitle(),
               style: const TextStyle(
-                  color: adminNavy, fontWeight: FontWeight.w700, fontSize: 19)),
+                  color: adminInk, fontWeight: FontWeight.w700, fontSize: 19)),
           const Spacer(),
           IconButton(
               tooltip: 'Send notification',
               onPressed: _showNotificationComposer,
-              icon: const Icon(Icons.notifications_none, color: adminNavy)),
-          const AppReloadButton(color: adminNavy),
+              icon: const Icon(Icons.notifications_none, color: adminInk)),
+          const AppReloadButton(color: adminInk),
           const SizedBox(width: 16),
           const CircleAvatar(
               radius: 17,
-              backgroundColor: Color(0xFFE9F0FA),
-              child: Icon(Icons.person_outline, color: adminNavy, size: 20)),
+              backgroundColor: Color(0xFFF1E7D3),
+              child: Icon(Icons.person_outline, color: adminInk, size: 20)),
           const SizedBox(width: 9),
           Text(_adminScopeName,
               style: const TextStyle(
-                  color: adminNavy, fontWeight: FontWeight.w600)),
+                  color: adminInk, fontWeight: FontWeight.w600)),
           IconButton(
               tooltip: 'Settings',
               onPressed: () => changePage(7),
-              icon: const Icon(Icons.keyboard_arrow_down, color: adminNavy)),
+              icon: const Icon(Icons.keyboard_arrow_down, color: adminInk)),
         ]));
   }
 
@@ -2191,10 +2191,32 @@ class _AdminDashboardState extends State<AdminDashboard>
               'Payroll Summary' => Icons.summarize_outlined,
               _ => Icons.payments_outlined
             };
-            return _dashboardReportCard(width, report, icon, adminBlue,
-                imageBytes: bytes,
-                assetName: bytes == null ? 'assets/hb_payroll_icon.png' : null,
-                fallbackLabel: bytes != null ? report : null);
+            final amount = switch (report) {
+              'Payroll' => totalNet,
+              'EPF' => epf + epfEmployer,
+              'SOCSO' => socso + socsoEmployer,
+              'EIS' => eis + eisEmployer,
+              'Payroll Summary' => totalGross,
+              _ => null
+            };
+            final caption = switch (report) {
+              'Payroll' => 'Net payroll',
+              'Payroll Summary' => 'Gross payroll',
+              'HRDF' => 'Eligibility & levy report',
+              _ => 'Employee + employer'
+            };
+            return IvoryAdminReportCard(
+                width: width,
+                title: report,
+                icon: icon,
+                value: amount == null
+                    ? '1% levy'
+                    : NumberFormat.currency(
+                            locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
+                        .format(amount),
+                caption: caption,
+                logoBytes: bytes,
+                onTap: () => _openDashboardReport(report));
           }),
           tools: _dashboardActionDock(),
           breakdown: _dashboardCommandHero(
@@ -10632,6 +10654,15 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  void _openDashboardReport(String title) {
+    selectedPayrollMonth = selectedDashboardMonth;
+    if (const {'EPF', 'SOCSO', 'EIS'}.contains(title)) {
+      _showStatutoryReport(title);
+    } else {
+      _showDashboardReport(title);
+    }
+  }
+
   Widget _dashboardReportCard(
     double width,
     String title,
@@ -10684,14 +10715,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            selectedPayrollMonth = selectedDashboardMonth;
-            if (const {'EPF', 'SOCSO', 'EIS'}.contains(title)) {
-              _showStatutoryReport(title);
-              return;
-            }
-            _showDashboardReport(title);
-          },
+          onTap: () => _openDashboardReport(title),
           borderRadius: BorderRadius.circular(12),
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

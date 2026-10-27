@@ -118,9 +118,22 @@ ModernAdminOverview overviewWidget(
       onCelebrate: (_, __) {},
       breakdown: const Text('Existing payroll details'),
       reports: AdminDashboardReportCards(
-          itemBuilder: (width, report) => SizedBox(
+          itemBuilder: (width, report) => IvoryAdminReportCard(
               width: width,
-              child: OutlinedButton(onPressed: () {}, child: Text(report)))),
+              title: report,
+              icon: Icons.description_outlined,
+              value: const {
+                'Payroll': 'RM 9,000.00',
+                'EPF': 'RM 2,300.00',
+                'SOCSO': 'RM 120.00',
+                'EIS': 'RM 50.00',
+                'HRDF': '1% levy',
+                'Payroll Summary': 'RM 10,000.00'
+              }[report]!,
+              caption: report == 'HRDF'
+                  ? 'Eligibility & levy report'
+                  : 'Selected month',
+              onTap: () {})),
       tools: tools ?? const Text('Existing import and notification tools'),
     );
 void main() {
@@ -178,7 +191,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Total employees'), findsOneWidget);
       expect(find.text('Active employees'), findsOneWidget);
-      expect(find.text('RM 9,000.00'), findsOneWidget);
+      expect(find.text('RM 9,000.00'), findsWidgets);
       final payrollAction = width < 650
           ? find.byTooltip('View payroll')
           : find.text('View payroll');
@@ -254,6 +267,35 @@ void main() {
     }
     expect(selected,
         ['Payroll', 'EPF', 'SOCSO', 'EIS', 'HRDF', 'Payroll Summary']);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'Ivory library uses three columns and keeps all report actions independent',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final opened = <String>[];
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: AdminDashboardReportCards(
+                itemBuilder: (width, report) => IvoryAdminReportCard(
+                    width: width,
+                    title: report,
+                    icon: Icons.description_outlined,
+                    value: 'RM 12,345.67',
+                    caption: 'Selected month',
+                    onTap: () => opened.add(report))))));
+    final first = tester.getTopLeft(find.text('Payroll'));
+    expect(tester.getTopLeft(find.text('SOCSO')).dy, first.dy);
+    expect(tester.getTopLeft(find.text('EIS')).dy, greaterThan(first.dy));
+    expect(tester.getTopLeft(find.text('Payroll Summary')).dy,
+        tester.getTopLeft(find.text('EIS')).dy);
+    for (final title in AdminDashboardReportCards.reports) {
+      await tester.tap(find.text(title));
+    }
+    expect(opened, AdminDashboardReportCards.reports);
     expect(tester.takeException(), isNull);
   });
 }

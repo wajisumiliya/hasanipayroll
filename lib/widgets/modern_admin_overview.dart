@@ -1,10 +1,13 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-const adminNavy = Color(0xFF12325B);
-const adminBlue = Color(0xFF1266D5);
-const adminCanvas = Color(0xFFF4F7FC);
+const adminInk = Color(0xFF252A32);
+const adminGold = Color(0xFF8D652B);
+const adminCanvas = Color(0xFFF6F3EC);
+const adminBorder = Color(0xFFE9E1D4);
+const adminMuted = Color(0xFF796F63);
 
 /// Pure live-data projection shared by desktop and mobile.
 class AdminOverviewMetrics {
@@ -147,9 +150,11 @@ class ModernAdminOverview extends StatelessWidget {
           {String? action, VoidCallback? onAction}) =>
       Material(
           color: Colors.white,
+          elevation: 1,
+          shadowColor: const Color(0x12000000),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: Color(0xFFE2E9F2))),
+              side: const BorderSide(color: adminBorder)),
           child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -157,14 +162,14 @@ class ModernAdminOverview extends StatelessWidget {
                   children: [
                     LayoutBuilder(builder: (context, c) {
                       final heading = Row(children: [
-                        Icon(icon, color: adminBlue, size: 21),
+                        Icon(icon, color: adminGold, size: 21),
                         const SizedBox(width: 10),
                         Expanded(
                             child: Text(title,
                                 style: const TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w700,
-                                    color: adminNavy)))
+                                    color: adminInk)))
                       ]);
                       if (action == null) return heading;
                       if (c.maxWidth < 400) {
@@ -174,7 +179,7 @@ class ModernAdminOverview extends StatelessWidget {
                               tooltip: action,
                               onPressed: onAction,
                               icon: const Icon(Icons.chevron_right,
-                                  color: adminBlue))
+                                  color: adminGold))
                         ]);
                       }
                       return Row(children: [
@@ -322,14 +327,14 @@ class ModernAdminOverview extends StatelessWidget {
       });
 
   Widget metrics(AdminOverviewMetrics m) => LayoutBuilder(builder: (_, c) {
-        final compact = c.maxWidth < 650;
-        final columns = compact ? 2 : 4;
+        final compact = c.maxWidth < 800;
+        final columns = c.maxWidth < 580 ? 2 : 4;
         final entries = [
           (
             'Total employees',
             '${m.people.length}',
             Icons.groups_outlined,
-            adminBlue,
+            adminGold,
             () => onNavigate(1)
           ),
           (
@@ -343,7 +348,7 @@ class ModernAdminOverview extends StatelessWidget {
             'Present today',
             m.present?.toString() ?? '—',
             Icons.event_available_outlined,
-            adminBlue,
+            adminGold,
             () => onNavigate(3)
           ),
           (
@@ -364,7 +369,7 @@ class ModernAdminOverview extends StatelessWidget {
                         color: Colors.white,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(color: Color(0xFFE2E9F2))),
+                            side: BorderSide.none),
                         child: InkWell(
                             onTap: e.$5,
                             borderRadius: BorderRadius.circular(12),
@@ -386,14 +391,14 @@ class ModernAdminOverview extends StatelessWidget {
                                           children: [
                                         Text(e.$1,
                                             style: TextStyle(
-                                                color: const Color(0xFF52647A),
+                                                color: adminMuted,
                                                 fontSize: compact ? 10 : 12)),
                                         const SizedBox(height: 4),
                                         Text(e.$2,
                                             style: TextStyle(
                                                 fontWeight: FontWeight.w800,
                                                 fontSize: compact ? 23 : 29,
-                                                color: adminNavy))
+                                                color: adminInk))
                                       ])),
                                 ]))))))
                 .toList());
@@ -402,14 +407,14 @@ class ModernAdminOverview extends StatelessWidget {
       'Payroll overview',
       Icons.bar_chart_outlined,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Net payroll', style: TextStyle(color: Color(0xFF52647A))),
+        const Text('Net payroll', style: TextStyle(color: adminMuted)),
         InkWell(
             onTap: onNet,
             child: Text(money(net),
                 style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: adminNavy))),
+                    color: adminInk))),
         const SizedBox(height: 18),
         Wrap(spacing: 30, runSpacing: 12, children: [
           InkWell(
@@ -420,13 +425,13 @@ class ModernAdminOverview extends StatelessWidget {
                     const Text('Gross payroll'),
                     Text(money(gross),
                         style: const TextStyle(
-                            fontWeight: FontWeight.w700, color: adminNavy))
+                            fontWeight: FontWeight.w700, color: adminInk))
                   ])),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Deductions'),
             Text(money(deductions),
                 style: const TextStyle(
-                    fontWeight: FontWeight.w700, color: adminNavy))
+                    fontWeight: FontWeight.w700, color: adminInk))
           ])
         ]),
         const SizedBox(height: 22),
@@ -436,8 +441,8 @@ class ModernAdminOverview extends StatelessWidget {
             value: gross > 0 ? 1 : 0,
             minHeight: 9,
             borderRadius: BorderRadius.circular(9),
-            backgroundColor: const Color(0xFFEDF2F8),
-            color: adminBlue),
+            backgroundColor: const Color(0xFFF1EBDF),
+            color: adminGold),
         const SizedBox(height: 14),
         const Text('Net payroll', style: TextStyle(fontSize: 12)),
         const SizedBox(height: 6),
@@ -445,8 +450,8 @@ class ModernAdminOverview extends StatelessWidget {
             value: gross > 0 ? (net / gross).clamp(0, 1) : 0,
             minHeight: 9,
             borderRadius: BorderRadius.circular(9),
-            backgroundColor: const Color(0xFFEDF2F8),
-            color: const Color(0xFF72A7EC)),
+            backgroundColor: const Color(0xFFF1EBDF),
+            color: const Color(0xFFD7BE8B)),
       ]),
       action: 'View payroll',
       onAction: () => onNavigate(2));
@@ -475,8 +480,8 @@ class ModernAdminOverview extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
           Text(m.checkedIn == null ? '—' : '${values[i]}',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, color: adminNavy))
+              style:
+                  const TextStyle(fontWeight: FontWeight.w700, color: adminInk))
         ]));
     return panel(
         'Attendance today',
@@ -485,7 +490,7 @@ class ModernAdminOverview extends StatelessWidget {
           Text(
               DateFormat('EEE, dd MMM yyyy')
                   .format(DateTime.now().toUtc().add(const Duration(hours: 8))),
-              style: const TextStyle(fontSize: 12, color: Color(0xFF687C92))),
+              style: const TextStyle(fontSize: 12, color: adminMuted)),
           const SizedBox(height: 18),
           Row(children: [
             SizedBox(
@@ -500,7 +505,7 @@ class ModernAdminOverview extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 27,
                               fontWeight: FontWeight.w800,
-                              color: adminNavy)),
+                              color: adminInk)),
                       const Text('Active', style: TextStyle(fontSize: 12))
                     ])))),
             const SizedBox(width: 20),
@@ -517,7 +522,7 @@ class ModernAdminOverview extends StatelessWidget {
                 padding: EdgeInsets.only(top: 12),
                 child: Text(
                     'Attendance is loading or unavailable. Refresh to retry.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF687C92)))),
+                    style: TextStyle(fontSize: 12, color: adminMuted))),
         ]),
         action: 'View attendance',
         onAction: () => onNavigate(3));
@@ -528,7 +533,7 @@ class ModernAdminOverview extends StatelessWidget {
       Icons.schedule,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('3 or more combined monthly occurrences',
-            style: TextStyle(fontSize: 12, color: Color(0xFF687C92))),
+            style: TextStyle(fontSize: 12, color: adminMuted)),
         const SizedBox(height: 14),
         if (m.lateRows == null)
           const Text('Report is loading or unavailable. Refresh to retry.')
@@ -584,7 +589,7 @@ class ModernAdminOverview extends StatelessWidget {
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
                   TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFF4F7FC)),
+                      decoration: const BoxDecoration(color: Color(0xFFFAF7F1)),
                       children: [
                         'Employee',
                         'Branch',
@@ -645,7 +650,7 @@ class ModernAdminOverview extends StatelessWidget {
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(m.pending(item.$2)?.toString() ?? '—',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w700, color: adminNavy)),
+                        fontWeight: FontWeight.w700, color: adminInk)),
                 const SizedBox(width: 12),
                 const Icon(Icons.chevron_right, size: 18)
               ])),
@@ -660,12 +665,12 @@ class ModernAdminOverview extends StatelessWidget {
         ]) ...[
           Text(item.$3,
               style: const TextStyle(
-                  fontWeight: FontWeight.w600, color: adminNavy)),
+                  fontWeight: FontWeight.w600, color: adminInk)),
           if (item.$1.isEmpty)
             const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text('No events in the next 3 days',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF687C92))))
+                    style: TextStyle(fontSize: 12, color: adminMuted)))
           else
             ...item.$1.take(3).map((e) => ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -691,13 +696,13 @@ class ModernAdminOverview extends StatelessWidget {
   Widget build(BuildContext context) => Theme(
       data: Theme.of(context).copyWith(
         colorScheme: const ColorScheme.light(
-            primary: adminBlue,
+            primary: adminGold,
             secondary: Color(0xFFD4A532),
             surface: Colors.white,
-            onSurface: adminNavy),
+            onSurface: adminInk),
         textTheme: Theme.of(context)
             .textTheme
-            .apply(bodyColor: adminNavy, displayColor: adminNavy),
+            .apply(bodyColor: adminInk, displayColor: adminInk),
         inputDecorationTheme: InputDecorationTheme(
             filled: true,
             fillColor: Colors.white,
@@ -706,7 +711,7 @@ class ModernAdminOverview extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: Color(0xFFD9E2EF)))),
+                borderSide: const BorderSide(color: adminBorder))),
       ),
       child: RefreshIndicator(
           onRefresh: onRefresh,
@@ -717,21 +722,29 @@ class ModernAdminOverview extends StatelessWidget {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text('WELCOME BACK',
+                        style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 1.8,
+                            fontWeight: FontWeight.w600,
+                            color: adminGold)),
+                    const SizedBox(height: 6),
                     Row(children: [
                       Expanded(
-                          child: const Text('Dashboard',
+                          child: const Text('Payroll Dashboard',
                               style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w800,
-                                  color: adminNavy))),
+                                  color: adminInk))),
                       IconButton(
                           tooltip: 'Refresh dashboard',
                           onPressed: () => onRefresh(),
-                          icon: const Icon(Icons.refresh, color: adminNavy))
+                          icon: const Icon(Icons.refresh, color: adminInk))
                     ]),
                     const SizedBox(height: 5),
-                    const Text('Your workforce at a glance',
-                        style: TextStyle(color: Color(0xFF687C92))),
+                    const Text(
+                        'Monitor payroll, statutory contributions and workforce performance',
+                        style: TextStyle(color: adminMuted)),
                     const SizedBox(height: 22),
                     filters(context),
                     const SizedBox(height: 22),
@@ -740,11 +753,10 @@ class ModernAdminOverview extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: adminNavy)),
+                              color: adminInk)),
                       const SizedBox(height: 5),
                       const Text('Preview or export each report separately',
-                          style: TextStyle(
-                              color: Color(0xFF687C92), fontSize: 12)),
+                          style: TextStyle(color: adminMuted, fontSize: 12)),
                       const SizedBox(height: 12),
                       reports!,
                       const SizedBox(height: 22),
@@ -759,28 +771,34 @@ class ModernAdminOverview extends StatelessWidget {
                                       ? s.data ?? {}
                                       : {},
                               branch: branch);
-                          return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                metrics(m),
-                                const SizedBox(height: 18),
-                                paired(payroll(), attendance(m)),
-                                const SizedBox(height: 18),
-                                paired(
-                                    late(m),
-                                    Column(children: [
-                                      approvals(m),
-                                      const SizedBox(height: 18),
-                                      celebrations()
-                                    ])),
-                              ]);
+                          return paired(
+                            Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  panel('Workforce snapshot',
+                                      Icons.groups_outlined, metrics(m)),
+                                  const SizedBox(height: 18),
+                                  payroll(),
+                                  const SizedBox(height: 18),
+                                  late(m),
+                                ]),
+                            Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  attendance(m),
+                                  const SizedBox(height: 18),
+                                  approvals(m),
+                                  const SizedBox(height: 18),
+                                  celebrations()
+                                ]),
+                          );
                         }),
                     const SizedBox(height: 20),
                     Material(
                         color: Colors.white,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
-                            side: const BorderSide(color: Color(0xFFE2E9F2))),
+                            side: const BorderSide(color: adminBorder)),
                         child: ExpansionTile(
                             key: const PageStorageKey(
                                 'overview-payroll-details'),
@@ -828,7 +846,7 @@ class _AttendanceRing extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12;
     canvas.drawArc(
-        ring, 0, math.pi * 2, false, p..color = const Color(0xFFEDF2F8));
+        ring, 0, math.pi * 2, false, p..color = const Color(0xFFF1EBDF));
     if (total == 0) return;
     var start = -math.pi / 2;
     for (var i = 0; i < values.length; i++) {
@@ -857,13 +875,11 @@ class AdminDashboardReportCards extends StatelessWidget {
   ];
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
-        final columns = c.maxWidth >= 1250
-            ? 6
-            : c.maxWidth >= 760
-                ? 3
-                : c.maxWidth >= 480
-                    ? 2
-                    : 1;
+        final columns = c.maxWidth >= 900
+            ? 3
+            : c.maxWidth >= 540
+                ? 2
+                : 1;
         final width = (c.maxWidth - 10 * (columns - 1)) / columns;
         return Wrap(
             spacing: 10,
@@ -871,4 +887,87 @@ class AdminDashboardReportCards extends StatelessWidget {
             children:
                 reports.map((report) => itemBuilder(width, report)).toList());
       });
+}
+
+/// Concept B report library: independent report actions with live monthly figures.
+class IvoryAdminReportCard extends StatelessWidget {
+  const IvoryAdminReportCard(
+      {super.key,
+      required this.width,
+      required this.title,
+      required this.icon,
+      required this.value,
+      required this.caption,
+      required this.onTap,
+      this.logoBytes});
+  final double width;
+  final String title, value, caption;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Uint8List? logoBytes;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      width: width,
+      child: Material(
+        color: Colors.white,
+        elevation: 1,
+        shadowColor: const Color(0x18000000),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(11),
+            side: const BorderSide(color: adminBorder)),
+        child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(11),
+            child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Row(children: [
+                  Container(
+                      width: 45,
+                      height: 45,
+                      decoration: BoxDecoration(
+                          color: const Color(0xFFF8F1E3),
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Icon(icon, color: adminGold, size: 27)),
+                  const SizedBox(width: 15),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Row(children: [
+                          Expanded(
+                              child: Text(title,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: adminInk))),
+                          if (logoBytes != null)
+                            Image.memory(logoBytes!,
+                                width: 30,
+                                height: 19,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    const SizedBox.shrink())
+                        ]),
+                        const SizedBox(height: 7),
+                        FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(value,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.w800,
+                                    color: adminInk))),
+                        const SizedBox(height: 6),
+                        Text(caption,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 10, color: adminMuted)),
+                      ])),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: adminGold, size: 17),
+                ]))),
+      ));
 }

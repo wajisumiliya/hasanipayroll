@@ -19,7 +19,7 @@ class ModernAdminSidebar extends StatelessWidget {
           gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF12345E), Color(0xFF0A2344)])),
+              colors: [Color(0xFF30271E), Color(0xFF1E1A16)])),
       child: Material(
           color: Colors.transparent,
           child: SafeArea(
@@ -50,7 +50,7 @@ class ModernAdminSidebar extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Material(
                                 color: item.selected
-                                    ? adminBlue
+                                    ? adminGold
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                                 child: ListTile(
@@ -61,24 +61,24 @@ class ModernAdminSidebar extends StatelessWidget {
                                     leading: Icon(item.icon,
                                         color: item.selected
                                             ? Colors.white
-                                            : const Color(0xFFBDCDE1),
+                                            : const Color(0xFFCABFAE),
                                         size: 20),
                                     title: Text(item.label,
                                         style: TextStyle(
                                             color: item.selected
                                                 ? Colors.white
-                                                : const Color(0xFFDCE6F3),
+                                                : const Color(0xFFE8E0D4),
                                             fontSize: 13,
                                             fontWeight: item.selected
                                                 ? FontWeight.w700
                                                 : FontWeight.w400)),
                                     onTap: item.onTap))))
                         .toList())),
-            const Divider(color: Color(0xFF2A4769)),
+            const Divider(color: Color(0xFF493D2E)),
             ListTile(
                 leading: const CircleAvatar(
                     radius: 17,
-                    backgroundColor: Color(0xFF4B6687),
+                    backgroundColor: Color(0xFF645039),
                     child: Icon(Icons.person_outline,
                         color: Colors.white, size: 20)),
                 title: Text(name,
