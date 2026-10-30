@@ -245,59 +245,63 @@ class _LateReportPageState extends State<LateReportPage> {
     final history = e['review_history'] as List? ?? [];
     return Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(e['type'] == 'arrival'
-                  ? Icons.schedule
-                  : Icons.free_breakfast_outlined),
-              title: Text(
-                  '${DateFormat('EEE, dd MMM').format(DateTime.parse(e['date']))} · ${e['type'] == 'arrival' ? 'Late arrival' : 'Break exceeded'}'),
-              subtitle: Text(e['type'] == 'arrival'
-                  ? 'Scheduled ${e['scheduled']} · arrived ${e['actual']}'
-                  : 'Allowed ${e['allocated_minutes']} min · used ${e['actual_minutes']} min'),
-              trailing: Text('+${e['minutes']} min',
-                  style: const TextStyle(fontWeight: FontWeight.bold))),
-          Wrap(
-              spacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Chip(
-                    label: Text(e['review_outdated'] == true
-                        ? 'Needs re-review'
-                        : lateReviewStatus(review?['status']))),
-                TextButton.icon(
-                    onPressed: () => _review(person, e),
-                    icon: const Icon(Icons.rate_review_outlined),
-                    label: const Text('Review event')),
-              ]),
-          if (review != null) ...[
-            Text(
-                '${lateReasonLabel(review['reason_code'])}: ${review['reason']}'),
-            Text(
-                '${review['reviewed_by']} · ${lateLocalReviewTime(review['reviewed_at'])}',
-                style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          ],
-          if (e['review_outdated'] == true)
-            const Text(
-                'Attendance timing changed after the last review. Please review again.'),
-          if (history.isNotEmpty)
-            ExpansionTile(
-                key: PageStorageKey(
-                    'history-${person['branch_id']}-${person['employee_id']}-${e['date']}-${e['type']}'),
-                tilePadding: EdgeInsets.zero,
-                title: Text('Review history (${history.length})'),
-                children: history
-                    .map((h) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                              '${lateReviewStatus(h['status'])} · ${lateReasonLabel(h['reason_code'])}'),
-                          subtitle: Text(
-                              '${h['reason']}\n${h['reviewed_by']} · ${lateLocalReviewTime(h['reviewed_at'])}${h['event_fingerprint'] != e['fingerprint'] ? ' · Previous attendance timing' : ''}'),
-                        ))
-                    .toList()),
-          const Divider(),
-        ]));
+        child: Material(
+            color: Colors.transparent,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(e['type'] == 'arrival'
+                      ? Icons.schedule
+                      : Icons.free_breakfast_outlined),
+                  title: Text(
+                      '${DateFormat('EEE, dd MMM').format(DateTime.parse(e['date']))} · ${e['type'] == 'arrival' ? 'Late arrival' : 'Break exceeded'}'),
+                  subtitle: Text(e['type'] == 'arrival'
+                      ? 'Scheduled ${e['scheduled']} · arrived ${e['actual']}'
+                      : 'Allowed ${e['allocated_minutes']} min · used ${e['actual_minutes']} min'),
+                  trailing: Text('+${e['minutes']} min',
+                      style: const TextStyle(fontWeight: FontWeight.bold))),
+              Wrap(
+                  spacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Chip(
+                        label: Text(e['review_outdated'] == true
+                            ? 'Needs re-review'
+                            : lateReviewStatus(review?['status']))),
+                    TextButton.icon(
+                        onPressed: () => _review(person, e),
+                        icon: const Icon(Icons.rate_review_outlined),
+                        label: const Text('Review event')),
+                  ]),
+              if (review != null) ...[
+                Text(
+                    '${lateReasonLabel(review['reason_code'])}: ${review['reason']}'),
+                Text(
+                    '${review['reviewed_by']} · ${lateLocalReviewTime(review['reviewed_at'])}',
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.black54)),
+              ],
+              if (e['review_outdated'] == true)
+                const Text(
+                    'Attendance timing changed after the last review. Please review again.'),
+              if (history.isNotEmpty)
+                ExpansionTile(
+                    key: PageStorageKey(
+                        'history-${person['branch_id']}-${person['employee_id']}-${e['date']}-${e['type']}'),
+                    tilePadding: EdgeInsets.zero,
+                    title: Text('Review history (${history.length})'),
+                    children: history
+                        .map((h) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                  '${lateReviewStatus(h['status'])} · ${lateReasonLabel(h['reason_code'])}'),
+                              subtitle: Text(
+                                  '${h['reason']}\n${h['reviewed_by']} · ${lateLocalReviewTime(h['reviewed_at'])}${h['event_fingerprint'] != e['fingerprint'] ? ' · Previous attendance timing' : ''}'),
+                            ))
+                        .toList()),
+              const Divider(),
+            ])));
   }
 
   Widget _results(Map<String, dynamic> data) {
@@ -372,10 +376,12 @@ class _LateReportPageState extends State<LateReportPage> {
                           _branch = v == '' ? null : v;
                           _selected = null;
                         })))),
-        OutlinedButton.icon(
-            onPressed: () => setState(_load),
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Refresh')),
+        Tooltip(
+            message: widget.embedded ? 'Refresh report' : 'Refresh',
+            child: OutlinedButton.icon(
+                onPressed: () => setState(_load),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Refresh'))),
         OutlinedButton.icon(
             onPressed: _exporting ? null : () => _export('pdf', data),
             icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
@@ -584,15 +590,12 @@ class _LateReportPageState extends State<LateReportPage> {
                         style: TextStyle(
                             fontSize: 11, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 10),
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _metric(
-                              'Late arrivals', '${person['arrival_count']}'),
-                          _metric('Break exceeded', '${person['break_count']}'),
-                          _metric('Total', '$c'),
-                          _pill(_severityName(c), _severity(c))
-                        ]),
+                    Wrap(spacing: 18, runSpacing: 10, children: [
+                      _metric('Late arrivals', '${person['arrival_count']}'),
+                      _metric('Break exceeded', '${person['break_count']}'),
+                      _metric('Total', '$c'),
+                      _pill(_severityName(c), _severity(c))
+                    ]),
                     const SizedBox(height: 16),
                     const Text('Attendance details',
                         style: TextStyle(
