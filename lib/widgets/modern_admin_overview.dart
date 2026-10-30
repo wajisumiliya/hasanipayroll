@@ -1127,183 +1127,152 @@ class ModernAdminOverview extends StatelessWidget {
       );
 
   @override
-  
-  static const _blue = Color(0xFF2563EB);
-  static const _navy = Color(0xFF10213A);
-  static const _page = Color(0xFFF2F6FB);
-  static const _stroke = Color(0xFFE3EAF3);
-  static const _green = Color(0xFF10B981);
-  static const _red = Color(0xFFEF4444);
-  static const _violet = Color(0xFF8B5CF6);
-
-  Widget _surface(String title, Widget content, {Widget? trailing}) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _stroke)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _navy))),
-        if (trailing != null) trailing]),
-      const SizedBox(height: 12), content,
-    ]),
-  );
-
-  Widget _stat(String label, String amount, IconData icon, Color color, {VoidCallback? tap}) => InkWell(
-    onTap: tap, borderRadius: BorderRadius.circular(12),
-    child: Container(padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: _stroke)),
-      child: Row(children: [
-        Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(11)),
-          child: Icon(icon, color: color, size: 23)),
-        const SizedBox(width: 11),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF55657D), fontSize: 11, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-            child: Text(amount, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _navy))),
-        ])),
-      ]),
-    ),
-  );
-
-  Widget _responsiveCards(List<Widget> children, double width, {double min = 175, double gap = 10}) {
-    final cols = math.max(1, (width / (min + gap)).floor());
-    final cell = (width - (cols - 1) * gap) / cols;
-    return Wrap(spacing: gap, runSpacing: gap, children: [for(final item in children) SizedBox(width: cell, child: item)]);
-  }
-
-  Widget _branchGrid(AdminOverviewMetrics m) {
-    final counts = <String, int>{};
-    for (final p in m.people) {
-      final branchId = AdminOverviewMetrics.key(p['branch_id']);
-      counts[branchId] = (counts[branchId] ?? 0) + 1;
-    }
-    final entries = counts.entries.toList()..sort((a,b) => b.value.compareTo(a.value));
-    return Column(children: [
-      const Row(children: [
-        Expanded(flex: 5, child: Text('BRANCH', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800))),
-        Expanded(flex: 2, child: Text('EMPLOYEES', textAlign: TextAlign.right, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800))),
-      ]),
-      const Divider(height: 14),
-      if (entries.isEmpty) const Text('No branch data for the selected period'),
-      for (final entry in entries.take(6)) Padding(padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(children: [
-          Expanded(flex: 5, child: Text(branches[entry.key] ?? entry.key, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-          Expanded(flex: 2, child: Text('${entry.value}', textAlign: TextAlign.right, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
-        ])),
-      Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => onNavigate(2), child: const Text('View branches'))),
-    ]);
-  }
-
-  Widget _salaryBars() {
-    final items = <(String, double, Color)>[
-      ('Gross', gross, _blue), ('Deductions', deductions, _red), ('Net', net, _green),
-    ];
-    final highest = math.max(1.0, [gross, deductions, net].reduce(math.max));
-    return Column(children: [
-      for (final entry in items) Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [Expanded(child: Text(entry.$1, style: const TextStyle(fontSize: 12))),
-            Text(money(entry.$2), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))]),
-          const SizedBox(height: 6),
-          ClipRRect(borderRadius: BorderRadius.circular(5), child: LinearProgressIndicator(
-            value: (entry.$2 / highest).clamp(0.0, 1.0), minHeight: 13,
-            color: entry.$3, backgroundColor: const Color(0xFFEAF0F7))),
-        ]),
-      ),
-    ]);
-  }
-
-  Widget _overviewContent(AdminOverviewMetrics m, double width) {
-    final total = m.people.length;
-    final present = m.present;
-    final missing = m.notChecked;
-    final attendanceRate = present == null || m.activeIds.isEmpty ? '—' :
-      '${(present / m.activeIds.length * 100).toStringAsFixed(1)}%';
-    final spacing = width >= 1100 ? 12.0 : 10.0;
-    final pairedWidth = width >= 980 ? (width - spacing) / 2 : width;
-    final split = width >= 980;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _responsiveCards([
-        _stat('Total Employees', '$total', Icons.groups_rounded, _blue, tap: () => onNavigate(1)),
-        _stat('Monthly Payroll Amount', money(gross), Icons.account_balance_wallet_rounded, _blue, tap: onGross),
-        _stat('Net Salary', money(net), Icons.check_circle_rounded, _green, tap: onNet),
-        _stat('Deductions', money(deductions), Icons.timelapse_rounded, _red),
-        _stat('Attendance Rate', attendanceRate, Icons.bar_chart_rounded, _green),
-        _stat('Missing Check-ins', missing?.toString() ?? '—', Icons.timer_outlined, _violet),
-      ], width, min: width >= 1100 ? 165 : 190),
-      const SizedBox(height: 12),
-      Wrap(spacing: spacing, runSpacing: spacing, children: [
-        SizedBox(width: split ? pairedWidth : width, child: _surface('Monthly Payroll Overview', _salaryBars())),
-        SizedBox(width: split ? pairedWidth : width, child: _surface('Payroll Split & Salary', Column(children: [
-          _salaryBars(),
-          const Divider(height: 20),
-          Row(children: [
-            Expanded(child: OutlinedButton(onPressed: onGross, child: const Text('Gross details'))),
-            const SizedBox(width: 8),
-            Expanded(child: OutlinedButton(onPressed: onNet, child: const Text('Net details'))),
-          ]),
-        ]))),
-        SizedBox(width: split ? pairedWidth : width, child: _surface('Attendance Monitoring', attendance(m))),
-        SizedBox(width: split ? pairedWidth : width, child: _surface('Salary Analytics', Column(children: [
-          _salaryBars(),
-          TextButton(onPressed: () => onNavigate(3), child: const Text('Open payroll analytics')),
-        ]))),
-        SizedBox(width: split ? pairedWidth : width, child: _surface('Branch Monitoring', _branchGrid(m))),
-        SizedBox(width: split ? pairedWidth : width, child: _surface('Quick Actions & Pending Approvals', Column(children: [
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.icon(onPressed: () => onNavigate(3), icon: const Icon(Icons.play_arrow), label: const Text('Payroll')),
-            OutlinedButton.icon(onPressed: () => onNavigate(12), icon: const Icon(Icons.receipt_long), label: const Text('Payslips')),
-            OutlinedButton.icon(onPressed: () => onNavigate(6), icon: const Icon(Icons.table_chart), label: const Text('Reports')),
-            OutlinedButton.icon(onPressed: () => onNavigate(4), icon: const Icon(Icons.fact_check), label: const Text('Attendance')),
-          ]),
-          approvals(m),
-        ]))),
-      ]),
-      const SizedBox(height: 12),
-      ExpansionTile(key: const PageStorageKey('hasani-dashboard-financial-details'),
-        title: const Text('Detailed payroll breakdown'), children: [breakdown]),
-      ExpansionTile(key: const PageStorageKey('hasani-dashboard-management-tools'),
-        title: const Text('Additional management tools'), children: [tools]),
-      if (reports != null) ExpansionTile(title: const Text('Payroll Reports'), children: [reports!]),
-    ]);
-  }
-
-  @override
   Widget build(BuildContext context) => Theme(
-    data: Theme.of(context).copyWith(
-      colorScheme: ColorScheme.fromSeed(seedColor: _blue),
-      scaffoldBackgroundColor: _page,
-    ),
-    child: RefreshIndicator(onRefresh: onRefresh,
-      child: LayoutBuilder(builder: (context, constraints) {
-        final width = math.max(1.0, constraints.maxWidth - (constraints.maxWidth < 600 ? 24 : 36));
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.all(constraints.maxWidth < 600 ? 12 : 18),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 8, children: [
-              const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Dashboard Overview', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _navy)),
-                Text('Payroll, people and branch performance in one place',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF61718B))),
-              ]),
-              filters(context),
-            ]),
-            const SizedBox(height: 14),
-            FutureBuilder<Map<String, dynamic>>(future: activity, builder: (context, snapshot) {
-              final m = AdminOverviewMetrics(employees: employees,
-                activity: snapshot.connectionState == ConnectionState.done ? (snapshot.data ?? {}) : {},
-                branch: branch);
-              return _overviewContent(m, width);
-            }),
-          ]),
-        );
-      }),
-    ),
-  );
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: adminGold,
+            secondary: Color(0xFFD4A532),
+            surface: Colors.white,
+            onSurface: adminInk,
+          ),
+          textTheme: Theme.of(context)
+              .textTheme
+              .apply(bodyColor: adminInk, displayColor: adminInk),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 13,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: adminBorder),
+            ),
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: onRefresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(
+              MediaQuery.sizeOf(context).width < 600 ? 16 : 24,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                executiveHeader(context),
+                const SizedBox(height: 20),
+                filters(context),
+                const SizedBox(height: 26),
+                if (reports != null) ...[
+                  const Text(
+                    'Payroll reports',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: adminInk,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Preview or export each report separately',
+                    style: TextStyle(color: adminMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  reports!,
+                  const SizedBox(height: 22),
+                ],
+                FutureBuilder<Map<String, dynamic>>(
+                  future: activity,
+                  builder: (_, s) {
+                    final m = AdminOverviewMetrics(
+                      employees: employees,
+                      activity: s.connectionState == ConnectionState.done
+                          ? s.data ?? {}
+                          : {},
+                      branch: branch,
+                    );
+                    return paired(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          panel(
+                            'Workforce snapshot',
+                            Icons.groups_outlined,
+                            metrics(m),
+                          ),
+                          const SizedBox(height: 18),
+                          payroll(),
+                          const SizedBox(height: 18),
+                          late(m),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          attendance(m),
+                          const SizedBox(height: 18),
+                          approvals(m),
+                          const SizedBox(height: 18),
+                          celebrations(),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                Material(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: adminBorder),
+                  ),
+                  child: ExpansionTile(
+                    key: const PageStorageKey('overview-payroll-details'),
+                    title: const Text('Detailed payroll breakdown'),
+                    subtitle: const Text(
+                      'Statutory contributions, allowances and payroll tools',
+                    ),
+                    children: [breakdown],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ExpansionTile(
+                      key: const PageStorageKey('overview-management-tools'),
+                      title: const Text('More management tools'),
+                      children: [tools],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        for (final action in [
+                          ('Payslips', 12, Icons.receipt_long_outlined),
+                          ('Reports', 6, Icons.bar_chart_outlined),
+                          ('Daily reports', 14, Icons.description_outlined),
+                          ('Branch logs', 9, Icons.store_outlined),
+                          ('Settings', 7, Icons.settings_outlined),
+                        ])
+                          OutlinedButton.icon(
+                            onPressed: () => onNavigate(action.$2),
+                            icon: Icon(action.$3, size: 17),
+                            label: Text(action.$1),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 class _HeaderChip extends StatelessWidget {
