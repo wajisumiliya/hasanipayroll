@@ -216,10 +216,8 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final routes = <int>[];
-      var late = 0;
       await tester.pumpWidget(MaterialApp(
-          home: Scaffold(
-              body: overviewWidget(navigate: routes.add, late: () => late++))));
+          home: Scaffold(body: overviewWidget(navigate: routes.add))));
       await tester.pumpAndSettle();
       expect(find.text('Dashboard Overview'), findsOneWidget);
       expect(find.text('Total Employees'), findsOneWidget);
@@ -229,10 +227,20 @@ void main() {
       await tester.ensureVisible(payrollAction);
       await tester.tap(payrollAction);
       expect(routes.last, 2);
-      final lateAction = find.text('Missing Attendance');
-      await tester.ensureVisible(lateAction);
-      await tester.tap(lateAction);
-      expect(routes.last, 3);
+      for (final title in [
+        'Attendance Monitoring',
+        'Salary Analytics',
+        'Branch Monitoring',
+        'Branch Distribution'
+      ]) {
+        expect(find.text(title), findsNothing);
+      }
+      // Reports and tools render immediately, without expanding either heading.
+      await tester.ensureVisible(find.text('Payroll reports'));
+      expect(find.text('Payroll'), findsWidgets);
+      await tester.ensureVisible(find.text('More management tools'));
+      expect(
+          find.text('Existing import and notification tools'), findsOneWidget);
       expect(find.text('Outside scope'), findsNothing);
       expect(find.textContaining('Incomplete current'), findsNothing);
       await tester.ensureVisible(find.text('Detailed payroll breakdown'));
@@ -277,11 +285,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Farah Nabila'), findsNothing);
     expect(find.text('Muhammad Arif'), findsNothing);
-    expect(find.text('Alor Setar'), findsWidgets);
     await tester.tap(find.text('Total Employees'));
     await tester.pumpAndSettle();
     expect(find.text('Employees'), findsWidgets);
     expect(find.text('Employee 1'), findsOneWidget);
+    expect(find.text('Alor Setar'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
   testWidgets(

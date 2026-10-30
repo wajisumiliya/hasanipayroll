@@ -2307,9 +2307,8 @@ class _ReferencePayrollDashboard extends StatelessWidget {
                           .toList()))
                   .toList()));
 
-  Widget _detailsAndTools() => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+  Widget _detailsAndTools() =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (view.reports != null) ...[
           const ListTile(
               title: Text('Payroll reports'),
@@ -2324,7 +2323,6 @@ class _ReferencePayrollDashboard extends StatelessWidget {
         const ListTile(title: Text('More management tools')),
         view.tools,
       ]);
-
 }
 
 extension on Widget {
