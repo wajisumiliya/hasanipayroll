@@ -102,7 +102,7 @@ class HasaniEnterprisePanel extends StatelessWidget {
   Widget payrollSplit()=>Column(children:[
     SizedBox(height:122,child:Row(children:[
       SizedBox(width:114,height:114,child:CustomPaint(
-        painter:_RingPainter([math.max(net,0),math.max(deductions,0)],[green,amber]),
+        painter:_RingPainter([math.max(net,0.0),math.max(deductions,0.0)],[green,amber]),
         child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
           const Text('GROSS',style:TextStyle(fontSize:9,color:muted,fontWeight:FontWeight.w700)),
           FittedBox(fit:BoxFit.scaleDown,child:Text(currency(gross),
