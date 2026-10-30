@@ -65,6 +65,8 @@ void main() {
               body: SingleChildScrollView(child: fixture(branch: 'A')))));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      expect(find.text('Monthly Gross Payroll Amount'), findsOneWidget);
+      expect(find.byType(MonthlyGrossPayrollChart), findsOneWidget);
       expect(find.text('RM 3,000.00'), findsWidgets);
       expect(find.text('No saved payroll'), findsWidgets);
       for (final title in [

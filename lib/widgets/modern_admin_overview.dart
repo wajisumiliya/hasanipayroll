@@ -161,6 +161,7 @@ class ModernAdminOverview extends StatelessWidget {
     required this.tools,
     this.reports,
     this.analytics,
+    this.workforceHeader,
     this.payrollRecords = const [],
   });
   final DateTime month;
@@ -176,7 +177,7 @@ class ModernAdminOverview extends StatelessWidget {
   final VoidCallback onLateReport, onGross, onNet;
   final void Function(Map<String, dynamic>, bool) onCelebrate;
   final Widget breakdown, tools;
-  final Widget? reports, analytics;
+  final Widget? reports, analytics, workforceHeader;
   final List<Map<String, dynamic>> payrollRecords;
   String money(double v) => NumberFormat.currency(
         locale: 'en_MY',
@@ -1577,11 +1578,22 @@ class _ReferencePayrollDashboard extends StatelessWidget {
                             style: TextStyle(fontSize: 10, color: muted))
                       ])),
             ]);
-        return compact
+        final heading = compact
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [title, const SizedBox(height: 12), controls])
             : Row(children: [Expanded(child: title), controls]);
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              heading,
+              if (view.workforceHeader != null) ...[
+                const SizedBox(height: 10),
+                Align(
+                    alignment: Alignment.centerRight,
+                    child: view.workforceHeader!),
+              ],
+            ]);
       });
 
   Widget _periodButton(BuildContext context) => OutlinedButton.icon(

@@ -2264,6 +2264,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                 logoBytes: bytes,
                 onTap: () => _openDashboardReport(report));
           }),
+          workforceHeader:
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            _dashboardFlagsAndClock(),
+            const SizedBox(height: 8),
+            _dashboardWorkforceFlashCards(
+                local: activeLocalEmployees,
+                temp: activeTempEmployees,
+                management: activeManagementEmployees,
+                foreign: activeForeignEmployees,
+                total: selectedActiveEmployees),
+          ]),
           analytics: AdminAnalytics(
             month: selectedDashboardMonth,
             branch: selectedDashboardBranchId,
@@ -2355,6 +2366,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     required Widget tools,
     required Widget breakdown,
     Widget? analytics,
+    Widget? workforceHeader,
     required List<Map<String, dynamic>> payrollRecords,
   }) =>
       ModernAdminOverview(
@@ -2381,6 +2393,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         breakdown: breakdown,
         payrollRecords: payrollRecords,
         analytics: analytics,
+        workforceHeader: workforceHeader,
       );
 
   Widget _dashboardCommandHero({
@@ -2412,8 +2425,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     required VoidCallback onNetTap,
   }) {
     final theme = _portalTheme;
-    final stackFlashCards =
-        !compact && MediaQuery.sizeOf(context).width >= 1050;
     final period = DateFormat('MMMM yyyy').format(selectedDashboardMonth);
     final currentYear = DateTime.now().year;
     final dashboardYears = currentYear >= 2023
@@ -2449,18 +2460,6 @@ class _AdminDashboardState extends State<AdminDashboard>
       ),
       child: Stack(
         children: [
-          if (stackFlashCards)
-            Positioned(
-              right: 0,
-              top: 62,
-              child: _dashboardWorkforceFlashCards(
-                local: activeLocalEmployees,
-                temp: activeTempEmployees,
-                management: activeManagementEmployees,
-                foreign: activeForeignEmployees,
-                total: selectedActiveEmployees,
-              ),
-            ),
           Positioned(
             right: -34,
             top: -62,
@@ -2478,12 +2477,6 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
             ),
           ),
-          if (stackFlashCards)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: _dashboardFlagsAndClock(),
-            ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2531,18 +2524,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ],
               ),
-              if (!stackFlashCards) ...[
-                const SizedBox(height: 14),
-                _dashboardFlagsAndClock(),
-                const SizedBox(height: 10),
-                _dashboardWorkforceFlashCards(
-                  local: activeLocalEmployees,
-                  temp: activeTempEmployees,
-                  management: activeManagementEmployees,
-                  foreign: activeForeignEmployees,
-                  total: selectedActiveEmployees,
-                ),
-              ],
               const SizedBox(height: 18),
               Text(
                 'Payroll command centre',

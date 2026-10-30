@@ -186,44 +186,30 @@ class AdminAnalytics extends StatelessWidget {
     final period = DateFormat('MMMM yyyy').format(month);
     final history =
         List.generate(8, (i) => DateTime(month.year, month.month - 7 + i));
-    final maximum =
-        history.map((d) => total(rows(d), grossOf)).fold<double>(0, math.max);
-    final monthLabel = DateFormat('MMM yy');
     final trend = card(
-        'Monthly payroll trend',
+        'Monthly Gross Payroll Amount',
         'Saved gross payroll · eight months ending $period',
-        Column(children: [
-          for (final d in history)
-            if (rows(d).isEmpty)
-              Padding(
-                  padding: const EdgeInsets.only(bottom: 15),
-                  child: Row(children: [
-                    Expanded(
-                        child: Text(monthLabel.format(d),
-                            style: const TextStyle(color: adminMuted))),
-                    const Text('No saved payroll',
-                        style: TextStyle(color: adminMuted, fontSize: 12))
-                  ]))
-            else
-              InkWell(
-                  onTap: () => details(
-                      context,
-                      '${monthLabel.format(d)} · saved payroll',
-                      ['Employee', 'Gross', 'Deductions', 'Net'],
-                      rows(d)
-                          .map((r) => [
-                                name(r),
-                                money(grossOf(r)),
-                                money(deductionsOf(r)),
-                                money(grossOf(r) - deductionsOf(r))
-                              ])
-                          .toList()),
-                  child: bar(monthLabel.format(d), total(rows(d), grossOf),
-                      maximum, adminGold)),
-          const Text(
-              'Select a month to inspect the employee totals. Unsaved months are excluded from comparisons.',
-              style: TextStyle(color: adminMuted, fontSize: 11))
-        ]));
+        MonthlyGrossPayrollChart(
+          months: history,
+          values: history
+              .map((d) => rows(d).isEmpty ? null : total(rows(d), grossOf))
+              .toList(),
+          onMonth: (index) {
+            final d = history[index];
+            details(
+                context,
+                '${DateFormat('MMM yy').format(d)} · saved payroll',
+                ['Employee', 'Gross', 'Deductions', 'Net'],
+                rows(d)
+                    .map((r) => [
+                          name(r),
+                          money(grossOf(r)),
+                          money(deductionsOf(r)),
+                          money(grossOf(r) - deductionsOf(r))
+                        ])
+                    .toList());
+          },
+        ));
     final split = card(
         'Payroll composition',
         '$period · ${current.length} saved payroll records',
@@ -291,5 +277,159 @@ class AdminAnalytics extends StatelessWidget {
                 const SizedBox(width: 18),
                 Expanded(flex: 2, child: split)
               ]));
+  }
+}
+
+/// Labelled, scrollable bars preserve readable values on narrow displays.
+class MonthlyGrossPayrollChart extends StatelessWidget {
+  const MonthlyGrossPayrollChart(
+      {super.key,
+      required this.months,
+      required this.values,
+      required this.onMonth});
+  final List<DateTime> months;
+  final List<double?> values;
+  final ValueChanged<int> onMonth;
+  static const colors = [
+    Color(0xFF378DF5),
+    Color(0xFF26BDE8),
+    Color(0xFF23CCA0),
+    Color(0xFF8ADA54),
+    Color(0xFFFFCF3E),
+    Color(0xFFFF9445),
+    Color(0xFFFF626B),
+    Color(0xFFFA459A)
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final maximum = values.whereType<double>().fold<double>(0, math.max);
+    final magnitude = maximum <= 0
+        ? 1.0
+        : math.pow(10, (math.log(maximum) / math.ln10).floor()).toDouble();
+    final ceiling =
+        maximum <= 0 ? 1.0 : (maximum / magnitude).ceil() * magnitude;
+    final currency =
+        NumberFormat.currency(locale: 'en_MY', symbol: 'RM ', decimalDigits: 2);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Row(children: [
+        Text('Amount (RM)', style: TextStyle(fontSize: 11, color: adminMuted)),
+        Spacer(),
+        Icon(Icons.circle, size: 10, color: Color(0xFF378DF5)),
+        SizedBox(width: 6),
+        Text('Gross payroll', style: TextStyle(fontSize: 11, color: adminMuted))
+      ]),
+      const SizedBox(height: 12),
+      LayoutBuilder(
+          builder: (_, constraints) => SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                  width: math.max(760, constraints.maxWidth),
+                  height: 276,
+                  child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                            width: 65,
+                            height: 260,
+                            child: Stack(children: [
+                              for (var tick = 0; tick <= 5; tick++)
+                                Positioned(
+                                    top: 17 + tick * 44.0,
+                                    right: 8,
+                                    child: Text(
+                                        NumberFormat('#,##0.##')
+                                            .format(ceiling * (5 - tick) / 5),
+                                        style: const TextStyle(
+                                            fontSize: 10, color: adminMuted)))
+                            ])),
+                        Expanded(
+                            child: Column(children: [
+                          SizedBox(
+                              height: 244,
+                              child: Stack(children: [
+                                for (var tick = 0; tick <= 5; tick++)
+                                  Positioned(
+                                      top: 24 + tick * 44.0,
+                                      left: 0,
+                                      right: 0,
+                                      child: Container(
+                                          height: 1,
+                                          color: const Color(0xFFE2EAF5))),
+                                Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      for (var index = 0;
+                                          index < values.length;
+                                          index++)
+                                        Expanded(
+                                            child: Tooltip(
+                                                message: values[index] == null
+                                                    ? 'No saved payroll'
+                                                    : currency
+                                                        .format(values[index]),
+                                                child: InkWell(
+                                                    onTap: values[index] == null
+                                                        ? null
+                                                        : () => onMonth(index),
+                                                    child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 6),
+                                                        child: SizedBox(
+                                                            height: 244,
+                                                            child: Column(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .end,
+                                                                children: [
+                                                                  SizedBox(
+                                                                      height:
+                                                                          19,
+                                                                      child: FittedBox(
+                                                                          fit: BoxFit
+                                                                              .scaleDown,
+                                                                          child: Text(
+                                                                              values[index] == null ? '—' : currency.format(values[index]),
+                                                                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: adminInk)))),
+                                                                  Container(
+                                                                      height: values[index] ==
+                                                                              null
+                                                                          ? 0
+                                                                          : (values[index]! / ceiling * 220)
+                                                                              .clamp(0, 220)
+                                                                              .toDouble(),
+                                                                      decoration: BoxDecoration(
+                                                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                                                          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [
+                                                                            colors[index % colors.length].withValues(alpha: .85),
+                                                                            colors[index %
+                                                                                colors.length]
+                                                                          ])))
+                                                                ]))))))
+                                    ])
+                              ])),
+                          const SizedBox(height: 8),
+                          Row(children: [
+                            for (final month in months)
+                              Expanded(
+                                  child: Text(
+                                      DateFormat('MMM yy').format(month),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          fontSize: 11, color: adminMuted)))
+                          ])
+                        ]))
+                      ])))),
+      if (values.any((v) => v == null))
+        const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text('No saved payroll',
+                style: TextStyle(color: adminMuted, fontSize: 11))),
+      const SizedBox(height: 8),
+      const Text(
+          'Select a bar to inspect saved employee totals. Missing months have no bar.',
+          style: TextStyle(color: adminMuted, fontSize: 11)),
+    ]);
   }
 }

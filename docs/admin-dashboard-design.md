@@ -68,3 +68,11 @@ exclusions and attendance deductions as the existing HRDF report. Payroll,
 summary and HRDF previews now read Neon rather than requesting all Supabase
 payroll history, and honour the selected branch. Existing statutory report and
 export actions remain available.
+
+The saved gross payroll trend is displayed as eight coloured vertical bars,
+with month labels, exact RM values, and an amount axis. It scrolls horizontally
+on narrow cards to keep labels readable. Missing months have no bar. Clicking a
+saved month continues to open its employee breakdown. Country flags, the live
+clock, and the five workforce category cards now sit under the top dashboard
+controls, above the KPI row. They reuse the original employee-list callbacks
+and selected-branch counts; the detailed payroll panel no longer duplicates them.
