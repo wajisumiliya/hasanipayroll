@@ -2298,89 +2298,30 @@ class _AdminDashboardState extends State<AdminDashboard>
     required Widget reports,
     required Widget tools,
     required Widget breakdown,
-  }) {
-    final activeEmployees = employees.where(_isActive).length;
-    final inactiveEmployees = employees.length - activeEmployees;
-    final departments = employees
-        .map((e) => e['department']?.toString().trim() ?? '')
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .length;
-
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      color: _portalTheme.accent,
-      child: LayoutBuilder(builder: (context, constraints) {
-        final compact = constraints.maxWidth < 720;
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.all(compact ? 12 : 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              breakdown,
-              const SizedBox(height: 14),
-              _dashboardSectionTitle(
-                'Workforce intelligence',
-                'Tap any metric to explore the live records',
-              ),
-              const SizedBox(height: 10),
-              _dashboardWorkforceOverview(
-                compact: compact,
-                employees: employees,
-                activeEmployees: activeEmployees,
-                inactiveEmployees: inactiveEmployees,
-                departments: departments,
-                birthdays: birthdays,
-                anniversaries: anniversaries,
-              ),
-              const SizedBox(height: 16),
-              _dashboardSectionTitle(
-                'Payroll reports',
-                'Preview a month before exporting or printing',
-              ),
-              const SizedBox(height: 10),
-              LayoutBuilder(builder: (context, reportConstraints) {
-                final columns = reportConstraints.maxWidth >= 1250
-                    ? 6
-                    : reportConstraints.maxWidth >= 760
-                        ? 3
-                        : reportConstraints.maxWidth >= 480
-                            ? 2
-                            : 1;
-                final width =
-                    (reportConstraints.maxWidth - (10 * (columns - 1))) /
-                        columns;
-                return Wrap(spacing: 10, runSpacing: 10, children: [
-                  _dashboardReportCard(width, 'Payroll',
-                      Icons.payments_outlined, const Color(0xFF1B2234),
-                      assetName: 'assets/hb_payroll_icon.png'),
-                  _dashboardReportCard(width, 'EPF', Icons.savings_outlined,
-                      const Color(0xFFD6B24F),
-                      imageBytes: dashboardEpfLogoBytes, fallbackLabel: 'KWSP'),
-                  _dashboardReportCard(width, 'SOCSO',
-                      Icons.health_and_safety_outlined, const Color(0xFF1B2234),
-                      imageBytes: dashboardSocsoLogoBytes,
-                      fallbackLabel: 'SOCSO'),
-                  _dashboardReportCard(width, 'EIS', Icons.shield_outlined,
-                      const Color(0xFFD6B24F),
-                      imageBytes: dashboardEisLogoBytes, fallbackLabel: 'EIS'),
-                  _dashboardReportCard(width, 'HRDF',
-                      Icons.account_balance_outlined, const Color(0xFF1B2234),
-                      imageBytes: dashboardHrdfLogoBytes, fallbackLabel: 'HRD'),
-                  _dashboardReportCard(width, 'Payroll Summary',
-                      Icons.summarize_outlined, const Color(0xFFD6B24F),
-                      assetName: 'assets/hb_payroll_icon.png'),
-                ]);
-              }),
-              const SizedBox(height: 16),
-              tools,
-            ],
-          ),
-        );
-      }),
-    );
-  }
+  }) =>
+      ModernAdminOverview(
+        month: month,
+        branch: branch,
+        branches: branches,
+        employees: employees,
+        gross: gross,
+        deductions: deductions,
+        net: net,
+        activity: activity,
+        onMonth: onMonth,
+        onBranch: onBranch,
+        onNavigate: onNavigate,
+        onRefresh: onRefresh,
+        onLateReport: onLateReport,
+        onGross: onGross,
+        onNet: onNet,
+        birthdays: birthdays,
+        anniversaries: anniversaries,
+        onCelebrate: onCelebrate,
+        reports: reports,
+        tools: tools,
+        breakdown: breakdown,
+      );
 
   Widget _dashboardCommandHero({
     required double totalGross,
