@@ -166,7 +166,10 @@ ModernAdminOverview overviewWidget(
                   ? 'Eligibility & levy report'
                   : 'Selected month',
               onTap: () {})),
-      tools: tools ?? const Text('Existing import and notification tools'),
+      tools: tools ??
+          TextButton(
+              onPressed: () => navigate?.call(2),
+              child: const Text('Existing import and notification tools')),
     );
 void main() {
   test(
@@ -223,10 +226,6 @@ void main() {
       expect(find.text('Total Employees'), findsOneWidget);
       expect(find.text('Monthly Payroll Amount'), findsOneWidget);
       expect(find.text('RM 9,000.00'), findsWidgets);
-      final payrollAction = find.text('Run Payroll');
-      await tester.ensureVisible(payrollAction);
-      await tester.tap(payrollAction);
-      expect(routes.last, 2);
       for (final title in [
         'Attendance Monitoring',
         'Salary Analytics',
@@ -239,8 +238,11 @@ void main() {
       await tester.ensureVisible(find.text('Payroll reports'));
       expect(find.text('Payroll'), findsWidgets);
       await tester.ensureVisible(find.text('More management tools'));
-      expect(
-          find.text('Existing import and notification tools'), findsOneWidget);
+      final toolsAction = find.text('Existing import and notification tools');
+      expect(toolsAction, findsOneWidget);
+      await tester.ensureVisible(toolsAction);
+      await tester.tap(toolsAction);
+      expect(routes, [2]);
       expect(find.text('Outside scope'), findsNothing);
       expect(find.textContaining('Incomplete current'), findsNothing);
       await tester.ensureVisible(find.text('Detailed payroll breakdown'));
