@@ -810,7 +810,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           Expanded(
             child: Column(
               children: [
-                _topBar(),
+                if (selectedPage != 0) _topBar(),
                 Expanded(child: _portalPage(_currentPage())),
               ],
             ),
@@ -905,6 +905,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           },
         );
     return PremiumPortalSidebar(
+      referenceDashboardStyle: !_attendanceOnly,
       portalLabel: 'Payroll Portal',
       profileName: _adminScopeName,
       profileDetail: _adminScopeLabel,

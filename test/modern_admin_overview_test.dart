@@ -189,21 +189,18 @@ void main() {
           home: Scaffold(
               body: overviewWidget(navigate: routes.add, late: () => late++))));
       await tester.pumpAndSettle();
-      expect(find.text('Total employees'), findsOneWidget);
-      expect(find.text('Active employees'), findsOneWidget);
+      expect(find.text('Dashboard Overview'), findsOneWidget);
+      expect(find.text('Total Employees'), findsOneWidget);
+      expect(find.text('Monthly Payroll Amount'), findsOneWidget);
       expect(find.text('RM 9,000.00'), findsWidgets);
-      final payrollAction = width < 650
-          ? find.byTooltip('View payroll')
-          : find.text('View payroll');
+      final payrollAction = find.text('Run Payroll');
       await tester.ensureVisible(payrollAction);
       await tester.tap(payrollAction);
       expect(routes.last, 2);
-      final lateAction = width < 650
-          ? find.byTooltip('View report')
-          : find.text('View report');
+      final lateAction = find.text('Missing Attendance');
       await tester.ensureVisible(lateAction);
       await tester.tap(lateAction);
-      expect(late, 1);
+      expect(routes.last, 3);
       expect(find.text('Outside scope'), findsNothing);
       expect(find.textContaining('Incomplete current'), findsNothing);
       await tester.ensureVisible(find.text('Detailed payroll breakdown'));

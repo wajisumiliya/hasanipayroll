@@ -25,6 +25,7 @@ class PremiumPortalSidebar extends StatelessWidget {
     this.profileImageAsset,
     required this.items,
     required this.onLogout,
+    this.referenceDashboardStyle = false,
   });
 
   final String portalLabel;
@@ -34,6 +35,7 @@ class PremiumPortalSidebar extends StatelessWidget {
   final String? profileImageAsset;
   final List<PremiumPortalSidebarItem> items;
   final VoidCallback onLogout;
+  final bool referenceDashboardStyle;
 
   static const _navy = Color(0xFF08111F);
   static const _navyLight = Color(0xFF111D2E);
@@ -43,7 +45,7 @@ class PremiumPortalSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 265,
+      width: referenceDashboardStyle ? 210 : 265,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -65,11 +67,15 @@ class PremiumPortalSidebar extends StatelessWidget {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+              padding: EdgeInsets.fromLTRB(
+                  referenceDashboardStyle ? 10 : 18,
+                  referenceDashboardStyle ? 14 : 22,
+                  referenceDashboardStyle ? 10 : 18,
+                  14),
               child: Column(
                 children: [
                   _logo(),
-                  const SizedBox(height: 25),
+                  SizedBox(height: referenceDashboardStyle ? 14 : 25),
                   Expanded(
                     child: ListView.separated(
                       padding: EdgeInsets.zero,
@@ -79,24 +85,25 @@ class PremiumPortalSidebar extends StatelessWidget {
                       itemBuilder: (_, index) => _menuItem(items[index]),
                     ),
                   ),
-                  _profile(),
+                  if (!referenceDashboardStyle) _profile(),
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: OutlinedButton.icon(
-                      onPressed: onLogout,
-                      icon: const Icon(Icons.logout_rounded, size: 19),
-                      label: const Text('Logout',
-                          style: TextStyle(fontWeight: FontWeight.w800)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _gold,
-                        side: const BorderSide(color: _goldDark, width: 1.2),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                  if (!referenceDashboardStyle)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: OutlinedButton.icon(
+                        onPressed: onLogout,
+                        icon: const Icon(Icons.logout_rounded, size: 19),
+                        label: const Text('Logout',
+                            style: TextStyle(fontWeight: FontWeight.w800)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _gold,
+                          side: const BorderSide(color: _goldDark, width: 1.2),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -109,13 +116,13 @@ class PremiumPortalSidebar extends StatelessWidget {
   Widget _logo() => Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(9),
+            padding: EdgeInsets.all(referenceDashboardStyle ? 5 : 9),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Image.asset('assets/hasani_books_logo.jpg',
-                width: 176,
+                width: referenceDashboardStyle ? 170 : 176,
                 errorBuilder: (context, error, stackTrace) => const Text(
                     'HASANI BOOKS',
                     style: TextStyle(
@@ -123,12 +130,15 @@ class PremiumPortalSidebar extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                         fontSize: 18))),
           ),
-          const SizedBox(height: 10),
-          Text(portalLabel.toUpperCase(),
-              style: const TextStyle(
+          SizedBox(height: referenceDashboardStyle ? 5 : 10),
+          Text(
+              referenceDashboardStyle
+                  ? 'PEOPLE  •  PAYROLL  •  PROGRESS'
+                  : portalLabel.toUpperCase(),
+              style: TextStyle(
                   color: _gold,
-                  fontSize: 10,
-                  letterSpacing: 2.2,
+                  fontSize: 8,
+                  letterSpacing: referenceDashboardStyle ? .7 : 2.2,
                   fontWeight: FontWeight.w800)),
         ],
       );
@@ -140,11 +150,15 @@ class PremiumPortalSidebar extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            height: referenceDashboardStyle ? 42 : 48,
+            padding: EdgeInsets.symmetric(
+                horizontal: referenceDashboardStyle ? 11 : 14),
             decoration: BoxDecoration(
               gradient: item.selected
-                  ? const LinearGradient(colors: [_gold, _goldDark])
+                  ? (referenceDashboardStyle
+                      ? const LinearGradient(
+                          colors: [Color(0xFF2382F7), Color(0xFF075DCE)])
+                      : const LinearGradient(colors: [_gold, _goldDark]))
                   : null,
               borderRadius: BorderRadius.circular(12),
               boxShadow: item.selected
@@ -152,53 +166,62 @@ class PremiumPortalSidebar extends StatelessWidget {
                   : null,
             ),
             child: Row(children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  gradient: item.selected
-                      ? const LinearGradient(
-                          colors: [Color(0xFFFFF4B8), Color(0xFFFFD85A)],
-                        )
-                      : const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF28B6FF), Color(0xFF0754D8)],
+              SizedBox(
+                  width: referenceDashboardStyle ? 22 : 32,
+                  height: referenceDashboardStyle ? 22 : 32,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: referenceDashboardStyle
+                          ? null
+                          : item.selected
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFFF4B8),
+                                    Color(0xFFFFD85A)
+                                  ],
+                                )
+                              : const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF28B6FF),
+                                    Color(0xFF0754D8)
+                                  ],
+                                ),
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(
+                        color: item.selected
+                            ? const Color(0x66FFFFFF)
+                            : const Color(0x554EDBFF),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: item.selected
+                              ? const Color(0x55F5C451)
+                              : const Color(0x660A78FF),
+                          blurRadius: item.selected ? 8 : 11,
+                          spreadRadius: item.selected ? 0 : 1,
                         ),
-                  borderRadius: BorderRadius.circular(9),
-                  border: Border.all(
-                    color: item.selected
-                        ? const Color(0x66FFFFFF)
-                        : const Color(0x554EDBFF),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: item.selected
-                          ? const Color(0x55F5C451)
-                          : const Color(0x660A78FF),
-                      blurRadius: item.selected ? 8 : 11,
-                      spreadRadius: item.selected ? 0 : 1,
+                      ],
                     ),
-                  ],
-                ),
-                child: Icon(
-                  item.icon,
-                  color: item.selected ? _navy : Colors.white,
-                  size: 20,
-                ),
-              ),
+                    child: Icon(
+                      item.icon,
+                      color: Colors.white,
+                      size: referenceDashboardStyle ? 18 : 20,
+                    ),
+                  )),
               const SizedBox(width: 11),
               Expanded(
                 child: Text(item.label,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: item.selected ? _navy : Colors.white,
+                      color: Colors.white,
                       fontWeight:
                           item.selected ? FontWeight.w800 : FontWeight.w600,
                     )),
               ),
               if (item.selected)
-                const Icon(Icons.chevron_right_rounded, color: _navy),
+                const Icon(Icons.chevron_right_rounded, color: Colors.white),
             ]),
           ),
         ),
