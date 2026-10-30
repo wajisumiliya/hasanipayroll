@@ -188,6 +188,10 @@ class AppService extends ChangeNotifier {
     defaultValue: 'https://hasaniworkhub.onrender.com/',
   );
 
+  final Map<String, Map<String, dynamic>> _lateReportCache = {};
+  final Map<String, DateTime> _lateReportCacheTime = {};
+  final Map<String, Future<Map<String, dynamic>>> _lateReportInFlight = {};
+
   FirstLoginOtpState? _firstLoginOtpState;
 
   FirstLoginOtpState? get firstLoginOtpState => _firstLoginOtpState;
@@ -429,6 +433,24 @@ class AppService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> loadLateReport(DateTime month) async {
+    final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+    final cachedAt = _lateReportCacheTime[key];
+    final cached = _lateReportCache[key];
+    if (cached != null &&
+        cachedAt != null &&
+        DateTime.now().difference(cachedAt) < const Duration(seconds: 30)) {
+      return cached;
+    }
+    final existing = _lateReportInFlight[key];
+    if (existing != null) return existing;
+
+    final request = _fetchLateReport(month, key);
+    _lateReportInFlight[key] = request;
+    return request.whenComplete(() => _lateReportInFlight.remove(key));
+  }
+
+  Future<Map<String, dynamic>> _fetchLateReport(
+      DateTime month, String cacheKey) async {
     final data = await _getAuth(Uri(
         path: '/api/attendance/late-report',
         queryParameters: {
@@ -439,6 +461,8 @@ class AppService extends ChangeNotifier {
       throw StateError(
           data['message']?.toString() ?? 'Unable to load late report.');
     }
+    _lateReportCache[cacheKey] = data;
+    _lateReportCacheTime[cacheKey] = DateTime.now();
     return data;
   }
 
@@ -466,6 +490,8 @@ class AppService extends ChangeNotifier {
     if (data['ok'] != true) {
       throw StateError(data['message']?.toString() ?? 'Unable to save review.');
     }
+    _lateReportCache.clear();
+    _lateReportCacheTime.clear();
   }
 
   /// Salary and roster data for one employee, scoped by the Node JWT.

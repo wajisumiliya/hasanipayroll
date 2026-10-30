@@ -30,12 +30,21 @@ class _LateReportPageState extends State<LateReportPage> {
   late Future<Map<String, dynamic>> _report;
   String? _branch;
   bool _exporting = false;
+  final _search = TextEditingController();
+  String _filter = 'all';
+  Map<String, dynamic>? _selected;
   @override
   void initState() {
     super.initState();
     _month = widget.month;
     _branch = widget.initialBranchId;
     _load();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   void _load() {
@@ -113,19 +122,73 @@ class _LateReportPageState extends State<LateReportPage> {
     }
   }
 
+  static const _gold = Color(0xFFB58A35),
+      _ink = Color(0xFF29251F),
+      _muted = Color(0xFF756F66),
+      _line = Color(0xFFE8E0D3),
+      _canvas = Color(0xFFF7F4ED);
+
+  BoxDecoration _card([Color color = Colors.white]) => BoxDecoration(
+      color: color,
+      border: Border.all(color: _line),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 12)]);
+
+  Widget _pill(String text, Color color) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: .1),
+          borderRadius: BorderRadius.circular(20)),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w700, color: color)));
+
+  String _severityName(int count) => count >= 7
+      ? 'Critical'
+      : count >= 5
+          ? 'Warning'
+          : 'Watch';
+  String _status(Map<String, dynamic> row) {
+    final events = row['events'] as List? ?? [];
+    return events.isNotEmpty &&
+            events.every((e) => (e as Map)['review']?['status'] == 'approved')
+        ? 'Approved'
+        : 'Pending review';
+  }
+
   Widget _summary(List<Map<String, dynamic>> reports) {
-    int total(String field) =>
-        reports.fold(0, (sum, r) => sum + (r[field] as num).toInt());
+    final approved = reports.where((r) => _status(r) == 'Approved').length;
     final metrics = [
-      ('Employees flagged', reports.length, Icons.people_outline),
-      ('Late arrivals', total('arrival_count'), Icons.schedule),
-      ('Exceeded breaks', total('break_count'), Icons.free_breakfast_outlined),
-      ('Excess minutes', total('total_minutes'), Icons.timer_outlined),
+      (
+        'Employees flagged',
+        reports.length,
+        'Monthly exceptions',
+        Icons.people_outline,
+        _gold
+      ),
+      (
+        'Critical cases',
+        reports.where((r) => (r['count'] as num) >= 7).length,
+        '7+ total occurrences',
+        Icons.warning_amber,
+        const Color(0xFFB9473D)
+      ),
+      (
+        'Pending review',
+        reports.length - approved,
+        'Requires attention',
+        Icons.hourglass_top,
+        const Color(0xFFD27A12)
+      ),
+      (
+        'Approved',
+        approved,
+        'Review completed',
+        Icons.check_circle_outline,
+        const Color(0xFF258761)
+      ),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Selected month · flagged employees only',
-          style: TextStyle(color: Colors.black54)),
-      const SizedBox(height: 8),
       LayoutBuilder(builder: (context, constraints) {
         final columns = constraints.maxWidth < 650 ? 2 : 4;
         return Wrap(
@@ -135,20 +198,41 @@ class _LateReportPageState extends State<LateReportPage> {
                 .map((m) => SizedBox(
                       width:
                           (constraints.maxWidth - (columns - 1) * 10) / columns,
-                      child: Card(
-                          margin: EdgeInsets.zero,
+                      child: Container(
+                          decoration: _card(),
                           child: Padding(
                               padding: const EdgeInsets.all(14),
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(m.$3, color: const Color(0xFF1A4264)),
-                                    Text('${m.$2}',
-                                        style: const TextStyle(
-                                            fontSize: 25,
-                                            fontWeight: FontWeight.bold)),
-                                    Text(m.$1),
-                                  ]))),
+                              child: Row(children: [
+                                Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                        color: m.$5.withValues(alpha: .1),
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
+                                    child: Icon(m.$4, color: m.$5, size: 19)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                    child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                      Text(m.$1,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 11, color: _muted)),
+                                      Text('${m.$2}',
+                                          style: const TextStyle(
+                                              fontSize: 23,
+                                              fontWeight: FontWeight.w800)),
+                                      Text(m.$3,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 9, color: _muted)),
+                                    ]))
+                              ]))),
                     ))
                 .toList());
       }),
@@ -217,147 +301,334 @@ class _LateReportPageState extends State<LateReportPage> {
   }
 
   Widget _results(Map<String, dynamic> data) {
-    final reports = _filtered(data['reports']);
+    final all = _filtered(data['reports']);
+    final query = _search.text.trim().toLowerCase();
+    final reports = all.where((r) {
+      final count = (r['count'] as num).toInt();
+      final severity = _filter == 'all' ||
+          _filter == 'watch' && count <= 4 ||
+          _filter == 'warning' && count >= 5 && count <= 6 ||
+          _filter == 'critical' && count >= 7;
+      return severity &&
+          (query.isEmpty ||
+              '${r['name']} ${r['employee_id']} ${_branchName(r['branch_id'])}'
+                  .toLowerCase()
+                  .contains(query));
+    }).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Late Report',
+          style: TextStyle(
+              fontSize: 25, fontWeight: FontWeight.w800, color: _ink)),
+      const SizedBox(height: 3),
+      const Text('Monthly attendance exceptions and review status',
+          style: TextStyle(fontSize: 12, color: _muted)),
+      const SizedBox(height: 15),
       Wrap(spacing: 8, runSpacing: 8, children: [
+        Container(
+            height: 42,
+            decoration: _card(),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(
+                  tooltip: 'Previous month',
+                  onPressed: () => setState(() {
+                        _month = DateTime(_month.year, _month.month - 1);
+                        _load();
+                      }),
+                  icon: const Icon(Icons.chevron_left, size: 18)),
+              const Icon(Icons.calendar_today_outlined, size: 14, color: _gold),
+              const SizedBox(width: 7),
+              Text(DateFormat('MMMM yyyy').format(_month),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w700)),
+              IconButton(
+                  tooltip: 'Next month',
+                  onPressed: () => setState(() {
+                        _month = DateTime(_month.year, _month.month + 1);
+                        _load();
+                      }),
+                  icon: const Icon(Icons.chevron_right, size: 18)),
+            ])),
+        SizedBox(
+            width: 180,
+            height: 42,
+            child: Container(
+                decoration: _card(),
+                child: DropdownButtonFormField<String>(
+                    initialValue: _branch ?? '',
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.account_tree_outlined, size: 15),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8)),
+                    items: [
+                      const DropdownMenuItem(
+                          value: '', child: Text('All branches')),
+                      ...widget.branches.map((b) => DropdownMenuItem(
+                          value: '${b['id'] ?? b['branch_id']}',
+                          child: Text('${b['name'] ?? b['branch_name']}',
+                              overflow: TextOverflow.ellipsis)))
+                    ],
+                    onChanged: (v) => setState(() {
+                          _branch = v == '' ? null : v;
+                          _selected = null;
+                        })))),
+        OutlinedButton.icon(
+            onPressed: () => setState(_load),
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Refresh')),
         OutlinedButton.icon(
             onPressed: _exporting ? null : () => _export('pdf', data),
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
             label: const Text('Export PDF')),
         OutlinedButton.icon(
             onPressed: _exporting ? null : () => _export('xlsx', data),
-            icon: const Icon(Icons.table_view),
+            icon: const Icon(Icons.table_view_outlined, size: 16),
             label: const Text('Export Excel')),
-        if (_exporting)
-          const Padding(
-              padding: EdgeInsets.all(8),
-              child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))),
       ]),
-      const SizedBox(height: 16),
-      _summary(reports),
+      const SizedBox(height: 18),
+      _summary(all),
       const SizedBox(height: 12),
-      const Text(
-          'Severity: Low 3–4 · Medium 5–6 · High 7+. Reviews and approvals retain the recorded totals. Comparisons use saved records; the current month may still be in progress.'),
+      _filterBar(all),
       const SizedBox(height: 12),
-      Text('${reports.length} employee(s) meet the monthly threshold',
-          style: const TextStyle(fontWeight: FontWeight.bold)),
-      if (reports.isEmpty)
-        const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-                'No employees with 3 or more occurrences in this period.')),
-      ...reports.asMap().entries.expand((entry) {
-        final r = entry.value;
-        final count = (r['count'] as num).toInt();
-        final previous = (r['previous_count'] as num? ?? 0).toInt();
-        final change = count - previous;
-        return <Widget>[
-          if (entry.key == 0 ||
-              reports[entry.key - 1]['branch_id'] != r['branch_id'])
-            Padding(
-                padding: const EdgeInsets.only(top: 20, bottom: 8),
-                child: Text(_branchName(r['branch_id']),
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold))),
-          Card(
-              child: ExpansionTile(
-            key: PageStorageKey(
-                '${_month.year}-${_month.month}-${r['branch_id']}-${r['employee_id']}'),
-            title: Text('${r['name']} · ${r['employee_id']}'),
-            subtitle:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                  '${_branchName(r['branch_id'])}\n${r['arrival_count']} late arrivals + ${r['break_count']} exceeded breaks = $count occurrences · ${r['total_minutes']} min total'),
-              const SizedBox(height: 6),
-              Wrap(
-                  spacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Chip(
-                        backgroundColor:
-                            _severity(count).withValues(alpha: .12),
-                        label: Text('${lateSeverityLabel(count)} severity',
-                            style: TextStyle(
-                                color: _severity(count),
-                                fontWeight: FontWeight.bold))),
-                    Text('$count this month · $previous last month'),
-                  ]),
-              Text(change == 0
-                  ? 'Unchanged from last month'
-                  : change < 0
-                      ? '${-change} fewer than last month'
-                      : '$change more than last month'),
-            ]),
-            children: (r['events'] as List).map((e) => _event(r, e)).toList(),
-          )),
-        ];
+      LayoutBuilder(builder: (context, box) {
+        final wide = box.maxWidth >= 1050;
+        final list = _reportTable(reports);
+        if (!wide || _selected == null) {
+          return Column(children: [
+            list,
+            if (_selected != null) ...[
+              const SizedBox(height: 12),
+              _details(_selected!)
+            ]
+          ]);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: list),
+          const SizedBox(width: 12),
+          SizedBox(width: 390, child: _details(_selected!))
+        ]);
       }),
     ]);
   }
 
+  Widget _filterBar(List<Map<String, dynamic>> rows) => Container(
+      padding: const EdgeInsets.all(9),
+      decoration: _card(),
+      child: LayoutBuilder(builder: (context, box) {
+        int n(String f) => rows.where((r) {
+              final c = (r['count'] as num).toInt();
+              return f == 'all' ||
+                  f == 'watch' && c <= 4 ||
+                  f == 'warning' && c >= 5 && c <= 6 ||
+                  f == 'critical' && c >= 7;
+            }).length;
+        final chips = Wrap(
+            spacing: 5,
+            runSpacing: 5,
+            children: [
+              ('all', 'All'),
+              ('watch', 'Watch 3–4'),
+              ('warning', 'Warning 5–6'),
+              ('critical', 'Critical 7+')
+            ]
+                .map((f) => InkWell(
+                    onTap: () => setState(() => _filter = f.$1),
+                    child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 11, vertical: 9),
+                        decoration: BoxDecoration(
+                            color: _filter == f.$1 ? _gold : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Text('${f.$2} (${n(f.$1)})',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color:
+                                    _filter == f.$1 ? Colors.white : _muted)))))
+                .toList());
+        final search = SizedBox(
+            width: box.maxWidth < 700 ? box.maxWidth : 275,
+            height: 38,
+            child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                    hintText: 'Search employee, staff ID or branch',
+                    prefixIcon: const Icon(Icons.search, size: 17),
+                    filled: true,
+                    fillColor: _canvas,
+                    contentPadding: EdgeInsets.zero,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none))));
+        return box.maxWidth < 700
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [chips, const SizedBox(height: 8), search])
+            : Row(children: [Expanded(child: chips), search]);
+      }));
+
+  Widget _reportTable(List<Map<String, dynamic>> rows) => Container(
+      decoration: _card(),
+      clipBehavior: Clip.antiAlias,
+      child: rows.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.all(28),
+              child: Text(
+                  'No employees with 3 or more occurrences in this period.'))
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                  headingTextStyle: const TextStyle(
+                      fontSize: 9, fontWeight: FontWeight.w700, color: _muted),
+                  dataRowMinHeight: 58,
+                  dataRowMaxHeight: 58,
+                  columnSpacing: 20,
+                  columns: const [
+                    DataColumn(label: Text('EMPLOYEE')),
+                    DataColumn(label: Text('BRANCH')),
+                    DataColumn(label: Text('LATE ARRIVALS')),
+                    DataColumn(label: Text('BREAK EXCEEDED')),
+                    DataColumn(label: Text('TOTAL')),
+                    DataColumn(label: Text('SEVERITY')),
+                    DataColumn(label: Text('REVIEW STATUS')),
+                    DataColumn(label: Text('ACTION'))
+                  ],
+                  rows: rows.map((r) {
+                    final c = (r['count'] as num).toInt();
+                    final color = _severity(c);
+                    return DataRow(
+                        color: WidgetStatePropertyAll(
+                            _selected?['employee_id'] == r['employee_id']
+                                ? const Color(0xFFF9F1DF)
+                                : Colors.transparent),
+                        cells: [
+                          DataCell(
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('${r['name']}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700)),
+                                    Text('${r['employee_id']}',
+                                        style: const TextStyle(
+                                            fontSize: 9, color: _muted))
+                                  ]),
+                              onTap: () => setState(() => _selected = r)),
+                          DataCell(Text(_branchName(r['branch_id']),
+                              style: const TextStyle(fontSize: 10))),
+                          DataCell(Text('${r['arrival_count']}')),
+                          DataCell(Text('${r['break_count']}')),
+                          DataCell(Text('$c',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800))),
+                          DataCell(_pill(_severityName(c), color)),
+                          DataCell(_pill(
+                              _status(r),
+                              _status(r) == 'Approved'
+                                  ? const Color(0xFF258761)
+                                  : _gold)),
+                          DataCell(IconButton(
+                              tooltip: 'View details',
+                              onPressed: () => setState(() => _selected = r),
+                              icon: const Icon(Icons.arrow_forward_ios,
+                                  size: 13, color: _gold)))
+                        ]);
+                  }).toList())));
+
+  Widget _details(Map<String, dynamic> person) {
+    final events = person['events'] as List? ?? [];
+    final c = (person['count'] as num).toInt();
+    return Container(
+        decoration: _card(),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        color: const Color(0xFFF8EFDC),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Text('${person['name']}'.trim().substring(0, 1),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, color: _gold))),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('${person['name']}',
+                          style: const TextStyle(fontWeight: FontWeight.w800)),
+                      Text(
+                          '${person['employee_id']}  |  ${_branchName(person['branch_id'])}',
+                          style: const TextStyle(fontSize: 9, color: _muted))
+                    ])),
+                IconButton(
+                    tooltip: 'Close details',
+                    onPressed: () => setState(() => _selected = null),
+                    icon: const Icon(Icons.close, size: 18))
+              ])),
+          const Divider(height: 1, color: _line),
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Summary (month)',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 10),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _metric(
+                              'Late arrivals', '${person['arrival_count']}'),
+                          _metric('Break exceeded', '${person['break_count']}'),
+                          _metric('Total', '$c'),
+                          _pill(_severityName(c), _severity(c))
+                        ]),
+                    const SizedBox(height: 16),
+                    const Text('Attendance details',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    if (events.isEmpty)
+                      const Text('No recorded occurrences.',
+                          style: TextStyle(color: _muted)),
+                    ...events.map((e) => _event(person, e))
+                  ]))
+        ]));
+  }
+
+  Widget _metric(String label, String value) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(fontSize: 8, color: _muted)),
+        Text(value,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800))
+      ]);
+
   @override
   Widget build(BuildContext context) => Scaffold(
+        backgroundColor: _canvas,
         appBar: widget.embedded
             ? null
-            : AppBar(title: const Text('Late Report'), actions: [
-                IconButton(
-                    tooltip: 'Refresh',
-                    onPressed: () => setState(_load),
-                    icon: const Icon(Icons.refresh))
-              ]),
+            : AppBar(
+                backgroundColor: Colors.white,
+                foregroundColor: _ink,
+                elevation: 0,
+                title: const Text('Late Report',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
         body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (widget.embedded)
-                Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                        tooltip: 'Refresh report',
-                        onPressed: () => setState(_load),
-                        icon: const Icon(Icons.refresh))),
-              Row(children: [
-                IconButton(
-                    tooltip: 'Previous month',
-                    onPressed: () => setState(() {
-                          _month = DateTime(_month.year, _month.month - 1);
-                          _load();
-                        }),
-                    icon: const Icon(Icons.chevron_left)),
-                Expanded(
-                    child: Text(DateFormat('MMMM yyyy').format(_month),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18))),
-                IconButton(
-                    tooltip: 'Next month',
-                    onPressed: () => setState(() {
-                          _month = DateTime(_month.year, _month.month + 1);
-                          _load();
-                        }),
-                    icon: const Icon(Icons.chevron_right)),
-              ]),
-              const Text(
-                  'Employees with 3 or more combined occurrences: late arrivals + days exceeding allocated break minutes.'),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                  initialValue: _branch ?? '',
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                      labelText: 'Branch', border: OutlineInputBorder()),
-                  items: [
-                    const DropdownMenuItem(
-                        value: '', child: Text('All branches')),
-                    ...widget.branches.map((b) => DropdownMenuItem(
-                        value: '${b['id'] ?? b['branch_id']}',
-                        child: Text('${b['name'] ?? b['branch_name']}')))
-                  ],
-                  onChanged: (v) =>
-                      setState(() => _branch = v == '' ? null : v)),
-              const SizedBox(height: 16),
               FutureBuilder<Map<String, dynamic>>(
                   future: _report,
                   builder: (context, snap) {
