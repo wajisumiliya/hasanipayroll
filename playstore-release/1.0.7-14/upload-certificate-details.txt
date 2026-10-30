@@ -1,0 +1,21 @@
+Owner: CN=Hasani Payroll, OU=Mobile, O=Hasani, L=Kuala Lumpur, ST=Kuala Lumpur, C=MY
+Issuer: CN=Hasani Payroll, OU=Mobile, O=Hasani, L=Kuala Lumpur, ST=Kuala Lumpur, C=MY
+Serial number: a831f6ca3cc965ca
+Valid from: Thu Sep 10 16:17:54 GMT+08:00 2026 until: Mon Jan 26 16:17:54 GMT+08:00 2054
+Certificate fingerprints:
+	 SHA1: F4:95:BC:25:EA:9B:1A:F9:88:3C:97:FC:EE:B4:47:35:53:36:0B:F6
+	 SHA256: E0:A4:52:0F:AB:95:8C:75:DC:60:2B:02:32:46:B0:9D:DB:8B:03:51:41:EE:6A:40:86:19:29:35:F0:8B:7D:DE
+Signature algorithm name: SHA384withRSA
+Subject Public Key Algorithm: 4096-bit RSA key
+Version: 3
+
+Extensions: 
+
+#1: ObjectId: 2.5.29.14 Criticality=false
+SubjectKeyIdentifier [
+KeyIdentifier [
+0000: 97 CF 8B 14 72 64 97 5F   AF E1 E6 63 EF CB 71 05  ....rd._...c..q.
+0010: F4 4A D7 64                                        .J.d
+]
+]
+

@@ -40,7 +40,6 @@ import '../widgets/premium_portal_sidebar.dart';
 import '../widgets/modern_admin_overview.dart';
 import '../widgets/admin_analytics.dart';
 import '../dashboard_brand_logos.dart';
-import '../widgets/modern_admin_navigation.dart';
 
 class _DashboardHeaderPainter extends CustomPainter {
   const _DashboardHeaderPainter();
@@ -249,6 +248,11 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<List<dynamic>>? _attendancePageFuture;
   String? _attendancePageFutureKey;
   Future<List<Map<String, dynamic>>>? _attendanceBranchesFuture;
+  final Map<String, Future<List<Map<String, dynamic>>>> _dashboardReportCache =
+      {};
+  final Map<String, Future<Map<String, dynamic>>> _statutoryReportCache = {};
+  final Map<String, DateTime> _dashboardReportCacheTime = {};
+  final Map<String, DateTime> _statutoryReportCacheTime = {};
   final TextEditingController _adminEmployeeSearchController =
       TextEditingController();
   final TextEditingController _attendanceEmployeeSearchController =
@@ -807,7 +811,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           Expanded(
             child: Column(
               children: [
-                _topBar(),
+                if (selectedPage != 0) _topBar(),
                 Expanded(child: _portalPage(_currentPage())),
               ],
             ),
@@ -901,9 +905,12 @@ class _AdminDashboardState extends State<AdminDashboard>
             changePage(page);
           },
         );
-    return ModernAdminSidebar(
-      name: _adminScopeName,
-      detail: _adminScopeLabel,
+    return PremiumPortalSidebar(
+      referenceDashboardStyle: !_attendanceOnly,
+      portalLabel: 'Payroll Portal',
+      profileName: _adminScopeName,
+      profileDetail: _adminScopeLabel,
+      profileIcon: Icons.admin_panel_settings_outlined,
       items: _attendanceOnly
           ? [
               item('Attendance', Icons.event_available_rounded, 3),
@@ -2163,7 +2170,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   .01;
         });
 
-        return ModernAdminOverview(
+        return _classicDashboard(
           month: selectedDashboardMonth,
           branch: selectedDashboardBranchId,
           branches: dashboardBranches,
@@ -2319,10 +2326,62 @@ class _AdminDashboardState extends State<AdminDashboard>
               metric: 'net',
             ),
           ),
+          payrollRecords: payroll,
         );
       },
     );
   }
+
+  Widget _classicDashboard({
+    required DateTime month,
+    required String? branch,
+    required Map<String, String> branches,
+    required List<Map<String, dynamic>> employees,
+    required double gross,
+    required double deductions,
+    required double net,
+    required Future<Map<String, dynamic>> activity,
+    required ValueChanged<DateTime> onMonth,
+    required ValueChanged<String?> onBranch,
+    required ValueChanged<int> onNavigate,
+    required Future<void> Function() onRefresh,
+    required VoidCallback onLateReport,
+    required VoidCallback onGross,
+    required VoidCallback onNet,
+    required List<Map<String, dynamic>> birthdays,
+    required List<Map<String, dynamic>> anniversaries,
+    required void Function(Map<String, dynamic>, bool) onCelebrate,
+    required Widget reports,
+    required Widget tools,
+    required Widget breakdown,
+    Widget? analytics,
+    required List<Map<String, dynamic>> payrollRecords,
+  }) =>
+      ModernAdminOverview(
+        month: month,
+        branch: branch,
+        branches: branches,
+        employees: employees,
+        gross: gross,
+        deductions: deductions,
+        net: net,
+        activity: activity,
+        onMonth: onMonth,
+        onBranch: onBranch,
+        onNavigate: onNavigate,
+        onRefresh: onRefresh,
+        onLateReport: onLateReport,
+        onGross: onGross,
+        onNet: onNet,
+        birthdays: birthdays,
+        anniversaries: anniversaries,
+        onCelebrate: onCelebrate,
+        reports: reports,
+        tools: tools,
+        breakdown: breakdown,
+        payrollRecords: payrollRecords,
+        analytics: analytics,
+      );
 
   Widget _dashboardCommandHero({
     required double totalGross,
@@ -11953,10 +12012,12 @@ class _AdminDashboardState extends State<AdminDashboard>
         overwriteExisting: overwriteExisting,
       );
 
-      // Batch generation writes directly through AttendancePayrollService.
-      // Refresh the shared payroll cache so Employee Payslips immediately
-      // includes the newly generated month without requiring a manual reload.
-      await service.loadPayrollMonthFromSupabase(month);
+      // Show completion immediately. Refresh shared payroll state in the
+      // background instead of making the user wait for a second full fetch.
+      _invalidatePayrollReportCaches();
+      unawaited(service
+          .loadPayrollMonthFromSupabase(month)
+          .catchError((Object _) {}));
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -12093,6 +12154,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
       },
     );
+  }
+
+  void _invalidatePayrollReportCaches() {
+    _dashboardReportCache.clear();
+    _statutoryReportCache.clear();
+    _dashboardReportCacheTime.clear();
+    _statutoryReportCacheTime.clear();
+    _dashboardDataFuture = null;
   }
 
   String _branchIdFromMap(Map<String, dynamic> branch) {
@@ -12448,7 +12517,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                       record,
                       onConflict: 'employee_id,period',
                     );
-                await service.loadPayrollMonthFromSupabase(month);
+                _invalidatePayrollReportCaches();
+                unawaited(service
+                    .loadPayrollMonthFromSupabase(month)
+                    .catchError((Object _) {}));
                 selectedPayrollMonth = month;
                 if (!dialogContext.mounted) return;
                 setDialogState(() {
@@ -15791,6 +15863,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               payrollRows,
               onConflict: 'employee_id,period',
             );
+        _invalidatePayrollReportCaches();
 
         if (!mounted) return;
 
@@ -19251,6 +19324,33 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Future<List<Map<String, dynamic>>> _loadDashboardReportRows(
       DateTime month) async {
+    final key = '${month.year}-${month.month.toString().padLeft(2, '0')}-'
+        '${service.currentUser?.staffScope ?? 'all'}-${selectedDashboardBranchId ?? 'all'}';
+    final existing = _dashboardReportCache[key];
+    final cachedAt = _dashboardReportCacheTime[key];
+    if (existing != null &&
+        (cachedAt == null ||
+            DateTime.now().difference(cachedAt) <
+                const Duration(seconds: 30))) {
+      return existing;
+    }
+    _dashboardReportCache.remove(key);
+    _dashboardReportCacheTime.remove(key);
+    final request = _fetchDashboardReportRows(month);
+    _dashboardReportCache[key] = request;
+    try {
+      final result = await request;
+      _dashboardReportCacheTime[key] = DateTime.now();
+      return result;
+    } catch (_) {
+      _dashboardReportCache.remove(key);
+      _dashboardReportCacheTime.remove(key);
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchDashboardReportRows(
+      DateTime month) async {
     final source = await service.loadNeonAdminDashboard(month);
     final results = ['payroll', 'employees', 'branches']
         .map((key) => (source[key] as List)
@@ -19476,7 +19576,35 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Future<Map<String, dynamic>> _loadStatutoryReport(
       String report, DateTime month) async {
-    final payrollResponse = await SupabaseService.getPayroll();
+    final key = '$report-${month.year}-'
+        '${month.month.toString().padLeft(2, '0')}-'
+        '${service.currentUser?.staffScope ?? 'all'}';
+    final existing = _statutoryReportCache[key];
+    final cachedAt = _statutoryReportCacheTime[key];
+    if (existing != null &&
+        (cachedAt == null ||
+            DateTime.now().difference(cachedAt) <
+                const Duration(seconds: 30))) {
+      return existing;
+    }
+    _statutoryReportCache.remove(key);
+    _statutoryReportCacheTime.remove(key);
+    final request = _fetchStatutoryReport(report, month);
+    _statutoryReportCache[key] = request;
+    try {
+      final result = await request;
+      _statutoryReportCacheTime[key] = DateTime.now();
+      return result;
+    } catch (_) {
+      _statutoryReportCache.remove(key);
+      _statutoryReportCacheTime.remove(key);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> _fetchStatutoryReport(
+      String report, DateTime month) async {
+    final payrollResponse = await SupabaseService.getPayrollForMonth(month);
     final payrollRows = payrollResponse
         .where((row) => _payrollPeriodMatchesMonth(row['period'], month))
         .toList();

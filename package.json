@@ -4,7 +4,11 @@
   "private": true,
   "description": "Build the Flutter frontend for Render static hosting",
   "scripts": {
-    "postinstall": "bash scripts/render-build-web.sh",
-    "build": "bash scripts/render-build-web.sh"
+    "build": "bash scripts/render-build-web.sh",
+    "preview": "flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:5001",
+    "backend:dev": "npm --prefix backend run dev",
+    "check:quick": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-check.ps1 -Quick",
+    "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-check.ps1",
+    "hooks:install": "git config core.hooksPath .githooks"
   }
 }

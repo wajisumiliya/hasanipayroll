@@ -207,23 +207,22 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       }
 
-      // Attendance must load independently of optional roster lookups.
-      // During the Neon cutover, legacy PostgREST can reject the Node JWT
-      // (PGRST301). Do not block the employee's attendance sheet on that.
-      final allRows = await SupabaseService.getAttendanceByEmployeeMonth(
-        employeeId,
-        widget.month.year,
-        widget.month.month,
-      );
-
-      // Fetch salary and rosters from the same authenticated Neon backend.
-      // Legacy PostgREST rejects Node-issued JWTs with PGRST301.
-      final dependencies =
-          await AppService.instance.loadAttendanceSheetDependencies(
-        employeeId: employeeId,
-        year: widget.month.year,
-        month: widget.month.month,
-      );
+      // Attendance rows and sheet dependencies are independent. Loading them
+      // concurrently removes one complete network round-trip from every open.
+      final results = await Future.wait<Object>([
+        SupabaseService.getAttendanceByEmployeeMonth(
+          employeeId,
+          widget.month.year,
+          widget.month.month,
+        ),
+        AppService.instance.loadAttendanceSheetDependencies(
+          employeeId: employeeId,
+          year: widget.month.year,
+          month: widget.month.month,
+        ),
+      ]);
+      final allRows = results[0] as List<Map<String, dynamic>>;
+      final dependencies = results[1] as Map<String, dynamic>;
       final salary = dependencies['salary'];
       if (salary is Map) {
         final epfCategory =

@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Hasani: Start local backend",
+      "type": "shell",
+      "command": "npm run backend:dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Hasani: Quick pre-push check",
+      "type": "shell",
+      "command": "npm run check:quick",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "Hasani: Full local CI check",
+      "type": "shell",
+      "command": "npm run check",
+      "problemMatcher": [],
+      "group": "test"
+    }
+  ]
+}

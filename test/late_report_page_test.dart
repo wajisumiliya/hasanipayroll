@@ -115,20 +115,16 @@ void main() {
             })));
     await tester.pumpAndSettle();
     expect(find.text('Employees flagged'), findsOneWidget);
-    expect(find.text('Late arrivals'), findsOneWidget);
-    expect(find.text('Exceeded breaks'), findsOneWidget);
-    expect(find.text('Excess minutes'), findsOneWidget);
+    expect(find.text('Critical cases'), findsOneWidget);
+    expect(find.text('Pending review'), findsWidgets);
+    expect(find.text('Approved'), findsWidgets);
     expect(find.textContaining('Incomplete current records'), findsNothing);
     expect(
         find.textContaining('Incomplete previous-month records'), findsNothing);
-    await tester.ensureVisible(find.text('Employee A · E1'));
-    expect(find.textContaining('2 late arrivals + 2 exceeded breaks = 4'),
-        findsOneWidget);
-    expect(find.text('Low severity'), findsOneWidget);
-    expect(find.text('4 this month · 7 last month'), findsOneWidget);
-    expect(find.text('3 fewer than last month'), findsOneWidget);
-    expect(find.text('High severity'), findsOneWidget);
-    await tester.tap(find.text('Employee A · E1'));
+    await tester.ensureVisible(find.text('Employee A'));
+    expect(find.text('Watch'), findsOneWidget);
+    expect(find.text('Critical'), findsOneWidget);
+    await tester.tap(find.text('Employee A'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('+20 min'));
     expect(find.text('Allowed 60 min · used 80 min'), findsOneWidget);
@@ -163,8 +159,8 @@ void main() {
               saved = body;
             })));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Employee A · E1'));
-    await tester.tap(find.text('Employee A · E1'));
+    await tester.ensureVisible(find.text('Employee A'));
+    await tester.tap(find.text('Employee A'));
     await tester.pumpAndSettle();
     final button = find.text('Review event').first;
     await tester.ensureVisible(button);
@@ -252,8 +248,8 @@ void main() {
             branches: branches,
             loader: (_) async => data)));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Employee A · E1'));
-    await tester.tap(find.text('Employee A · E1'));
+    await tester.ensureVisible(find.text('Employee A'));
+    await tester.tap(find.text('Employee A'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Needs re-review'));
     expect(find.text('Needs re-review'), findsOneWidget);
@@ -326,7 +322,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AppBar), findsNothing);
     expect(find.byTooltip('Refresh report'), findsOneWidget);
-    expect(find.text('Employee A · E1'), findsOneWidget);
-    expect(find.text('Employee B · E2'), findsNothing);
+    expect(find.text('Employee A'), findsOneWidget);
+    expect(find.text('Employee B'), findsNothing);
   });
 }

@@ -133,6 +133,21 @@ flutter pub get
 flutter run -d chrome
 ```
 
+For the normal local workflow from the repository root:
+
+```bash
+# Terminal 1: start the API (requires backend/.env)
+npm run backend:dev
+
+# Terminal 2: open the Flutter dashboard in Chrome against that API
+npm run preview
+```
+
+In VS Code, select **Hasani Payroll - Local Chrome** in Run and Debug. The
+matching **Hasani: Start local backend** task is available from **Run Task**.
+Both use `http://127.0.0.1:5001`, so local previewing does not require a push
+or consume GitHub Actions minutes.
+
 The frontend API URL is configured through a Dart environment definition. The current default is `https://hasaniworkhub.onrender.com`.
 
 ```bash
@@ -201,6 +216,24 @@ Never put Firebase service-account private keys in Flutter or GitHub.
 A passing build does not establish that these flows work in production. Test with authorized accounts in a safe environment and avoid destructive tests against live payroll records.
 
 ## Testing and builds
+
+Before pushing, run the repository-level local checks:
+
+```bash
+# Formatting, analysis and Flutter tests (also used by the optional hook)
+npm run check:quick
+
+# All quick checks, backend tests and a release Flutter web compilation
+npm run check
+
+# One-time setup: reject future pushes when quick checks fail
+npm run hooks:install
+```
+
+The hook is intentionally opt-in because Git does not activate repository
+hooks after cloning. You can bypass it for an exceptional push with
+`git push --no-verify`, but the full local check is recommended before opening
+or merging a pull request.
 
 ### Flutter
 
