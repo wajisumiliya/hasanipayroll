@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+echo "Running Hasani Payroll local pre-push checks..."
+
+if command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local-check.ps1 -Quick
+elif command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -File scripts/local-check.ps1 -Quick
+else
+  echo "PowerShell is required for the local pre-push checks." >&2
+  exit 1
+fi
