@@ -234,9 +234,17 @@ void main() {
       ]) {
         expect(find.text(title), findsNothing);
       }
-      // Reports and tools render immediately, without expanding either heading.
-      await tester.ensureVisible(find.text('Payroll reports'));
-      expect(find.text('Payroll'), findsWidgets);
+      // Activity cards replace duplicated payroll sections; tools stay visible.
+      expect(find.text('Payroll reports'), findsNothing);
+      expect(find.text('Detailed payroll breakdown'), findsNothing);
+      for (final title in [
+        'Attendance Late (3 and above)',
+        'Increment List',
+        'Upcoming Birthdays',
+        'Work Anniversary'
+      ]) {
+        expect(find.text(title), findsOneWidget);
+      }
       await tester.ensureVisible(find.text('More management tools'));
       final toolsAction = find.text('Existing import and notification tools');
       expect(toolsAction, findsOneWidget);
@@ -245,10 +253,6 @@ void main() {
       expect(routes, [2]);
       expect(find.text('Outside scope'), findsNothing);
       expect(find.textContaining('Incomplete current'), findsNothing);
-      await tester.ensureVisible(find.text('Detailed payroll breakdown'));
-      await tester.tap(find.text('Detailed payroll breakdown'));
-      await tester.pumpAndSettle();
-      expect(find.text('Existing payroll details'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
@@ -261,7 +265,7 @@ void main() {
             body: overviewWidget(
                 month: (v) => month = v, branch: (v) => branch = v))));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('October 2026'));
+    await tester.tap(find.text('October 2026').first);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<int>).first);
     await tester.pumpAndSettle();

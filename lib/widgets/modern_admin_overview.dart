@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/payroll_calculation_service.dart';
+import 'admin_activity_cards.dart';
 
 const adminInk = Color(0xFF20242C);
 const adminGold = Color(0xFF987033);
@@ -2321,17 +2322,16 @@ class _ReferencePayrollDashboard extends StatelessWidget {
 
   Widget _detailsAndTools() =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (view.reports != null) ...[
-          const ListTile(
-              title: Text('Payroll reports'),
-              subtitle: Text(
-                  'Open payroll, EPF, SOCSO, EIS, HRDF and summary reports')),
-          Padding(padding: const EdgeInsets.all(12), child: view.reports!),
-        ],
-        ExpansionTile(
-            key: const PageStorageKey('overview-payroll-details'),
-            title: const Text('Detailed payroll breakdown'),
-            children: [view.breakdown]),
+        AdminActivityCards(
+            month: view.month,
+            branch: view.branch,
+            employees: view.employees,
+            payroll: view.payrollRecords,
+            activity: view.activity,
+            onMonth: view.onMonth,
+            onLate: view.onLateReport,
+            onPayroll: () => view.onNavigate(2)),
+        const SizedBox(height: 18),
         const ListTile(title: Text('More management tools')),
         view.tools,
       ]);

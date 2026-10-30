@@ -76,3 +76,15 @@ saved month continues to open its employee breakdown. Country flags, the live
 clock, and the five workforce category cards now sit under the top dashboard
 controls, above the KPI row. They reuse the original employee-list callbacks
 and selected-branch counts; the detailed payroll panel no longer duplicates them.
+
+The duplicated Payroll reports and Detailed payroll breakdown blocks are now
+replaced by a responsive two-column activity grid: Attendance Late (3 and above),
+Increment List, Upcoming Birthdays, and Work Anniversary. Month controls update
+the shared reporting month and the cards follow the selected branch/staff scope.
+Late days use arrival events only; the full Late Report still counts excess breaks.
+Increments use the existing saved-payroll comparison rules and label payroll month,
+not an unverified approval/effective date. Employee service dates drive birthday
+and completed-year anniversary rows. Past birthdays are labelled as past, missing
+positions show a dash, and unavailable late data is distinct from no records.
+View All opens full lists; late View All links to the existing Late Report.
+Management actions remain visible below the activity cards.
