@@ -67,6 +67,14 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('RM 3,000.00'), findsWidgets);
       expect(find.text('No saved payroll'), findsWidgets);
+      for (final title in [
+        'Salary analytics',
+        'Attendance monitoring',
+        'Branch monitoring',
+        'Branch distribution'
+      ]) {
+        expect(find.text(title), findsNothing);
+      }
       await tester.ensureVisible(find.text('View employee breakdown'));
       await tester.tap(find.text('View employee breakdown'));
       await tester.pumpAndSettle();

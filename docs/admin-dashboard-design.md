@@ -54,18 +54,14 @@ are required for this design.
 The dashboard now reads eight saved payroll months from the authenticated Neon
 admin overview API. Missing months show “No saved payroll”; they are not zero
 points or interpolated history. The selected month and branch apply to payroll
-composition, salary comparisons and branch totals. Each saved trend month opens
-an employee breakdown. Salary comparisons require an employee record in both
-adjacent months, use the existing base-pay calculation and distinguish saved
-base changes from approved increments. Payroll net is derived from the existing
-gross calculation minus the eight itemised employee deduction fields.
+composition. Each saved trend month opens an employee breakdown. Payroll net
+is derived from the existing gross calculation minus the eight itemised employee
+deduction fields.
 
-Attendance is explicitly today's Malaysia date, independent of the payroll
-selector. Missing attendance stays unavailable. Not checked in is not absence;
-late uses recorded status, and off/leave includes rest days. Branch monitoring
-shows total and active employees, gross/net, today's unique active check-ins and
-saved payroll record counts. Distribution includes all scoped employee records,
-including inactive staff, and lists every branch rather than truncating to five.
+Salary analytics, attendance monitoring, branch monitoring and branch
+distribution are removed from the dashboard at the user's request. Payroll
+reports and More management tools render their contents directly, without
+collapsible wrappers. The separate detailed payroll breakdown remains expandable.
 
 HRDF displays the calculated one-percent eligible levy base using the same
 exclusions and attendance deductions as the existing HRDF report. Payroll,

@@ -1508,11 +1508,8 @@ class _ReferencePayrollDashboard extends StatelessWidget {
                       else ...[
                         _topAnalytics(context, metrics),
                         const SizedBox(height: 12),
-                        _middleAnalytics(context, metrics),
-                        const SizedBox(height: 12),
-                        _bottomAnalytics(context, metrics),
-                        const SizedBox(height: 12),
                       ],
+                      const SizedBox(height: 12),
                       _detailsAndTools(),
                     ]),
               ),
@@ -2310,22 +2307,24 @@ class _ReferencePayrollDashboard extends StatelessWidget {
                           .toList()))
                   .toList()));
 
-  Widget _detailsAndTools() => Column(children: [
-        if (view.reports != null)
-          ExpansionTile(
-              title: const Text('Payroll reports'),
-              subtitle: const Text(
-                  'Open payroll, EPF, SOCSO, EIS, HRDF and summary reports'),
-              children: [
-                Padding(padding: const EdgeInsets.all(12), child: view.reports!)
-              ]),
+  Widget _detailsAndTools() => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (view.reports != null) ...[
+          const ListTile(
+              title: Text('Payroll reports'),
+              subtitle: Text(
+                  'Open payroll, EPF, SOCSO, EIS, HRDF and summary reports')),
+          Padding(padding: const EdgeInsets.all(12), child: view.reports!),
+        ],
         ExpansionTile(
             key: const PageStorageKey('overview-payroll-details'),
             title: const Text('Detailed payroll breakdown'),
             children: [view.breakdown]),
-        ExpansionTile(
-            title: const Text('More management tools'), children: [view.tools]),
+        const ListTile(title: Text('More management tools')),
+        view.tools,
       ]);
+
 }
 
 extension on Widget {
