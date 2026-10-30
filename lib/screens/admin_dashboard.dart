@@ -38,6 +38,7 @@ import '../widgets/employee_profile_details.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../widgets/modern_admin_overview.dart';
+import '../widgets/admin_analytics.dart';
 import '../dashboard_brand_logos.dart';
 import '../widgets/modern_admin_navigation.dart';
 
@@ -1406,7 +1407,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     var employees = (results['employees'] as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
-    var payroll = (results['payroll'] as List)
+    var payroll = ((results['payroll_history'] ?? results['payroll']) as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
     final staffScope = service.currentUser?.staffScope?.trim().toLowerCase();
@@ -2139,14 +2140,39 @@ class _AdminDashboardState extends State<AdminDashboard>
               _number(row['advance']),
         );
         final totalNet = totalGross - totalDeductions;
+        final hrdfLevy = periodPayroll.fold<double>(0, (sum, row) {
+          final employee = employees
+              .where((e) =>
+                  _dashboardBranchKey(e['employee_id'] ?? e['id']) ==
+                  _dashboardBranchKey(row['employee_id']))
+              .firstOrNull;
+          if (employee == null) return sum;
+          bool flag(String field) =>
+              employee[field] == true ||
+              employee[field]?.toString().toLowerCase() == 'true';
+          if (isForeign(employee) ||
+              flag('is_management_staff') ||
+              flag('is_temp_staff') ||
+              flag('is_support_staff')) return sum;
+          return sum +
+              (_number(row['basic_salary']) -
+                          _number(row['unpaid_deduction']) -
+                          _number(row['late_deduction']))
+                      .clamp(0, double.infinity)
+                      .toDouble() *
+                  .01;
+        });
 
         return ModernAdminOverview(
           month: selectedDashboardMonth,
           branch: selectedDashboardBranchId,
           branches: dashboardBranches,
           employees: employees
-              .map((e) =>
-                  {...e, 'branch_id': _dashboardBranchKey(e['branch_id'])})
+              .map((e) => {
+                    ...e,
+                    'branch_id':
+                        _dashboardBranchKey(_payrollBranchIdFromEmployee(e))
+                  })
               .toList(),
           gross: totalGross,
           deductions: totalDeductions,
@@ -2197,27 +2223,56 @@ class _AdminDashboardState extends State<AdminDashboard>
               'SOCSO' => socso + socsoEmployer,
               'EIS' => eis + eisEmployer,
               'Payroll Summary' => totalGross,
+              'HRDF' => hrdfLevy,
               _ => null
             };
+            String rm(double value) => NumberFormat.currency(
+                    locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
+                .format(value);
             final caption = switch (report) {
-              'Payroll' => 'Net payroll',
-              'Payroll Summary' => 'Gross payroll',
-              'HRDF' => 'Eligibility & levy report',
+              'Payroll' =>
+                '${periodPayroll.length} saved records · Net payroll',
+              'Payroll Summary' =>
+                'Gross payroll · Deductions ${rm(totalDeductions)}',
+              'EPF' => 'Employee ${rm(epf)}\nEmployer ${rm(epfEmployer)}',
+              'SOCSO' => 'Employee ${rm(socso)}\nEmployer ${rm(socsoEmployer)}',
+              'EIS' => 'Employee ${rm(eis)}\nEmployer ${rm(eisEmployer)}',
+              'HRDF' => '1% of eligible levy base',
               _ => 'Employee + employer'
             };
             return IvoryAdminReportCard(
                 width: width,
                 title: report,
                 icon: icon,
-                value: amount == null
-                    ? '1% levy'
-                    : NumberFormat.currency(
-                            locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
-                        .format(amount),
+                value: periodPayroll.isEmpty
+                    ? 'No saved payroll'
+                    : amount == null
+                        ? 'Unavailable'
+                        : NumberFormat.currency(
+                                locale: 'en_MY',
+                                symbol: 'RM ',
+                                decimalDigits: 2)
+                            .format(amount),
                 caption: caption,
                 logoBytes: bytes,
                 onTap: () => _openDashboardReport(report));
           }),
+          analytics: AdminAnalytics(
+            month: selectedDashboardMonth,
+            branch: selectedDashboardBranchId,
+            branches: dashboardBranches,
+            employees: employees
+                .map((e) => {
+                      ...e,
+                      'branch_id':
+                          _dashboardBranchKey(_payrollBranchIdFromEmployee(e))
+                    })
+                .toList(),
+            payroll: payroll,
+            activity: _dashboardActivityData(),
+            grossOf: _payrollTotalEarnings,
+            baseOf: _payrollSalaryBase,
+          ),
           tools: _dashboardActionDock(),
           breakdown: _dashboardCommandHero(
             totalGross: totalGross,
@@ -19196,11 +19251,12 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Future<List<Map<String, dynamic>>> _loadDashboardReportRows(
       DateTime month) async {
-    final results = await Future.wait([
-      SupabaseService.getPayroll(),
-      SupabaseService.getEmployees(),
-      SupabaseService.getBranches(),
-    ]);
+    final source = await service.loadNeonAdminDashboard(month);
+    final results = ['payroll', 'employees', 'branches']
+        .map((key) => (source[key] as List)
+            .map((r) => Map<String, dynamic>.from(r as Map))
+            .toList())
+        .toList();
     final scopedEmployeeRows = _scopedEmployeeRows(results[1]);
     final scopedEmployeeIds = scopedEmployeeRows
         .map((row) => _normalizeBranchValue(row['employee_id']))
@@ -19211,6 +19267,21 @@ class _AdminDashboardState extends State<AdminDashboard>
             service.currentUser?.staffScope == null ||
             scopedEmployeeIds
                 .contains(_normalizeBranchValue(row['employee_id'])))
+        .where((row) {
+          if (selectedDashboardBranchId == null) return true;
+          final own = _dashboardBranchKey(row['branch_id']);
+          final person = scopedEmployeeRows
+              .where((e) =>
+                  _dashboardBranchKey(e['employee_id']) ==
+                  _dashboardBranchKey(row['employee_id']))
+              .firstOrNull;
+          return (own.isNotEmpty
+                  ? own
+                  : _dashboardBranchKey(person == null
+                      ? ''
+                      : _payrollBranchIdFromEmployee(person))) ==
+              selectedDashboardBranchId;
+        })
         .map((row) => Map<String, dynamic>.from(row))
         .toList();
     final employees = <String, Map<String, dynamic>>{};
@@ -19229,8 +19300,9 @@ class _AdminDashboardState extends State<AdminDashboard>
     for (final row in payroll) {
       final employeeId = _normalizeBranchValue(row['employee_id']);
       final employee = employees[employeeId] ?? <String, dynamic>{};
-      final branchId = employee.isEmpty
-          ? _normalizeBranchValue(row['branch_id'])
+      final payrollBranchId = _normalizeBranchValue(row['branch_id']);
+      final branchId = payrollBranchId.isNotEmpty
+          ? payrollBranchId
           : _payrollBranchIdFromEmployee(employee);
       final fallbackBranch = branchId.isEmpty ? 'Unassigned' : branchId;
       final branch = branchNames[branchId] ??
@@ -19291,7 +19363,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           pcb +
           zakat +
           advance;
-      final net = _number(row['net_pay'] ?? row['net_salary']);
       summary['basic'] = (summary['basic'] as double) + basic;
       summary['overtime'] = (summary['overtime'] as double) + overtime;
       summary['otherAllowances'] =
@@ -19311,8 +19382,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       summary['zakat'] = (summary['zakat'] as double) + zakat;
       summary['advance'] = (summary['advance'] as double) + advance;
       summary['deductions'] = (summary['deductions'] as double) + deductions;
-      summary['net'] =
-          (summary['net'] as double) + (net == 0 ? gross - deductions : net);
+      summary['net'] = (summary['net'] as double) + gross - deductions;
 
       final foreign = employee['address']
               ?.toString()

@@ -48,3 +48,27 @@ Its embedded view retains the selected reporting month and matching branch,
 refresh, reviews, and background PDF/Excel exports. No incomplete-record panels
 are reintroduced. No schema, payroll calculation, or release-signing changes
 are required for this design.
+
+### Detailed analytics
+
+The dashboard now reads eight saved payroll months from the authenticated Neon
+admin overview API. Missing months show “No saved payroll”; they are not zero
+points or interpolated history. The selected month and branch apply to payroll
+composition, salary comparisons and branch totals. Each saved trend month opens
+an employee breakdown. Salary comparisons require an employee record in both
+adjacent months, use the existing base-pay calculation and distinguish saved
+base changes from approved increments. Payroll net is derived from the existing
+gross calculation minus the eight itemised employee deduction fields.
+
+Attendance is explicitly today's Malaysia date, independent of the payroll
+selector. Missing attendance stays unavailable. Not checked in is not absence;
+late uses recorded status, and off/leave includes rest days. Branch monitoring
+shows total and active employees, gross/net, today's unique active check-ins and
+saved payroll record counts. Distribution includes all scoped employee records,
+including inactive staff, and lists every branch rather than truncating to five.
+
+HRDF displays the calculated one-percent eligible levy base using the same
+exclusions and attendance deductions as the existing HRDF report. Payroll,
+summary and HRDF previews now read Neon rather than requesting all Supabase
+payroll history, and honour the selected branch. Existing statutory report and
+export actions remain available.

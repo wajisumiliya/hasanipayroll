@@ -128,7 +128,8 @@ class ModernAdminOverview extends StatelessWidget {
       required this.onCelebrate,
       required this.breakdown,
       required this.tools,
-      this.reports});
+      this.reports,
+      this.analytics});
   final DateTime month;
   final String? branch;
   final Map<String, String> branches;
@@ -142,7 +143,7 @@ class ModernAdminOverview extends StatelessWidget {
   final VoidCallback onLateReport, onGross, onNet;
   final void Function(Map<String, dynamic>, bool) onCelebrate;
   final Widget breakdown, tools;
-  final Widget? reports;
+  final Widget? reports, analytics;
   String money(double v) =>
       NumberFormat.currency(locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
           .format(v);
@@ -760,6 +761,10 @@ class ModernAdminOverview extends StatelessWidget {
                       const SizedBox(height: 12),
                       reports!,
                       const SizedBox(height: 22),
+                    ],
+                    if (analytics != null) ...[
+                      analytics!,
+                      const SizedBox(height: 22)
                     ],
                     FutureBuilder<Map<String, dynamic>>(
                         future: activity,

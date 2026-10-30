@@ -1691,8 +1691,8 @@ app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req,
     const [employeesResult, payrollResult, branchesResult] = await Promise.all([
       pool.query("SELECT to_jsonb(e) AS row FROM public.employees e ORDER BY e.name ASC"),
       pool.query(
-        `SELECT to_jsonb(p) AS row FROM public.payroll p
-         WHERE p.period >= make_date($1, $2, 1)
+        `SELECT to_jsonb(p) AS row, p.period >= make_date($1, $2, 1) AS selected FROM public.payroll p
+         WHERE p.period >= (make_date($1, $2, 1) - INTERVAL '7 months')
            AND p.period < (make_date($1, $2, 1) + INTERVAL '1 month')
          ORDER BY p.employee_id ASC`,
         [year, month],
@@ -1709,7 +1709,8 @@ app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req,
       ok: true,
       source: "neon",
       employees: employeesResult.rows.map(({row}) => row),
-      payroll: payrollResult.rows.map(({row}) => row),
+      payroll: payrollResult.rows.filter(r => r.selected).map(({row}) => row),
+      payroll_history: payrollResult.rows.map(({row}) => row),
       branches,
     });
   } catch (error) {
