@@ -39,7 +39,6 @@ import '../widgets/app_reload_button.dart';
 import '../widgets/premium_portal_sidebar.dart';
 import '../widgets/modern_admin_overview.dart';
 import '../dashboard_brand_logos.dart';
-import '../widgets/modern_admin_navigation.dart';
 
 class _DashboardHeaderPainter extends CustomPainter {
   const _DashboardHeaderPainter();
@@ -900,9 +899,11 @@ class _AdminDashboardState extends State<AdminDashboard>
             changePage(page);
           },
         );
-    return ModernAdminSidebar(
-      name: _adminScopeName,
-      detail: _adminScopeLabel,
+    return PremiumPortalSidebar(
+      portalLabel: 'Payroll Portal',
+      profileName: _adminScopeName,
+      profileDetail: _adminScopeLabel,
+      profileIcon: Icons.admin_panel_settings_outlined,
       items: _attendanceOnly
           ? [
               item('Attendance', Icons.event_available_rounded, 3),
@@ -2140,7 +2141,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
         final totalNet = totalGross - totalDeductions;
 
-        return ModernAdminOverview(
+        return _classicDashboard(
           month: selectedDashboardMonth,
           branch: selectedDashboardBranchId,
           branches: dashboardBranches,
@@ -2266,6 +2267,112 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         );
       },
+    );
+  }
+
+  Widget _classicDashboard({
+    required DateTime month,
+    required String? branch,
+    required Map<String, String> branches,
+    required List<Map<String, dynamic>> employees,
+    required double gross,
+    required double deductions,
+    required double net,
+    required Future<Map<String, dynamic>> activity,
+    required ValueChanged<DateTime> onMonth,
+    required ValueChanged<String?> onBranch,
+    required ValueChanged<int> onNavigate,
+    required Future<void> Function() onRefresh,
+    required VoidCallback onLateReport,
+    required VoidCallback onGross,
+    required VoidCallback onNet,
+    required List<Map<String, dynamic>> birthdays,
+    required List<Map<String, dynamic>> anniversaries,
+    required void Function(Map<String, dynamic>, bool) onCelebrate,
+    required Widget reports,
+    required Widget tools,
+    required Widget breakdown,
+  }) {
+    final activeEmployees = employees.where(_isActive).length;
+    final inactiveEmployees = employees.length - activeEmployees;
+    final departments = employees
+        .map((e) => e['department']?.toString().trim() ?? '')
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .length;
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: _portalTheme.accent,
+      child: LayoutBuilder(builder: (context, constraints) {
+        final compact = constraints.maxWidth < 720;
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(compact ? 12 : 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              breakdown,
+              const SizedBox(height: 14),
+              _dashboardSectionTitle(
+                'Workforce intelligence',
+                'Tap any metric to explore the live records',
+              ),
+              const SizedBox(height: 10),
+              _dashboardWorkforceOverview(
+                compact: compact,
+                employees: employees,
+                activeEmployees: activeEmployees,
+                inactiveEmployees: inactiveEmployees,
+                departments: departments,
+                birthdays: birthdays,
+                anniversaries: anniversaries,
+              ),
+              const SizedBox(height: 16),
+              _dashboardSectionTitle(
+                'Payroll reports',
+                'Preview a month before exporting or printing',
+              ),
+              const SizedBox(height: 10),
+              LayoutBuilder(builder: (context, reportConstraints) {
+                final columns = reportConstraints.maxWidth >= 1250
+                    ? 6
+                    : reportConstraints.maxWidth >= 760
+                        ? 3
+                        : reportConstraints.maxWidth >= 480
+                            ? 2
+                            : 1;
+                final width =
+                    (reportConstraints.maxWidth - (10 * (columns - 1))) /
+                        columns;
+                return Wrap(spacing: 10, runSpacing: 10, children: [
+                  _dashboardReportCard(width, 'Payroll',
+                      Icons.payments_outlined, const Color(0xFF1B2234),
+                      assetName: 'assets/hb_payroll_icon.png'),
+                  _dashboardReportCard(width, 'EPF', Icons.savings_outlined,
+                      const Color(0xFFD6B24F),
+                      imageBytes: dashboardEpfLogoBytes, fallbackLabel: 'KWSP'),
+                  _dashboardReportCard(width, 'SOCSO',
+                      Icons.health_and_safety_outlined, const Color(0xFF1B2234),
+                      imageBytes: dashboardSocsoLogoBytes,
+                      fallbackLabel: 'SOCSO'),
+                  _dashboardReportCard(width, 'EIS', Icons.shield_outlined,
+                      const Color(0xFFD6B24F),
+                      imageBytes: dashboardEisLogoBytes, fallbackLabel: 'EIS'),
+                  _dashboardReportCard(width, 'HRDF',
+                      Icons.account_balance_outlined, const Color(0xFF1B2234),
+                      imageBytes: dashboardHrdfLogoBytes, fallbackLabel: 'HRD'),
+                  _dashboardReportCard(width, 'Payroll Summary',
+                      Icons.summarize_outlined, const Color(0xFFD6B24F),
+                      assetName: 'assets/hb_payroll_icon.png'),
+                ]);
+              }),
+              const SizedBox(height: 16),
+              tools,
+            ],
+          ),
+        );
+      }),
     );
   }
 
