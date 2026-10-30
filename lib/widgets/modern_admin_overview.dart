@@ -1,3 +1,4 @@
+import 'hasani_enterprise_panel.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -1129,148 +1130,50 @@ class ModernAdminOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: adminGold,
-            secondary: Color(0xFFD4A532),
-            surface: Colors.white,
-            onSurface: adminInk,
-          ),
-          textTheme: Theme.of(context)
-              .textTheme
-              .apply(bodyColor: adminInk, displayColor: adminInk),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 13,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: adminBorder),
-            ),
-          ),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2764E9)),
+          scaffoldBackgroundColor: const Color(0xFFF2F6FB),
         ),
         child: RefreshIndicator(
           onRefresh: onRefresh,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.all(
-              MediaQuery.sizeOf(context).width < 600 ? 16 : 24,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                executiveHeader(context),
-                const SizedBox(height: 20),
-                filters(context),
-                const SizedBox(height: 26),
-                if (reports != null) ...[
-                  const Text(
-                    'Payroll reports',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: adminInk,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'Preview or export each report separately',
-                    style: TextStyle(color: adminMuted, fontSize: 12),
-                  ),
-                  const SizedBox(height: 12),
-                  reports!,
-                  const SizedBox(height: 22),
-                ],
+          child: LayoutBuilder(builder: (context, constraints) {
+            final compact = constraints.maxWidth < 700;
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(compact ? 12 : 18),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Wrap(spacing: 16, runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Dashboard Overview',
+                        style: TextStyle(color: Color(0xFF10213B),fontSize: 23,fontWeight: FontWeight.w900)),
+                      SizedBox(height: 3),
+                      Text('Your payroll, attendance and branch performance at a glance.',
+                        style: TextStyle(color: Color(0xFF687C99),fontSize: 11)),
+                    ]),
+                    filters(context),
+                  ]),
+                const SizedBox(height: 14),
                 FutureBuilder<Map<String, dynamic>>(
                   future: activity,
-                  builder: (_, s) {
+                  builder: (context, snapshot) {
                     final m = AdminOverviewMetrics(
                       employees: employees,
-                      activity: s.connectionState == ConnectionState.done
-                          ? s.data ?? {}
-                          : {},
+                      activity: snapshot.connectionState == ConnectionState.done ? snapshot.data ?? {} : {},
                       branch: branch,
                     );
-                    return paired(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          panel(
-                            'Workforce snapshot',
-                            Icons.groups_outlined,
-                            metrics(m),
-                          ),
-                          const SizedBox(height: 18),
-                          payroll(),
-                          const SizedBox(height: 18),
-                          late(m),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          attendance(m),
-                          const SizedBox(height: 18),
-                          approvals(m),
-                          const SizedBox(height: 18),
-                          celebrations(),
-                        ],
-                      ),
+                    return HasaniEnterprisePanel(
+                      metrics: m,
+                      branches: branches,
+                      gross: gross, net: net, deductions: deductions,
+                      month: month,
+                      onNavigate: onNavigate, onGross: onGross, onNet: onNet,
+                      breakdown: breakdown, tools: tools, reports: reports,
                     );
                   },
                 ),
-                const SizedBox(height: 20),
-                Material(
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: const BorderSide(color: adminBorder),
-                  ),
-                  child: ExpansionTile(
-                    key: const PageStorageKey('overview-payroll-details'),
-                    title: const Text('Detailed payroll breakdown'),
-                    subtitle: const Text(
-                      'Statutory contributions, allowances and payroll tools',
-                    ),
-                    children: [breakdown],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ExpansionTile(
-                      key: const PageStorageKey('overview-management-tools'),
-                      title: const Text('More management tools'),
-                      children: [tools],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        for (final action in [
-                          ('Payslips', 12, Icons.receipt_long_outlined),
-                          ('Reports', 6, Icons.bar_chart_outlined),
-                          ('Daily reports', 14, Icons.description_outlined),
-                          ('Branch logs', 9, Icons.store_outlined),
-                          ('Settings', 7, Icons.settings_outlined),
-                        ])
-                          OutlinedButton.icon(
-                            onPressed: () => onNavigate(action.$2),
-                            icon: Icon(action.$3, size: 17),
-                            label: Text(action.$1),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ]),
+            );
+          }),
         ),
       );
 }
