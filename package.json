@@ -4,7 +4,6 @@
   "private": true,
   "description": "Build the Flutter frontend for Render static hosting",
   "scripts": {
-    "postinstall": "bash scripts/render-build-web.sh",
-    "build": "bash scripts/render-build-web.sh"
+        "build": "bash scripts/render-build-web.sh"
   }
 }
