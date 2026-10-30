@@ -19,18 +19,17 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function(payload) {
-  console.log(
-    "[firebase-messaging-sw.js] Background message received:",
-    payload
-  );
+  // Firebase displays notification payloads automatically in the background.
+  // Show a custom notification only for data-only messages, avoiding duplicates.
+  if (payload.notification) return;
 
   const notificationTitle =
-    payload.notification?.title ||
+    payload.data?.title ||
     "Hasani Payroll";
 
   const notificationOptions = {
     body:
-      payload.notification?.body ||
+      payload.data?.body ||
       "",
     icon: "/icons/Icon-192.png",
     data: payload.data || {}

@@ -77,3 +77,6 @@ backend/data/*.json
 # Local Supabase backup secrets and generated backups
 backup/windows/backup_config.local.ps1
 backup/windows/HasaniPayroll_Backups/
+
+# Android release bundles
+*.aab
