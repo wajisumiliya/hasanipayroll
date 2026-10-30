@@ -87,23 +87,22 @@ class PremiumPortalSidebar extends StatelessWidget {
                   ),
                   if (!referenceDashboardStyle) _profile(),
                   const SizedBox(height: 14),
-                  if (!referenceDashboardStyle)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 46,
-                      child: OutlinedButton.icon(
-                        onPressed: onLogout,
-                        icon: const Icon(Icons.logout_rounded, size: 19),
-                        label: const Text('Logout',
-                            style: TextStyle(fontWeight: FontWeight.w800)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _gold,
-                          side: const BorderSide(color: _goldDark, width: 1.2),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    height: referenceDashboardStyle ? 40 : 46,
+                    child: OutlinedButton.icon(
+                      onPressed: onLogout,
+                      icon: const Icon(Icons.logout_rounded, size: 19),
+                      label: const Text('Logout',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _gold,
+                        side: const BorderSide(color: _goldDark, width: 1.2),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

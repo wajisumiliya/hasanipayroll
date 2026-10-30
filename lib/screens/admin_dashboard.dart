@@ -2271,6 +2271,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               metric: 'net',
             ),
           ),
+          payrollRecords: payroll,
         );
       },
     );
@@ -2298,6 +2299,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     required Widget reports,
     required Widget tools,
     required Widget breakdown,
+    required List<Map<String, dynamic>> payrollRecords,
   }) =>
       ModernAdminOverview(
         month: month,
@@ -2321,6 +2323,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         reports: reports,
         tools: tools,
         breakdown: breakdown,
+        payrollRecords: payrollRecords,
       );
 
   Widget _dashboardCommandHero({

@@ -105,6 +105,38 @@ ModernAdminOverview overviewWidget(
       gross: 10000,
       deductions: 1000,
       net: 9000,
+      payrollRecords: const [
+        {
+          'employee_id': 'A1',
+          'branch_id': 'A',
+          'month': 9,
+          'year': 2026,
+          'basic_salary': 2500,
+          'gross_pay': 2800,
+          'net_pay': 2500,
+          'epf_employee': 300,
+        },
+        {
+          'employee_id': 'A1',
+          'branch_id': 'A',
+          'month': 10,
+          'year': 2026,
+          'basic_salary': 2800,
+          'gross_pay': 3200,
+          'net_pay': 2850,
+          'epf_employee': 350,
+        },
+        {
+          'employee_id': 'B1',
+          'branch_id': 'B',
+          'month': 10,
+          'year': 2026,
+          'basic_salary': 2200,
+          'gross_pay': 2500,
+          'net_pay': 2250,
+          'epf_employee': 250,
+        },
+      ],
       activity: Future.value(data ?? overviewActivity()),
       onMonth: month ?? (_) {},
       onBranch: branch ?? (_) {},
@@ -233,6 +265,24 @@ void main() {
     await tester.tap(find.text('Astana').last);
     await tester.pumpAndSettle();
     expect(branch, 'B');
+  });
+  testWidgets('dashboard cards expose live record details without demo people',
+      (tester) async {
+    tester.view.physicalSize = const Size(1440, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester
+        .pumpWidget(MaterialApp(home: Scaffold(body: overviewWidget())));
+    await tester.pumpAndSettle();
+    expect(find.text('Farah Nabila'), findsNothing);
+    expect(find.text('Muhammad Arif'), findsNothing);
+    expect(find.text('Alor Setar'), findsWidgets);
+    await tester.tap(find.text('Total Employees'));
+    await tester.pumpAndSettle();
+    expect(find.text('Employees'), findsWidgets);
+    expect(find.text('Employee 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
   testWidgets(
       'all six separate payroll reports stay visible and clickable on mobile',

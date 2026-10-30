@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../services/payroll_calculation_service.dart';
+
 const adminInk = Color(0xFF20242C);
 const adminGold = Color(0xFF987033);
 const adminCanvas = Color(0xFFF5F1E8);
@@ -158,6 +160,7 @@ class ModernAdminOverview extends StatelessWidget {
     required this.breakdown,
     required this.tools,
     this.reports,
+    this.payrollRecords = const [],
   });
   final DateTime month;
   final String? branch;
@@ -173,6 +176,7 @@ class ModernAdminOverview extends StatelessWidget {
   final void Function(Map<String, dynamic>, bool) onCelebrate;
   final Widget breakdown, tools;
   final Widget? reports;
+  final List<Map<String, dynamic>> payrollRecords;
   String money(double v) => NumberFormat.currency(
         locale: 'en_MY',
         symbol: 'RM ',
@@ -1302,6 +1306,170 @@ class _ReferencePayrollDashboard extends StatelessWidget {
         ],
       );
 
+  double _number(dynamic value) => value is num
+      ? value.toDouble()
+      : double.tryParse('${value ?? ''}'.replaceAll(',', '').trim()) ?? 0;
+  String _key(dynamic value) => '${value ?? ''}'.trim().toUpperCase();
+  String _employeeId(Map row) => _key(row['employee_id'] ?? row['id']);
+  DateTime? _period(Map row) => DateTime.tryParse('${row['period'] ?? ''}');
+  double _gross(Map row) {
+    final salary = _number(row['fw_salary']) != 0
+        ? _number(row['fw_salary'])
+        : _number(row['basic_salary']);
+    return salary +
+        _number(row['elaun_kedatangan']) +
+        _number(row['elaun_perkhidmatan']) +
+        _number(row['elaun_kerajinan']) +
+        _number(row['elaun_makanan']) +
+        _number(row['overtime']) +
+        _number(row['bonus']) +
+        _number(row['commission']) +
+        _number(row['other_earnings']) +
+        _number(row['cuti_umum']);
+  }
+
+  double _deductions(Map row) =>
+      _number(row['late_deduction']) +
+      _number(row['unpaid_deduction']) +
+      _number(row['epf_employee']) +
+      _number(row['socso_employee']) +
+      _number(row['eis_employee']) +
+      _number(row['pcb']) +
+      _number(row['zakat']) +
+      _number(row['advance']);
+  double _net(Map row) {
+    final stored = _number(row['net_pay'] ?? row['net_salary']);
+    return stored != 0 ? stored : _gross(row) - _deductions(row);
+  }
+
+  Map<String, String> get _employeeBranches => {
+        for (final employee in view.employees)
+          _employeeId(employee): _key(employee['branch_id'])
+      };
+  String _recordBranch(Map row) => _key(row['branch_id']).isNotEmpty
+      ? _key(row['branch_id'])
+      : _employeeBranches[_employeeId(row)] ?? '';
+  bool _monthMatches(Map row, DateTime month) {
+    final period = _period(row);
+    return period != null &&
+        period.year == month.year &&
+        period.month == month.month;
+  }
+
+  List<Map<String, dynamic>> _periodPayroll() => view.payrollRecords
+      .where((row) => _monthMatches(row, view.month))
+      .where((row) =>
+          view.branch == null || _recordBranch(row) == _key(view.branch))
+      .toList();
+  List<Map<String, dynamic>> _people() => view.employees
+      .where((row) =>
+          view.branch == null || _key(row['branch_id']) == _key(view.branch))
+      .toList();
+
+  List<Map<String, dynamic>> _increments() {
+    final employeeNames = {
+      for (final e in view.employees)
+        _employeeId(e): '${e['name'] ?? _employeeId(e)}'
+    };
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final row in view.payrollRecords) {
+      final id = _employeeId(row);
+      if (id.isNotEmpty) grouped.putIfAbsent(id, () => []).add(row);
+    }
+    final result = <Map<String, dynamic>>[];
+    for (final entry in grouped.entries) {
+      final currentRows =
+          entry.value.where((r) => _monthMatches(r, view.month)).toList();
+      if (currentRows.isEmpty) continue;
+      final current = currentRows.last;
+      if (view.branch != null && _recordBranch(current) != _key(view.branch)) {
+        continue;
+      }
+      final history = entry.value
+          .map((r) {
+            final period = _period(r);
+            if (period == null) return null;
+            return (
+              period: period,
+              basicSalary: _number(r['basic_salary']),
+              attendanceAllowance: _number(r['elaun_kedatangan']),
+              serviceAllowance: _number(r['elaun_perkhidmatan']),
+              diligenceAllowance: _number(r['elaun_kerajinan'])
+            );
+          })
+          .whereType<
+              ({
+                DateTime period,
+                double basicSalary,
+                double attendanceAllowance,
+                double serviceAllowance,
+                double diligenceAllowance
+              })>()
+          .toList();
+      final comparison =
+          PayrollCalculationService.payrollIncrementComparisonForMonth(
+              history, view.month);
+      if (comparison == null) continue;
+      result.add({
+        'employee_id': entry.key,
+        'name': employeeNames[entry.key] ?? entry.key,
+        'branch_id': _recordBranch(current),
+        'previous': comparison.previousBasicSalary +
+            comparison.previousAttendanceAllowance +
+            comparison.previousServiceAllowance +
+            comparison.previousDiligenceAllowance,
+        'current': comparison.currentBasicSalary +
+            comparison.currentAttendanceAllowance +
+            comparison.currentServiceAllowance +
+            comparison.currentDiligenceAllowance,
+        'amount': comparison.amount
+      });
+    }
+    result.sort((a, b) => _number(b['amount']).compareTo(_number(a['amount'])));
+    return result;
+  }
+
+  Future<void> _showDetails(
+      BuildContext context,
+      String title,
+      List<Map<String, dynamic>> rows,
+      List<(String, String Function(Map))> columns) async {
+    await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+              title: Text(title),
+              content: SizedBox(
+                  width: 760,
+                  height: math.min(520, 100.0 + rows.length * 48),
+                  child: rows.isEmpty
+                      ? const Center(
+                          child: Text(
+                              'No database records for the selected filter.'))
+                      : Scrollbar(
+                          child: SingleChildScrollView(
+                              child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    columns: columns
+                                        .map((c) =>
+                                            DataColumn(label: Text(c.$1)))
+                                        .toList(),
+                                    rows: rows
+                                        .map((row) => DataRow(
+                                            cells: columns
+                                                .map((c) =>
+                                                    DataCell(Text(c.$2(row))))
+                                                .toList()))
+                                        .toList(),
+                                  ))))),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Close'))
+              ],
+            ));
+  }
+
   @override
   Widget build(BuildContext context) => Theme(
         data: Theme.of(context).copyWith(
@@ -1332,7 +1500,7 @@ class _ReferencePayrollDashboard extends StatelessWidget {
                     children: [
                       _header(context),
                       const SizedBox(height: 12),
-                      _kpis(metrics),
+                      _kpis(context, metrics),
                       const SizedBox(height: 12),
                       _topAnalytics(context, metrics),
                       const SizedBox(height: 12),
@@ -1448,54 +1616,111 @@ class _ReferencePayrollDashboard extends StatelessWidget {
         ),
       );
 
-  Widget _kpis(AdminOverviewMetrics m) {
+  Widget _kpis(BuildContext context, AdminOverviewMetrics m) {
     final active = m.activeIds.length;
     final attendance = active == 0 || m.checkedIn == null
         ? 0.0
         : m.checkedIn!.length / active * 100;
-    final values = [
+    final payroll = _periodPayroll();
+    final attendanceRows = (m.activity['attendance'] as List? ?? const [])
+        .map((r) => Map<String, dynamic>.from(r as Map))
+        .where((r) =>
+            view.branch == null || _key(r['branch_id']) == _key(view.branch))
+        .toList();
+    final otRows = (m.activity['ot'] as List? ?? const [])
+        .map((r) => Map<String, dynamic>.from(r as Map))
+        .where((r) =>
+            view.branch == null || _key(r['branch_id']) == _key(view.branch))
+        .toList();
+    final otMinutes = otRows.fold<double>(
+        0,
+        (sum, row) =>
+            sum +
+            _number(row['approved_minutes'] ??
+                row['minutes'] ??
+                row['duration_minutes']));
+    final values = <(String, String, String, IconData, Color, VoidCallback)>[
       (
         'Total Employees',
         '${m.people.length}',
-        '+12 (5.1%)',
+        'Database employee records',
         Icons.groups_rounded,
-        blue
+        blue,
+        () => _showDetails(context, 'Employees', _people(), [
+              ('Employee ID', (r) => '${r['employee_id'] ?? r['id'] ?? ''}'),
+              ('Name', (r) => '${r['name'] ?? ''}'),
+              (
+                'Branch',
+                (r) =>
+                    view.branches[_key(r['branch_id'])] ??
+                    '${r['branch_id'] ?? ''}'
+              ),
+              ('Status', (r) => r['is_active'] == true ? 'Active' : 'Inactive')
+            ])
       ),
       (
         'Monthly Payroll Amount',
         view.money(view.gross),
-        '+8.2%',
+        '${payroll.length} payroll records',
         Icons.monetization_on_rounded,
-        blue
+        blue,
+        () => _showDetails(context, 'Monthly Payroll', payroll, [
+              ('Employee', (r) => '${r['employee_id'] ?? ''}'),
+              ('Gross', (r) => view.money(_gross(r))),
+              ('Deductions', (r) => view.money(_deductions(r))),
+              ('Net', (r) => view.money(_net(r)))
+            ])
       ),
       (
         'Paid Payroll',
         view.money(view.net),
-        '+12.4%',
+        'Calculated net payroll',
         Icons.check_circle_rounded,
-        green
+        green,
+        () => _showDetails(context, 'Net Payroll', payroll, [
+              ('Employee', (r) => '${r['employee_id'] ?? ''}'),
+              ('Net Pay', (r) => view.money(_net(r)))
+            ])
       ),
       (
-        'Pending Payroll',
+        'Payroll Deductions',
         view.money(view.deductions),
-        '-6.1%',
+        'Statutory and other deductions',
         Icons.schedule_rounded,
-        red
+        red,
+        () => _showDetails(context, 'Payroll Deductions', payroll, [
+              ('Employee', (r) => '${r['employee_id'] ?? ''}'),
+              ('Deductions', (r) => view.money(_deductions(r)))
+            ])
       ),
       (
         'Attendance Rate',
         '${attendance.toStringAsFixed(1)}%',
-        '+2.3%',
+        '${attendanceRows.length} attendance records',
         Icons.bar_chart_rounded,
-        const Color(0xFF12BFB4)
+        const Color(0xFF12BFB4),
+        () => _showDetails(context, 'Today Attendance', attendanceRows, [
+              ('Employee', (r) => '${r['employee_id'] ?? ''}'),
+              ('Status', (r) => '${r['status'] ?? ''}'),
+              ('Check in', (r) => '${r['check_in'] ?? r['working_in'] ?? ''}')
+            ])
       ),
       (
         'Overtime Hours',
-        '${(m.pending('ot') ?? 0) * 8}',
-        '+18.6%',
+        (otMinutes / 60).toStringAsFixed(1),
+        '${otRows.length} OT requests',
         Icons.timer_outlined,
-        purple
-      ),
+        purple,
+        () => _showDetails(context, 'Overtime Requests', otRows, [
+              ('Employee', (r) => '${r['employee_id'] ?? ''}'),
+              ('Status', (r) => '${r['status'] ?? ''}'),
+              (
+                'Minutes',
+                (r) =>
+                    '${r['approved_minutes'] ?? r['minutes'] ?? r['duration_minutes'] ?? 0}'
+              )
+            ])
+      )
     ];
     return LayoutBuilder(builder: (_, c) {
       final cols = c.maxWidth >= 1180
@@ -1510,58 +1735,64 @@ class _ReferencePayrollDashboard extends StatelessWidget {
           spacing: 10,
           runSpacing: 10,
           children: values
-              .map((v) => Container(
-                  width: width,
-                  height: 102,
-                  padding: const EdgeInsets.all(12),
-                  decoration: card(),
-                  child: Stack(children: [
-                    Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                  color: v.$5.withValues(alpha: .11),
-                                  borderRadius: BorderRadius.circular(13)),
-                              child: Icon(v.$4, color: v.$5, size: 24)),
-                          const SizedBox(width: 11),
-                          Expanded(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                Text(v.$1,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF26466D))),
-                                const SizedBox(height: 4),
-                                FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(v.$2,
-                                        style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w900))),
-                                const SizedBox(height: 5),
-                                Text(
-                                    '${v.$3.startsWith('-') ? '↓' : '↑'} ${v.$3}',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color:
-                                            v.$3.startsWith('-') ? red : green,
-                                        fontWeight: FontWeight.w700))
-                              ]))
-                        ]),
-                    Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: CustomPaint(
-                            size: const Size(48, 20),
-                            painter: _SparkPainter(v.$5))),
-                  ])))
+              .map((v) => Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                      onTap: v.$6,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                          width: width,
+                          height: 124,
+                          padding: const EdgeInsets.all(12),
+                          decoration: card(),
+                          child: Stack(children: [
+                            Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                          color: v.$5.withValues(alpha: .11),
+                                          borderRadius:
+                                              BorderRadius.circular(13)),
+                                      child: Icon(v.$4, color: v.$5, size: 24)),
+                                  const SizedBox(width: 11),
+                                  Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                        Text(v.$1,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Color(0xFF26466D))),
+                                        const SizedBox(height: 4),
+                                        FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(v.$2,
+                                                style: const TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight:
+                                                        FontWeight.w900))),
+                                        const SizedBox(height: 5),
+                                        Text(v.$3,
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                color: muted,
+                                                fontWeight: FontWeight.w700))
+                                      ]))
+                                ]),
+                            Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: CustomPaint(
+                                    size: const Size(48, 20),
+                                    painter: _SparkPainter(v.$5))),
+                          ])))))
               .toList());
     });
   }
@@ -1586,7 +1817,7 @@ class _ReferencePayrollDashboard extends StatelessWidget {
       _responsive(
         context,
         [
-          (1.45, _panel('Attendance Monitoring', _attendance(m))),
+          (1.45, _panel('Attendance Monitoring', _attendance(context, m))),
           (1.45, _panel('Salary Analytics', _salaryAnalytics())),
         ],
         minWide: 900,
@@ -1596,8 +1827,8 @@ class _ReferencePayrollDashboard extends StatelessWidget {
       _responsive(
         context,
         [
-          (1.55, _panel('Branch Monitoring', _branchesTable())),
-          (0.9, _panel('Branch Distribution', _branchMap())),
+          (1.55, _panel('Branch Monitoring', _branchesTable(m))),
+          (0.9, _panel('Branch Distribution', _branchDistribution())),
           (0.9, _panel('Quick Actions', _quickActions())),
           (0.9, _panel('Pending Approvals & Alerts', _approvals(m))),
         ],
@@ -1634,52 +1865,66 @@ class _ReferencePayrollDashboard extends StatelessWidget {
         child
       ]));
 
-  Widget _payrollTrend() => SizedBox(
-      height: 190,
-      child: Column(children: [
-        Expanded(
-            child: CustomPaint(
-                size: Size.infinite, painter: _ComboChartPainter())),
-        SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final label in const [
-                'Sep 2024',
-                'Oct 2024',
-                'Nov 2024',
-                'Dec 2024',
-                'Jan 2025',
-                'Feb 2025',
-                'Mar 2025'
-              ])
-                SizedBox(
-                    width: 58, child: Text(label, textAlign: TextAlign.center))
-            ]))
-      ])).withTextScale(.72);
+  Widget _payrollTrend() {
+    final months = List.generate(
+        7, (i) => DateTime(view.month.year, view.month.month - 6 + i));
+    final values = months
+        .map((month) => view.payrollRecords
+            .where((r) => _monthMatches(r, month))
+            .where((r) =>
+                view.branch == null || _recordBranch(r) == _key(view.branch))
+            .fold<double>(0, (sum, r) => sum + _gross(r)))
+        .toList();
+    return SizedBox(
+        height: 190,
+        child: Column(children: [
+          Expanded(
+              child: CustomPaint(
+                  size: Size.infinite, painter: _ComboChartPainter(values))),
+          SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                for (final month in months)
+                  SizedBox(
+                      width: 58,
+                      child: Text(DateFormat('MMM yy').format(month),
+                          textAlign: TextAlign.center))
+              ]))
+        ])).withTextScale(.72);
+  }
 
-  Widget _payrollSplit() => SizedBox(
-      height: 190,
-      child: Row(children: [
-        Expanded(
-            child: Stack(alignment: Alignment.center, children: [
-          CustomPaint(size: const Size.square(150), painter: _DonutPainter()),
-          Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(view.money(view.gross),
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
-            const Text('Total Payroll', style: TextStyle(fontSize: 9))
-          ])
-        ])),
-        const SizedBox(width: 8),
-        Expanded(
-            child:
-                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _legend('Paid', '81.0%', green),
-          _legend('Pending', '19.0%', orange),
-          _legend('Instant', '2.1%', cyan),
-          _legend('Adjustments', '1.9%', purple)
-        ]))
-      ]));
+  Widget _payrollSplit() {
+    final total = view.net + view.deductions;
+    final netPercent = total <= 0 ? 0.0 : view.net / total * 100;
+    final deductionPercent = total <= 0 ? 0.0 : view.deductions / total * 100;
+    return SizedBox(
+        height: 190,
+        child: Row(children: [
+          Expanded(
+              child: Stack(alignment: Alignment.center, children: [
+            CustomPaint(
+                size: const Size.square(150),
+                painter: _DonutPainter([view.net, view.deductions])),
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(view.money(view.gross),
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w900)),
+              const Text('Total Payroll', style: TextStyle(fontSize: 9))
+            ])
+          ])),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                _legend(
+                    'Net payroll', '${netPercent.toStringAsFixed(1)}%', green),
+                _legend('Deductions', '${deductionPercent.toStringAsFixed(1)}%',
+                    orange)
+              ]))
+        ]));
+  }
+
   Widget _legend(String label, String value, Color color) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
@@ -1693,13 +1938,25 @@ class _ReferencePayrollDashboard extends StatelessWidget {
             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800))
       ]));
 
-  Widget _grossNet() => SizedBox(
-      height: 190,
-      child: CustomPaint(
-          size: Size.infinite,
-          painter: _DualBarsPainter(view.gross, view.net)));
+  Widget _grossNet() {
+    final previous = DateTime(view.month.year, view.month.month - 1);
+    final previousRows = view.payrollRecords
+        .where((r) => _monthMatches(r, previous))
+        .where(
+            (r) => view.branch == null || _recordBranch(r) == _key(view.branch))
+        .toList();
+    final previousGross =
+        previousRows.fold<double>(0, (sum, r) => sum + _gross(r));
+    final previousNet = previousRows.fold<double>(0, (sum, r) => sum + _net(r));
+    return SizedBox(
+        height: 190,
+        child: CustomPaint(
+            size: Size.infinite,
+            painter: _DualBarsPainter(
+                previousGross, previousNet, view.gross, view.net)));
+  }
 
-  Widget _attendance(AdminOverviewMetrics m) {
+  Widget _attendance(BuildContext context, AdminOverviewMetrics m) {
     final present = m.present ?? 0,
         late = m.lateIds?.length ?? 0,
         leave = m.offIds?.length ?? 0,
@@ -1710,44 +1967,88 @@ class _ReferencePayrollDashboard extends StatelessWidget {
       ('Absent', absent, red, Icons.person_off),
       ('Late', late, orange, Icons.timer),
       ('On Leave', leave, blue, Icons.work_off),
-      ('Overtime', (m.pending('ot') ?? 0) * 8, purple, Icons.timelapse)
+      ('Pending OT', m.pending('ot') ?? 0, purple, Icons.timelapse)
     ];
     final anomalies = m.lateRows ?? [];
+    final attendanceRows = (m.activity['attendance'] as List? ?? const [])
+        .map((r) => Map<String, dynamic>.from(r as Map))
+        .where((r) =>
+            view.branch == null || _key(r['branch_id']) == _key(view.branch))
+        .toList();
     return SingleChildScrollView(
         child: Column(children: [
       Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: boxes
-              .map((b) => Container(
-                  width: 112,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                      color: b.$3.withValues(alpha: .09),
-                      borderRadius: BorderRadius.circular(8)),
-                  child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(b.$4, color: b.$3),
-                        const SizedBox(height: 3),
-                        Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+          children: boxes.map((b) {
+            return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                    onTap: () {
+                      if (b.$1 == 'Pending OT') {
+                        view.onNavigate(11);
+                        return;
+                      }
+                      final rows = attendanceRows.where((r) {
+                        final status = _key(r['status']);
+                        if (b.$1 == 'Present') {
+                          return status == 'PRESENT' || status.isEmpty;
+                        }
+                        if (b.$1 == 'Late') return status.contains('LATE');
+                        const leaveStatuses = {
+                          'OFF',
+                          'MC',
+                          'PL',
+                          'AL',
+                          'EL',
+                          'UNPAID',
+                          'PH-OFF',
+                          'PH-SPL'
+                        };
+                        if (b.$1 == 'On Leave') {
+                          return leaveStatuses.contains(status);
+                        }
+                        return !leaveStatuses.contains(status) &&
+                            status != 'PRESENT' &&
+                            status != 'LATE';
+                      }).toList();
+                      _showDetails(context, '${b.$1} attendance', rows, [
+                        ('Employee', (r) => '${r['employee_id'] ?? ''}'),
+                        ('Status', (r) => '${r['status'] ?? ''}'),
+                        (
+                          'Check in',
+                          (r) => '${r['check_in'] ?? r['working_in'] ?? ''}'
+                        )
+                      ]);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                        width: 112,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: b.$3.withValues(alpha: .09),
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              Icon(b.$4, color: b.$3),
+                              const SizedBox(height: 3),
                               Text(b.$1, style: const TextStyle(fontSize: 9)),
                               Text('${b.$2}',
                                   style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w900))
-                            ])
-                      ])))
-              .toList()),
+                            ]))));
+          }).toList()),
       const SizedBox(height: 12),
       SizedBox(
           height: 150,
           child: Row(children: [
             Expanded(
                 child: CustomPaint(
-                    size: Size.infinite, painter: _WeeklyBarsPainter())),
+                    size: Size.infinite,
+                    painter:
+                        _WeeklyBarsPainter([present, absent, late, leave]))),
             const SizedBox(width: 10),
             Expanded(
                 child: _simpleTable(
@@ -1764,74 +2065,122 @@ class _ReferencePayrollDashboard extends StatelessWidget {
     ]));
   }
 
-  Widget _salaryAnalytics() => SizedBox(
-      height: 238,
-      child: Row(children: [
-        Expanded(
-            child: CustomPaint(
-                size: Size.infinite,
-                painter: _SalaryBarsPainter(view.gross, view.deductions))),
-        const SizedBox(width: 12),
-        Expanded(
-            child: _simpleTable([
-          'Employee',
-          'Previous',
-          'Current',
-          'Increment'
-        ], const [
-          ['Farah Nabila', 'RM 2,800', 'RM 3,200', '+14.3%'],
-          ['Muhammad Arif', 'RM 2,500', 'RM 2,800', '+12.0%'],
-          ['Lee Chong Wei', 'RM 3,200', 'RM 3,600', '+12.5%'],
-          ['Siti Aisyah', 'RM 2,200', 'RM 2,500', '+13.6%'],
-          ['Ramesh Kumar', 'RM 2,700', 'RM 3,000', '+11.1%']
-        ]))
-      ]));
+  Widget _salaryAnalytics() {
+    final records = _periodPayroll();
+    final components = <double>[
+      records.fold(
+          0,
+          (s, r) =>
+              s +
+              (_number(r['fw_salary']) != 0
+                  ? _number(r['fw_salary'])
+                  : _number(r['basic_salary']))),
+      records.fold(0, (s, r) => s + _number(r['elaun_kedatangan'])),
+      records.fold(0, (s, r) => s + _number(r['elaun_perkhidmatan'])),
+      records.fold(0, (s, r) => s + _number(r['elaun_kerajinan'])),
+      records.fold(0, (s, r) => s + _number(r['overtime'])),
+      records.fold(0, (s, r) => s + _deductions(r)),
+    ];
+    final increments = _increments();
+    return SizedBox(
+        height: 238,
+        child: Row(children: [
+          Expanded(
+              child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _SalaryBarsPainter(components))),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _simpleTable(
+                  ['Employee', 'Previous', 'Current', 'Increment'],
+                  increments
+                      .take(5)
+                      .map((r) => [
+                            '${r['name']}',
+                            view.money(_number(r['previous'])),
+                            view.money(_number(r['current'])),
+                            view.money(_number(r['amount']))
+                          ])
+                      .toList()))
+        ]));
+  }
 
-  Widget _branchesTable() {
-    final rows = view.branches.entries.take(5).toList();
+  Widget _branchesTable(AdminOverviewMetrics m) {
+    final payroll = _periodPayroll();
+    final attendance = (m.activity['attendance'] as List? ?? const [])
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+    final rows = view.branches.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
     return _simpleTable([
       '#',
       'Branch',
       'Employees',
       'Payroll Total (RM)',
-      'Attendance %',
-      'Status'
+      'Checked in',
+      'Records'
     ], [
       for (var i = 0; i < rows.length; i++)
         [
           '${i + 1}',
           rows[i].value,
           '${view.employees.where((e) => AdminOverviewMetrics.key(e['branch_id']) == AdminOverviewMetrics.key(rows[i].key)).length}',
-          NumberFormat('#,##0').format(view.gross / math.max(1, rows.length)),
-          '${(95.6 - i * .7).toStringAsFixed(1)}%',
-          '● Healthy'
+          NumberFormat('#,##0.00').format(payroll
+              .where((r) =>
+                  _recordBranch(r) == AdminOverviewMetrics.key(rows[i].key))
+              .fold<double>(0, (sum, r) => sum + _gross(r))),
+          '${attendance.where((r) => AdminOverviewMetrics.key(r['branch_id']) == AdminOverviewMetrics.key(rows[i].key)).length}',
+          '${payroll.where((r) => _recordBranch(r) == AdminOverviewMetrics.key(rows[i].key)).length}'
         ]
     ]);
   }
 
-  Widget _branchMap() => SizedBox(
+  Widget _branchDistribution() {
+    final rows = view.branches.entries.map((entry) {
+      final count = view.employees
+          .where((e) =>
+              AdminOverviewMetrics.key(e['branch_id']) ==
+              AdminOverviewMetrics.key(entry.key))
+          .length;
+      return (entry.value, count);
+    }).toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+    final maximum = rows.fold<int>(1, (value, row) => math.max(value, row.$2));
+    return SizedBox(
       height: 145,
-      child: Stack(children: [
-        Positioned.fill(child: CustomPaint(painter: _MapPainter())),
-        for (final p in const [
-          (0.18, 0.18, 'LANGKAWI'),
-          (0.62, 0.25, 'ALOR SETAR'),
-          (0.77, 0.47, 'JITRA'),
-          (0.76, 0.66, 'SUNGAI PETANI'),
-          (0.72, 0.84, 'KULIM')
-        ])
-          Positioned(
-              left: p.$1 * 220,
-              top: p.$2 * 130,
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.circle, color: blue, size: 12),
-                    Text(p.$3,
-                        style: const TextStyle(
-                            fontSize: 8, fontWeight: FontWeight.w800))
-                  ]))
-      ]));
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        itemCount: rows.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 7),
+        itemBuilder: (_, index) {
+          final row = rows[index];
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(
+                      child: Text(row.$1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 9, fontWeight: FontWeight.w700))),
+                  Text('${row.$2}',
+                      style: const TextStyle(
+                          fontSize: 9, fontWeight: FontWeight.w800))
+                ]),
+                const SizedBox(height: 3),
+                LinearProgressIndicator(
+                  value: row.$2 / maximum,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(6),
+                  color: blue,
+                  backgroundColor: const Color(0xFFEAF1FA),
+                )
+              ]);
+        },
+      ),
+    );
+  }
 
   Widget _quickActions() => GridView.count(
           physics: const NeverScrollableScrollPhysics(),
@@ -1872,22 +2221,30 @@ class _ReferencePayrollDashboard extends StatelessWidget {
                                 fontSize: 9, fontWeight: FontWeight.w700))
                       ]))));
 
-  Widget _approvals(AdminOverviewMetrics m) => Column(children: [
-        _alert(
-            'Missing Attendance',
-            '${m.notChecked ?? 0} employees with missing check-in',
-            red,
-            () => view.onNavigate(3)),
-        _alert('Payroll Mismatch', '3 records require verification', orange,
-            () => view.onNavigate(2)),
-        _alert(
-            'Pending Leave Requests',
-            '${m.pending('leave') ?? 0} leave requests pending approval',
-            purple,
-            () => view.onNavigate(13)),
-        _alert('Salary Increment Review', '5 increment requests pending',
-            orange, () => view.onNavigate(10)),
-      ]);
+  Widget _approvals(AdminOverviewMetrics m) {
+    final payrollIssues = _periodPayroll()
+        .where(
+            (r) => _gross(r) <= 0 || _net(r) < 0 || _deductions(r) > _gross(r))
+        .length;
+    final increments = _increments().length;
+    return Column(children: [
+      _alert(
+          'Missing Attendance',
+          '${m.notChecked ?? 0} employees with missing check-in',
+          red,
+          () => view.onNavigate(3)),
+      _alert('Payroll Mismatch', '$payrollIssues records require verification',
+          orange, () => view.onNavigate(2)),
+      _alert(
+          'Pending Leave Requests',
+          '${m.pending('leave') ?? 0} leave requests pending approval',
+          purple,
+          () => view.onNavigate(13)),
+      _alert('Salary Increment Review', '$increments salary changes found',
+          orange, () => view.onNavigate(10)),
+    ]);
+  }
+
   Widget _alert(String title, String detail, Color color, VoidCallback tap) =>
       InkWell(
           onTap: tap,
@@ -2001,6 +2358,9 @@ class _SparkPainter extends CustomPainter {
 }
 
 class _ComboChartPainter extends CustomPainter {
+  const _ComboChartPainter(this.values);
+  final List<double> values;
+
   @override
   void paint(Canvas c, Size s) {
     final grid = Paint()
@@ -2010,11 +2370,14 @@ class _ComboChartPainter extends CustomPainter {
       c.drawLine(
           Offset(0, s.height * i / 5), Offset(s.width, s.height * i / 5), grid);
     }
-    final bw = s.width / 11;
-    for (var i = 0; i < 7; i++) {
+    final maximum = values.fold<double>(1, math.max);
+    final count = math.max(1, values.length);
+    final bw = s.width / (count * 1.65);
+    for (var i = 0; i < values.length; i++) {
+      final ratio = values[i] / maximum;
       c.drawRect(
-          Rect.fromLTWH(s.width * (i + .45) / 7, s.height * (.48 - i * .045),
-              bw, s.height * (.52 + i * .045)),
+          Rect.fromLTWH(s.width * (i + .2) / count, s.height * (1 - ratio * .9),
+              bw, s.height * ratio * .9),
           Paint()
             ..shader = const LinearGradient(
                     begin: Alignment.topCenter,
@@ -2023,8 +2386,9 @@ class _ComboChartPainter extends CustomPainter {
                 .createShader(Offset.zero & s));
     }
     final path = Path();
-    for (var i = 0; i < 7; i++) {
-      final o = Offset(s.width * (i + .5) / 7, s.height * (.46 - i * .055));
+    for (var i = 0; i < values.length; i++) {
+      final o = Offset(s.width * (i + .5) / count,
+          s.height * (1 - values[i] / maximum * .9));
       i == 0 ? path.moveTo(o.dx, o.dy) : path.lineTo(o.dx, o.dy);
       c.drawCircle(o, 5, Paint()..color = const Color(0xFF0FA7A7));
     }
@@ -2041,21 +2405,29 @@ class _ComboChartPainter extends CustomPainter {
 }
 
 class _DonutPainter extends CustomPainter {
+  const _DonutPainter(this.values);
+  final List<double> values;
+
   @override
   void paint(Canvas c, Size s) {
     final r = Rect.fromLTWH(12, 12, s.width - 24, s.height - 24),
         p = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 24;
+    final total = values.fold<double>(0, (sum, value) => sum + value);
     var start = -math.pi / 2;
-    for (final v in [
-      (81.0, _ReferencePayrollDashboard.green),
-      (15.0, _ReferencePayrollDashboard.orange),
-      (2.1, _ReferencePayrollDashboard.cyan),
-      (1.9, _ReferencePayrollDashboard.purple)
-    ]) {
-      final a = v.$1 / 100 * math.pi * 2;
-      c.drawArc(r, start, a, false, p..color = v.$2);
+    final colors = [
+      _ReferencePayrollDashboard.green,
+      _ReferencePayrollDashboard.orange
+    ];
+    if (total <= 0) {
+      c.drawArc(r, start, math.pi * 2, false,
+          p..color = _ReferencePayrollDashboard.line);
+      return;
+    }
+    for (var i = 0; i < values.length; i++) {
+      final a = values[i] / total * math.pi * 2;
+      c.drawArc(r, start, a, false, p..color = colors[i % colors.length]);
       start += a;
     }
   }
@@ -2065,8 +2437,9 @@ class _DonutPainter extends CustomPainter {
 }
 
 class _DualBarsPainter extends CustomPainter {
-  const _DualBarsPainter(this.gross, this.net);
-  final double gross, net;
+  const _DualBarsPainter(
+      this.previousGross, this.previousNet, this.currentGross, this.currentNet);
+  final double previousGross, previousNet, currentGross, currentNet;
   @override
   void paint(Canvas c, Size s) {
     final p = Paint();
@@ -2074,16 +2447,22 @@ class _DualBarsPainter extends CustomPainter {
       c.drawLine(Offset(0, s.height * i / 5), Offset(s.width, s.height * i / 5),
           Paint()..color = _ReferencePayrollDashboard.line);
     }
-    final max = math.max(1, gross);
+    final maxValue = [previousGross, previousNet, currentGross, currentNet]
+        .fold<double>(1, math.max);
     for (var group = 0; group < 2; group++) {
+      final gross = group == 0 ? previousGross : currentGross;
+      final net = group == 0 ? previousNet : currentNet;
       final x = s.width * (.18 + group * .5);
       c.drawRect(
-          Rect.fromLTWH(x, s.height * (1 - gross / max * .75), s.width * .14,
-              s.height * gross / max * .75),
+          Rect.fromLTWH(x, s.height * (1 - gross / maxValue * .75),
+              s.width * .14, s.height * gross / maxValue * .75),
           p..color = _ReferencePayrollDashboard.cyan);
       c.drawRect(
-          Rect.fromLTWH(x + s.width * .15, s.height * (1 - net / max * .75),
-              s.width * .14, s.height * net / max * .75),
+          Rect.fromLTWH(
+              x + s.width * .15,
+              s.height * (1 - net / maxValue * .75),
+              s.width * .14,
+              s.height * net / maxValue * .75),
           p..color = const Color(0xFF114989));
     }
   }
@@ -2093,17 +2472,23 @@ class _DualBarsPainter extends CustomPainter {
 }
 
 class _WeeklyBarsPainter extends CustomPainter {
+  const _WeeklyBarsPainter(this.values);
+  final List<int> values;
+
   @override
   void paint(Canvas c, Size s) {
-    for (var i = 0; i < 7; i++) {
-      final x = s.width * (i + .15) / 7;
-      final h = s.height * (.68 - i * .07 + (i % 2) * .05);
-      c.drawRect(Rect.fromLTWH(x, s.height - h, s.width * .07, h),
-          Paint()..color = _ReferencePayrollDashboard.blue);
-      c.drawRect(
-          Rect.fromLTWH(x + s.width * .075, s.height - 4 - (i % 3) * 2,
-              s.width * .025, 4 + (i % 3) * 2),
-          Paint()..color = _ReferencePayrollDashboard.red);
+    final colors = [
+      _ReferencePayrollDashboard.green,
+      _ReferencePayrollDashboard.red,
+      _ReferencePayrollDashboard.orange,
+      _ReferencePayrollDashboard.purple
+    ];
+    final maximum = values.fold<int>(1, math.max);
+    for (var i = 0; i < values.length; i++) {
+      final x = s.width * (i + .25) / math.max(1, values.length);
+      final h = s.height * values[i] / maximum * .9;
+      c.drawRect(Rect.fromLTWH(x, s.height - h, s.width * .1, h),
+          Paint()..color = colors[i % colors.length]);
     }
   }
 
@@ -2112,8 +2497,8 @@ class _WeeklyBarsPainter extends CustomPainter {
 }
 
 class _SalaryBarsPainter extends CustomPainter {
-  const _SalaryBarsPainter(this.gross, this.deductions);
-  final double gross, deductions;
+  const _SalaryBarsPainter(this.values);
+  final List<double> values;
   @override
   void paint(Canvas c, Size s) {
     final colors = [
@@ -2124,42 +2509,14 @@ class _SalaryBarsPainter extends CustomPainter {
       _ReferencePayrollDashboard.purple,
       _ReferencePayrollDashboard.red
     ];
-    final vals = [
-      1.0,
-      .3,
-      .23,
-      .18,
-      .16,
-      math.max(.12, deductions / math.max(1, gross))
-    ];
-    for (var i = 0; i < 6; i++) {
+    final maximum = values.fold<double>(1, math.max);
+    for (var i = 0; i < values.length; i++) {
       final w = s.width / 9,
           x = s.width * (i + .45) / 6,
-          h = (s.height - 20) * vals[i];
+          h = (s.height - 20) * values[i] / maximum;
       c.drawRect(
           Rect.fromLTWH(x, s.height - h, w, h), Paint()..color = colors[i]);
     }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter o) => false;
-}
-
-class _MapPainter extends CustomPainter {
-  @override
-  void paint(Canvas c, Size s) {
-    final p = Paint()..color = const Color(0xFFC8E2FA);
-    final path = Path()
-      ..moveTo(s.width * .16, s.height * .08)
-      ..lineTo(s.width * .38, s.height * .16)
-      ..lineTo(s.width * .45, s.height * .32)
-      ..lineTo(s.width * .55, s.height * .38)
-      ..lineTo(s.width * .63, s.height * .75)
-      ..lineTo(s.width * .5, s.height * .98)
-      ..lineTo(s.width * .39, s.height * .78)
-      ..lineTo(s.width * .27, s.height * .64)
-      ..close();
-    c.drawPath(path, p);
   }
 
   @override
