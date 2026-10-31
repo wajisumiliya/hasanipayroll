@@ -77,14 +77,31 @@ clock, and the five workforce category cards now sit under the top dashboard
 controls, above the KPI row. They reuse the original employee-list callbacks
 and selected-branch counts; the detailed payroll panel no longer duplicates them.
 
-The duplicated Payroll reports and Detailed payroll breakdown blocks are now
-replaced by a responsive two-column activity grid: Attendance Late (3 and above),
-Increment List, Upcoming Birthdays, and Work Anniversary. Month controls update
-the shared reporting month and the cards follow the selected branch/staff scope.
-Late days use arrival events only; the full Late Report still counts excess breaks.
-Increments use the existing saved-payroll comparison rules and label payroll month,
-not an unverified approval/effective date. Employee service dates drive birthday
-and completed-year anniversary rows. Past birthdays are labelled as past, missing
-positions show a dash, and unavailable late data is distinct from no records.
-View All opens full lists; late View All links to the existing Late Report.
-Management actions remain visible below the activity cards.
+The duplicated payroll sections are replaced with the four supplied activity
+cards, preserving the reference's two-column arrangement, circular category icons,
+colour themes, four summary tiles, table headings, row badges and footer bars.
+On narrow screens the cards stack and their record rows scroll horizontally.
+
+Attendance Late includes employees with at least three recorded late arrival
+days in the selected payroll month. Each compact employee row is clickable and
+shows days and total late hours. Detail lists the arrival dates, scheduled start,
+actual check-in and minutes; excess breaks never inflate late-arrival hours.
+Summary late days and late rate describe the listed threshold group; total
+employees is the active branch/staff scope. Missing timings remain unavailable.
+
+Increment List now reads maintained inc_details schedules from the authenticated
+Neon dashboard API's employee_salary_defaults join. A valid positive scheduled
+increment matching the selected payroll month identifies eligibility without
+requiring generated payroll. Inactive and out-of-scope employees are excluded.
+Existing increment amount validation (RM50–1000 in RM50 steps) is retained.
+Effective is a scheduled month, not an invented exact approval date. Average
+percentage remains unavailable unless all eligible employees have a saved prior
+payroll baseline. Deploy the backend along with the new Flutter web build.
+
+Birthdays and work anniversaries use Malaysia's current date, today through five
+days ahead, regardless of the payroll selector. The window crosses month/year
+boundaries and clamps February 29 to the last day of February in other years.
+Only active scoped employees are listed, and service years must be completed.
+The event summary's This Week/This Month counts are subsets of this same window.
+Calendar chips on these two cards display the current month, without changing
+the required five-day window. View All uses the same record filters.
