@@ -174,6 +174,19 @@ class AdminActivityCards extends StatelessWidget {
     return events.fold<double>(0, (sum, e) => sum + number(e['minutes']));
   }
 
+  static String recordedMinutesLabel(Map row, String type) {
+    final events = (row['events'] as List? ?? [])
+        .whereType<Map>()
+        .where((e) => e['type'] == type)
+        .toList();
+    final known = events.where((e) => e['minutes'] != null).toList();
+    if (known.isEmpty && issueCount(row, type) > 0) return 'Not recorded';
+    final total = known.fold<double>(0, (sum, e) => sum + number(e['minutes']));
+    final partial =
+        known.length < issueCount(row, type) || known.length < events.length;
+    return '${total.toStringAsFixed(0)} min${partial ? ' (partial)' : ''}';
+  }
+
   static double? lateMinutes(Map row) => issueMinutes(row, 'arrival');
   static String minutesLabel(double? value) =>
       value == null ? '—' : '${value.toStringAsFixed(0)} min';
@@ -244,13 +257,9 @@ class AdminActivityCards extends StatelessWidget {
                         child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: DataTable(
-                                columns: [
-                                  'Date',
-                                  'Issue',
-                                  'Scheduled / allowed',
-                                  'Actual / used',
-                                  'Excess minutes'
-                                ].map((v) => DataColumn(label: Text(v))).toList(),
+                                columns: ['Date', 'Issue', 'Excess minutes']
+                                    .map((v) => DataColumn(label: Text(v)))
+                                    .toList(),
                                 rows: events
                                     .map((e) => DataRow(
                                             cells: [
@@ -258,9 +267,7 @@ class AdminActivityCards extends StatelessWidget {
                                           e['type'] == 'arrival'
                                               ? 'Main late'
                                               : 'Excess break',
-                                          '${e['type'] == 'arrival' ? e['scheduled'] ?? '—' : e['allocated_minutes'] ?? '—'}',
-                                          '${e['type'] == 'arrival' ? e['actual'] ?? '—' : e['actual_minutes'] ?? '—'}',
-                                          '${e['minutes'] ?? 'Unavailable'}'
+                                          '${e['minutes'] ?? 'Not recorded'}'
                                         ].map((v) => DataCell(Text(v))).toList()))
                                     .toList())))),
                 actions: [
@@ -751,7 +758,7 @@ class AdminActivityCards extends StatelessWidget {
               headers: ['Main + Break', 'Late Minutes'],
               values: (r) => [
                     '${combinedCount(r)} (M${issueCount(r, 'arrival')}/B${issueCount(r, 'break')})',
-                    'Main ${minutesLabel(issueMinutes(r, 'arrival'))}\nBreak ${minutesLabel(issueMinutes(r, 'break'))}'
+                    'Main ${recordedMinutesLabel(r, 'arrival')}\nBreak ${recordedMinutesLabel(r, 'break')}'
                   ],
               note: late == null
                   ? 'Late attendance data unavailable.'

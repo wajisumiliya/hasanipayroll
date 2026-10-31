@@ -202,6 +202,9 @@ void main() {
     await tester.tap(find.text('Aina'));
     await tester.pumpAndSettle();
     expect(find.text('Aina · 4 occurrences'), findsOneWidget);
+    expect(tester.widget<DataTable>(find.byType(DataTable)).columns.length, 3);
+    expect(find.text('Scheduled / allowed'), findsNothing);
+    expect(find.text('Actual / used'), findsNothing);
     expect(find.text('2026-10-01'), findsOneWidget);
     expect(find.text('90'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -222,6 +225,32 @@ void main() {
         AdminActivityCards.issueMinutes(
             {'arrival_count': 0, 'events': []}, 'arrival'),
         0);
+  });
+  test('known minutes remain visible when another main duration is missing',
+      () {
+    final row = {
+      'arrival_count': 2,
+      'break_count': 5,
+      'events': [
+        {'type': 'arrival', 'minutes': null},
+        {'type': 'arrival', 'minutes': 1},
+        {'type': 'break', 'minutes': 26}
+      ]
+    };
+    expect(AdminActivityCards.recordedMinutesLabel(row, 'arrival'),
+        '1 min (partial)');
+    expect(
+        AdminActivityCards.recordedMinutesLabel({
+          'arrival_count': 1,
+          'events': [
+            {'type': 'arrival', 'minutes': null}
+          ]
+        }, 'arrival'),
+        'Not recorded');
+    expect(
+        AdminActivityCards.recordedMinutesLabel(
+            {'arrival_count': 0, 'events': []}, 'arrival'),
+        '0 min');
   });
   for (final width in [320.0, 768.0, 1100.0, 1440.0]) {
     testWidgets('activity cards fit $width with honest empty states',

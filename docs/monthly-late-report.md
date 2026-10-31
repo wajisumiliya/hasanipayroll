@@ -155,3 +155,11 @@ existing pagination; this rule applies to the three dashboard summary buttons.
 Tests cover single-page empty/dense summary PDFs, both actual A4 MediaBox
 orientations and fit bounds. A separately inspected 100-employee status PDF with
 31 dates per employee retained its last row, final date and totals on one page.
+
+Employee detail popups now show only Date, Issue and Excess minutes. Summary
+rows display the sum of recorded main/break minutes even if another occurrence
+has no retained duration, labelling that value “partial”. If no duration is known
+for a positive count, the UI says “Not recorded”. A zero count still shows zero
+minutes. The PDF uses asterisked partial subtotals and an explanatory note; it
+never guesses a missing scheduled shift time. This supersedes masking the entire
+total whenever a single event duration is unavailable.

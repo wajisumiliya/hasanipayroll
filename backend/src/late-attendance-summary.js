@@ -7,9 +7,12 @@ export function attendanceSummaryRows(data) {
   return data.reports.filter(r=>(Number(r.arrival_count)||0)+(Number(r.break_count)||0)>=3).map(r=>{
     const total=type=>{
       const events=r.events.filter(e=>e.type===type);
-      return events.some(e=>e.minutes==null)?null:events.reduce((sum,e)=>sum+e.minutes,0);
+      const known=events.filter(e=>e.minutes!=null);
+      return events.length && !known.length ? null : known.reduce((sum,e)=>sum+e.minutes,0);
     };
-    return {...r,arrival_minutes:total('arrival'),break_minutes:total('break')};
+    return {...r,arrival_minutes:total('arrival'),break_minutes:total('break'),
+      arrival_minutes_partial:r.events.some(e=>e.type==='arrival'&&e.minutes==null),
+      break_minutes_partial:r.events.some(e=>e.type==='break'&&e.minutes==null)};
   });
 }
 
@@ -53,7 +56,7 @@ export async function renderAttendanceSummary(data) {
   const widths=[34,80,133,92,85,95,89,99,99];
   const shortMonthLabel=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'short',year:'numeric',timeZone:'UTC'});
   const cellsFor=(row,index)=>[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
-    shortMonthLabel,hhmm(row.arrival_minutes),row.arrival_count,hhmm(row.break_minutes),row.break_count];
+    shortMonthLabel,hhmm(row.arrival_minutes)+(row.arrival_minutes!=null&&row.arrival_minutes_partial?'*':''),row.arrival_count,hhmm(row.break_minutes)+(row.break_minutes!=null&&row.break_minutes_partial?'*':''),row.break_count];
   const heights=measureRows(rows.map(cellsFor),widths,8,10,22);
   const {doc,done}=onePage(842,127+heights.reduce((a,b)=>a+b,0)+88);
   const period=new Date(Date.UTC(data.year,data.month-1,1));
@@ -83,7 +86,7 @@ export async function renderAttendanceSummary(data) {
   for(let index=0;index<rows.length;index++) {
     const row=rows[index];
     const cells=[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
-      shortMonth,hhmm(row.arrival_minutes),row.arrival_count,hhmm(row.break_minutes),row.break_count];
+      shortMonth,hhmm(row.arrival_minutes)+(row.arrival_minutes!=null&&row.arrival_minutes_partial?'*':''),row.arrival_count,hhmm(row.break_minutes)+(row.break_minutes!=null&&row.break_minutes_partial?'*':''),row.break_count];
     const height=heights[index];
     let left=x;
     cells.forEach((cell,i)=>{
@@ -93,11 +96,11 @@ export async function renderAttendanceSummary(data) {
     });
     y+=height;
   }
-  const total=field=>rows.some(r=>r[field]==null)?null:rows.reduce((sum,r)=>sum+r[field],0);
+  const total=field=>rows.length && rows.every(r=>r[field]==null)?null:rows.reduce((sum,r)=>sum+(r[field]??0),0);
   const merged=widths.slice(0,5).reduce((a,b)=>a+b,0);
   doc.rect(x,y,merged,24).fillAndStroke('#D7E8FA','#A3BDDA');text('TOTAL',x,y+6,merged,{bold:true,size:10,align:'center'});
   let left=x+merged;
-  [hhmm(total('arrival_minutes')),total('arrival_count'),hhmm(total('break_minutes')),total('break_count')].forEach((value,i)=>{
+  [hhmm(total('arrival_minutes'))+(total('arrival_minutes')!=null&&rows.some(r=>r.arrival_minutes_partial)?'*':''),total('arrival_count'),hhmm(total('break_minutes'))+(total('break_minutes')!=null&&rows.some(r=>r.break_minutes_partial)?'*':''),total('break_count')].forEach((value,i)=>{
     doc.rect(left,y,widths[i+5],24).fillAndStroke(i%2?'#FFC6CD':'#D7E8FA','#A3BDDA');
     text(value,left,y+6,widths[i+5],{bold:true,size:10,align:'center'});left+=widths[i+5];
   });
@@ -105,7 +108,7 @@ export async function renderAttendanceSummary(data) {
   text('Note:',x,y,w,{bold:true,size:7});
   text('1. This report shows employees with 3 or more combined main late and excess-break occurrences in the selected payroll month.',x,y+11,w,{size:7});
   text('2. Main exceed time and break exceed time are total accumulated time for the selected month.',x,y+21,w,{size:7});
-  if(rows.some(r=>r.arrival_minutes==null))text('3. — indicates a recorded late status with no retained roster/timing. Unknown durations are not estimated.',x,y+31,w,{size:7});
+  if(rows.some(r=>r.arrival_minutes_partial||r.break_minutes_partial))text('3. * Partial total of recorded minutes. — means no recorded duration. Missing times are not estimated.',x,y+31,w,{size:7});
   if(!rows.length)text('No employees meet the selected monthly threshold.',x,y+31,w,{size:8});
   finishOnePage(doc);return done;
 }

@@ -27,3 +27,11 @@ test('A4 orientation follows measured table shape and bounds the entire content'
    assert.ok(h*fit.scale<=fit.pageHeight-44+.001);
  }
 });
+
+test('partial main durations retain known minutes instead of masking them',()=>{
+ const [row]=attendanceSummaryRows({reports:[{arrival_count:2,break_count:5,events:[
+   {type:'arrival',minutes:null},{type:'arrival',minutes:1},{type:'break',minutes:26}
+ ]}]});
+ assert.equal(row.arrival_minutes,1);assert.equal(row.arrival_minutes_partial,true);
+ assert.equal(row.break_minutes,26);assert.equal(row.break_minutes_partial,false);
+});
