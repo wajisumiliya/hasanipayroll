@@ -4,7 +4,7 @@ export function buildStatusReport(records,{status,branchId='',staffScope='',empl
   const groups=new Map();
   for(const {attendance:a,employee:e={}} of records) {
     const saved=key(a.status);
-    const unpaid=saved==='UL';
+    const unpaid=saved==='UL-UNPAID';
     if(status==='MC'?!['MC','MEDICAL LEAVE'].includes(saved):!unpaid)continue;
     if(branchId&&key(a.branch_id)!==key(branchId))continue;
     const foreign=key(e?.address).includes('FRN');
@@ -58,7 +58,7 @@ export function installAttendanceStatusReportApi(app,{authenticate,pool,renderEx
           WHERE a.attendance_date >= $1::date AND a.attendance_date < ($1::date + INTERVAL '1 month')
             AND (CASE WHEN $2::text='MC'
               THEN UPPER(TRIM(COALESCE(to_jsonb(a)->>'status',''))) IN ('MC','MEDICAL LEAVE')
-              ELSE UPPER(TRIM(COALESCE(to_jsonb(a)->>'status','')))='UL' END)`,[start,status]),
+              ELSE UPPER(TRIM(COALESCE(to_jsonb(a)->>'status','')))='UL-UNPAID' END)`,[start,status]),
         pool.query('SELECT id,name FROM public.branches')]);
       const branches=Object.fromEntries(branchRows.rows.map(b=>[key(b.id),b.name==='SUNGAI PETANI'?'SP-EDAR':b.name]));
       if(branchId&&!Object.hasOwn(branches,key(branchId)))return res.status(404).json({ok:false,message:'Branch not found.'});

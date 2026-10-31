@@ -79,6 +79,7 @@ class AttendancePdfService {
     final unpaidTotal = days.where((day) {
           final status = day.status.trim().toUpperCase();
           return status == 'UL' ||
+              status == 'UL-UNPAID' ||
               status == 'UNPAID' ||
               status == 'UNPAID LEAVE';
         }).length *

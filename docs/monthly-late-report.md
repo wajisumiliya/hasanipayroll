@@ -230,3 +230,11 @@ Unpaid Print now includes only attendance rows whose trimmed status is UL
 for this report. This restriction is applied both in the database query and in
 report grouping. Existing attendance and payroll deduction rules are unchanged.
 MC opening/taken/closing columns and automatic single-page A4 layout are retained.
+
+### Canonical UL-UNPAID status
+
+UL is now named UL-UNPAID in attendance menus, saved attendance and roster records,
+payroll recognition and the unpaid print filter. The startup migration renames
+existing UL records. Older attendance clients submitting UL are normalized to
+UL-UNPAID. Unpaid Print includes UL-UNPAID only; the separate UNPAID status and
+unpaid flags alone remain excluded. Earlier UL descriptions above are historical.

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { renderLateReport } from './late-report-export.js';
 
-const nonWorking = new Set(['OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'PH-OFF', 'PH-SPL', 'UL', 'UNPAID', 'UNPAID LEAVE', 'MEDICAL LEAVE']);
+const nonWorking = new Set(['OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'PH-OFF', 'PH-SPL', 'UL', 'UL-UNPAID', 'UNPAID', 'UNPAID LEAVE', 'MEDICAL LEAVE']);
 const key = (...parts) => parts.map(v => String(v ?? '').trim().toUpperCase()).join('|');
 const dateOnly = v => String(v ?? '').slice(0, 10);
 const present = v => v != null && !['', '-', '--', '--:--'].includes(String(v).trim());

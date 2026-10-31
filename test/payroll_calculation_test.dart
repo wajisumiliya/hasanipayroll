@@ -3,8 +3,10 @@ import 'package:hasani_payroll_portal/models/payroll.dart';
 import 'package:hasani_payroll_portal/services/payroll_calculation_service.dart';
 
 void main() {
-  test('UL is unpaid and PH-GANTI preserves legacy replacement OFF entitlement',
+  test('UL-UNPAID is unpaid and PH-GANTI preserves legacy replacement OFF entitlement',
       () {
+    expect(PayrollCalculationService.isUnpaidAttendanceStatus('UL-UNPAID'),
+        isTrue);
     expect(PayrollCalculationService.isUnpaidAttendanceStatus('UL'), isTrue);
     expect(
         PayrollCalculationService.isUnpaidAttendanceStatus(' unpaid '), isTrue);

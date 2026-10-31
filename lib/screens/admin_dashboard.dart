@@ -10528,7 +10528,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'status': newStatus,
         'is_public_holiday':
             const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GANTI'}.contains(newStatus),
-        'is_unpaid': (newStatus == 'UNPAID' || newStatus == 'UL'),
+        'is_unpaid': (newStatus == 'UNPAID' || newStatus == 'UL-UNPAID'),
       };
       if (recordId.isNotEmpty) {
         await SupabaseService.updateAttendance(recordId, values);
@@ -10676,7 +10676,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       'PH-OFF',
       'PH-SPL',
       'PH-GANTI',
-      'UL',
+      'UL-UNPAID',
       'UNPAID',
     ];
     return FutureBuilder<List<dynamic>>(

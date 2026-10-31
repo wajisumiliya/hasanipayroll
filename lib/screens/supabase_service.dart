@@ -1975,6 +1975,9 @@ class SupabaseService {
       // PH-OFF, PH-SPL, PH-GANTI, UNPAID.
       String attendanceStatus =
           status.trim().replaceAll('PH-GUNTI', 'PH-GANTI');
+      if (attendanceStatus.toUpperCase() == 'UL') {
+        attendanceStatus = 'UL-UNPAID';
+      }
 
       if (attendanceStatus.isEmpty) {
         if (hasWorkingTime) {
@@ -2001,7 +2004,7 @@ class SupabaseService {
         'PH-OFF',
         'PH-SPL',
         'PH-GANTI',
-        'UL',
+        'UL-UNPAID',
         'UNPAID',
       };
 

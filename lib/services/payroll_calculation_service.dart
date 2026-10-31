@@ -6,6 +6,7 @@
 class PayrollCalculationService {
   static bool isUnpaidAttendanceStatus(String status) => const {
         'UL',
+        'UL-UNPAID',
         'UNPAID',
         'UNPAID LEAVE'
       }.contains(status.trim().toUpperCase());

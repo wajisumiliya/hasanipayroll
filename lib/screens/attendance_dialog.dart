@@ -312,6 +312,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             .toString()
             .trim()
             .replaceAll('PH-GUNTI', 'PH-GANTI');
+        if (c.status.toUpperCase() == 'UL') c.status = 'UL-UNPAID';
         c.otRequested = _toBool(row['ot_requested']);
         c.otAuthorized = _toBool(row['ot_authorized']);
         c.isUnpaid = _toBool(row['is_unpaid']);
@@ -690,7 +691,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       'AL',
       'EL',
       'PH',
-      'UL',
+      'UL-UNPAID',
       'UNPAID'
     ];
     final choices = <int, String?>{};
@@ -874,7 +875,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                             attendance.status = type;
                             attendance.isPublicHoliday = type == 'PH';
                             attendance.isUnpaid =
-                                (type == 'UNPAID' || type == 'UL');
+                                (type == 'UNPAID' || type == 'UL-UNPAID');
                           } else if (nonWorking.contains(attendance.status)) {
                             attendance.status = '';
                             attendance.isPublicHoliday = false;
@@ -1762,7 +1763,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       'PH',
       'PH-OFF',
       'PH-SPL',
-      'UL',
+      'UL-UNPAID',
       'UNPAID',
     };
     final status = c.status.trim().toUpperCase();
@@ -1812,7 +1813,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       'PH-OFF',
       'PH-SPL',
       'PH-GANTI',
-      'UL',
+      'UL-UNPAID',
       'UNPAID',
     };
     final manual = c.status.trim().toUpperCase();
@@ -1897,7 +1898,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         break;
       case 'PL':
       case 'AL':
-      case 'UL':
+      case 'UL-UNPAID':
       case 'UNPAID':
         background = const Color(0xFFE1BEE7);
         foreground = const Color(0xFF6A1B9A);
@@ -1959,14 +1960,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             case 'PH-OFF':
             case 'PH-SPL':
             case 'PH-GANTI':
-            case 'UL':
+            case 'UL-UNPAID':
             case 'UNPAID':
               c.status = value;
               c.isPublicHoliday = value == 'PH' ||
                   value == 'PH-OFF' ||
                   value == 'PH-SPL' ||
                   value == 'PH-GANTI';
-              c.isUnpaid = (value == 'UNPAID' || value == 'UL');
+              c.isUnpaid = (value == 'UNPAID' || value == 'UL-UNPAID');
               if (!hasWorkingTime) {
                 c.otRequested = false;
                 c.otAuthorized = false;
@@ -2024,7 +2025,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             value: 'PH-GANTI',
             child: Text('PH-GANTI - WORK FOR REPLACEMENT OFF'),
           ),
-          const PopupMenuItem(value: 'UL', child: Text('UL')),
+          const PopupMenuItem(value: 'UL-UNPAID', child: Text('UL-UNPAID')),
           const PopupMenuItem(
             value: 'UNPAID',
             child: Text('UNPAID'),

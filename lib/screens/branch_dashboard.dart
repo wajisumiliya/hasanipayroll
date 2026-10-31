@@ -2258,7 +2258,7 @@ class _BranchPortalState extends State<BranchPortal>
                               'PH-OFF',
                               'PH-SPL',
                               'PH-GANTI',
-                              'UL',
+                              'UL-UNPAID',
                               'U'
                             }.contains(c))
                         .length;
@@ -2295,7 +2295,7 @@ class _BranchPortalState extends State<BranchPortal>
           'LATE + EARLY OUT': 'L/E',
           'EARLY OUT': 'EO',
           'OFF': 'O',
-          'UL': 'UL',
+          'UL-UNPAID': 'UL-UNPAID',
           'UNPAID': 'U'
         }[status] ??
         status;

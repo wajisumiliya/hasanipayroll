@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {buildStatusReport,installAttendanceStatusReportApi,applyMcBalances} from '../src/attendance-status-report.js';
 import {renderLateReport} from '../src/late-report-export.js';
 const row=(employee_id,date,status,extra={})=>({attendance:{employee_id,attendance_date:date,branch_id:'A',status,...extra},employee:{name:employee_id,address:'LOCAL'}});
-const records=[row('E1','2026-10-01','MC'),row('E1','2026-10-01','MC'),row('E1','2026-10-02','MC'),row('E2','2026-10-03','UNPAID'),row('E3','2026-10-04','Present',{is_unpaid:true}),row('E4','2026-10-05','Present'),row('E5','2026-10-06','UL')];
-test('MC and UL-only unpaid lists use unique employee dates',()=>{
+const records=[row('E1','2026-10-01','MC'),row('E1','2026-10-01','MC'),row('E1','2026-10-02','MC'),row('E2','2026-10-03','UNPAID'),row('E3','2026-10-04','Present',{is_unpaid:true}),row('E4','2026-10-05','Present'),row('E5','2026-10-06','UL-UNPAID')];
+test('MC and UL-UNPAID-only unpaid lists use unique employee dates',()=>{
  const mc=buildStatusReport(records,{status:'MC'});assert.equal(mc.length,1);assert.equal(mc[0].count,2);
  assert.equal(buildStatusReport(records,{status:'UNPAID'}).length,1);
  assert.equal(buildStatusReport(records,{status:'MC',branchId:'B'}).length,0);
