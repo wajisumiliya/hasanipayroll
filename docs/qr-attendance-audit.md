@@ -92,3 +92,8 @@ into this feature branch. QR changes remain isolated from main.
 Actual Neon staging schema, realistic staging data, physical USB hardware, shared
 rate limiting for horizontal scaling, and release/deployment acceptance remain
 required. No production data or production QR migration was touched.
+
+The feature branch was pushed successfully. The final `gh pr edit 228 --body-file`
+attempt also returned GitHub GraphQL Forbidden; the prepared description is in
+`docs/qr-attendance-pr-228.md`. PR description editing and observing Actions results
+remain blocked by API access, not by a test failure.
