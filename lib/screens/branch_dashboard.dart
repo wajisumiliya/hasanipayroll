@@ -11,6 +11,7 @@ import '../theme/daily_portal_theme.dart';
 import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'attendance_dialog.dart';
+import 'qr_attendance_page.dart';
 import 'branch_ot_requests_page.dart';
 import 'leave_requests_approval_page.dart';
 import 'daily_report_page.dart';
@@ -412,6 +413,7 @@ class _BranchPortalState extends State<BranchPortal>
       items: [
         item('Dashboard', Icons.grid_view_rounded, 0),
         item('Attendance', Icons.event_available_rounded, 1),
+        item('QR Scanner', Icons.qr_code_scanner_rounded, 6),
         item('Employees', Icons.groups_rounded, 2),
         item('OT Requests', Icons.more_time_rounded, 3),
         item('Leave Requests', Icons.flight_rounded, 4),
@@ -843,6 +845,8 @@ class _BranchPortalState extends State<BranchPortal>
         return 'Leave Requests';
       case 5:
         return 'Daily Report';
+      case 6:
+        return 'QR Scanner';
       default:
         return 'Dashboard';
     }
@@ -852,6 +856,8 @@ class _BranchPortalState extends State<BranchPortal>
     switch (selectedPage) {
       case 1:
         return _attendancePage();
+      case 6:
+        return const QrAttendancePage();
       case 2:
         return _employeesPage();
       case 3:
