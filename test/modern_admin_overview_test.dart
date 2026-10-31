@@ -244,7 +244,7 @@ void main() {
         'Upcoming Birthdays',
         'Work Anniversary'
       ]) {
-        expect(find.text(title), findsOneWidget);
+        expect(find.byKey(ValueKey('activity-heading-$title')), findsOneWidget);
       }
       await tester.ensureVisible(find.text('More management tools'));
       final toolsAction = find.text('Existing import and notification tools');

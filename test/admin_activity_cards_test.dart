@@ -216,10 +216,16 @@ void main() {
                       onLate: () {},
                       onPayroll: () {})))));
       await tester.pumpAndSettle();
-      expect(find.text('Attendance Late (3 and above)'), findsOneWidget);
-      expect(find.text('Increment List'), findsOneWidget);
-      expect(find.text('Upcoming Birthdays'), findsOneWidget);
-      expect(find.text('Work Anniversary'), findsOneWidget);
+      expect(
+          find.byKey(
+              const ValueKey('activity-heading-Attendance Late (3 and above)')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('activity-heading-Increment List')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('activity-heading-Upcoming Birthdays')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('activity-heading-Work Anniversary')),
+          findsOneWidget);
       expect(
           find.text('No matching records for this month.'), findsNWidgets(2));
       expect(find.text('No events in the next 5 days.'), findsNWidgets(2));
