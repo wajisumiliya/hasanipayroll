@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import {buildStatusReport,installAttendanceStatusReportApi,applyMcBalances} from '../src/attendance-status-report.js';
 import {renderLateReport} from '../src/late-report-export.js';
 const row=(employee_id,date,status,extra={})=>({attendance:{employee_id,attendance_date:date,branch_id:'A',status,...extra},employee:{name:employee_id,address:'LOCAL'}});
-const records=[row('E1','2026-10-01','MC'),row('E1','2026-10-01','MC'),row('E1','2026-10-02','MC'),row('E2','2026-10-03','UNPAID'),row('E3','2026-10-04','Present',{is_unpaid:true}),row('E4','2026-10-05','Present')];
-test('MC and unpaid lists use saved statuses/flags and unique employee dates',()=>{
+const records=[row('E1','2026-10-01','MC'),row('E1','2026-10-01','MC'),row('E1','2026-10-02','MC'),row('E2','2026-10-03','UNPAID'),row('E3','2026-10-04','Present',{is_unpaid:true}),row('E4','2026-10-05','Present'),row('E5','2026-10-06','UL')];
+test('MC and UL-only unpaid lists use unique employee dates',()=>{
  const mc=buildStatusReport(records,{status:'MC'});assert.equal(mc.length,1);assert.equal(mc[0].count,2);
- assert.equal(buildStatusReport(records,{status:'UNPAID'}).length,2);
+ assert.equal(buildStatusReport(records,{status:'UNPAID'}).length,1);
  assert.equal(buildStatusReport(records,{status:'MC',branchId:'B'}).length,0);
  assert.equal(buildStatusReport(records,{status:'MC',staffScope:'foreign'}).length,0);
- assert.equal(buildStatusReport(records,{status:'UNPAID',employeeIds:new Set(['E3'])})[0].employee_id,'E3');
+ assert.equal(buildStatusReport(records,{status:'UNPAID',employeeIds:new Set(['E5'])})[0].employee_id,'E5');
 });
 function response(){return {code:200,status(code){this.code=code;return this;},json(body){this.body=body;return this;}};}
 test('status API guards roles and validates selection before querying',async()=>{

@@ -216,3 +216,17 @@ snapshots before capturing the new assignment. These fields are server-managed;
 clients cannot submit them through generic writes. No historical timing is
 backfilled from an assumed start time. Missing past shift times still require
 admin-supplied dates and scheduled starts to recover accurate minutes.
+
+### Direct printing and UL-only unpaid selection
+
+The dashboard now has MC Print and Unpaid Print actions. One click requests the
+PDF and opens the native/browser print flow; the intermediate report-list dialog
+and its second Print PDF action are removed. Buttons show Preparing PDF while
+pending, prevent duplicate requests and show an error message if generation fails.
+The selected month, branch and scoped employee IDs are captured at click time.
+
+Unpaid Print now includes only attendance rows whose trimmed status is UL
+(case-insensitive). UNPAID, UNPAID LEAVE and is_unpaid flags alone no longer qualify
+for this report. This restriction is applied both in the database query and in
+report grouping. Existing attendance and payroll deduction rules are unchanged.
+MC opening/taken/closing columns and automatic single-page A4 layout are retained.

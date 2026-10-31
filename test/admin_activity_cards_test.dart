@@ -196,8 +196,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Main 120 min\nBreak 90 min'), findsOneWidget);
     expect(find.text('Print PDF'), findsOneWidget);
-    expect(find.text('MC Report'), findsOneWidget);
-    expect(find.text('Unpaid Report'), findsOneWidget);
+    expect(find.text('MC Print'), findsOneWidget);
+    expect(find.text('Unpaid Print'), findsOneWidget);
     await tester.ensureVisible(find.text('Aina'));
     await tester.tap(find.text('Aina'));
     await tester.pumpAndSettle();

@@ -13,11 +13,12 @@ test('UL is saved as unpaid through the batched attendance path',()=>{
  const [query]=buildAttendanceUpserts([{employee_id:'E1',attendance_date:'2026-10-01',status:'UL'}]);
  assert.match(query.sql,/is_unpaid/);assert.ok(query.values.includes('UL'));assert.ok(query.values.includes(true));
 });
-test('UL appears once per date in unpaid reports alongside legacy unpaid entries',()=>{
+test('unpaid report includes only UL and excludes legacy unpaid status or flags',()=>{
  const row={attendance:{employee_id:'E1',branch_id:'A',attendance_date:'2026-10-01',status:'UL'},employee:{name:'Employee'}};
  const reports=buildStatusReport([row,row,{...row,attendance:{...row.attendance,attendance_date:'2026-10-02',status:'UNPAID'}}],{status:'UNPAID'});
- assert.equal(reports.length,1);assert.equal(reports[0].count,2);
+ assert.equal(reports.length,1);assert.equal(reports[0].count,1);
  assert.equal(buildStatusReport([row],{status:'MC'}).length,0);
+ assert.equal(buildStatusReport([{...row,attendance:{...row.attendance,status:'Present',is_unpaid:true}}],{status:'UNPAID'}).length,0);
 });
 test('UL is not accidentally counted as late arrival or excess break',()=>{
  const result=buildLateReport({attendance:[1,2,3].map(d=>({employee_id:'E1',branch_id:'A',attendance_date:`2026-10-0${d}`,status:'UL',check_in:'10:00',break_minutes:120})),
