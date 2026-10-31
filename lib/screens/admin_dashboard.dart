@@ -326,6 +326,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   String _attendanceSubmissionFilter = 'submitted';
   DateTime _attendanceStatusDate = DateTime.now();
   String _attendanceStatusFilter = 'OFF';
+  bool _attendanceStatusMonthly = false;
   Future<List<dynamic>>? _attendanceStatusFuture;
   String? _attendanceStatusFutureKey;
   final Set<String> _attendanceStatusUpdatingIds = <String>{};
@@ -10463,14 +10464,18 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Future<List<dynamic>> _attendanceStatusPageData() {
     final key =
-        '${_attendanceDateText(_attendanceStatusDate)}|$_attendanceStatusFilter';
+        '$_attendanceStatusMonthly|${_attendanceDateText(_attendanceStatusDate)}|$_attendanceStatusFilter';
     if (_attendanceStatusFuture == null || _attendanceStatusFutureKey != key) {
       _attendanceStatusFutureKey = key;
       _attendanceStatusFuture = Future.wait([
         SupabaseService.getBranches(),
         SupabaseService.getActiveEmployees(),
-        SupabaseService.getAttendanceByDate(
-          _attendanceDateText(_attendanceStatusDate),
+        AppService.instance.loadNeonAttendance(
+          date: _attendanceStatusMonthly
+              ? null
+              : _attendanceDateText(_attendanceStatusDate),
+          year: _attendanceStatusMonthly ? _attendanceStatusDate.year : null,
+          month: _attendanceStatusMonthly ? _attendanceStatusDate.month : null,
         ),
       ]);
     }
@@ -10500,7 +10505,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final employeeId = (record['employee_id'] ?? '').toString().trim();
     final updateKey = recordId.isNotEmpty
         ? recordId
-        : '$employeeId|${_attendanceDateText(_attendanceStatusDate)}';
+        : '$employeeId|${record['attendance_date'] ?? _attendanceDateText(_attendanceStatusDate)}';
     if (_attendanceStatusUpdatingIds.contains(updateKey)) return;
 
     if (newStatus == 'PH-GANTI') {
@@ -10537,7 +10542,10 @@ class _AdminDashboardState extends State<AdminDashboard>
             .from('attendance')
             .update(values)
             .eq('employee_id', employeeId)
-            .eq('attendance_date', _attendanceDateText(_attendanceStatusDate))
+            .eq(
+                'attendance_date',
+                record['attendance_date'] ??
+                    _attendanceDateText(_attendanceStatusDate))
             .select('employee_id,status')
             .single();
       }
@@ -10560,7 +10568,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     try {
       final document = pw.Document();
       final dateLabel =
-          DateFormat('dd MMMM yyyy').format(_attendanceStatusDate);
+          DateFormat(_attendanceStatusMonthly ? 'MMMM yyyy' : 'dd MMMM yyyy')
+              .format(_attendanceStatusDate);
       final status = _attendanceStatusFilter;
       final total =
           grouped.values.fold<int>(0, (sum, rows) => sum + rows.length);
@@ -10581,13 +10590,15 @@ class _AdminDashboardState extends State<AdminDashboard>
               ),
               pw.SizedBox(height: 4),
               pw.Text(
-                'DAILY ATTENDANCE STATUS REPORT',
+                _attendanceStatusMonthly
+                    ? 'MONTHLY ATTENDANCE STATUS REPORT'
+                    : 'DAILY ATTENDANCE STATUS REPORT',
                 style: pw.TextStyle(
                   fontSize: 14,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              pw.Text('Date: $dateLabel   Status: $status   Total: $total'),
+              pw.Text('Period: $dateLabel   Status: $status   Records: $total'),
               pw.SizedBox(height: 10),
             ],
           ),
@@ -10618,7 +10629,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                   'No.',
                   'Employee ID',
                   'Employee Name',
-                  'Status'
+                  'Status',
+                  'Date'
                 ],
                 data: [
                   for (var index = 0;
@@ -10631,6 +10643,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                       (grouped[branchId]![index]['employee_name'] ?? '-')
                           .toString(),
                       status,
+                      (grouped[branchId]![index]['attendance_date'] ?? '')
+                          .toString()
+                          .split('T')
+                          .first,
                     ],
                 ],
                 headerStyle: pw.TextStyle(
@@ -10646,6 +10662,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   1: pw.FixedColumnWidth(85),
                   2: pw.FlexColumnWidth(),
                   3: pw.FixedColumnWidth(65),
+                  4: pw.FixedColumnWidth(65),
                 },
               ),
               pw.SizedBox(height: 12),
@@ -10656,7 +10673,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
       await Printing.layoutPdf(
         name:
-            'attendance-${_attendanceDateText(_attendanceStatusDate)}-$status.pdf',
+            'attendance-${_attendanceStatusMonthly ? DateFormat('yyyy-MM').format(_attendanceStatusDate) : _attendanceDateText(_attendanceStatusDate)}-$status.pdf',
         format: PdfPageFormat.a4,
         onLayout: (_) => document.save(),
       );
@@ -10753,13 +10770,15 @@ class _AdminDashboardState extends State<AdminDashboard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Daily Status View',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                Text(
+                  _attendanceStatusMonthly
+                      ? 'Monthly Status View'
+                      : 'Daily Status View',
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Choose a date and status to see matching employees grouped by branch.',
+                  'Choose a day or month and status to see matching employees grouped by branch.',
                   style: TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 18),
@@ -10768,26 +10787,93 @@ class _AdminDashboardState extends State<AdminDashboard>
                   runSpacing: 12,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.calendar_today_outlined),
-                      label: Text(
-                        DateFormat('dd MMM yyyy').format(_attendanceStatusDate),
+                    SizedBox(
+                      width: 140,
+                      child: DropdownButtonFormField<bool>(
+                        initialValue: _attendanceStatusMonthly,
+                        decoration: const InputDecoration(
+                            labelText: 'Period', isDense: true),
+                        items: const [
+                          DropdownMenuItem(value: false, child: Text('Daily')),
+                          DropdownMenuItem(value: true, child: Text('Monthly')),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _attendanceStatusMonthly = value;
+                            _refreshAttendanceStatusView();
+                          });
+                        },
                       ),
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _attendanceStatusDate,
-                          firstDate: DateTime(2020),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 366)),
-                        );
-                        if (picked == null || !mounted) return;
-                        setState(() {
-                          _attendanceStatusDate = picked;
-                          _refreshAttendanceStatusView();
-                        });
-                      },
                     ),
+                    if (_attendanceStatusMonthly) ...[
+                      SizedBox(
+                        width: 150,
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _attendanceStatusDate.month,
+                          decoration: const InputDecoration(
+                              labelText: 'Month', isDense: true),
+                          items: List.generate(
+                              12,
+                              (i) => DropdownMenuItem(
+                                    value: i + 1,
+                                    child: Text(DateFormat('MMMM')
+                                        .format(DateTime(2026, i + 1))),
+                                  )),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _attendanceStatusDate =
+                                  DateTime(_attendanceStatusDate.year, value);
+                              _refreshAttendanceStatusView();
+                            });
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: 110,
+                        child: DropdownButtonFormField<int>(
+                          initialValue: _attendanceStatusDate.year,
+                          decoration: const InputDecoration(
+                              labelText: 'Year', isDense: true),
+                          items: List.generate(
+                              DateTime.now().year - 2018,
+                              (i) => DropdownMenuItem(
+                                    value: 2020 + i,
+                                    child: Text('${2020 + i}'),
+                                  )),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _attendanceStatusDate =
+                                  DateTime(value, _attendanceStatusDate.month);
+                              _refreshAttendanceStatusView();
+                            });
+                          },
+                        ),
+                      ),
+                    ] else
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.calendar_today_outlined),
+                        label: Text(
+                          DateFormat('dd MMM yyyy')
+                              .format(_attendanceStatusDate),
+                        ),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _attendanceStatusDate,
+                            firstDate: DateTime(2020),
+                            lastDate:
+                                DateTime.now().add(const Duration(days: 366)),
+                          );
+                          if (picked == null || !mounted) return;
+                          setState(() {
+                            _attendanceStatusDate = picked;
+                            _refreshAttendanceStatusView();
+                          });
+                        },
+                      ),
                     SizedBox(
                       width: 190,
                       child: DropdownButtonFormField<String>(
@@ -10821,7 +10907,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         color: statusHighlight,
                       ),
                       label: Text(
-                        '${records.length} employee${records.length == 1 ? '' : 's'}',
+                        '${records.map((row) => row['employee_id']).toSet().length} employees${_attendanceStatusMonthly ? ' · ${records.length} records' : ''}',
                         style: TextStyle(
                           color: statusHighlight,
                           fontWeight: FontWeight.w800,
@@ -10848,8 +10934,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                       padding: const EdgeInsets.all(32),
                       child: Center(
                         child: Text(
-                          'No $_attendanceStatusFilter employees found on '
-                          '${DateFormat('dd MMM yyyy').format(_attendanceStatusDate)}.',
+                          'No $_attendanceStatusFilter employees found '
+                          '${_attendanceStatusMonthly ? 'in' : 'on'} '
+                          '${DateFormat(_attendanceStatusMonthly ? 'MMMM yyyy' : 'dd MMM yyyy').format(_attendanceStatusDate)}.',
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -10894,7 +10981,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   (record['employee_id'] ?? '').toString();
                               final updateKey = recordId.isNotEmpty
                                   ? recordId
-                                  : '$employeeId|${_attendanceDateText(_attendanceStatusDate)}';
+                                  : '$employeeId|${record['attendance_date'] ?? _attendanceDateText(_attendanceStatusDate)}';
                               final updating = _attendanceStatusUpdatingIds
                                   .contains(updateKey);
                               return ListTile(
@@ -10915,7 +11002,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   ),
                                 ),
                                 subtitle: Text(
-                                  'Employee ID: ${record['employee_id'] ?? '-'}',
+                                  'Employee ID: ${record['employee_id'] ?? '-'}'
+                                  '${_attendanceStatusMonthly ? ' · ${record['attendance_date'].toString().split('T').first}' : ''}',
                                 ),
                                 trailing: updating
                                     ? const SizedBox.square(

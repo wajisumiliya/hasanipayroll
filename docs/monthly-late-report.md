@@ -253,3 +253,12 @@ payroll must be regenerated to apply this rule.
 
 UL-UNPAID (and legacy UL) uses the same unpaid daily-rate deduction as UNPAID.
 Unpaid statuses are fetched even when the old row has no submitted/unpaid flag.
+
+### Status View by month
+
+Attendance Admin Status View offers Daily and Monthly period modes. Monthly mode
+loads the selected calendar month using the existing authenticated attendance API
+and filters the chosen status across all dates. Results remain grouped by branch,
+show each record's date, and count distinct employees plus matching records.
+Print A4 uses the same selected period and includes attendance dates. Editing a
+monthly result targets its saved attendance ID/date rather than the picker date.
