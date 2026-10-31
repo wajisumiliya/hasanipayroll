@@ -196,7 +196,7 @@ void main() {
     expect(find.text('90'), findsNothing);
     expect(tester.takeException(), isNull);
   });
-  for (final width in [320.0, 1440.0]) {
+  for (final width in [320.0, 768.0, 1100.0, 1440.0]) {
     testWidgets('activity cards fit $width with honest empty states',
         (tester) async {
       tester.view.physicalSize = Size(width, 1200);

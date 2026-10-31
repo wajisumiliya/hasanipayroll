@@ -446,18 +446,28 @@ class AdminActivityCards extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                            FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(e.$2,
-                                    style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w800,
-                                        color: ink))),
+                            SizedBox(
+                                height: 24,
+                                child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(e.$2,
+                                        style: const TextStyle(
+                                            fontSize: 20,
+                                            height: 1,
+                                            fontWeight: FontWeight.w800,
+                                            color: ink)))),
                             const SizedBox(height: 3),
-                            Text(e.$3,
-                                maxLines: 2,
-                                style:
-                                    const TextStyle(fontSize: 9, color: muted))
+                            Flexible(
+                                child: Tooltip(
+                                    message: e.$3,
+                                    child: Text(e.$3,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontSize: 9,
+                                            height: 1.1,
+                                            color: muted))))
                           ]))
                     ])))
                 .toList());
