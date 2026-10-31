@@ -193,6 +193,7 @@ export function installDataApi(app, { pool, authenticate }) {
     const columns = new Map(schema.columns);
     if (table === 'employees' && String(req.user?.role ?? '').toUpperCase() !== 'ADMIN') {
       columns.delete('medical_leave_balance');
+      columns.delete('medical_leave_opening_month');
       if (!['GET', 'HEAD'].includes(req.method)) columns.delete('annual_leave_balance');
     }
     // Imported branch credentials are not part of any frontend data contract.

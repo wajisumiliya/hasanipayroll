@@ -163,3 +163,22 @@ for a positive count, the UI says “Not recorded”. A zero count still shows z
 minutes. The PDF uses asterisked partial subtotals and an explanatory note; it
 never guesses a missing scheduled shift time. This supersedes masking the entire
 total whenever a single event duration is unavailable.
+
+### MC opening, usage and closing balances
+
+MC reports include Opening MC, MC Taken and Closing MC (days). The user confirmed
+October 2026 as the opening month for previously uploaded MC values. The startup
+migration anchors only existing non-null, unanchored values to 2026-10-01; it does
+not replace their uploaded amounts. A private monthly opening ledger records
+subsequent admin opening changes so future adjustments do not overwrite prior
+months. Employee payloads continue to omit MC and its opening month.
+
+For each report the latest opening at/before the report month is selected.
+Earlier distinct MC attendance dates since that opening reduce the report month's
+opening; current-month distinct MC dates reduce its closing. For example October
+10 opening - 5 used = 5 closing; November begins with 5 unless a newer explicit
+opening was supplied. Calculations include every branch and deduplicate an
+employee's dates across transfers. Negative closings remain visible as overuse.
+Missing openings remain Not set. No automatic annual reset or new entitlement
+is assumed. Printing reads the ledger and attendance only and never writes a
+second deduction. Unpaid/AL behavior is unchanged.

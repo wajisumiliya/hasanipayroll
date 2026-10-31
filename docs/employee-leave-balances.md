@@ -28,3 +28,12 @@ payroll amounts are independent.
 Backend tests check migration registration, MC redaction and generic read/write
 boundaries. Flutter tests cover null/zero/decimal AL values, cached model round
 trips and an AL-only card. Flutter runtime verification requires an available SDK.
+
+MC reports now treat the MC entry as an opening balance tied to an opening month,
+not a repeatedly decremented number. Edit Employee includes MC opening month
+(YYYY-MM). Previously uploaded non-null MC values are anchored to October 2026
+as confirmed by the user. Future uploads must specify their intended opening
+month; the bulk template now includes it. Opening history is private and retained
+per month. MC usage is derived from saved attendance when reporting, including
+carry-forward; opening - taken = closing. Reprinting does not alter stored values.
+AL stays manually maintained and remains the only employee-dashboard balance.

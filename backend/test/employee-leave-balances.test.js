@@ -4,10 +4,10 @@ import {employeeLeaveView} from '../src/employee-leave-balances.js';
 import {installDataApi} from '../src/data-api.js';
 
 test('employee payload keeps AL but removes MC outside admin without mutating source',()=>{
- const original={employee_id:'E1',annual_leave_balance:10.5,medical_leave_balance:14};
+ const original={employee_id:'E1',annual_leave_balance:10.5,medical_leave_balance:14,medical_leave_opening_month:'2026-10-01'};
  for(const role of ['EMPLOYEE','BRANCH']) {
    const view=employeeLeaveView(original,role);
-   assert.equal(view.annual_leave_balance,10.5);assert.equal('medical_leave_balance' in view,false);
+   assert.equal(view.annual_leave_balance,10.5);assert.equal('medical_leave_balance' in view,false);assert.equal('medical_leave_opening_month' in view,false);
  }
  assert.equal(employeeLeaveView(original,'ADMIN').medical_leave_balance,14);
  assert.equal(original.medical_leave_balance,14);assert.equal(employeeLeaveView(null,'EMPLOYEE'),null);

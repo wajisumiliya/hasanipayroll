@@ -116,29 +116,34 @@ export async function renderAttendanceSummary(data) {
 export async function renderStatusSummary(data) {
   const label=data.status==='MC'?'MC':'UNPAID';
   const month=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
-  const longDates=data.reports.some(r=>r.dates.join(', ').length>40);
+  const isMc=data.status==='MC';
+  const longDates=isMc||data.reports.some(r=>r.dates.join(', ').length>40);
   const canvasWidth=longDates?842:595;
   const width=canvasWidth-48;
-  const cols=(longDates?[35,95,190,115,60,299]:[25,65,120,80,35,222]).map(v=>v/(longDates?794:547)*width);
-  const cellsFor=(r,i)=>[i+1,r.employee_id,r.name,data.branches[String(r.branch_id).trim().toUpperCase()]??r.branch_id,r.count,r.dates.join(', ')];
+  const weights=isMc?[30,75,145,90,65,60,65,264]:longDates?[35,95,190,115,60,299]:[25,65,120,80,35,222];
+  const cols=weights.map(v=>v/weights.reduce((a,b)=>a+b,0)*width);
+  const dayValue=value=>value==null?'Not set':String(Number(value));
+  const cellsFor=(r,i)=>[i+1,r.employee_id,r.name,r.branch_names??data.branches[String(r.branch_id).trim().toUpperCase()]??r.branch_id,
+    ...(isMc?[dayValue(r.opening_mc),r.mc_taken??r.count,dayValue(r.closing_mc)]:[r.count]),r.dates.join(', ')];
   const heights=measureRows(data.reports.map(cellsFor),cols,8,12,25);
   const {doc,done}=onePage(canvasWidth,98+heights.reduce((a,b)=>a+b,0)+78);
   function text(v,x,y,w,bold=false,size=8){doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#102943').text(String(v),x,y,{width:w});}
   function header() {
     text('HASANI PAYROLL',24,18,width*.52,true,canvasWidth<600?14:18);text(`${label} ATTENDANCE REPORT`,24+width*.55,22,width*.45,true,canvasWidth<600?10:13);
     text(`${month} · ${data.branchLabel} · ${data.reports.length} employees`,24,48,width,false,10);
-    let x=24;['No.','Employee ID','Employee Name','Branch','Days',`${label} dates`].forEach((v,i)=>{
+    let x=24;['No.','Employee ID','Employee Name','Branch',...(isMc?['Opening MC','MC Taken','Closing MC']:['Days']),`${label} dates`].forEach((v,i)=>{
       doc.rect(x,72,cols[i],26).fill(navy);doc.font('Bold').fontSize(8).fillColor('white').text(v,x+5,78,{width:cols[i]-10});x+=cols[i];
     });return 98;
   }
   let y=header();
   for(let i=0;i<data.reports.length;i++) {
-    const r=data.reports[i],cells=[i+1,r.employee_id,r.name,data.branches[String(r.branch_id).trim().toUpperCase()]??r.branch_id,r.count,r.dates.join(', ')];
+    const r=data.reports[i],cells=cellsFor(r,i);
     const height=heights[i];
     let x=24;cells.forEach((v,j)=>{doc.rect(x,y,cols[j],height).fillAndStroke(i%2?'#F1F3F6':'#FFFFFF','#B8C8D8');text(v,x+5,y+6,cols[j]-10);x+=cols[j];});y+=height;
   }
-  text(`TOTAL: ${data.reports.length} employees · ${data.reports.reduce((sum,r)=>sum+r.count,0)} ${label} days`,24,y+12,width,true,10);
-  text('Source: saved attendance records for the selected month. Duplicate dates are counted once per employee and branch.',24,y+32,width,false,8);
+  text(`TOTAL: ${data.reports.length} employees · ${data.reports.reduce((sum,r)=>sum+(isMc?(r.mc_taken??r.count):r.count),0)} ${label} days`,24,y+12,width,true,10);
+  text(isMc?'Opening MC minus MC taken = Closing MC (days). Balances include MC at every branch; duplicate employee dates count once.':'Source: saved attendance records for the selected month. Duplicate dates are counted once per employee and branch.',24,y+32,width,false,8);
+  if(isMc&&data.reports.some(r=>r.opening_mc==null))text('Not set: no opening MC balance is recorded for this report month.',24,y+44,width,false,7);
   if(!data.reports.length)text(`No ${label} attendance records for this selection.`,24,y+46,width);
   finishOnePage(doc);return done;
 }

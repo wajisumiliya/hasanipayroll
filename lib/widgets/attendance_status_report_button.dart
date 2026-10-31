@@ -131,7 +131,11 @@ class _AttendanceStatusDialogState extends State<_AttendanceStatusDialog> {
                               final days = rows.fold<int>(
                                   0,
                                   (sum, r) =>
-                                      sum + (r['count'] as num).toInt());
+                                      sum +
+                                      ((widget.status == 'MC'
+                                              ? r['mc_taken'] ?? r['count']
+                                              : r['count']) as num)
+                                          .toInt());
                               return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -148,7 +152,13 @@ class _AttendanceStatusDialogState extends State<_AttendanceStatusDialog> {
                                                       'Employee ID',
                                                       'Employee',
                                                       'Branch',
-                                                      'Days',
+                                                      if (widget.status ==
+                                                          'MC') ...[
+                                                        'Opening MC',
+                                                        'MC Taken',
+                                                        'Closing MC'
+                                                      ] else
+                                                        'Days',
                                                       'Dates'
                                                     ]
                                                         .map((v) => DataColumn(
@@ -161,8 +171,15 @@ class _AttendanceStatusDialogState extends State<_AttendanceStatusDialog> {
                                                                 cells: [
                                                               '${r['employee_id']}',
                                                               '${r['name']}',
-                                                              '${branches['${r['branch_id']}'.trim().toUpperCase()] ?? r['branch_id']}',
-                                                              '${r['count']}',
+                                                              '${r['branch_names'] ?? branches['${r['branch_id']}'.trim().toUpperCase()] ?? r['branch_id']}',
+                                                              if (widget
+                                                                      .status ==
+                                                                  'MC') ...[
+                                                                '${r['opening_mc'] ?? 'Not set'}',
+                                                                '${r['mc_taken'] ?? r['count']}',
+                                                                '${r['closing_mc'] ?? 'Not set'}',
+                                                              ] else
+                                                                '${r['count']}',
                                                               (r['dates']
                                                                       as List)
                                                                   .join(', ')

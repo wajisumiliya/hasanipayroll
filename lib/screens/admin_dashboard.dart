@@ -7199,6 +7199,12 @@ class _AdminDashboardState extends State<AdminDashboard>
       'medical_leave_balance': TextEditingController(
           text: employee['medical_leave_balance']?.toString() ?? ''),
     };
+    final mcOpeningMonth = TextEditingController(
+        text: employee['medical_leave_opening_month'] == null
+            ? DateFormat('yyyy-MM').format(selectedDashboardMonth)
+            : employee['medical_leave_opening_month']
+                .toString()
+                .substring(0, 7));
     final incrementDetails = TextEditingController(
       text: salaryDefault['inc_details']?.toString() ?? '',
     );
@@ -7354,11 +7360,20 @@ class _AdminDashboardState extends State<AdminDashboard>
                           decoration: InputDecoration(
                               labelText: entry.key == 'annual_leave_balance'
                                   ? 'AL balance (days)'
-                                  : 'MC balance (days)',
+                                  : 'MC opening balance (days)',
                               helperText:
                                   'Leave blank if not uploaded; decimals such as 0.5 are supported.',
                               border: const OutlineInputBorder())),
                   ]),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: mcOpeningMonth,
+                      enabled: !saving,
+                      decoration: const InputDecoration(
+                          labelText: 'MC opening month (YYYY-MM)',
+                          helperText:
+                              'MC is calculated from this opening month; previous monthly openings are retained.',
+                          border: OutlineInputBorder())),
                   const Divider(height: 28),
                   sectionHeading(
                     Icons.payments_outlined,
@@ -7746,6 +7761,21 @@ class _AdminDashboardState extends State<AdminDashboard>
                           }
                           leaveValues[entry.key] = value;
                         }
+                        final openingText = mcOpeningMonth.text.trim();
+                        final mcMonth = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$')
+                                .hasMatch(openingText)
+                            ? DateTime.tryParse('$openingText-01')
+                            : null;
+                        if (leaveValues['medical_leave_balance'] != null &&
+                            (mcMonth == null ||
+                                mcMonth.year < 2000 ||
+                                mcMonth.year > 2100)) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Set the MC opening month as YYYY-MM, for example 2026-10.')));
+                          return;
+                        }
                         final salaryValues = <String, double>{};
                         for (final field in salaryFields.entries) {
                           final value = double.tryParse(
@@ -7812,6 +7842,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                           final savedLastName = lastName.text.trim();
                           final employeePayload = <String, dynamic>{
                             ...leaveValues,
+                            'medical_leave_opening_month':
+                                leaveValues['medical_leave_balance'] == null
+                                    ? null
+                                    : '$openingText-01',
                             'name': isForeignEmployee
                                 ? '$savedFirstName $savedLastName'.trim()
                                 : fields['Name']!.text.trim(),
@@ -7936,6 +7970,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       for (final controller in leaveFields.values) {
         controller.dispose();
       }
+      mcOpeningMonth.dispose();
       incrementDetails.dispose();
       firstName.dispose();
       lastName.dispose();

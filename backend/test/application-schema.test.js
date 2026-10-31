@@ -24,6 +24,8 @@ test('application startup applies the penguin migration once and records it', as
 
   assert.ok(applied.has('20261026_late_report_reviews_v1'));
   assert.ok(applied.has('20261031_employee_leave_balances_v1'));
+  assert.ok(applied.has('20261031_mc_opening_balances_v1'));
+  assert.ok(executed.some(sql=>sql.includes("DATE '2026-10-01'")));
   assert.ok(executed.some(sql => sql.includes('annual_leave_balance numeric(6,2)')));
   assert.ok(executed.some(sql => sql.includes('CREATE TABLE IF NOT EXISTS app_private.late_report_reviews')));
   const penguinVersion = '20261021_employee_penguin_pet_v1';

@@ -17,6 +17,23 @@ export function buildStatusReport(records,{status,branchId='',staffScope='',empl
   return [...groups.values()].map(r=>({...r,dates:[...r.dates].sort(),count:r.dates.size}))
     .sort((a,b)=>key(a.branch_id).localeCompare(key(b.branch_id))||String(a.name).localeCompare(String(b.name)));
 }
+export function applyMcBalances(reports,balances) {
+  const byId=new Map(balances.map(r=>[key(r.employee_id),r]));
+  const grouped=new Map();
+  for(const r of reports) {
+    const id=key(r.employee_id);
+    if(!grouped.has(id))grouped.set(id,{...r,dates:new Set(),branch_ids:new Set()});
+    const group=grouped.get(id);r.dates.forEach(d=>group.dates.add(d));group.branch_ids.add(r.branch_id);
+  }
+  return [...grouped.values()].map(r=>{
+    const balance=byId.get(key(r.employee_id));
+    const opening=balance?.balance==null?null:Math.round((Number(balance.balance)-Number(balance.prior_taken??0))*100)/100;
+    const taken=Number(balance?.current_taken??r.dates.size);
+    return {...r,dates:[...r.dates].sort(),branch_ids:[...r.branch_ids],count:r.dates.size,
+      opening_mc:opening,mc_taken:taken,closing_mc:opening==null?null:Math.round((opening-taken)*100)/100,
+      mc_opening_month:balance?.opening_month??null};
+  });
+}
 export function installAttendanceStatusReportApi(app,{authenticate,pool,renderExport=renderLateReport}) {
   app.get('/api/attendance/status-report',authenticate,async(req,res)=>{
     const scope=req.auth?.app_metadata?.staff_scope??'';
@@ -44,7 +61,22 @@ export function installAttendanceStatusReportApi(app,{authenticate,pool,renderEx
         pool.query('SELECT id,name FROM public.branches')]);
       const branches=Object.fromEntries(branchRows.rows.map(b=>[key(b.id),b.name==='SUNGAI PETANI'?'SP-EDAR':b.name]));
       if(branchId&&!Object.hasOwn(branches,key(branchId)))return res.status(404).json({ok:false,message:'Branch not found.'});
-      const reports=buildStatusReport(data.rows,{status,branchId,staffScope:scope,employeeIds});
+      let reports=buildStatusReport(data.rows,{status,branchId,staffScope:scope,employeeIds});
+      if(status==='MC'&&reports.length) {
+        const balances=await pool.query(`SELECT e.employee_id, o.opening_month, o.balance,
+            COUNT(DISTINCT a.attendance_date) FILTER (WHERE a.attendance_date < $1::date) AS prior_taken,
+            COUNT(DISTINCT a.attendance_date) FILTER (WHERE a.attendance_date >= $1::date) AS current_taken
+          FROM public.employees e
+          LEFT JOIN LATERAL (SELECT opening_month,balance FROM app_private.employee_mc_openings
+            WHERE employee_id=e.employee_id AND opening_month <= $1::date ORDER BY opening_month DESC LIMIT 1) o ON true
+          LEFT JOIN public.attendance a ON a.employee_id=e.employee_id
+            AND a.attendance_date >= COALESCE(o.opening_month,$1::date)
+            AND a.attendance_date < ($1::date + INTERVAL '1 month')
+            AND UPPER(TRIM(COALESCE(a.status,''))) IN ('MC','MEDICAL LEAVE')
+          WHERE e.employee_id=ANY($2::text[]) GROUP BY e.employee_id,o.opening_month,o.balance`,
+          [start,[...new Set(reports.map(r=>r.employee_id))]]);
+        reports=applyMcBalances(reports,balances.rows).map(r=>({...r,branch_names:r.branch_ids.map(id=>branches[key(id)]??id).join(' / ')}));
+      }
       const branchLabel=branchId?branches[key(branchId)]:'All branches';
       if(format==='pdf') {
         const bytes=await renderExport({format:'pdf',view:'status-summary',year,month,status,reports,branches,branchLabel});
