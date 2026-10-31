@@ -1753,6 +1753,7 @@ class _ReferencePayrollDashboard extends StatelessWidget {
               .map((v) => Material(
                   color: Colors.transparent,
                   child: InkWell(
+                      key: ValueKey('admin-kpi-${v.$1}'),
                       onTap: v.$6,
                       borderRadius: BorderRadius.circular(10),
                       child: Container(

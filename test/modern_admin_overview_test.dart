@@ -223,7 +223,8 @@ void main() {
           home: Scaffold(body: overviewWidget(navigate: routes.add))));
       await tester.pumpAndSettle();
       expect(find.text('Dashboard Overview'), findsOneWidget);
-      expect(find.text('Total Employees'), findsOneWidget);
+      expect(find.byKey(const ValueKey('admin-kpi-Total Employees')),
+          findsOneWidget);
       expect(find.text('Monthly Payroll Amount'), findsOneWidget);
       expect(find.text('RM 9,000.00'), findsWidgets);
       for (final title in [
@@ -291,7 +292,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Farah Nabila'), findsNothing);
     expect(find.text('Muhammad Arif'), findsNothing);
-    await tester.tap(find.text('Total Employees'));
+    await tester.tap(find.byKey(const ValueKey('admin-kpi-Total Employees')));
     await tester.pumpAndSettle();
     expect(find.text('Employees'), findsWidgets);
     expect(find.text('Employee 1'), findsOneWidget);
