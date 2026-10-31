@@ -13,7 +13,7 @@ function amounts(row) {
   const values = fields.map(field => Number(row[field] ?? 0));
   return values.every(value => Number.isFinite(value) && value >= 0) ? values : null;
 }
-export function scheduledIncrement(value, year, month) {
+export function incrementEligibility(value, year, month) {
   const text = key(value);
   const match = /^([A-Z]{3,4})[-/](\d{4}|\d{2})(?:\D|$)/.exec(text);
   const months = {JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,SEPT:9,OCT:10,NOV:11,DEC:12};
@@ -21,7 +21,13 @@ export function scheduledIncrement(value, year, month) {
   const scheduleYear = Number(match[2]) + (match[2].length === 2 ? 2000 : 0);
   const separator = text.lastIndexOf('/');
   const amount = separator < 0 ? NaN : Number(text.slice(separator + 1).trim());
-  return scheduleYear === year && months[match[1]] === month && amount >= 50 && amount <= 1000 && amount % 50 === 0 ? amount : null;
+  const lastMonth = months[match[1]];
+  if (!lastMonth) return null;
+  const dueKey = monthKey(scheduleYear,lastMonth) + 6;
+  if (dueKey > monthKey(year,month)) return null;
+  const dueDate = new Date(Date.UTC(scheduleYear,lastMonth - 1 + 6,1)).toISOString().slice(0,10);
+  return {last_increment_month:`${scheduleYear}-${String(lastMonth).padStart(2,'0')}-01`,eligible_from:dueDate,
+    last_amount:Number.isFinite(amount) && separator >= 0 && text.slice(separator+1).trim() !== '' && amount >= 0 ? amount : null};
 }
 
 // Keep the established increment basis: positive changes in each of the four
@@ -60,27 +66,28 @@ export function buildIncrementReport({employees, payroll, year, month, mode, bra
     if (!id || (branchId && key(employee.branch_id) !== key(branchId))) continue;
     const foreign = key(employee.address).includes('FRN');
     if ((staffScope === 'local' && foreign) || (staffScope === 'foreign' && !foreign)) continue;
-    const expected = key(employee.is_active) === 'TRUE' ? scheduledIncrement(employee.inc_details, year, month) : null;
+    const eligibility = key(employee.is_active) === 'TRUE' ? incrementEligibility(employee.inc_details, year, month) : null;
+    const expected = eligibility?.last_amount ?? null;
     const evidence = payrollIncrementEvidence(histories.get(id) ?? [], year, month);
     let result;
     if (mode === 'eligible') {
-      if (expected == null) continue;
+      if (!eligibility) continue;
       result = 'Eligible';
     } else {
-      if (expected == null && (evidence.state === 'no_payroll' || (evidence.state === 'compared' && evidence.actual === 0))) continue;
+      if (!eligibility && (evidence.state === 'no_payroll' || (evidence.state === 'compared' && evidence.actual === 0))) continue;
       if (evidence.state === 'no_payroll') result = 'Payroll not generated';
       else if (evidence.state === 'no_baseline') result = 'Review: no prior payroll';
       else if (evidence.state === 'duplicate_payroll') result = 'Review: duplicate payroll';
       else if (evidence.state === 'invalid_payroll') result = 'Review: invalid salary';
-      else if (expected == null) result = 'Additional: not eligible';
+      else if (!eligibility) result = 'Additional: not eligible';
       else if (evidence.actual === 0) result = 'Not received';
-      else if (Math.abs(evidence.actual - expected) < 0.005) result = 'Received';
-      else if (evidence.actual < expected) result = 'Received less';
-      else result = 'Received more';
+      else if (expected == null || Math.abs(evidence.actual - expected) < 0.005) result = 'Received';
+      else if (evidence.actual < expected) result = 'Received less than last';
+      else result = 'Received more than last';
     }
     rows.push({employee_id:id,name:employee.name ?? id,branch_id:employee.branch_id ?? '',
-      schedule:employee.inc_details ?? '',eligible:expected != null,expected,...evidence,result,
-      variance:evidence.actual == null ? null : money(evidence.actual - (expected ?? 0))});
+      schedule:employee.inc_details ?? '',eligible:eligibility != null,expected,...eligibility,...evidence,result,
+      variance:evidence.actual == null || (eligibility && expected == null) ? null : money(evidence.actual - (expected ?? 0))});
   }
   rows.sort((a,b) => a.result.localeCompare(b.result) || key(a.branch_id).localeCompare(key(b.branch_id)) || key(a.name).localeCompare(key(b.name)));
   const counts = {};

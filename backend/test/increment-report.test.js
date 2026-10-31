@@ -1,23 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildIncrementReport, payrollIncrementEvidence, scheduledIncrement, installIncrementReportApi} from '../src/increment-report.js';
+import {buildIncrementReport, payrollIncrementEvidence, incrementEligibility, installIncrementReportApi} from '../src/increment-report.js';
 import {renderLateReport} from '../src/late-report-export.js';
 
-const employee=(id,extra={})=>({employee_id:id,name:`Employee ${id}`,branch_id:'A',is_active:true,inc_details:'OCT-26/100',...extra});
+const employee=(id,extra={})=>({employee_id:id,name:`Employee ${id}`,branch_id:'A',is_active:true,inc_details:'APR-26/100',...extra});
 const pay=(id,period,basic=2000,extra={})=>({employee_id:id,period,basic_salary:basic,elaun_kedatangan:200,elaun_perkhidmatan:100,elaun_kerajinan:50,...extra});
 const build=(employees,payroll,mode='comparison',extra={})=>buildIncrementReport({employees,payroll,mode,year:2026,month:10,...extra});
 const response=()=>({code:200,status(code){this.code=code;return this;},json(body){this.body=body;return this;}});
 
-test('scheduled eligibility follows maintained month, year and valid increment steps',()=>{
-  assert.equal(scheduledIncrement(' oct-26/150 ',2026,10),150);
-  assert.equal(scheduledIncrement('OCT/2026/100',2026,10),100);
-  assert.equal(scheduledIncrement('SEPT-26/100',2026,9),100);
-  for(const value of ['OCT-25/100','NOV-26/100','OCT-26/25','OCT-26/0','OCT-26/1050','bad','OCT-26/'])
-    assert.equal(scheduledIncrement(value,2026,10),null);
+test('eligibility begins six months after the last award and retains overdue employees',()=>{
+  assert.equal(incrementEligibility('Jan-26/50',2026,6),null);
+  assert.deepEqual(incrementEligibility('Jan-26/50',2026,7),{
+    last_increment_month:'2026-01-01',eligible_from:'2026-07-01',last_amount:50});
+  assert.equal(incrementEligibility('Jan-26/50',2026,10).eligible_from,'2026-07-01');
+  assert.equal(incrementEligibility('SEPT-26/125',2027,2),null);
+  assert.equal(incrementEligibility('SEPT-26/125',2027,3).last_amount,125);
+  assert.equal(incrementEligibility('JUL/2026/100',2027,1).eligible_from,'2027-01-01');
+  assert.equal(incrementEligibility('JAN-26/not recorded',2026,7).last_amount,null);
+  for(const value of ['MAY-26/100','JAN-27/100','BAD-26/100','bad',''])
+    assert.equal(incrementEligibility(value,2026,10),null);
 });
 
 test('eligibility PDF list exists before payroll, scopes branches and excludes inactive employees',()=>{
-  const report=build([employee('E1'),employee('E2',{branch_id:'B'}),employee('E3',{is_active:false}),employee('E4',{inc_details:'NOV-26/100'})],[],'eligible',{branchId:'a'});
+  const report=build([employee('E1'),employee('E2',{branch_id:'B'}),employee('E3',{is_active:false}),employee('E4',{inc_details:'MAY-26/100'})],[],'eligible',{branchId:'a'});
   assert.deepEqual(report.reports.map(row=>row.employee_id),['E1']);
   assert.equal(report.expected_total,100);assert.equal(report.eligible_count,1);
   assert.equal(report.reports[0].result,'Eligible');
@@ -25,19 +30,28 @@ test('eligibility PDF list exists before payroll, scopes branches and excludes i
 
 test('comparison separates paid, missed, different, additional and not-generated payroll',()=>{
   const ids=['MATCH','MISS','LESS','MORE','ADDITIONAL','PENDING','CLEAN'];
-  const employees=ids.map(id=>employee(id,{inc_details:['ADDITIONAL','CLEAN'].includes(id)?'NOV-26/100':'OCT-26/100'}));
+  const employees=ids.map(id=>employee(id,{inc_details:['ADDITIONAL','CLEAN'].includes(id)?'MAY-26/100':'APR-26/100'}));
   const rows=ids.map(id=>pay(id,'2026-09-01'));
   for(const [id,increase] of [['MATCH',100],['MISS',0],['LESS',50],['MORE',150],['ADDITIONAL',25],['CLEAN',0]]) rows.push(pay(id,'2026-10-01',2000+increase));
   const report=build(employees,rows);
   const byId=Object.fromEntries(report.reports.map(row=>[row.employee_id,row]));
   assert.equal(byId.MATCH.result,'Received');
   assert.equal(byId.MISS.result,'Not received');
-  assert.equal(byId.LESS.result,'Received less');assert.equal(byId.LESS.variance,-50);
-  assert.equal(byId.MORE.result,'Received more');assert.equal(byId.MORE.variance,50);
+  assert.equal(byId.LESS.result,'Received less than last');assert.equal(byId.LESS.variance,-50);
+  assert.equal(byId.MORE.result,'Received more than last');assert.equal(byId.MORE.variance,50);
   assert.equal(byId.ADDITIONAL.result,'Additional: not eligible');assert.equal(byId.ADDITIONAL.actual,25);
   assert.equal(byId.PENDING.result,'Payroll not generated');assert.equal(byId.PENDING.actual,null);
   assert.equal(byId.CLEAN,undefined);
   assert.equal(report.eligible_count,5);assert.equal(report.expected_total,500);assert.equal(report.actual_total,325);
+});
+
+test('unknown historical amount does not remove date-based eligibility or imply a future award amount',()=>{
+  const report=build([employee('E',{inc_details:'JAN-26/unknown'})],[pay('E','2026-09-01'),pay('E','2026-10-01',2075)]);
+  assert.equal(report.eligible_count,1);
+  assert.equal(report.reports[0].result,'Received');
+  assert.equal(report.reports[0].expected,null);
+  assert.equal(report.reports[0].variance,null);
+  assert.equal(report.reports[0].eligible_from,'2026-07-01');
 });
 
 test('highest prior values ignore partial-pay rebounds and do not let allowance forfeiture hide a basic increment',()=>{
@@ -51,7 +65,7 @@ test('highest prior values ignore partial-pay rebounds and do not let allowance 
 
 test('missing history, invalid salary and duplicates are review cases, never assumed paid or missed',()=>{
   for(const eligible of [true,false]) {
-    const e=employee('E',{inc_details:eligible?'OCT-26/100':'NOV-26/100'});
+    const e=employee('E',{inc_details:eligible?'APR-26/100':'MAY-26/100'});
     for(const [rows,result] of [
       [[pay('E','2026-10-01')],'Review: no prior payroll'],
       [[pay('E','2026-10-01',-1)],'Review: invalid salary'],

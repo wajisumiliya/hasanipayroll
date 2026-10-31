@@ -55,7 +55,8 @@ void main() {
         }),
         isNull);
   });
-  test('eligibility uses maintained schedule before payroll generation', () {
+  test('eligibility is six months after last increment and ignores amount step',
+      () {
     final widget = AdminActivityCards(
         month: DateTime(2026, 10),
         branch: 'A',
@@ -64,31 +65,31 @@ void main() {
             'employee_id': 'E1',
             'branch_id': 'A',
             'is_active': true,
-            'inc_details': 'OCT-26/100'
+            'inc_details': 'APR-26/100'
           },
           {
             'employee_id': 'E2',
             'branch_id': 'A',
             'is_active': true,
-            'inc_details': 'SEP-26/100'
+            'inc_details': 'MAY-26/100'
           },
           {
             'employee_id': 'E3',
             'branch_id': 'B',
             'is_active': true,
-            'inc_details': 'OCT-26/100'
+            'inc_details': 'APR-26/100'
           },
           {
             'employee_id': 'E4',
             'branch_id': 'A',
             'is_active': false,
-            'inc_details': 'OCT-26/100'
+            'inc_details': 'APR-26/100'
           },
           {
             'employee_id': 'E5',
             'branch_id': 'A',
             'is_active': true,
-            'inc_details': 'OCT-26/125'
+            'inc_details': 'APR-26/125'
           },
         ],
         payroll: const [],
@@ -96,8 +97,9 @@ void main() {
         onMonth: (_) {},
         onLate: () {},
         onPayroll: () {});
-    expect(widget.increments().single['employee_id'], 'E1');
-    expect(widget.increments().single['amount'], 100);
+    expect(widget.increments().map((row) => row['employee_id']).toSet(),
+        {'E1', 'E5'});
+    expect(widget.increments().first['event'], DateTime(2026, 10));
   });
   test('five-day window crosses New Year and excludes sixth day', () {
     final widget = AdminActivityCards(

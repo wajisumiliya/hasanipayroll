@@ -297,3 +297,26 @@ Reports are read-only and do not freeze eligibility. Save the pre-payroll PDF
 before modifying maintained schedules; later reports use the schedules that exist
 when printed. Local/foreign admin scopes and selected branches apply on the server;
 reviewer, requests-only and attendance-only accounts cannot access salary reports.
+
+### Corrected last-increment eligibility (six calendar months)
+
+This supersedes the earlier interpretation of inc_details as a future schedule.
+The salary-default field records the last increment: JAN-26/50 means RM50 was
+awarded in January 2026. The user confirmed the next eligibility is July 2026,
+six calendar months later. Active employees due on or before the selected month
+are eligible, including overdue employees, until a newer last increment is saved.
+No recurring awards are assumed and payroll generation does not change inc_details.
+
+The dashboard and both PDFs now use this same rule, including year rollovers.
+Eligibility depends on the recorded date rather than restricting past amounts to
+RM50 steps. A valid date with an unknown amount stays eligible and displays an
+unknown amount; a missing/invalid date cannot establish eligibility. No joining-date
+fallback is invented for this list. The existing next-increment salary report
+already adds six months and retains that rule.
+
+Amounts from inc_details are historical references, not promised future awards.
+The card labels and PDF columns now say last increment, and the eligibility PDF
+includes Eligible from. Comparison amounts continue to use saved payroll evidence;
+Received less/more refers explicitly to the previous increment amount. Unknown
+historical reference amounts do not fabricate a variance. Current saved last-increment
+records are used when printing; retain the pre-payroll PDF before updating them.

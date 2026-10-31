@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import '../services/app_service.dart';
-import '../services/payroll_calculation_service.dart';
+import '../services/increment_eligibility_service.dart';
 import 'modern_admin_overview.dart';
 
 class AdminActivityCards extends StatelessWidget {
@@ -91,57 +91,19 @@ class AdminActivityCards extends StatelessWidget {
     return result;
   }
 
-  // Maintained increment schedules identify eligibility even before payroll is generated.
+  // Six months after the last recorded increment; overdue employees remain due.
   List<Map<String, dynamic>> increments() {
     final result = <Map<String, dynamic>>[];
-    const months = {
-      'JAN': 1,
-      'FEB': 2,
-      'MAR': 3,
-      'APR': 4,
-      'MAY': 5,
-      'JUN': 6,
-      'JUL': 7,
-      'AUG': 8,
-      'SEP': 9,
-      'SEPT': 9,
-      'OCT': 10,
-      'NOV': 11,
-      'DEC': 12
-    };
     for (final e in people) {
-      final text = canonical(e['inc_details']);
-      final match =
-          RegExp(r'^([A-Z]{3,4})[-/](\d{4}|\d{2})(?:\D|$)').firstMatch(text);
-      if (match == null) continue;
-      var year = int.parse(match[2]!);
-      if (year < 100) year += 2000;
-      final separator = text.lastIndexOf('/');
-      final amount = separator < 0
-          ? null
-          : double.tryParse(text.substring(separator + 1).trim());
-      if (months[match[1]] != month.month ||
-          year != month.year ||
-          amount == null ||
-          !PayrollCalculationService.isValidPayrollIncrementAmount(amount))
-        continue;
-      final prior =
-          payroll.where((r) => employeeId(r) == employeeId(e)).where((r) {
-        final d = DateTime.tryParse('${r['period']}');
-        return d != null && d.isBefore(DateTime(month.year, month.month));
-      }).toList()
-            ..sort((a, b) => '${b['period']}'.compareTo('${a['period']}'));
-      final baseline = prior.isEmpty
-          ? 0.0
-          : number(prior.first['basic_salary']) +
-              number(prior.first['elaun_kedatangan']) +
-              number(prior.first['elaun_perkhidmatan']) +
-              number(prior.first['elaun_kerajinan']);
+      final schedule =
+          IncrementEligibilityService.dueForMonth(e['inc_details'], month);
+      if (schedule == null) continue;
+      final amount = schedule.lastAmount;
       result.add({
         ...e,
         'amount': amount,
-        'event': DateTime(year, month.month),
-        'percent': baseline > 0 ? amount / baseline * 100 : null
+        'event': schedule.dueMonth,
+        'last_event': schedule.lastMonth,
       });
     }
     result.sort((a, b) => number(b['amount']).compareTo(number(a['amount'])));
@@ -701,8 +663,8 @@ class AdminActivityCards extends StatelessWidget {
             : '${(late.length / count * 100).toStringAsFixed(1)}%';
         final totalAmount =
             inc.fold<double>(0, (sum, r) => sum + number(r['amount']));
-        final percents =
-            inc.map((r) => r['percent']).whereType<double>().toList();
+        final recordedAmounts =
+            inc.map((r) => r['amount']).whereType<double>().toList();
         String money(double value) => NumberFormat.currency(
                 locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
             .format(value);
@@ -785,15 +747,15 @@ class AdminActivityCards extends StatelessWidget {
                 (
                   Icons.payments,
                   money(totalAmount),
-                  'Total Increment Amount',
+                  'Known Last Increment Total',
                   green
                 ),
                 (
                   Icons.trending_up,
-                  percents.isEmpty || percents.length != inc.length
+                  recordedAmounts.isEmpty
                       ? '—'
-                      : '+${(percents.reduce((a, b) => a + b) / percents.length).toStringAsFixed(1)}%',
-                  'Avg. Increment',
+                      : money(totalAmount / recordedAmounts.length),
+                  'Avg. Last Increment',
                   const Color(0xFF00BEAA)
                 ),
                 (
@@ -801,18 +763,18 @@ class AdminActivityCards extends StatelessWidget {
                   inc.isEmpty
                       ? '—'
                       : DateFormat('MMM-yy').format(month).toUpperCase(),
-                  'Increment Month',
+                  'Report Month',
                   blue
                 )
               ],
               rows: inc,
-              headers: ['Increment', 'Effective'],
+              headers: ['Last Increment', 'Eligible From'],
               values: (r) => [
-                    money(number(r['amount'])),
+                    '${r['amount'] == null ? 'Not recorded' : money(number(r['amount']))}\n${DateFormat('MMM yyyy').format(r['last_event'] as DateTime)}',
                     DateFormat('MMM yyyy').format(r['event'] as DateTime)
                   ],
               note:
-                  'Eligible in the selected payroll month from maintained increment schedules.',
+                  'Due six months after the last increment; overdue employees remain eligible. Amounts shown are previous increments.',
               increments: true),
           card(context,
               title: 'Upcoming Birthdays',
