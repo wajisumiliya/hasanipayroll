@@ -147,3 +147,59 @@ export async function renderStatusSummary(data) {
   if(!data.reports.length)text(`No ${label} attendance records for this selection.`,24,y+46,width);
   finishOnePage(doc);return done;
 }
+
+export async function renderIncrementSummary(data) {
+  const comparison=data.mode==='comparison';
+  const cash=value=>value==null?'—':Number(value).toFixed(2);
+  const title=comparison?'INCREMENT PAYROLL COMPARISON':'INCREMENT ELIGIBILITY REPORT';
+  const month=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
+  const widths=comparison?[26,65,150,78,75,75,70,70,65,150]:[30,85,220,115,170,174];
+  const tableWidth=widths.reduce((sum,value)=>sum+value,0),canvasWidth=tableWidth+48;
+  const labels=comparison?['No.','Employee ID','Employee Name','Branch','Previous base','Current base','Expected RM','Actual RM','Diff. RM','Result']:
+    ['No.','Employee ID','Employee Name','Branch','Maintained schedule','Expected increment RM'];
+  const cellsFor=(row,index)=>[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
+    ...(comparison?[cash(row.previous_total),cash(row.current_total),cash(row.expected),cash(row.actual),cash(row.variance),row.result]:[row.schedule,cash(row.expected)])];
+  const rows=data.reports.map(cellsFor);
+  const heights=measureRows(rows,widths,8,12,26);
+  const countText=Object.entries(data.counts).map(([status,count])=>`${status}: ${count}`).join(' · ')||'No matching employees';
+  const summaryHeight=measureRows([[countText]],[tableWidth],9,10,24)[0];
+  const tableTop=102+summaryHeight;
+  const {doc,done}=onePage(canvasWidth,tableTop+30+heights.reduce((sum,value)=>sum+value,0)+126);
+  const text=(value,x,y,w,{bold=false,size=8,color='#102943'}={})=>doc.font(bold?'Bold':'Body').fontSize(size).fillColor(color).text(String(value),x,y,{width:w});
+  text('HASANI PAYROLL',24,18,tableWidth*.4,{bold:true,size:18});
+  text(title,24+tableWidth*.43,23,tableWidth*.57,{bold:true,size:12});
+  text(`${month} · ${data.branchLabel} · ${data.eligible_count} eligible · ${data.reports.length} report rows`,24,50,tableWidth,{size:10});
+  text(`Expected: RM ${cash(data.expected_total)}${comparison?` · Verified increases: RM ${cash(data.actual_total)}`:''}`,24,69,tableWidth,{bold:true,size:10});
+  const generated=new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Kuala_Lumpur'}).format(new Date());
+  text(`Generated: ${generated} MYT`,24+tableWidth*.68,69,tableWidth*.32,{size:8});
+  text(countText,24,89,tableWidth,{size:9});
+  let x=24;
+  labels.forEach((label,index)=>{doc.rect(x,tableTop,widths[index],30).fill(navy);text(label,x+5,tableTop+7,widths[index]-10,{bold:true,color:'white'});x+=widths[index];});
+  let y=tableTop+30;
+  rows.forEach((cells,index)=>{
+    let left=24;
+    const row=data.reports[index];
+    const flagged=comparison&&row.result!=='Received';
+    cells.forEach((value,column)=>{
+      const fill=comparison&&column===9?(flagged?'#FFE5E5':'#D8F1E8'):(index%2?'#F1F3F6':'#FFFFFF');
+      doc.rect(left,y,widths[column],heights[index]).fillAndStroke(fill,'#B8C8D8');
+      text(value,left+5,y+6,widths[column]-10,{bold:comparison&&column===9});
+      left+=widths[column];
+    });
+    y+=heights[index];
+  });
+  if(!rows.length){text('No matching employees for this selection.',24,y+12,tableWidth);y+=22;}
+  const notes=comparison?[
+    'Basis: Basic salary + Elaun Kedatangan + Elaun Perkhidmatan + Elaun Kerajinan. RM amounts; other earnings are excluded.',
+    'Actual increment = sum of positive increases per field versus its highest saved value in the preceding seven calendar months. Reductions do not offset increases.',
+    'Expected = maintained increment schedule for the selected month. Diff. = actual minus expected. Additional means an increase without eligibility.',
+    'Review means missing prior payroll, invalid values or duplicate payroll; no increment is assumed. Unverified amounts are excluded from verified totals.',
+    'Eligibility uses current active employees and current maintained schedules. This report is read-only; it does not award increments or freeze earlier schedules.',
+  ]:[
+    'Source: current active employees and maintained salary-default increment schedules for the selected month (valid RM50 steps from RM50 to RM1,000).',
+    'This is the scheduled eligibility list before payroll generation. It does not confirm payment or change any salary values.',
+    'After generating payroll, print the comparison report to check recipients, missing or different amounts, and additional increases.',
+  ];
+  notes.forEach((note,index)=>text(note,24,y+16+index*17,tableWidth,{size:7}));
+  finishOnePage(doc);return done;
+}

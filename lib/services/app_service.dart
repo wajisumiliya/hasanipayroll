@@ -526,6 +526,28 @@ class AppService extends ChangeNotifier {
     return data;
   }
 
+  Future<Uint8List> loadIncrementReportPdf({
+    required DateTime month,
+    required bool comparison,
+    String? branchId,
+  }) async {
+    final data = await _getAuth(Uri(
+      path: '/api/payroll/increment-report',
+      queryParameters: {
+        'year': '${month.year}',
+        'month': '${month.month}',
+        'mode': comparison ? 'comparison' : 'eligible',
+        'format': 'pdf',
+        if (branchId != null) 'branch_id': branchId,
+      },
+    ).toString());
+    if (data['ok'] != true || data['file_base64'] is! String) {
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to load increment report.');
+    }
+    return base64Decode(data['file_base64'] as String);
+  }
+
   Future<void> saveLateReportReview(Map<String, dynamic> review) async {
     final data = await _postAuth('/api/attendance/late-report/reviews', review,
         authenticated: true);

@@ -262,3 +262,38 @@ and filters the chosen status across all dates. Results remain grouped by branch
 show each record's date, and count distinct employees plus matching records.
 Print A4 uses the same selected period and includes attendance dates. Editing a
 monthly result targets its saved attendance ID/date rather than the picker date.
+
+### Increment eligibility and payroll comparison PDFs
+
+The Increment List card has Eligible List PDF and Payroll Comparison PDF buttons.
+Both print directly using the selected month and branch, without a preview dialog.
+Reports query current server records rather than relying on a stale dashboard
+snapshot; PDF generation uses the bounded export worker and a single A4 page.
+
+Eligibility matches the existing list: active employees whose maintained
+employee_salary_defaults.inc_details matches the selected month/year and has a
+valid RM50 increment step between RM50 and RM1,000 (for example OCT-26/150).
+The pre-payroll report lists these employees and expected amounts even when no
+payroll has been generated. It does not award or automatically apply increments.
+
+The comparison includes all eligible employees plus additional or unverifiable
+recipients from saved payroll, including inactive recipients. It reports Received,
+Not received, Received less, Received more, Additional: not eligible, Payroll not
+generated, and Review for missing history, duplicates or invalid salaries.
+Noneligible employees with a verified zero increase are omitted. Noneligible
+employees with no baseline are review cases, not assumed additional recipients.
+
+The comparison follows the existing four-field increment basis: basic salary,
+attendance allowance, service allowance and diligence allowance. Each field uses
+its highest saved value across the prior seven calendar months. Only positive
+changes are added, so attendance-allowance forfeiture does not hide a simultaneous
+basic-salary increase, and restoration after a partial month is not an increment.
+Unlike the display helper, unexpected positive amounts outside RM50 steps remain
+visible. Other earnings, deductions and statutory contributions are excluded.
+Previous/current bases, expected/actual increases, differences and result counts
+are printed. Unknown actual amounts remain unknown and are excluded from totals.
+
+Reports are read-only and do not freeze eligibility. Save the pre-payroll PDF
+before modifying maintained schedules; later reports use the schedules that exist
+when printed. Local/foreign admin scopes and selected branches apply on the server;
+reviewer, requests-only and attendance-only accounts cannot access salary reports.

@@ -1,3 +1,4 @@
+import { installIncrementReportApi } from './increment-report.js';
 import { installLateReportApi } from './late-report.js';
 import { installEmployeeEditorApi } from './employee-editor.js';
 import { installAttendanceStatusReportApi } from './attendance-status-report.js';
@@ -1866,6 +1867,7 @@ app.get("/api/branches", authenticate, async (req, res) => {
 
 installLateReportApi(app, { authenticate, pool });
 installAttendanceStatusReportApi(app, { authenticate, pool });
+installIncrementReportApi(app, { authenticate, pool });
 installEmployeeEditorApi(app, { authenticate, pool });
 
 // Neon attendance-sheet dependencies: read only within the authenticated scope.

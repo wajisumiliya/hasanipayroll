@@ -285,6 +285,8 @@ void main() {
       expect(
           find.text('No matching records for this month.'), findsNWidgets(2));
       expect(find.text('No events in the next 5 days.'), findsNWidgets(2));
+      expect(find.text('Eligible List PDF'), findsOneWidget);
+      expect(find.text('Payroll Comparison PDF'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'attendance_status_report_button.dart';
+import 'increment_report_button.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
@@ -646,6 +647,16 @@ class AdminActivityCards extends StatelessWidget {
                       const Icon(Icons.arrow_forward, size: 18)
                     ]))
               ])),
+          if (increments)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Wrap(spacing: 10, runSpacing: 8, children: [
+                IncrementReportButton(
+                    month: month, branch: branch, comparison: false),
+                IncrementReportButton(
+                    month: month, branch: branch, comparison: true),
+              ]),
+            ),
           if (late)
             Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
