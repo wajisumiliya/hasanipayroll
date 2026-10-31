@@ -3,7 +3,6 @@ import 'attendance_status_report_button.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
-import 'package:pdf/pdf.dart';
 import '../services/app_service.dart';
 import '../services/payroll_calculation_service.dart';
 import 'modern_admin_overview.dart';
@@ -869,7 +868,7 @@ class _LateAttendancePrintButtonState extends State<LateAttendancePrintButton> {
       if (!mounted) return;
       await Printing.layoutPdf(
           name: 'Late_Attendance_${DateFormat('yyyy_MM').format(month)}.pdf',
-          format: PdfPageFormat.a4.landscape,
+          dynamicLayout: false,
           onLayout: (_) async => bytes);
     } catch (error) {
       if (mounted)

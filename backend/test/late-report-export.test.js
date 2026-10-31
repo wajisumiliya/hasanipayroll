@@ -46,12 +46,12 @@ test('worker timeout rejects and frees capacity for subsequent export',async()=>
   assert.ok((await renderLateReport(payload('xlsx'))).length>500);
 });
 
-test('attendance summary PDF supports empty selections and multiple pages',async()=>{
+test('attendance summary PDF always fits empty and dense selections on one A4 page',async()=>{
  for(const count of [0,1,60]) {
    const data=payload('pdf',count);data.view='attendance-summary';
    for(const r of data.reports)r.arrival_count=3;
    const bytes=await renderLateReport(data);
    assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
-   if(count===60)assert.ok((bytes.toString('latin1').match(/\/Type \/Page\b/g)??[]).length>1);
+   assert.equal((bytes.toString('latin1').match(/\/Type \/Page\b/g)??[]).length,1);
  }
 });

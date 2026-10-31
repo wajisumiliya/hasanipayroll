@@ -35,3 +35,14 @@ test('status PDF renders real documents including empty selections',async()=>{
    assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
  }
 });
+
+test('MC and unpaid PDFs retain a dense full selection on exactly one A4 page',async()=>{
+ for(const status of ['MC','UNPAID']) {
+   const reports=Array.from({length:100},(_,i)=>({employee_id:`E${i}`,name:`Long employee name ${i}`,branch_id:'A',count:31,
+     dates:Array.from({length:31},(_,d)=>`2026-10-${String(d+1).padStart(2,'0')}`)}));
+   const bytes=await renderLateReport({view:'status-summary',format:'pdf',status,year:2026,month:10,reports,branches:{A:'ALOR SETAR'},branchLabel:'All branches'});
+   const content=bytes.toString('latin1');
+   assert.equal((content.match(/\/Type \/Page\b/g)??[]).length,1);
+   assert.match(content,/\/MediaBox \[0 0 (595\.28 841\.89|841\.89 595\.28)\]/);
+ }
+});

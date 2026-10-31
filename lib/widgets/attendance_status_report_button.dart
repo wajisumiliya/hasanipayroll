@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
-import 'package:pdf/pdf.dart';
 import '../services/app_service.dart';
 
 class AttendanceStatusReportButton extends StatelessWidget {
@@ -71,7 +70,7 @@ class _AttendanceStatusDialogState extends State<_AttendanceStatusDialog> {
       await Printing.layoutPdf(
           name:
               '${widget.status}_${DateFormat('yyyy_MM').format(widget.month)}.pdf',
-          format: PdfPageFormat.a4.landscape,
+          dynamicLayout: false,
           onLayout: (_) async => bytes);
     } catch (error) {
       if (mounted)

@@ -138,3 +138,20 @@ period/status/branch/employee selections and enforces restricted staff scopes.
 The PDF uses the existing limited background worker service. Deploy the backend
 and rebuild Flutter web together. Automated backend tests cover all four threshold
 combinations, invalid/unauthorized status requests, scope, distinct dates and PDFs.
+
+### Single-page A4 summary printing
+
+The dashboard late summary, MC and unpaid PDFs now measure every row before
+rendering and fit the complete report onto exactly one real A4 page. The chosen
+orientation compares portrait and landscape against the measured width/height;
+compact status tables prefer portrait, wide late summaries prefer landscape,
+and dense tall reports can select portrait for more vertical space. The table,
+totals and notes scale together; no employee/date is discarded to force one page.
+Very large selections necessarily use smaller print text. The footer remains
+readable and says Page 1 of 1. Browser print buttons no longer force landscape.
+The detailed audit export from the separate Late Report screen retains its
+existing pagination; this rule applies to the three dashboard summary buttons.
+
+Tests cover single-page empty/dense summary PDFs, both actual A4 MediaBox
+orientations and fit bounds. A separately inspected 100-employee status PDF with
+31 dates per employee retained its last row, final date and totals on one page.

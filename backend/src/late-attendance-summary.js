@@ -12,15 +12,50 @@ export function attendanceSummaryRows(data) {
     return {...r,arrival_minutes:total('arrival'),break_minutes:total('break')};
   });
 }
-export async function renderAttendanceSummary(data) {
-  const rows=attendanceSummaryRows(data);
-  const doc=new PDFDocument({size:'A4',layout:'landscape',margin:18,bufferPages:true});
-  const chunks=[];
-  const done=new Promise((resolve,reject)=>{doc.on('data',c=>chunks.push(c));doc.once('end',()=>resolve(Buffer.concat(chunks)));doc.once('error',reject);});
+
+const a4 = {portrait: [595.28,841.89], landscape: [841.89,595.28]};
+export function chooseA4Layout(width,height) {
+  const options=Object.entries(a4).map(([layout,[pageWidth,pageHeight]])=>({layout,pageWidth,pageHeight,
+    scale:Math.min(1,(pageWidth-28)/width,(pageHeight-44)/height)}));
+  if(width<=600 && options[0].scale>=options[1].scale*.9)return options[0];
+  return options.sort((a,b)=>b.scale-a.scale)[0];
+}
+function registerFonts(doc) {
   doc.registerFont('Body',fileURLToPath(new URL('../assets/fonts/DejaVuSans.ttf',import.meta.url)));
   doc.registerFont('Bold',fileURLToPath(new URL('../assets/fonts/DejaVuSans-Bold.ttf',import.meta.url)));
-  const x=18,w=doc.page.width-36;
-  const widths=[34,80,133,92,85,95,89,99,99].map(v=>v/806*w);
+}
+function measureRows(rows,widths,size,padding,minHeight) {
+  const measure=new PDFDocument({size:'A4'});measure.resume();registerFonts(measure);
+  const heights=rows.map(cells=>Math.max(minHeight,...cells.map((value,i)=>
+    measure.font('Body').fontSize(size).heightOfString(String(value),{width:widths[i]-padding})+padding)));
+  measure.end();return heights;
+}
+function onePage(width,height) {
+  const fit=chooseA4Layout(width,height);
+  const doc=new PDFDocument({size:'A4',layout:fit.layout,margin:14});
+  registerFonts(doc);
+  // The entire measured table is transformed into the printable A4 region.
+  // Extend only text-flow space, not the actual A4 MediaBox, to prevent auto-pagination.
+  doc.page.margins.bottom=doc.page.height-height-32;
+  doc.save().translate((doc.page.width-width*fit.scale)/2,14).scale(fit.scale);
+  const chunks=[];
+  const done=new Promise((resolve,reject)=>{doc.on('data',c=>chunks.push(c));doc.once('end',()=>resolve(Buffer.concat(chunks)));doc.once('error',reject);});
+  return {doc,done};
+}
+function finishOnePage(doc) {
+  doc.restore();doc.page.margins.bottom=0;
+  doc.font('Body').fontSize(7).fillColor('#102943').text('Page 1 of 1',14,doc.page.height-22,{width:doc.page.width-28,align:'right',lineBreak:false});
+  doc.end();
+}
+export async function renderAttendanceSummary(data) {
+  const rows=attendanceSummaryRows(data);
+  const x=18,w=806;
+  const widths=[34,80,133,92,85,95,89,99,99];
+  const shortMonthLabel=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'short',year:'numeric',timeZone:'UTC'});
+  const cellsFor=(row,index)=>[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
+    shortMonthLabel,hhmm(row.arrival_minutes),row.arrival_count,hhmm(row.break_minutes),row.break_count];
+  const heights=measureRows(rows.map(cellsFor),widths,8,10,22);
+  const {doc,done}=onePage(842,127+heights.reduce((a,b)=>a+b,0)+88);
   const period=new Date(Date.UTC(data.year,data.month-1,1));
   const month=period.toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
   const shortMonth=period.toLocaleDateString('en-GB',{month:'short',year:'numeric',timeZone:'UTC'});
@@ -49,9 +84,7 @@ export async function renderAttendanceSummary(data) {
     const row=rows[index];
     const cells=[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
       shortMonth,hhmm(row.arrival_minutes),row.arrival_count,hhmm(row.break_minutes),row.break_count];
-    let height=22;
-    cells.forEach((cell,i)=>{doc.font('Body').fontSize(8);height=Math.max(height,doc.heightOfString(String(cell),{width:widths[i]-8})+10);});
-    if(y+height>doc.page.height-95){doc.addPage();y=header();}
+    const height=heights[index];
     let left=x;
     cells.forEach((cell,i)=>{
       doc.rect(left,y,widths[i],height).fillAndStroke(i===6||i===8?red:index%2?'#F1F2F4':'#FFFFFF','#B8C8D8');
@@ -60,7 +93,6 @@ export async function renderAttendanceSummary(data) {
     });
     y+=height;
   }
-  if(y+75>doc.page.height-20){doc.addPage();y=header();}
   const total=field=>rows.some(r=>r[field]==null)?null:rows.reduce((sum,r)=>sum+r[field],0);
   const merged=widths.slice(0,5).reduce((a,b)=>a+b,0);
   doc.rect(x,y,merged,24).fillAndStroke('#D7E8FA','#A3BDDA');text('TOTAL',x,y+6,merged,{bold:true,size:10,align:'center'});
@@ -75,39 +107,35 @@ export async function renderAttendanceSummary(data) {
   text('2. Main exceed time and break exceed time are total accumulated time for the selected month.',x,y+21,w,{size:7});
   if(rows.some(r=>r.arrival_minutes==null))text('3. — indicates a recorded late status with no retained roster/timing. Unknown durations are not estimated.',x,y+31,w,{size:7});
   if(!rows.length)text('No employees meet the selected monthly threshold.',x,y+31,w,{size:8});
-  const range=doc.bufferedPageRange();
-  for(let i=0;i<range.count;i++) {doc.switchToPage(i);text(`Page ${i+1} of ${range.count}`,x,doc.page.height-28,w,{size:7,align:'right'});}
-  doc.end();return done;
+  finishOnePage(doc);return done;
 }
 
 export async function renderStatusSummary(data) {
-  const doc=new PDFDocument({size:'A4',layout:'landscape',margin:24,bufferPages:true});
-  const chunks=[];const done=new Promise((resolve,reject)=>{doc.on('data',c=>chunks.push(c));doc.once('end',()=>resolve(Buffer.concat(chunks)));doc.once('error',reject);});
-  doc.registerFont('Body',fileURLToPath(new URL('../assets/fonts/DejaVuSans.ttf',import.meta.url)));
-  doc.registerFont('Bold',fileURLToPath(new URL('../assets/fonts/DejaVuSans-Bold.ttf',import.meta.url)));
   const label=data.status==='MC'?'MC':'UNPAID';
   const month=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
-  const width=doc.page.width-48,cols=[35,95,190,115,60,width-495];
+  const longDates=data.reports.some(r=>r.dates.join(', ').length>40);
+  const canvasWidth=longDates?842:595;
+  const width=canvasWidth-48;
+  const cols=(longDates?[35,95,190,115,60,299]:[25,65,120,80,35,222]).map(v=>v/(longDates?794:547)*width);
+  const cellsFor=(r,i)=>[i+1,r.employee_id,r.name,data.branches[String(r.branch_id).trim().toUpperCase()]??r.branch_id,r.count,r.dates.join(', ')];
+  const heights=measureRows(data.reports.map(cellsFor),cols,8,12,25);
+  const {doc,done}=onePage(canvasWidth,98+heights.reduce((a,b)=>a+b,0)+78);
   function text(v,x,y,w,bold=false,size=8){doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#102943').text(String(v),x,y,{width:w});}
   function header() {
-    text('HASANI PAYROLL',24,18,350,true,18);text(`${label} ATTENDANCE REPORT`,420,22,width-396,true,13);
+    text('HASANI PAYROLL',24,18,width*.52,true,canvasWidth<600?14:18);text(`${label} ATTENDANCE REPORT`,24+width*.55,22,width*.45,true,canvasWidth<600?10:13);
     text(`${month} · ${data.branchLabel} · ${data.reports.length} employees`,24,48,width,false,10);
     let x=24;['No.','Employee ID','Employee Name','Branch','Days',`${label} dates`].forEach((v,i)=>{
-      doc.rect(x,72,cols[i],26).fill(navy);doc.font('Bold').fontSize(8).fillColor('white').text(v,x+5,80,{width:cols[i]-10});x+=cols[i];
+      doc.rect(x,72,cols[i],26).fill(navy);doc.font('Bold').fontSize(8).fillColor('white').text(v,x+5,78,{width:cols[i]-10});x+=cols[i];
     });return 98;
   }
   let y=header();
   for(let i=0;i<data.reports.length;i++) {
     const r=data.reports[i],cells=[i+1,r.employee_id,r.name,data.branches[String(r.branch_id).trim().toUpperCase()]??r.branch_id,r.count,r.dates.join(', ')];
-    let height=25;
-    cells.forEach((v,j)=>{doc.font('Body').fontSize(8);height=Math.max(height,doc.heightOfString(String(v),{width:cols[j]-10})+12);});
-    if(y+height>doc.page.height-70){doc.addPage();y=header();}
+    const height=heights[i];
     let x=24;cells.forEach((v,j)=>{doc.rect(x,y,cols[j],height).fillAndStroke(i%2?'#F1F3F6':'#FFFFFF','#B8C8D8');text(v,x+5,y+6,cols[j]-10);x+=cols[j];});y+=height;
   }
-  if(y+50>doc.page.height-30){doc.addPage();y=header();}
   text(`TOTAL: ${data.reports.length} employees · ${data.reports.reduce((sum,r)=>sum+r.count,0)} ${label} days`,24,y+12,width,true,10);
   text('Source: saved attendance records for the selected month. Duplicate dates are counted once per employee and branch.',24,y+32,width,false,8);
   if(!data.reports.length)text(`No ${label} attendance records for this selection.`,24,y+46,width);
-  const range=doc.bufferedPageRange();for(let i=0;i<range.count;i++){doc.switchToPage(i);text(`Page ${i+1} of ${range.count}`,doc.page.width-100,doc.page.height-25,80);}
-  doc.end();return done;
+  finishOnePage(doc);return done;
 }
