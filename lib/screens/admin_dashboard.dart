@@ -7193,6 +7193,12 @@ class _AdminDashboardState extends State<AdminDashboard>
       'PCB (RM)': makeSalary('pcb'),
       'Zakat (RM)': makeSalary('zakat'),
     };
+    final leaveFields = <String, TextEditingController>{
+      'annual_leave_balance': TextEditingController(
+          text: employee['annual_leave_balance']?.toString() ?? ''),
+      'medical_leave_balance': TextEditingController(
+          text: employee['medical_leave_balance']?.toString() ?? ''),
+    };
     final incrementDetails = TextEditingController(
       text: salaryDefault['inc_details']?.toString() ?? '',
     );
@@ -7332,6 +7338,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                         decoration: InputDecoration(
                             labelText: field.key,
                             border: const OutlineInputBorder()))),
+                  ]),
+                  const Divider(height: 28),
+                  sectionHeading(
+                      Icons.event_available_outlined,
+                      'Leave Balances',
+                      'Balances in days. AL is visible to the employee; MC is admin-only.'),
+                  _responsiveFormGrid(children: [
+                    for (final entry in leaveFields.entries)
+                      TextField(
+                          controller: entry.value,
+                          enabled: !saving,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: InputDecoration(
+                              labelText: entry.key == 'annual_leave_balance'
+                                  ? 'AL balance (days)'
+                                  : 'MC balance (days)',
+                              helperText:
+                                  'Leave blank if not uploaded; decimals such as 0.5 are supported.',
+                              border: const OutlineInputBorder())),
                   ]),
                   const Divider(height: 28),
                   sectionHeading(
@@ -7700,6 +7726,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                           );
                           return;
                         }
+                        final leaveValues = <String, double?>{};
+                        for (final entry in leaveFields.entries) {
+                          final text = entry.value.text.trim();
+                          final value =
+                              text.isEmpty ? null : double.tryParse(text);
+                          if (text.isNotEmpty &&
+                              (value == null ||
+                                  !value.isFinite ||
+                                  value < 0 ||
+                                  value >= 10000 ||
+                                  (value * 100 - (value * 100).round()).abs() >
+                                      .000001)) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'AL and MC must be non-negative days with at most two decimal places.')));
+                            return;
+                          }
+                          leaveValues[entry.key] = value;
+                        }
                         final salaryValues = <String, double>{};
                         for (final field in salaryFields.entries) {
                           final value = double.tryParse(
@@ -7765,6 +7811,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           final savedFirstName = firstName.text.trim();
                           final savedLastName = lastName.text.trim();
                           final employeePayload = <String, dynamic>{
+                            ...leaveValues,
                             'name': isForeignEmployee
                                 ? '$savedFirstName $savedLastName'.trim()
                                 : fields['Name']!.text.trim(),
@@ -7885,6 +7932,9 @@ class _AdminDashboardState extends State<AdminDashboard>
       }
       for (final item in salaryFields.values) {
         item.dispose();
+      }
+      for (final controller in leaveFields.values) {
+        controller.dispose();
       }
       incrementDetails.dispose();
       firstName.dispose();

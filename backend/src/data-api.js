@@ -191,6 +191,10 @@ export function installDataApi(app, { pool, authenticate }) {
       metadataCache.set(table, schema);
     }
     const columns = new Map(schema.columns);
+    if (table === 'employees' && String(req.user?.role ?? '').toUpperCase() !== 'ADMIN') {
+      columns.delete('medical_leave_balance');
+      if (!['GET', 'HEAD'].includes(req.method)) columns.delete('annual_leave_balance');
+    }
     // Imported branch credentials are not part of any frontend data contract.
     for (const name of ['password', 'passwordHash', 'password_hash', 'otpHash']) columns.delete(name);
     if (req.auth?.app_metadata?.staff_scope === 'attendance' && table === 'employees') {

@@ -1,6 +1,7 @@
 import { installLateReportApi } from './late-report.js';
 import { installEmployeeEditorApi } from './employee-editor.js';
 import { installAttendanceStatusReportApi } from './attendance-status-report.js';
+import { employeeLeaveView } from './employee-leave-balances.js';
 import { createApiCorsOptions } from "./api-cors.js";
 import { isDailyReportPin } from "./daily-report-pin.js";
 import { findAccountByLogin, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
@@ -847,7 +848,7 @@ async function publicAppUser(
          LIMIT 1`,
         [normalizeEmployeeId(user.employeeId)],
       );
-      employee = result.rows[0]?.data ?? null;
+      employee = employeeLeaveView(result.rows[0]?.data ?? null, role);
     } catch (error) {
       console.warn("PUBLIC USER EMPLOYEE LOOKUP FAILED:", error.message);
     }
@@ -1779,7 +1780,7 @@ app.get(
       );
       const payroll = result.rows.map((row) => ({
         ...row.data,
-        employee: row.employee_data ?? null,
+        employee: employeeLeaveView(row.employee_data ?? null, req.user?.role),
       }));
       return res.json({ ok: true, count: payroll.length, payroll });
     } catch (error) {
@@ -1823,7 +1824,7 @@ app.get(
          ORDER BY p.period DESC, p.employee_id ASC`,
         params,
       );
-      const payroll = result.rows.map((row) => ({ ...row.data, employee: row.employee_data ?? null }));
+      const payroll = result.rows.map((row) => ({ ...row.data, employee: employeeLeaveView(row.employee_data ?? null, req.user?.role) }));
       return res.json({ ok: true, count: payroll.length, payroll });
     } catch (error) {
       console.error("PAYROLL LIST ERROR:", error.message);
@@ -2583,7 +2584,7 @@ app.get(
           : `SELECT to_jsonb(e) AS data FROM public.employees AS e ${where} ORDER BY e.employee_id ASC`,
         params,
       );
-      const employees = result.rows.map((row) => row.data);
+      const employees = result.rows.map((row) => employeeLeaveView(row.data, role));
       return res.json({ ok: true, count: employees.length, employees });
     } catch (error) {
       console.error("EMPLOYEE LIST ERROR:", error.message);
@@ -2613,7 +2614,7 @@ app.get(
       if (role === "BRANCH" && String(employee.branch_id ?? employee.payroll_branch_id ?? "") !== String(req.user.branchId ?? req.user.branch_id ?? "")) {
         return res.status(403).json({ ok: false, message: "Not authorized." });
       }
-      return res.json({ ok: true, employee });
+      return res.json({ ok: true, employee: employeeLeaveView(employee, role) });
     } catch (error) {
       console.error("EMPLOYEE LOOKUP ERROR:", error.message);
       return genericError(res, 503);
@@ -2683,7 +2684,7 @@ app.get(
       );
       const row = result.rows[0];
       if (!row) return res.status(404).json({ ok: false, message: "Payslip not found." });
-      return res.json({ ok: true, payroll: { ...row.data, employee: row.employee_data ?? null } });
+      return res.json({ ok: true, payroll: { ...row.data, employee: employeeLeaveView(row.employee_data ?? null, req.user?.role) } });
     } catch (error) {
       console.error("PAYSLIP ERROR:", error.message);
       return genericError(res, 503);

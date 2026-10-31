@@ -1145,6 +1145,8 @@ class AppService extends ChangeNotifier {
           data['employeeId']?.toString() ??
           '',
       name: data['name']?.toString() ?? '',
+      annualLeaveBalance:
+          double.tryParse('${data['annual_leave_balance'] ?? ''}'),
       designation: data['designation']?.toString() ?? '',
       department: data['department']?.toString() ?? '',
       email: data['email']?.toString() ?? '',

@@ -16,6 +16,7 @@ import 'login_screen.dart';
 import 'supabase_service.dart';
 import 'ea_forms_page.dart';
 import '../widgets/employee_photo.dart';
+import '../widgets/annual_leave_balance_card.dart';
 import '../widgets/payroll_year_summary.dart';
 import '../widgets/app_reload_button.dart';
 import '../widgets/employee_identity_card.dart';
@@ -1111,6 +1112,8 @@ class _EmployeePortalState extends State<EmployeePortal>
           children: [
             _welcome(),
             const SizedBox(height: 16),
+            AnnualLeaveBalanceCard(balance: employee?.annualLeaveBalance),
+            const SizedBox(height: 16),
             _myWorkdayCard(),
             const SizedBox(height: 16),
             _emptyPayroll(),
@@ -1133,6 +1136,8 @@ class _EmployeePortalState extends State<EmployeePortal>
             children: [
               if (compact) ...[
                 _welcome(),
+                const SizedBox(height: 12),
+                AnnualLeaveBalanceCard(balance: employee?.annualLeaveBalance),
                 const SizedBox(height: 12),
                 _salary(payroll),
                 const SizedBox(height: 12),
@@ -1164,6 +1169,8 @@ class _EmployeePortalState extends State<EmployeePortal>
                   ],
                 ),
                 const SizedBox(height: 18),
+                AnnualLeaveBalanceCard(balance: employee?.annualLeaveBalance),
+                const SizedBox(height: 16),
                 _myWorkdayCard(),
                 const SizedBox(height: 16),
                 const EmployeePenguinPetCard(),

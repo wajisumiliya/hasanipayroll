@@ -480,6 +480,7 @@ class Employee {
   final String department;
   final String email;
   final String photoUrl;
+  final double? annualLeaveBalance;
 
   final String newIcNo;
   final String bankCode;
@@ -507,6 +508,7 @@ class Employee {
     required this.department,
     required this.email,
     this.photoUrl = '',
+    this.annualLeaveBalance,
     required this.newIcNo,
     required this.bankCode,
     required this.bankAccount,
@@ -536,6 +538,7 @@ class Employee {
     String? department,
     String? email,
     String? photoUrl,
+    double? annualLeaveBalance,
     String? newIcNo,
     String? bankCode,
     String? bankAccount,
@@ -560,6 +563,7 @@ class Employee {
       department: department ?? this.department,
       email: email ?? this.email,
       photoUrl: photoUrl ?? this.photoUrl,
+      annualLeaveBalance: annualLeaveBalance ?? this.annualLeaveBalance,
       newIcNo: newIcNo ?? this.newIcNo,
       bankCode: bankCode ?? this.bankCode,
       bankAccount: bankAccount ?? this.bankAccount,
@@ -594,6 +598,7 @@ class Employee {
       'department': department,
       'email': email,
       'photoUrl': photoUrl,
+      'annualLeaveBalance': annualLeaveBalance,
       'newIcNo': newIcNo,
       'bankCode': bankCode,
       'bankAccount': bankAccount,
@@ -623,6 +628,8 @@ class Employee {
       department: _stringValue(json['department']),
       email: _stringValue(json['email']),
       photoUrl: _stringValue(json['photoUrl'] ?? json['photo_url']),
+      annualLeaveBalance: double.tryParse(
+          '${json['annualLeaveBalance'] ?? json['annual_leave_balance'] ?? ''}'),
       newIcNo: _stringValue(json['newIcNo']),
       bankCode: _stringValue(json['bankCode']),
       bankAccount: _stringValue(json['bankAccount']),
