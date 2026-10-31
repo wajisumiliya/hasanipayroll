@@ -65,7 +65,14 @@ void main() {
             'employee_id': 'E1',
             'branch_id': 'A',
             'is_active': true,
-            'inc_details': 'APR-26/100'
+            'inc_details': 'APR-26/100',
+            '_salary_defaults': {
+              'basic_salary': 2000,
+              'elaun_kedatangan': 200,
+              'elaun_perkhidmatan': 100,
+              'elaun_kerajinan': 50,
+              'elaun_makanan': 25
+            }
           },
           {
             'employee_id': 'E2',
@@ -100,6 +107,10 @@ void main() {
     expect(widget.increments().map((row) => row['employee_id']).toSet(),
         {'E1', 'E5'});
     expect(widget.increments().first['event'], DateTime(2026, 10));
+    final employee =
+        widget.increments().firstWhere((row) => row['employee_id'] == 'E1');
+    expect(employee['basic_salary'], 2000);
+    expect(employee['total_allowances'], 375);
   });
   test('five-day window crosses New Year and excludes sixth day', () {
     final widget = AdminActivityCards(

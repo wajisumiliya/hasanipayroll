@@ -320,3 +320,17 @@ includes Eligible from. Comparison amounts continue to use saved payroll evidenc
 Received less/more refers explicitly to the previous increment amount. Unknown
 historical reference amounts do not fabricate a variance. Current saved last-increment
 records are used when printing; retain the pre-payroll PDF before updating them.
+
+### Exact six-month cohort and salary columns
+
+For October 2026, include last increments from April 2026 only. Employees from
+March or earlier are not carried forward as overdue; May or later are not yet
+in this cohort. January 2026 belongs to July 2026 only. This replaces the previous
+"due or overdue" interpretation in the card and both PDFs.
+
+Show basic salary and total allowances from employee_salary_defaults, not the
+last increment amount. Total allowances include Elaun Kedatangan, Perkhidmatan,
+Kerajinan and Makanan. The card totals and eligibility PDF use these values;
+unknown salary defaults stay unknown. Payroll comparison still reports actual
+increases from saved payroll as Received, Not received or Additional without
+using the historical increment amount as a promised future award.

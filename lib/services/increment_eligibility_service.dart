@@ -25,8 +25,9 @@ class IncrementEligibilityService {
     if (year < 100) year += 2000;
     final last = DateTime(year, months[match[1]]!);
     final due = DateTime(last.year, last.month + 6);
-    if (due.isAfter(DateTime(selectedMonth.year, selectedMonth.month)))
+    if (due != DateTime(selectedMonth.year, selectedMonth.month)) {
       return null;
+    }
     final separator = text.lastIndexOf('/');
     final amount = separator < 0
         ? null

@@ -17,12 +17,28 @@ void main() {
     expect(july.lastAmount, 50);
     expect(
         IncrementEligibilityService.dueForMonth(
-                'Jan-26/50', DateTime(2026, 10))!
-            .dueMonth,
-        DateTime(2026, 7));
+            'Jan-26/50', DateTime(2026, 10)),
+        isNull);
     expect(
         IncrementEligibilityService.dueForMonth(
             'Jul-26/50', DateTime(2026, 10)),
+        isNull);
+  });
+
+  test(
+      'October selects April only and excludes earlier and later last-increment months',
+      () {
+    expect(
+        IncrementEligibilityService.dueForMonth(
+            'MAR-26/50', DateTime(2026, 10)),
+        isNull);
+    expect(
+        IncrementEligibilityService.dueForMonth(
+            'APR-26/50', DateTime(2026, 10)),
+        isNotNull);
+    expect(
+        IncrementEligibilityService.dueForMonth(
+            'MAY-26/50', DateTime(2026, 10)),
         isNull);
   });
 

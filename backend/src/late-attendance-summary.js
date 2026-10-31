@@ -155,10 +155,10 @@ export async function renderIncrementSummary(data) {
   const month=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
   const widths=comparison?[26,65,150,78,75,75,70,70,65,150]:[30,85,195,100,155,95,134];
   const tableWidth=widths.reduce((sum,value)=>sum+value,0),canvasWidth=tableWidth+48;
-  const labels=comparison?['No.','Employee ID','Employee Name','Branch','Previous base','Current base','Last inc. RM','Actual RM','Change RM','Result']:
-    ['No.','Employee ID','Employee Name','Branch','Last increment details','Eligible from','Last increment RM'];
+  const labels=comparison?['No.','Employee ID','Employee Name','Branch','Basic salary RM','Allowances RM','Previous base','Current base','Actual inc. RM','Result']:
+    ['No.','Employee ID','Employee Name','Branch','Basic salary RM','Total allowances RM','Eligible from'];
   const cellsFor=(row,index)=>[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
-    ...(comparison?[cash(row.previous_total),cash(row.current_total),cash(row.expected),cash(row.actual),cash(row.variance),row.result]:[row.schedule,row.eligible_from??'—',cash(row.expected)])];
+    ...(comparison?[cash(row.basic_salary),cash(row.total_allowances),cash(row.previous_total),cash(row.current_total),cash(row.actual),row.result]:[cash(row.basic_salary),cash(row.total_allowances),row.eligible_from??'—'])];
   const rows=data.reports.map(cellsFor);
   const heights=measureRows(rows,widths,8,12,26);
   const countText=Object.entries(data.counts).map(([status,count])=>`${status}: ${count}`).join(' · ')||'No matching employees';
@@ -169,9 +169,9 @@ export async function renderIncrementSummary(data) {
   text('HASANI PAYROLL',24,18,tableWidth*.4,{bold:true,size:18});
   text(title,24+tableWidth*.43,23,tableWidth*.57,{bold:true,size:12});
   text(`${month} · ${data.branchLabel} · ${data.eligible_count} eligible · ${data.reports.length} report rows`,24,50,tableWidth,{size:10});
-  text(`Known last increments: RM ${cash(data.expected_total)}${comparison?` · Verified increases: RM ${cash(data.actual_total)}`:''}`,24,69,tableWidth,{bold:true,size:10});
+  text(`Basic salary: RM ${cash(data.basic_total)} · Total allowances: RM ${cash(data.allowance_total)}${comparison?` · Verified increases: RM ${cash(data.actual_total)}`:''}`,24,69,tableWidth,{bold:true,size:10});
   const generated=new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Kuala_Lumpur'}).format(new Date());
-  text(`Generated: ${generated} MYT`,24+tableWidth*.68,69,tableWidth*.32,{size:8});
+  text(`Generated: ${generated} MYT`,24+tableWidth*.68,52,tableWidth*.32,{size:8});
   text(countText,24,89,tableWidth,{size:9});
   let x=24;
   labels.forEach((label,index)=>{doc.rect(x,tableTop,widths[index],30).fill(navy);text(label,x+5,tableTop+7,widths[index]-10,{bold:true,color:'white'});x+=widths[index];});
@@ -192,12 +192,12 @@ export async function renderIncrementSummary(data) {
   const notes=comparison?[
     'Basis: Basic salary + Elaun Kedatangan + Elaun Perkhidmatan + Elaun Kerajinan. RM amounts; other earnings are excluded.',
     'Actual increment = sum of positive increases per field versus its highest saved value in the preceding seven calendar months. Reductions do not offset increases.',
-    'Eligibility starts six months after the last recorded increment and includes overdue employees. Change = actual increase minus the previous increment amount.',
+    'Eligibility requires the last increment month to be exactly six calendar months before the selected payroll month. Older and newer months are excluded.',
     'Review means missing prior payroll, invalid values or duplicate payroll; no increment is assumed. Unverified amounts are excluded from verified totals.',
-    'Last inc. RM is a historical reference, not a promised next increase. Eligibility uses current active employees and current inc_details; this report does not award increments.',
+    'Displayed basic salary and allowances come from salary defaults. Allowances include Kedatangan, Perkhidmatan, Kerajinan and Makanan; no future increment amount is assumed.',
   ]:[
-    'Source: employee_salary_defaults.inc_details records the last increment month and amount. Eligibility starts six calendar months later (JAN-26 becomes JUL-26).',
-    'Due and overdue active employees are included until a newer last increment is recorded. Last increment RM is historical; the next amount must be decided separately.',
+    'Eligibility: last increment month is exactly six months before the selected payroll month (OCT-26 selects APR-26 only). Older and newer months are excluded.',
+    'Basic salary and total allowances come from employee_salary_defaults. Allowances = Kedatangan + Perkhidmatan + Kerajinan + Makanan; last increment amounts are not shown.',
     'This report does not change salaries. After payroll generation, print the comparison to check recipients, missed increases and additional increases outside eligibility.',
   ];
   notes.forEach((note,index)=>text(note,24,y+16+index*17,tableWidth,{size:7}));

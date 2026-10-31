@@ -91,22 +91,40 @@ class AdminActivityCards extends StatelessWidget {
     return result;
   }
 
-  // Six months after the last recorded increment; overdue employees remain due.
+  // Only the cohort whose last increment was exactly six payroll months ago.
   List<Map<String, dynamic>> increments() {
     final result = <Map<String, dynamic>>[];
     for (final e in people) {
       final schedule =
           IncrementEligibilityService.dueForMonth(e['inc_details'], month);
       if (schedule == null) continue;
-      final amount = schedule.lastAmount;
+      final salary = e['_salary_defaults'] is Map
+          ? Map<String, dynamic>.from(e['_salary_defaults'] as Map)
+          : e;
+      double? salaryValue(String key) {
+        final value = double.tryParse('${salary[key] ?? ''}');
+        return value != null && value.isFinite && value >= 0 ? value : null;
+      }
+
+      const allowanceFields = [
+        'elaun_kedatangan',
+        'elaun_perkhidmatan',
+        'elaun_kerajinan',
+        'elaun_makanan'
+      ];
+      final totalAllowances = allowanceFields.any(salary.containsKey)
+          ? allowanceFields.fold<double>(
+              0, (sum, key) => sum + (salaryValue(key) ?? 0))
+          : null;
       result.add({
         ...e,
-        'amount': amount,
+        'basic_salary': salaryValue('basic_salary'),
+        'total_allowances': totalAllowances,
         'event': schedule.dueMonth,
         'last_event': schedule.lastMonth,
       });
     }
-    result.sort((a, b) => number(b['amount']).compareTo(number(a['amount'])));
+    result.sort((a, b) => canonical(a['name']).compareTo(canonical(b['name'])));
     return result;
   }
 
@@ -661,10 +679,10 @@ class AdminActivityCards extends StatelessWidget {
         final rate = late == null || count == 0
             ? '—'
             : '${(late.length / count * 100).toStringAsFixed(1)}%';
-        final totalAmount =
-            inc.fold<double>(0, (sum, r) => sum + number(r['amount']));
-        final recordedAmounts =
-            inc.map((r) => r['amount']).whereType<double>().toList();
+        final totalBasic =
+            inc.fold<double>(0, (sum, r) => sum + number(r['basic_salary']));
+        final totalAllowances = inc.fold<double>(
+            0, (sum, r) => sum + number(r['total_allowances']));
         String money(double value) => NumberFormat.currency(
                 locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
             .format(value);
@@ -746,16 +764,18 @@ class AdminActivityCards extends StatelessWidget {
                 (Icons.groups, '${inc.length}', 'Employees Eligible', green),
                 (
                   Icons.payments,
-                  money(totalAmount),
-                  'Known Last Increment Total',
+                  inc.any((r) => r['basic_salary'] == null)
+                      ? 'Not set'
+                      : money(totalBasic),
+                  'Total Basic Salary',
                   green
                 ),
                 (
                   Icons.trending_up,
-                  recordedAmounts.isEmpty
-                      ? '—'
-                      : money(totalAmount / recordedAmounts.length),
-                  'Avg. Last Increment',
+                  inc.any((r) => r['total_allowances'] == null)
+                      ? 'Not set'
+                      : money(totalAllowances),
+                  'Total Allowances',
                   const Color(0xFF00BEAA)
                 ),
                 (
@@ -768,13 +788,17 @@ class AdminActivityCards extends StatelessWidget {
                 )
               ],
               rows: inc,
-              headers: ['Last Increment', 'Eligible From'],
+              headers: ['Basic Salary', 'Total Allowances'],
               values: (r) => [
-                    '${r['amount'] == null ? 'Not recorded' : money(number(r['amount']))}\n${DateFormat('MMM yyyy').format(r['last_event'] as DateTime)}',
-                    DateFormat('MMM yyyy').format(r['event'] as DateTime)
+                    r['basic_salary'] == null
+                        ? 'Not set'
+                        : money(number(r['basic_salary'])),
+                    r['total_allowances'] == null
+                        ? 'Not set'
+                        : money(number(r['total_allowances']))
                   ],
               note:
-                  'Due six months after the last increment; overdue employees remain eligible. Amounts shown are previous increments.',
+                  'Only employees whose last increment was exactly six payroll months ago. Salary and allowances come from salary defaults.',
               increments: true),
           card(context,
               title: 'Upcoming Birthdays',
