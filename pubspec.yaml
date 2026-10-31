@@ -47,6 +47,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/qr_fonts/
     - assets/hasani_books_logo.jpg
     - assets/hasani_books_logo_card.jpg
     - assets/hasani_books_payslip_logo.jpeg

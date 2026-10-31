@@ -1,3 +1,4 @@
+import { renderQrAttendance } from './qr-attendance-export-renderer.js';
 import { parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import PDFDocument from 'pdfkit';
@@ -91,6 +92,6 @@ async function pdf(data) {
 }
 try {
   if(!['pdf','xlsx'].includes(workerData.format)) throw new Error('Invalid report format.');
-  const bytes=Uint8Array.from(await (workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):workerData.view==='status-summary'?renderStatusSummary(workerData):workerData.view==='increment-summary'?renderIncrementSummary(workerData):pdf(workerData)):excel(workerData)));
+  const bytes=Uint8Array.from(await (workerData.view==='qr-attendance'?renderQrAttendance(workerData):workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):workerData.view==='status-summary'?renderStatusSummary(workerData):workerData.view==='increment-summary'?renderIncrementSummary(workerData):pdf(workerData)):excel(workerData)));
   parentPort.postMessage({bytes},[bytes.buffer]);
 } catch(error) { parentPort.postMessage({error:error.message}); }
