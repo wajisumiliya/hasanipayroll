@@ -161,3 +161,29 @@ test('export rejects invalid formats, periods, and unknown branches',async()=>{
  assert.equal(pool.calls.length,0);
  const res=response();await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',branch_id:'unknown'}},res);assert.equal(res.code,404);
 });
+
+test('saved late statuses retain legacy branches without rosters and never invent minutes',()=>{
+ const attendance=[];
+ for(const branch of ['SP-EDAR','ALOR SETAR','AMANJAYA']) for(let d=1;d<=3;d++)
+   attendance.push({...day(d,'09:10'),branch_id:branch,employee_id:branch,status:'Late'});
+ const result=buildLateReport({attendance,daily:[],monthly:[{...roster,branch_id:'SP-EDAR',employee_id:'SP-EDAR'}],
+   employees:[],year:2026,month:10});
+ assert.equal(result.reports.length,3);
+ for(const r of result.reports)assert.equal(r.arrival_count,3);
+ const legacy=result.reports.find(r=>r.branch_id==='AMANJAYA');
+ assert.equal(legacy.events[0].minutes,null);assert.equal(legacy.total_minutes_known,false);
+ assert.equal(result.reports.find(r=>r.branch_id==='SP-EDAR').total_minutes,30);
+});
+test('summary PDF request applies arrival threshold and employee selection',async()=>{
+ let payload;
+ const routes=api(fakePool([1,2,3].map(d=>day(d,'09:05'))),async data=>{payload=data;return Buffer.from('summary');});
+ const res=response();
+ await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',view:'attendance-summary',employees:'["E1"]'}},res);
+ assert.equal(res.body.ok,true);assert.equal(payload.view,'attendance-summary');assert.equal(payload.reports.length,1);
+ const excluded=response();
+ await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',view:'attendance-summary',employees:'[]'}},excluded);
+ assert.equal(payload.reports.length,0);
+ const invalid=response();
+ await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',view:'attendance-summary',employees:'not-json'}},invalid);
+ assert.equal(invalid.code,400);
+});

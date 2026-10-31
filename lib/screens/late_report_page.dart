@@ -257,9 +257,12 @@ class _LateReportPageState extends State<LateReportPage> {
                   title: Text(
                       '${DateFormat('EEE, dd MMM').format(DateTime.parse(e['date']))} · ${e['type'] == 'arrival' ? 'Late arrival' : 'Break exceeded'}'),
                   subtitle: Text(e['type'] == 'arrival'
-                      ? 'Scheduled ${e['scheduled']} · arrived ${e['actual']}'
+                      ? 'Scheduled ${e['scheduled'] ?? 'unavailable'} · arrived ${e['actual'] ?? 'unavailable'}'
                       : 'Allowed ${e['allocated_minutes']} min · used ${e['actual_minutes']} min'),
-                  trailing: Text('+${e['minutes']} min',
+                  trailing: Text(
+                      e['minutes'] == null
+                          ? 'Unavailable'
+                          : '+${e['minutes']} min',
                       style: const TextStyle(fontWeight: FontWeight.bold))),
               Wrap(
                   spacing: 8,
@@ -727,7 +730,7 @@ class _LateReviewDialogState extends State<_LateReviewDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                              '${widget.event['date']} · ${widget.event['type'] == 'arrival' ? 'Late arrival' : 'Break exceeded'} · +${widget.event['minutes']} min'),
+                              '${widget.event['date']} · ${widget.event['type'] == 'arrival' ? 'Late arrival' : 'Break exceeded'} · ${widget.event['minutes'] == null ? 'Duration unavailable' : '+${widget.event['minutes']} min'}'),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
                               initialValue: _status,

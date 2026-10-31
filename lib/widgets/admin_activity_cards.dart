@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/pdf.dart';
+import '../services/app_service.dart';
 import '../services/payroll_calculation_service.dart';
 import 'modern_admin_overview.dart';
 
@@ -15,7 +18,8 @@ class AdminActivityCards extends StatelessWidget {
       required this.onMonth,
       required this.onLate,
       required this.onPayroll,
-      this.referenceDate});
+      this.referenceDate,
+      this.branchLabels = const {}});
   final DateTime month;
   final String? branch;
   final List<Map<String, dynamic>> employees, payroll;
@@ -23,6 +27,7 @@ class AdminActivityCards extends StatelessWidget {
   final ValueChanged<DateTime> onMonth;
   final VoidCallback onLate, onPayroll;
   final DateTime? referenceDate;
+  final Map<String, String> branchLabels;
   static const ink = Color(0xFF0B1A3C), muted = Color(0xFF3C587F);
   static const pink = Color(0xFFFF214B),
       green = Color(0xFF00A96F),
@@ -150,7 +155,7 @@ class AdminActivityCards extends StatelessWidget {
           .toList();
   static double? lateMinutes(Map r) {
     final events = arrivals(r);
-    return events.isEmpty
+    return events.isEmpty || events.any((e) => e['minutes'] == null)
         ? null
         : events.fold<double>(0, (sum, e) => sum + number(e['minutes']));
   }
@@ -227,7 +232,7 @@ class AdminActivityCards extends StatelessWidget {
                                           '${e['date']}',
                                           '${e['scheduled'] ?? '—'}',
                                           '${e['actual'] ?? '—'}',
-                                          '${e['minutes']}'
+                                          '${e['minutes'] ?? 'Unavailable'}'
                                         ].map((v) => DataCell(Text(v))).toList()))
                                     .toList())))),
                 actions: [
@@ -339,7 +344,10 @@ class AdminActivityCards extends StatelessWidget {
                                             ])),
                                         Expanded(
                                             flex: 2,
-                                            child: Text(position(rows[i]),
+                                            child: Text(
+                                                late
+                                                    ? '${position(rows[i])}\n${branchLabels[canonical(rows[i]["branch_id"])] ?? rows[i]["branch_id"] ?? "—"}'
+                                                    : position(rows[i]),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
@@ -602,7 +610,16 @@ class AdminActivityCards extends StatelessWidget {
                       const SizedBox(width: 5),
                       const Icon(Icons.arrow_forward, size: 18)
                     ]))
-              ]))
+              ])),
+          if (late)
+            Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: LateAttendancePrintButton(
+                        month: month,
+                        branch: branch,
+                        employeeIds: rows?.map(employeeId).toSet().toList()))),
         ]));
   }
 
@@ -694,7 +711,9 @@ class AdminActivityCards extends StatelessWidget {
               rows: late,
               headers: ['Late Days', 'Late Hours'],
               values: (r) => ['${r['arrival_count']}', hours(lateMinutes(r))],
-              note: 'Showing employees with 3 or more late days this month.',
+              note: late == null
+                  ? 'Late attendance data unavailable.'
+                  : 'Showing ${math.min(5, late.length)} of ${late.length} employees · ${late.map((r) => canonical(r["branch_id"])).toSet().length} branches · 3+ late days.',
               late: true),
           card(context,
               title: 'Increment List',
@@ -774,4 +793,60 @@ class AdminActivityCards extends StatelessWidget {
                         child: item)
                 ]));
       });
+}
+
+class LateAttendancePrintButton extends StatefulWidget {
+  const LateAttendancePrintButton(
+      {super.key,
+      required this.month,
+      required this.branch,
+      required this.employeeIds});
+  final DateTime month;
+  final String? branch;
+  final List<String>? employeeIds;
+  @override
+  State<LateAttendancePrintButton> createState() =>
+      _LateAttendancePrintButtonState();
+}
+
+class _LateAttendancePrintButtonState extends State<LateAttendancePrintButton> {
+  bool busy = false;
+  Future<void> printReport() async {
+    final month = widget.month, branch = widget.branch;
+    final employeeIds = widget.employeeIds;
+    if (employeeIds == null) return;
+    setState(() => busy = true);
+    try {
+      final bytes = await AppService.instance.loadLateReportExport(
+          month: month,
+          format: 'pdf',
+          branchId: branch,
+          attendanceSummary: true,
+          employeeIds: employeeIds);
+      if (!mounted) return;
+      await Printing.layoutPdf(
+          name: 'Late_Attendance_${DateFormat('yyyy_MM').format(month)}.pdf',
+          format: PdfPageFormat.a4.landscape,
+          onLayout: (_) async => bytes);
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Unable to print late attendance report: $error')));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+      onPressed: busy || widget.employeeIds == null ? null : printReport,
+      icon: busy
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2))
+          : const Icon(Icons.print, size: 18),
+      label: Text(busy ? 'Preparing PDF…' : 'Print PDF'),
+      style:
+          OutlinedButton.styleFrom(foregroundColor: AdminActivityCards.pink));
 }

@@ -81,6 +81,12 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     const breaks = hasPairs ? measured.reduce((sum, v) => sum + (v ?? 0), 0) : Number(row.break_minutes);
     const events = [];
     if (delay > 0) events.push({ date, type: 'arrival', minutes: delay, scheduled: roster.shift_start, actual: row.check_in ?? row.working_in });
+    // Legacy branches may have saved Late statuses but no retained roster.
+    // Preserve that attendance evidence without inventing a shift or duration.
+    else if ((shift == null || actual == null) && /^LATE(?:$|\s*[+(])/.test(key(row.status))) {
+      events.push({ date, type: 'arrival', minutes: null, scheduled: roster?.shift_start ?? null,
+        actual: row.check_in ?? row.working_in ?? null, minutes_known: false, source: 'recorded_status' });
+    }
     if (roster && validAllowance(roster.break_minutes) && !incompleteBreak && (hasPairs || hasBreakTotal) && breaks > +roster.break_minutes) {
       events.push({ date, type: 'break', minutes: breaks - +roster.break_minutes, allocated_minutes: +roster.break_minutes, actual_minutes: breaks });
     }
@@ -103,7 +109,8 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     arrival_count: r.events.filter(e => e.type === 'arrival').length,
     break_count: r.events.filter(e => e.type === 'break').length,
     count: r.events.length, severity: lateSeverity(r.events.length),
-    total_minutes: r.events.reduce((sum, e) => sum + e.minutes, 0),
+    total_minutes: r.events.reduce((sum, e) => sum + (e.minutes ?? 0), 0),
+    total_minutes_known: r.events.every(e => e.minutes != null),
   })).filter(r => r.count >= minimum).sort((a, b) => String(a.branch_id).localeCompare(String(b.branch_id)) || b.count - a.count || String(a.name).localeCompare(String(b.name)));
   return { reports, missing_records: missingRecords, missing_schedules: missingRecords.length,
     missing_schedules_by_branch: missingByBranch, threshold: 3 };
@@ -157,7 +164,17 @@ export function installLateReportApi(app, { authenticate, pool, renderExport = r
     const year = Number(req.query.year), month = Number(req.query.month);
     const format = String(req.query.format ?? '');
     const branchId = String(req.query.branch_id ?? '').trim();
-    if (!validPeriod(year, month) || !['pdf','xlsx'].includes(format) || branchId.length > 100) {
+    const view = String(req.query.view ?? '');
+    let employeeIds = null;
+    if (req.query.employees != null) {
+      try {
+        const ids = JSON.parse(String(req.query.employees));
+        if (!Array.isArray(ids) || ids.length > 1000 || ids.some(id => typeof id !== 'string' || id.length > 100)) throw new Error();
+        employeeIds = new Set(ids.map(id => key(id)));
+      } catch { return res.status(400).json({ok: false, message: 'Invalid export employee selection.'}); }
+    }
+    if (!validPeriod(year, month) || !['pdf','xlsx'].includes(format) || branchId.length > 100 ||
+        !['', 'attendance-summary'].includes(view) || (view === 'attendance-summary' && format !== 'pdf')) {
       return res.status(400).json({ok: false, message: 'Invalid export period, branch, or format.'});
     }
     try {
@@ -166,8 +183,10 @@ export function installLateReportApi(app, { authenticate, pool, renderExport = r
       ]);
       const branches = Object.fromEntries(branchRows.rows.map(b => [key(b.id), b.name === 'SUNGAI PETANI' ? 'SP-EDAR' : b.name]));
       if (branchId && !Object.hasOwn(branches, key(branchId))) return res.status(404).json({ok: false, message: 'Branch not found.'});
-      const reports = report.reports.filter(r => !branchId || key(r.branch_id) === key(branchId));
-      const bytes = await renderExport({year, month, format, reports, branches,
+      const reports = report.reports.filter(r => (!branchId || key(r.branch_id) === key(branchId)) &&
+        (view !== 'attendance-summary' || r.arrival_count >= 3) &&
+        (!employeeIds || employeeIds.has(key(r.employee_id))));
+      const bytes = await renderExport({year, month, format, view, reports, branches,
         branchLabel: branchId ? branches[key(branchId)] : 'All branches'});
       return res.json({ok: true, file_base64: bytes.toString('base64')});
     } catch (error) {

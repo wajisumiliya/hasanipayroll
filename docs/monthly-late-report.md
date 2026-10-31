@@ -91,3 +91,28 @@ runner. The private review table is inaccessible to public/anon/authenticated
 Data API roles and is not in the public table allowlist. No external service,
 new credential, or scheduled job is required. A web deployment updates the browser
 UI; Android needs a client release for the new screen.
+
+### Dashboard late-attendance summary print
+
+The dashboard card includes Print PDF beneath the employee flash cards. It opens
+the system/browser print dialog with an A4 landscape Hasani Payroll attendance
+summary: employee ID/name, branch, payroll month, accumulated main late time,
+arrival count, accumulated excess-break time, break count, totals and notes.
+Count columns are pink, the header is navy, and each page repeats the heading.
+The first-five preview does not limit the PDF: all qualifying arrival-count >=3
+rows within the selected branch and displayed employee/staff scope are exported.
+The existing combined-occurrence report and its Excel/PDF exports remain separate.
+
+The authenticated export endpoint accepts view=attendance-summary with format=pdf
+and an optional JSON employees selection (bounded to 1000 IDs). It generates the
+summary in the existing worker queue with time/heap/concurrency limits. The UI
+shows a busy state, permits navigation and reports failures without freezing.
+
+Saved Late / Late + Early Out statuses now retain arrival occurrences even where
+legacy daily/monthly rosters or check-in times are unavailable. Such events have
+unknown minutes, never a guessed shift or zero duration. The card/PDF show a dash
+for unknown accumulated time and the PDF explains it. Known roster timings still
+take precedence. No roster is borrowed from another branch. The underlying query
+continues to load the whole selected month across all branches. Preview rows now
+show their branch and the card note states preview/full employee and branch counts.
+Production branch counts require verification after deploying the backend and web.

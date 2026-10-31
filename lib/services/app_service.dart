@@ -469,13 +469,17 @@ class AppService extends ChangeNotifier {
   Future<Uint8List> loadLateReportExport(
       {required DateTime month,
       required String format,
-      String? branchId}) async {
+      String? branchId,
+      bool attendanceSummary = false,
+      List<String>? employeeIds}) async {
     final data = await _getAuth(
         Uri(path: '/api/attendance/late-report/export', queryParameters: {
       'year': '${month.year}',
       'month': '${month.month}',
       'format': format,
-      if (branchId != null) 'branch_id': branchId
+      if (branchId != null) 'branch_id': branchId,
+      if (attendanceSummary) 'view': 'attendance-summary',
+      if (employeeIds != null) 'employees': jsonEncode(employeeIds),
     }).toString());
     if (data['ok'] != true || data['file_base64'] is! String) {
       throw StateError(

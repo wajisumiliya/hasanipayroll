@@ -47,6 +47,13 @@ void main() {
     expect(widget.occasions(false).single['employee_id'], 'A1');
     expect(widget.occasions(true).single['years'], 6);
     expect(widget.increments(), isEmpty);
+    expect(
+        AdminActivityCards.lateMinutes({
+          'events': [
+            {'type': 'arrival', 'minutes': null}
+          ]
+        }),
+        isNull);
   });
   test('eligibility uses maintained schedule before payroll generation', () {
     final widget = AdminActivityCards(
@@ -188,6 +195,7 @@ void main() {
                     onPayroll: () {})))));
     await tester.pumpAndSettle();
     expect(find.text('2.00 h'), findsOneWidget);
+    expect(find.text('Print PDF'), findsOneWidget);
     await tester.ensureVisible(find.text('Aina'));
     await tester.tap(find.text('Aina'));
     await tester.pumpAndSettle();

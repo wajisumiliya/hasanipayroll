@@ -2324,6 +2324,7 @@ class _ReferencePayrollDashboard extends StatelessWidget {
   Widget _detailsAndTools() =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         AdminActivityCards(
+            branchLabels: view.branches,
             month: view.month,
             branch: view.branch,
             employees: view.employees,
