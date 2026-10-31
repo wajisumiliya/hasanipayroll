@@ -515,6 +515,7 @@ class AdminActivityCards extends StatelessWidget {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(title,
+            key: ValueKey('activity-heading-$title'),
             style: const TextStyle(
                 fontSize: 21, fontWeight: FontWeight.w800, color: ink)),
         const SizedBox(height: 3),
