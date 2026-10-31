@@ -2,7 +2,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
-import { renderAttendanceSummary } from './late-attendance-summary.js';
+import { renderAttendanceSummary, renderStatusSummary } from './late-attendance-summary.js';
 
 const status = value => ({noted:'Reviewed',approved:'Approved',correction_required:'Correction required'}[value] ?? 'Pending');
 const category = value => ({transport:'Transport delay',approved_late:'Approved late arrival / break',attendance_error:'Incorrect attendance'}[value] ?? 'Other');
@@ -91,6 +91,6 @@ async function pdf(data) {
 }
 try {
   if(!['pdf','xlsx'].includes(workerData.format)) throw new Error('Invalid report format.');
-  const bytes=Uint8Array.from(await (workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):pdf(workerData)):excel(workerData)));
+  const bytes=Uint8Array.from(await (workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):workerData.view==='status-summary'?renderStatusSummary(workerData):pdf(workerData)):excel(workerData)));
   parentPort.postMessage({bytes},[bytes.buffer]);
 } catch(error) { parentPort.postMessage({error:error.message}); }

@@ -187,3 +187,14 @@ test('summary PDF request applies arrival threshold and employee selection',asyn
  await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',view:'attendance-summary',employees:'not-json'}},invalid);
  assert.equal(invalid.code,400);
 });
+
+test('every main/break combination totalling three meets the threshold',()=>{
+ const cases=[
+   [day(1,'09:05',61),day(2,'09:05',60)],
+   [day(1,'09:05',61),day(2,'09:00',61)],
+   [day(1,'09:00',61),day(2,'09:00',61),day(3,'09:00',61)],
+   [day(1,'09:05',60),day(2,'09:05',60),day(3,'09:05',60)],
+ ];
+ for(const rows of cases) {const result=report(rows).reports;assert.equal(result.length,1);assert.equal(result[0].count,3);}
+ assert.equal(report([day(1,'09:05',61)]).reports.length,0);
+});

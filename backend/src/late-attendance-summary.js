@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 const navy='#073D68', blue='#1687FF', red='#FFDADD';
 export const hhmm = minutes => minutes == null ? '—' : `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(Math.round(minutes%60)).padStart(2,'0')}`;
 export function attendanceSummaryRows(data) {
-  return data.reports.filter(r=>r.arrival_count>=3).map(r=>{
+  return data.reports.filter(r=>(Number(r.arrival_count)||0)+(Number(r.break_count)||0)>=3).map(r=>{
     const total=type=>{
       const events=r.events.filter(e=>e.type===type);
       return events.some(e=>e.minutes==null)?null:events.reduce((sum,e)=>sum+e.minutes,0);
@@ -71,11 +71,43 @@ export async function renderAttendanceSummary(data) {
   });
   y+=32;
   text('Note:',x,y,w,{bold:true,size:7});
-  text('1. This report shows employees with 3 or more late arrivals in the selected payroll month.',x,y+11,w,{size:7});
+  text('1. This report shows employees with 3 or more combined main late and excess-break occurrences in the selected payroll month.',x,y+11,w,{size:7});
   text('2. Main exceed time and break exceed time are total accumulated time for the selected month.',x,y+21,w,{size:7});
   if(rows.some(r=>r.arrival_minutes==null))text('3. — indicates a recorded late status with no retained roster/timing. Unknown durations are not estimated.',x,y+31,w,{size:7});
   if(!rows.length)text('No employees meet the selected monthly threshold.',x,y+31,w,{size:8});
   const range=doc.bufferedPageRange();
   for(let i=0;i<range.count;i++) {doc.switchToPage(i);text(`Page ${i+1} of ${range.count}`,x,doc.page.height-28,w,{size:7,align:'right'});}
+  doc.end();return done;
+}
+
+export async function renderStatusSummary(data) {
+  const doc=new PDFDocument({size:'A4',layout:'landscape',margin:24,bufferPages:true});
+  const chunks=[];const done=new Promise((resolve,reject)=>{doc.on('data',c=>chunks.push(c));doc.once('end',()=>resolve(Buffer.concat(chunks)));doc.once('error',reject);});
+  doc.registerFont('Body',fileURLToPath(new URL('../assets/fonts/DejaVuSans.ttf',import.meta.url)));
+  doc.registerFont('Bold',fileURLToPath(new URL('../assets/fonts/DejaVuSans-Bold.ttf',import.meta.url)));
+  const label=data.status==='MC'?'MC':'UNPAID';
+  const month=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
+  const width=doc.page.width-48,cols=[35,95,190,115,60,width-495];
+  function text(v,x,y,w,bold=false,size=8){doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#102943').text(String(v),x,y,{width:w});}
+  function header() {
+    text('HASANI PAYROLL',24,18,350,true,18);text(`${label} ATTENDANCE REPORT`,420,22,width-396,true,13);
+    text(`${month} · ${data.branchLabel} · ${data.reports.length} employees`,24,48,width,false,10);
+    let x=24;['No.','Employee ID','Employee Name','Branch','Days',`${label} dates`].forEach((v,i)=>{
+      doc.rect(x,72,cols[i],26).fill(navy);doc.font('Bold').fontSize(8).fillColor('white').text(v,x+5,80,{width:cols[i]-10});x+=cols[i];
+    });return 98;
+  }
+  let y=header();
+  for(let i=0;i<data.reports.length;i++) {
+    const r=data.reports[i],cells=[i+1,r.employee_id,r.name,data.branches[String(r.branch_id).trim().toUpperCase()]??r.branch_id,r.count,r.dates.join(', ')];
+    let height=25;
+    cells.forEach((v,j)=>{doc.font('Body').fontSize(8);height=Math.max(height,doc.heightOfString(String(v),{width:cols[j]-10})+12);});
+    if(y+height>doc.page.height-70){doc.addPage();y=header();}
+    let x=24;cells.forEach((v,j)=>{doc.rect(x,y,cols[j],height).fillAndStroke(i%2?'#F1F3F6':'#FFFFFF','#B8C8D8');text(v,x+5,y+6,cols[j]-10);x+=cols[j];});y+=height;
+  }
+  if(y+50>doc.page.height-30){doc.addPage();y=header();}
+  text(`TOTAL: ${data.reports.length} employees · ${data.reports.reduce((sum,r)=>sum+r.count,0)} ${label} days`,24,y+12,width,true,10);
+  text('Source: saved attendance records for the selected month. Duplicate dates are counted once per employee and branch.',24,y+32,width,false,8);
+  if(!data.reports.length)text(`No ${label} attendance records for this selection.`,24,y+46,width);
+  const range=doc.bufferedPageRange();for(let i=0;i<range.count;i++){doc.switchToPage(i);text(`Page ${i+1} of ${range.count}`,doc.page.width-100,doc.page.height-25,80);}
   doc.end();return done;
 }

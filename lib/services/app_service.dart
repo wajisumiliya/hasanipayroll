@@ -488,6 +488,29 @@ class AppService extends ChangeNotifier {
     return base64Decode(data['file_base64'] as String);
   }
 
+  Future<Map<String, dynamic>> loadAttendanceStatusReport(
+      {required DateTime month,
+      required String status,
+      String? branchId,
+      required List<String> employeeIds,
+      bool pdf = false}) async {
+    final data = await _getAuth(
+        Uri(path: '/api/attendance/status-report', queryParameters: {
+      'year': '${month.year}',
+      'month': '${month.month}',
+      'status': status,
+      if (branchId != null) 'branch_id': branchId,
+      'employees': jsonEncode(employeeIds),
+      if (pdf) 'format': 'pdf',
+    }).toString());
+    if (data['ok'] != true ||
+        (pdf ? data['file_base64'] is! String : data['reports'] is! List)) {
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to load attendance report.');
+    }
+    return data;
+  }
+
   Future<void> saveLateReportReview(Map<String, dynamic> review) async {
     final data = await _postAuth('/api/attendance/late-report/reviews', review,
         authenticated: true);

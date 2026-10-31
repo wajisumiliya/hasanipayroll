@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { renderLateReport } from './late-report-export.js';
 
-const nonWorking = new Set(['OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'PH-OFF', 'PH-SPL', 'UNPAID']);
+const nonWorking = new Set(['OFF', 'MC', 'PL', 'AL', 'EL', 'PH', 'PH-OFF', 'PH-SPL', 'UNPAID', 'UNPAID LEAVE', 'MEDICAL LEAVE']);
 const key = (...parts) => parts.map(v => String(v ?? '').trim().toUpperCase()).join('|');
 const dateOnly = v => String(v ?? '').slice(0, 10);
 const present = v => v != null && !['', '-', '--', '--:--'].includes(String(v).trim());
@@ -184,7 +184,7 @@ export function installLateReportApi(app, { authenticate, pool, renderExport = r
       const branches = Object.fromEntries(branchRows.rows.map(b => [key(b.id), b.name === 'SUNGAI PETANI' ? 'SP-EDAR' : b.name]));
       if (branchId && !Object.hasOwn(branches, key(branchId))) return res.status(404).json({ok: false, message: 'Branch not found.'});
       const reports = report.reports.filter(r => (!branchId || key(r.branch_id) === key(branchId)) &&
-        (view !== 'attendance-summary' || r.arrival_count >= 3) &&
+        (view !== 'attendance-summary' || r.arrival_count + r.break_count >= 3) &&
         (!employeeIds || employeeIds.has(key(r.employee_id))));
       const bytes = await renderExport({year, month, format, view, reports, branches,
         branchLabel: branchId ? branches[key(branchId)] : 'All branches'});

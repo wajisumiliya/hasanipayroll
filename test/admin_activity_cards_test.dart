@@ -135,7 +135,7 @@ void main() {
         }),
         90);
   });
-  testWidgets('late employee flash card opens arrival-only detail',
+  testWidgets('late employee flash card opens combined main and break detail',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(
@@ -194,15 +194,34 @@ void main() {
                     onLate: () {},
                     onPayroll: () {})))));
     await tester.pumpAndSettle();
-    expect(find.text('2.00 h'), findsOneWidget);
+    expect(find.text('Main 120 min\nBreak 90 min'), findsOneWidget);
     expect(find.text('Print PDF'), findsOneWidget);
+    expect(find.text('MC Report'), findsOneWidget);
+    expect(find.text('Unpaid Report'), findsOneWidget);
     await tester.ensureVisible(find.text('Aina'));
     await tester.tap(find.text('Aina'));
     await tester.pumpAndSettle();
-    expect(find.text('Aina · 3 late days · 2.00 h'), findsOneWidget);
+    expect(find.text('Aina · 4 occurrences'), findsOneWidget);
     expect(find.text('2026-10-01'), findsOneWidget);
-    expect(find.text('90'), findsNothing);
+    expect(find.text('90'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+  test('all combined threshold permutations qualify, two occurrences do not',
+      () {
+    for (final counts in [(2, 1), (1, 2), (0, 3), (3, 0)]) {
+      expect(
+          AdminActivityCards.combinedCount(
+              {'arrival_count': counts.$1, 'break_count': counts.$2}),
+          3);
+    }
+    expect(
+        AdminActivityCards.combinedCount(
+            {'arrival_count': 1, 'break_count': 1}),
+        2);
+    expect(
+        AdminActivityCards.issueMinutes(
+            {'arrival_count': 0, 'events': []}, 'arrival'),
+        0);
   });
   for (final width in [320.0, 768.0, 1100.0, 1440.0]) {
     testWidgets('activity cards fit $width with honest empty states',

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'attendance_status_report_button.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
@@ -153,13 +154,30 @@ class AdminActivityCards extends StatelessWidget {
           .where((e) => e['type'] == 'arrival')
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
-  static double? lateMinutes(Map r) {
-    final events = arrivals(r);
-    return events.isEmpty || events.any((e) => e['minutes'] == null)
-        ? null
-        : events.fold<double>(0, (sum, e) => sum + number(e['minutes']));
+  static int issueCount(Map row, String type) {
+    final field = type == 'arrival' ? 'arrival_count' : 'break_count';
+    if (row[field] != null) return number(row[field]).toInt();
+    return (row['events'] as List? ?? [])
+        .whereType<Map>()
+        .where((e) => e['type'] == type)
+        .length;
   }
 
+  static int combinedCount(Map row) =>
+      issueCount(row, 'arrival') + issueCount(row, 'break');
+  static double? issueMinutes(Map row, String type) {
+    final events = (row['events'] as List? ?? [])
+        .whereType<Map>()
+        .where((e) => e['type'] == type)
+        .toList();
+    if (events.isEmpty && issueCount(row, type) > 0) return null;
+    if (events.any((e) => e['minutes'] == null)) return null;
+    return events.fold<double>(0, (sum, e) => sum + number(e['minutes']));
+  }
+
+  static double? lateMinutes(Map row) => issueMinutes(row, 'arrival');
+  static String minutesLabel(double? value) =>
+      value == null ? '—' : '${value.toStringAsFixed(0)} min';
   static String hours(double? minutes) =>
       minutes == null ? '—' : '${(minutes / 60).toStringAsFixed(2)} h';
   String name(Map r) => '${r['name'] ?? r['employee_name'] ?? employeeId(r)}';
@@ -212,26 +230,37 @@ class AdminActivityCards extends StatelessWidget {
           style: TextStyle(
               color: color, fontSize: 12, fontWeight: FontWeight.w700)));
   void lateDetails(BuildContext context, Map<String, dynamic> row) {
-    final events = arrivals(row)
+    final events = (row['events'] as List? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList()
       ..sort((a, b) => '${a['date']}'.compareTo('${b['date']}'));
     showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-                title: Text(
-                    '${name(row)} · ${row['arrival_count']} late days · ${hours(lateMinutes(row))}'),
+                title: Text('${name(row)} · ${combinedCount(row)} occurrences'),
                 content: SizedBox(
                     width: 680,
                     child: SingleChildScrollView(
                         child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: DataTable(
-                                columns: ['Date', 'Scheduled', 'Check-in', 'Late minutes'].map((v) => DataColumn(label: Text(v))).toList(),
+                                columns: [
+                                  'Date',
+                                  'Issue',
+                                  'Scheduled / allowed',
+                                  'Actual / used',
+                                  'Excess minutes'
+                                ].map((v) => DataColumn(label: Text(v))).toList(),
                                 rows: events
                                     .map((e) => DataRow(
                                             cells: [
                                           '${e['date']}',
-                                          '${e['scheduled'] ?? '—'}',
-                                          '${e['actual'] ?? '—'}',
+                                          e['type'] == 'arrival'
+                                              ? 'Main late'
+                                              : 'Excess break',
+                                          '${e['type'] == 'arrival' ? e['scheduled'] ?? '—' : e['allocated_minutes'] ?? '—'}',
+                                          '${e['type'] == 'arrival' ? e['actual'] ?? '—' : e['actual_minutes'] ?? '—'}',
                                           '${e['minutes'] ?? 'Unavailable'}'
                                         ].map((v) => DataCell(Text(v))).toList()))
                                     .toList())))),
@@ -614,12 +643,19 @@ class AdminActivityCards extends StatelessWidget {
           if (late)
             Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: LateAttendancePrintButton(
+                child: Wrap(spacing: 10, runSpacing: 8, children: [
+                  LateAttendancePrintButton(
+                      month: month,
+                      branch: branch,
+                      employeeIds: rows?.map(employeeId).toSet().toList()),
+                  for (final status in ['MC', 'UNPAID'])
+                    AttendanceStatusReportButton(
                         month: month,
                         branch: branch,
-                        employeeIds: rows?.map(employeeId).toSet().toList()))),
+                        status: status,
+                        employeeIds:
+                            employees.map(employeeId).toSet().toList()),
+                ])),
         ]));
   }
 
@@ -633,17 +669,16 @@ class AdminActivityCards extends StatelessWidget {
             branch: branch);
         final byId = {for (final e in employees) employeeId(e): e};
         final late = metrics.lateRows
-            ?.where((r) => number(r['arrival_count']) >= 3)
+            ?.where((r) => combinedCount(r) >= 3)
             .map((r) => {...?byId[employeeId(r)], ...r})
             .toList()
-          ?..sort((a, b) =>
-              number(b['arrival_count']).compareTo(number(a['arrival_count'])));
+          ?..sort((a, b) => combinedCount(b).compareTo(combinedCount(a)));
         final inc = increments(),
             birthdays = occasions(false),
             anniversaries = occasions(true);
         final count = people.length;
-        final totalDays = late?.fold<int>(
-            0, (sum, r) => sum + number(r['arrival_count']).toInt());
+        final totalDays =
+            late?.fold<int>(0, (sum, r) => sum + combinedCount(r));
         final rate = late == null || count == 0
             ? '—'
             : '${(late.length / count * 100).toStringAsFixed(1)}%';
@@ -689,7 +724,7 @@ class AdminActivityCards extends StatelessWidget {
         final cards = [
           card(context,
               title: 'Attendance Late (3 and above)',
-              subtitle: 'Employees with 3 or more late arrivals this month',
+              subtitle: 'Main late + excess breaks: 3 or more occurrences',
               color: pink,
               icon: Icons.alarm,
               totals: [
@@ -699,7 +734,12 @@ class AdminActivityCards extends StatelessWidget {
                   'Total Late (≥3)',
                   pink
                 ),
-                (Icons.warning, '${totalDays ?? '—'}', 'Total Late Days', pink),
+                (
+                  Icons.warning,
+                  '${totalDays ?? '—'}',
+                  'Total Occurrences',
+                  pink
+                ),
                 (
                   Icons.person,
                   '$count',
@@ -709,11 +749,14 @@ class AdminActivityCards extends StatelessWidget {
                 (Icons.pie_chart, rate, 'Late Rate', gold)
               ],
               rows: late,
-              headers: ['Late Days', 'Late Hours'],
-              values: (r) => ['${r['arrival_count']}', hours(lateMinutes(r))],
+              headers: ['Main + Break', 'Late Minutes'],
+              values: (r) => [
+                    '${combinedCount(r)} (M${issueCount(r, 'arrival')}/B${issueCount(r, 'break')})',
+                    'Main ${minutesLabel(issueMinutes(r, 'arrival'))}\nBreak ${minutesLabel(issueMinutes(r, 'break'))}'
+                  ],
               note: late == null
                   ? 'Late attendance data unavailable.'
-                  : 'Showing ${math.min(5, late.length)} of ${late.length} employees · ${late.map((r) => canonical(r["branch_id"])).toSet().length} branches · 3+ late days.',
+                  : 'Showing ${math.min(5, late.length)} of ${late.length} employees · ${late.map((r) => canonical(r["branch_id"])).toSet().length} branches · 3+ main + break occurrences.',
               late: true),
           card(context,
               title: 'Increment List',

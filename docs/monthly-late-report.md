@@ -116,3 +116,25 @@ take precedence. No roster is borrowed from another branch. The underlying query
 continues to load the whole selected month across all branches. Preview rows now
 show their branch and the card note states preview/full employee and branch counts.
 Production branch counts require verification after deploying the backend and web.
+
+### Combined dashboard threshold and absence reports
+
+The dashboard card, full list and summary PDF now consistently include employees
+with main late arrivals + over-allocated-break occurrences >= 3. Examples 2+1,
+1+2, 0+3 and 3+0 all qualify; 1+1 does not. Two different issue types on one date
+count as two occurrences, so the tile now says Total Occurrences, not Late Days.
+Rows show the combined count with separate main/break counts and separate minutes.
+Clicking an employee includes both arrival and break timing details. Unknown legacy
+main durations remain unavailable; they are never presented as zero minutes.
+
+MC Report and Unpaid Report buttons sit beside Print PDF. Each opens a selected
+month/branch/staff-scope list with employee ID/name, branch, day count and dates,
+and a Print PDF action. MC/medical-leave statuses and unpaid/unpaid-leave statuses
+or explicit saved is_unpaid flags drive these lists. Counts deduplicate dates per
+employee/branch. No leave or payroll records are created or changed.
+
+GET /api/attendance/status-report requires administrator authentication, validates
+period/status/branch/employee selections and enforces restricted staff scopes.
+The PDF uses the existing limited background worker service. Deploy the backend
+and rebuild Flutter web together. Automated backend tests cover all four threshold
+combinations, invalid/unauthorized status requests, scope, distinct dates and PDFs.

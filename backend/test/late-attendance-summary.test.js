@@ -11,3 +11,8 @@ test('summary separates arrival and break accumulated times and keeps unknown mi
  assert.equal(rows[1].arrival_minutes,null);assert.equal(rows[1].break_minutes,5);
  assert.equal(hhmm(90),'01:30');assert.equal(hhmm(null),'—');assert.equal(hhmm(1500),'25:00');
 });
+
+test('summary threshold combines main and break counts including break-only employees',()=>{
+ const records=[[2,1],[1,2],[0,3],[3,0],[1,1]].map(([arrival_count,break_count])=>({arrival_count,break_count,events:[]}));
+ assert.equal(attendanceSummaryRows({reports:records}).length,4);
+});
