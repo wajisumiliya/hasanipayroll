@@ -199,3 +199,20 @@ explicit unpaid flags. MC reports remain separate. UL is excluded from late and
 excess-break occurrence calculations and included in leave/off attendance totals.
 Deploy backend/migrations/20261031_attendance_ul_ph_ganti.sql through backend
 startup before using the new status in the rebuilt frontend.
+
+### Retaining actual arrival timing evidence
+
+Main late calculation now uses a valid dated roster, retained scheduled shift
+snapshot, then the employee's assigned weekly roster for the exact branch/week.
+A missing daily start may inherit the assigned weekly start; an invalid primary
+check-in no longer hides a valid working_in value. The clock reader accepts
+explicit fractional-second and AM/PM time strings. If no schedule is available,
+an explicit positive saved late_minutes value can still provide the duration.
+Otherwise the duration remains unknown rather than being guessed.
+
+New attendance saves retain assigned start/end times through a database trigger,
+including saves from older apps. Identity/date/branch changes clear inherited
+snapshots before capturing the new assignment. These fields are server-managed;
+clients cannot submit them through generic writes. No historical timing is
+backfilled from an assumed start time. Missing past shift times still require
+admin-supplied dates and scheduled starts to recover accurate minutes.

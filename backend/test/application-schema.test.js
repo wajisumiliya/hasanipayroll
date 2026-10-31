@@ -26,6 +26,7 @@ test('application startup applies the penguin migration once and records it', as
   assert.ok(applied.has('20261031_employee_leave_balances_v1'));
   assert.ok(applied.has('20261031_mc_opening_balances_v1'));
   assert.ok(applied.has('20261031_attendance_ul_ph_ganti_v1'));
+  assert.ok(applied.has('20261031_attendance_shift_snapshots_v1'));
   assert.ok(executed.some(sql=>sql.includes("DATE '2026-10-01'")));
   assert.ok(executed.some(sql => sql.includes('annual_leave_balance numeric(6,2)')));
   assert.ok(executed.some(sql => sql.includes('CREATE TABLE IF NOT EXISTS app_private.late_report_reviews')));

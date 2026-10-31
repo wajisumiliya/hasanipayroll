@@ -75,6 +75,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261031_attendance_ul_ph_ganti.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [attendanceStatusVersion]);
     }
+    const shiftSnapshotVersion = '20261031_attendance_shift_snapshots_v1';
+    const shiftSnapshotMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [shiftSnapshotVersion]);
+    if (!shiftSnapshotMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261031_attendance_shift_snapshots.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [shiftSnapshotVersion]);
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK'); throw error;

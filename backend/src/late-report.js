@@ -8,10 +8,16 @@ const present = v => v != null && !['', '-', '--', '--:--'].includes(String(v).t
 const statuses = new Set(['noted', 'approved', 'correction_required', 'pending']);
 const reasons = new Set(['transport', 'approved_late', 'attendance_error', 'other']);
 function clock(value) {
-  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(value ?? '').trim());
-  if (!match || +match[1] > 23 || +match[2] > 59) return null;
-  return +match[1] * 60 + +match[2];
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?\s*(AM|PM)?$/i.exec(String(value ?? '').trim());
+  if (!match || +match[2] > 59 || (match[3] != null && +match[3] > 59)) return null;
+  let hour=+match[1];
+  if(match[4]) {
+    if(hour<1||hour>12)return null;
+    hour=hour%12+(match[4].toUpperCase()==='PM'?12:0);
+  } else if(hour>23)return null;
+  return hour*60 + +match[2];
 }
+const firstClock = (...values) => values.find(v => clock(v) != null) ?? null;
 function duration(start, end) {
   const a = clock(start), b = clock(end);
   return a == null || b == null ? null : (b - a + 1440) % 1440;
@@ -48,9 +54,14 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     const identity = key(row.branch_id, row.employee_id, date);
     if (seen.has(identity)) continue;
     seen.add(identity);
-    const roster = dailyByKey.get(identity) ?? weeklyByKey.get(key(row.branch_id, row.employee_id, Math.floor((+date.slice(8) - 1) / 7) + 1));
+    const dailyRoster = dailyByKey.get(identity);
+    const weeklyRoster = weeklyByKey.get(key(row.branch_id, row.employee_id, Math.floor((+date.slice(8) - 1) / 7) + 1));
+    const roster = dailyRoster ?? weeklyRoster;
+    const scheduledStart = firstClock(dailyRoster?.shift_start, row.scheduled_shift_start, weeklyRoster?.shift_start);
+    const scheduledEnd = firstClock(dailyRoster?.shift_end, row.scheduled_shift_end, weeklyRoster?.shift_end);
+    const actualValue = firstClock(row.check_in, row.working_in);
     if (nonWorking.has(key(row.status)) || nonWorking.has(key(roster?.assignment_type))) continue;
-    const actual = clock(row.check_in ?? row.working_in);
+    const actual = clock(actualValue);
     const pairs = [['morning_in', 'morning_out'], ['afternoon_in', 'afternoon_out'], ['overtime_in', 'overtime_out']];
     const measured = pairs.map(([a, b]) => duration(row[a], row[b]));
     const incompleteBreak = pairs.some(([a, b]) => (present(row[a]) || present(row[b])) && duration(row[a], row[b]) == null);
@@ -61,7 +72,7 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     const issues = [];
     if (!roster) issues.push('Missing roster');
     else {
-      if (clock(roster.shift_start) == null) issues.push('Missing or invalid shift start');
+      if (clock(scheduledStart) == null) issues.push('Missing or invalid shift start');
       if (!validAllowance(roster.break_minutes)) issues.push('Missing or invalid break allowance');
     }
     if (actual == null) issues.push('Missing or invalid check-in');
@@ -74,18 +85,21 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
         name: names.get(key(row.employee_id)) ?? row.employee_id, date, issues });
       missingByBranch[row.branch_id] = (missingByBranch[row.branch_id] ?? 0) + 1;
     }
-    const shift = clock(roster?.shift_start);
+    const shift = clock(scheduledStart);
     let delay = actual == null || shift == null ? 0 : actual - shift;
-    const shiftEnd = clock(roster?.shift_end);
+    const shiftEnd = clock(scheduledEnd);
     if (shift != null && shiftEnd != null && shiftEnd < shift && actual != null && actual <= shiftEnd) delay += 1440;
     const breaks = hasPairs ? measured.reduce((sum, v) => sum + (v ?? 0), 0) : Number(row.break_minutes);
     const events = [];
-    if (delay > 0) events.push({ date, type: 'arrival', minutes: delay, scheduled: roster.shift_start, actual: row.check_in ?? row.working_in });
+    if (delay > 0) events.push({ date, type: 'arrival', minutes: delay, scheduled: scheduledStart, actual: actualValue });
     // Legacy branches may have saved Late statuses but no retained roster.
     // Preserve that attendance evidence without inventing a shift or duration.
     else if ((shift == null || actual == null) && /^LATE(?:$|\s*[+(])/.test(key(row.status))) {
-      events.push({ date, type: 'arrival', minutes: null, scheduled: roster?.shift_start ?? null,
-        actual: row.check_in ?? row.working_in ?? null, minutes_known: false, source: 'recorded_status' });
+      const savedMinutes = Number(row.late_minutes);
+      const knownMinutes = present(row.late_minutes) && Number.isInteger(savedMinutes) && savedMinutes > 0 && savedMinutes <= 1440 ? savedMinutes : null;
+      events.push({ date, type: 'arrival', minutes: knownMinutes, scheduled: scheduledStart,
+        actual: row.check_in ?? row.working_in ?? null, minutes_known: knownMinutes != null,
+        source: knownMinutes == null ? 'recorded_status' : 'saved_late_minutes' });
     }
     if (roster && validAllowance(roster.break_minutes) && !incompleteBreak && (hasPairs || hasBreakTotal) && breaks > +roster.break_minutes) {
       events.push({ date, type: 'break', minutes: breaks - +roster.break_minutes, allocated_minutes: +roster.break_minutes, actual_minutes: breaks });

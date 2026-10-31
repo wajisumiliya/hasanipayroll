@@ -198,3 +198,26 @@ test('every main/break combination totalling three meets the threshold',()=>{
  for(const rows of cases) {const result=report(rows).reports;assert.equal(result.length,1);assert.equal(result[0].count,3);}
  assert.equal(report([day(1,'09:05',61)]).reports.length,0);
 });
+
+test('saved shift snapshots retain exact late minutes after roster removal',()=>{
+ const rows=[1,2,3].map(d=>({...day(d,'09:35'),status:'Late',scheduled_shift_start:'09:00:00',scheduled_shift_end:'18:00:00'}));
+ const result=report(rows,{monthly:[]}).reports[0];
+ assert.equal(result.arrival_count,3);assert.equal(result.total_minutes,105);assert.equal(result.total_minutes_known,true);
+});
+test('valid weekly shift fills a missing daily shift and valid alternate check-in is used',()=>{
+ const rows=[1,2,3].map(d=>({...day(d,'-'),working_in:'09:10',status:'Late'}));
+ const daily=[1,2,3].map(d=>({...roster,roster_date:`2026-10-0${d}`,shift_start:null,shift_end:null}));
+ const result=report(rows,{daily,monthly:[{...roster,shift_start:'09:00:00.000'}]}).reports[0];
+ assert.equal(result.total_minutes,30);assert.equal(result.events[0].actual,'09:10');
+});
+test('explicit 12-hour times and midnight snapshots calculate without assumed defaults',()=>{
+ const rows=[1,2,3].map(d=>({...day(d,'12:10 AM'),status:'Late',scheduled_shift_start:'10:00 PM',scheduled_shift_end:'06:00 AM'}));
+ const result=report(rows,{monthly:[]}).reports[0];assert.equal(result.total_minutes,390);
+ const missing=report(rows.map(r=>({...r,scheduled_shift_start:null,scheduled_shift_end:null})),{monthly:[]}).reports[0];
+ assert.equal(missing.events[0].minutes,null);
+});
+
+test('explicit saved late minutes are retained when a legacy roster is gone',()=>{
+ const result=report([1,2,3].map(d=>({...day(d,'09:35'),status:'Late',late_minutes:35})),{monthly:[]}).reports[0];
+ assert.equal(result.total_minutes,105);assert.equal(result.events[0].source,'saved_late_minutes');
+});

@@ -197,6 +197,11 @@ export function installDataApi(app, { pool, authenticate }) {
       columns.delete('medical_leave_opening_month');
       if (!['GET', 'HEAD'].includes(req.method)) columns.delete('annual_leave_balance');
     }
+    if (table === 'attendance' && !['GET','HEAD'].includes(req.method)) {
+      // These evidence fields are populated by the database trigger, not clients.
+      columns.delete('scheduled_shift_start');
+      columns.delete('scheduled_shift_end');
+    }
     // Imported branch credentials are not part of any frontend data contract.
     for (const name of ['password', 'passwordHash', 'password_hash', 'otpHash']) columns.delete(name);
     if (req.auth?.app_metadata?.staff_scope === 'attendance' && table === 'employees') {
