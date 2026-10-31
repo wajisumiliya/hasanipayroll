@@ -47,7 +47,8 @@ export function installQrAttendanceApi(app, pool, authenticate) {
         await client.query('ROLLBACK');return res.status(429).json({ok:false,message:'Duplicate scan blocked. Wait at least 60 seconds.'});
       }
       // One IN and one OUT per Malaysia calendar day; no automatic override of payroll attendance.
-      const day= new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit'}).format(timestamp);
+      const dayResult = await client.query("SELECT to_char((now() AT TIME ZONE 'Asia/Kuala_Lumpur')::date,'YYYY-MM-DD') AS day");
+      const day = dayResult.rows[0].day;
       const today=await client.query(`SELECT action FROM public.qr_attendance_events WHERE employee_id=$1
         AND (scanned_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date=$2::date
         ORDER BY scanned_at DESC,id DESC LIMIT 1`,[emp.employee_id,day]);
