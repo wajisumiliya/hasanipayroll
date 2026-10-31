@@ -10774,7 +10774,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                   _attendanceStatusMonthly
                       ? 'Monthly Status View'
                       : 'Daily Status View',
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                      fontSize: 28, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 6),
                 const Text(
