@@ -3,16 +3,18 @@ import assert from 'node:assert/strict';
 import {buildIncrementReport, payrollIncrementEvidence, incrementEligibility, installIncrementReportApi} from '../src/increment-report.js';
 import {renderLateReport} from '../src/late-report-export.js';
 
-const employee=(id,extra={})=>({employee_id:id,name:`Employee ${id}`,branch_id:'A',is_active:true,inc_details:'APR-26/100',...extra});
+const employee=(id,extra={})=>({employee_id:id,name:`Employee ${id}`,branch_id:'A',is_active:true,inc_details:'APR-26/100',basic_salary:2000,elaun_kedatangan:200,elaun_perkhidmatan:100,elaun_kerajinan:50,elaun_makanan:25,...extra});
 const pay=(id,period,basic=2000,extra={})=>({employee_id:id,period,basic_salary:basic,elaun_kedatangan:200,elaun_perkhidmatan:100,elaun_kerajinan:50,...extra});
 const build=(employees,payroll,mode='comparison',extra={})=>buildIncrementReport({employees,payroll,mode,year:2026,month:10,...extra});
 const response=()=>({code:200,status(code){this.code=code;return this;},json(body){this.body=body;return this;}});
 
-test('eligibility begins six months after the last award and retains overdue employees',()=>{
+test('eligibility includes only the exact six-month cohort and excludes overdue employees',()=>{
   assert.equal(incrementEligibility('Jan-26/50',2026,6),null);
   assert.deepEqual(incrementEligibility('Jan-26/50',2026,7),{
     last_increment_month:'2026-01-01',eligible_from:'2026-07-01',last_amount:50});
-  assert.equal(incrementEligibility('Jan-26/50',2026,10).eligible_from,'2026-07-01');
+  assert.equal(incrementEligibility('Jan-26/50',2026,10),null);
+  assert.equal(incrementEligibility('APR-26/50',2026,10).eligible_from,'2026-10-01');
+  assert.equal(incrementEligibility('MAR-26/50',2026,10),null);
   assert.equal(incrementEligibility('SEPT-26/125',2027,2),null);
   assert.equal(incrementEligibility('SEPT-26/125',2027,3).last_amount,125);
   assert.equal(incrementEligibility('JUL/2026/100',2027,1).eligible_from,'2027-01-01');
@@ -24,7 +26,7 @@ test('eligibility begins six months after the last award and retains overdue emp
 test('eligibility PDF list exists before payroll, scopes branches and excludes inactive employees',()=>{
   const report=build([employee('E1'),employee('E2',{branch_id:'B'}),employee('E3',{is_active:false}),employee('E4',{inc_details:'MAY-26/100'})],[],'eligible',{branchId:'a'});
   assert.deepEqual(report.reports.map(row=>row.employee_id),['E1']);
-  assert.equal(report.expected_total,100);assert.equal(report.eligible_count,1);
+  assert.equal(report.basic_total,2000);assert.equal(report.allowance_total,375);assert.equal(report.eligible_count,1);
   assert.equal(report.reports[0].result,'Eligible');
 });
 
@@ -37,21 +39,23 @@ test('comparison separates paid, missed, different, additional and not-generated
   const byId=Object.fromEntries(report.reports.map(row=>[row.employee_id,row]));
   assert.equal(byId.MATCH.result,'Received');
   assert.equal(byId.MISS.result,'Not received');
-  assert.equal(byId.LESS.result,'Received less than last');assert.equal(byId.LESS.variance,-50);
-  assert.equal(byId.MORE.result,'Received more than last');assert.equal(byId.MORE.variance,50);
+  assert.equal(byId.LESS.result,'Received');assert.equal(byId.LESS.actual,50);
+  assert.equal(byId.MORE.result,'Received');assert.equal(byId.MORE.actual,150);
   assert.equal(byId.ADDITIONAL.result,'Additional: not eligible');assert.equal(byId.ADDITIONAL.actual,25);
   assert.equal(byId.PENDING.result,'Payroll not generated');assert.equal(byId.PENDING.actual,null);
   assert.equal(byId.CLEAN,undefined);
-  assert.equal(report.eligible_count,5);assert.equal(report.expected_total,500);assert.equal(report.actual_total,325);
+  assert.equal(report.eligible_count,5);assert.equal(report.basic_total,12000);assert.equal(report.allowance_total,2250);assert.equal(report.actual_total,325);
 });
 
 test('unknown historical amount does not remove date-based eligibility or imply a future award amount',()=>{
-  const report=build([employee('E',{inc_details:'JAN-26/unknown'})],[pay('E','2026-09-01'),pay('E','2026-10-01',2075)]);
+  const report=build([employee('E',{inc_details:'APR-26/unknown'})],[pay('E','2026-09-01'),pay('E','2026-10-01',2075)]);
   assert.equal(report.eligible_count,1);
   assert.equal(report.reports[0].result,'Received');
-  assert.equal(report.reports[0].expected,null);
-  assert.equal(report.reports[0].variance,null);
-  assert.equal(report.reports[0].eligible_from,'2026-07-01');
+  assert.equal(report.reports[0].basic_salary,2000);
+  assert.equal(report.reports[0].total_allowances,375);
+  assert.equal(Object.hasOwn(report.reports[0],'last_amount'),false);
+  assert.equal(Object.hasOwn(report.reports[0],'expected'),false);
+  assert.equal(report.reports[0].eligible_from,'2026-10-01');
 });
 
 test('highest prior values ignore partial-pay rebounds and do not let allowance forfeiture hide a basic increment',()=>{

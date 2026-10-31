@@ -24,7 +24,7 @@ export function incrementEligibility(value, year, month) {
   const lastMonth = months[match[1]];
   if (!lastMonth) return null;
   const dueKey = monthKey(scheduleYear,lastMonth) + 6;
-  if (dueKey > monthKey(year,month)) return null;
+  if (dueKey !== monthKey(year,month)) return null;
   const dueDate = new Date(Date.UTC(scheduleYear,lastMonth - 1 + 6,1)).toISOString().slice(0,10);
   return {last_increment_month:`${scheduleYear}-${String(lastMonth).padStart(2,'0')}-01`,eligible_from:dueDate,
     last_amount:Number.isFinite(amount) && separator >= 0 && text.slice(separator+1).trim() !== '' && amount >= 0 ? amount : null};
@@ -67,7 +67,10 @@ export function buildIncrementReport({employees, payroll, year, month, mode, bra
     const foreign = key(employee.address).includes('FRN');
     if ((staffScope === 'local' && foreign) || (staffScope === 'foreign' && !foreign)) continue;
     const eligibility = key(employee.is_active) === 'TRUE' ? incrementEligibility(employee.inc_details, year, month) : null;
-    const expected = eligibility?.last_amount ?? null;
+    const salaryValue=value=>value==null?null:(Number.isFinite(Number(value))&&Number(value)>=0?Number(value):null);
+    const allowanceFields=['elaun_kedatangan','elaun_perkhidmatan','elaun_kerajinan','elaun_makanan'];
+    const basicSalary=salaryValue(employee.basic_salary);
+    const totalAllowances=allowanceFields.some(field=>Object.hasOwn(employee,field))?money(allowanceFields.reduce((sum,field)=>sum+(salaryValue(employee[field])??0),0)):null;
     const evidence = payrollIncrementEvidence(histories.get(id) ?? [], year, month);
     let result;
     if (mode === 'eligible') {
@@ -81,19 +84,18 @@ export function buildIncrementReport({employees, payroll, year, month, mode, bra
       else if (evidence.state === 'invalid_payroll') result = 'Review: invalid salary';
       else if (!eligibility) result = 'Additional: not eligible';
       else if (evidence.actual === 0) result = 'Not received';
-      else if (expected == null || Math.abs(evidence.actual - expected) < 0.005) result = 'Received';
-      else if (evidence.actual < expected) result = 'Received less than last';
-      else result = 'Received more than last';
+      else result = 'Received';
     }
     rows.push({employee_id:id,name:employee.name ?? id,branch_id:employee.branch_id ?? '',
-      schedule:employee.inc_details ?? '',eligible:eligibility != null,expected,...eligibility,...evidence,result,
-      variance:evidence.actual == null || (eligibility && expected == null) ? null : money(evidence.actual - (expected ?? 0))});
+      eligible:eligibility != null,last_increment_month:eligibility?.last_increment_month??null,eligible_from:eligibility?.eligible_from??null,
+      basic_salary:basicSalary,total_allowances:totalAllowances,...evidence,result});
   }
   rows.sort((a,b) => a.result.localeCompare(b.result) || key(a.branch_id).localeCompare(key(b.branch_id)) || key(a.name).localeCompare(key(b.name)));
   const counts = {};
   for (const row of rows) counts[row.result] = (counts[row.result] ?? 0) + 1;
   return {reports:rows,counts,eligible_count:rows.filter(row => row.eligible).length,
-    expected_total:money(rows.reduce((sum,row) => sum + (row.expected ?? 0),0)),
+    basic_total:rows.some(row=>row.basic_salary==null)?null:money(rows.reduce((sum,row)=>sum+row.basic_salary,0)),
+    allowance_total:rows.some(row=>row.total_allowances==null)?null:money(rows.reduce((sum,row)=>sum+row.total_allowances,0)),
     actual_total:money(rows.reduce((sum,row) => sum + (row.actual ?? 0),0))};
 }
 
@@ -109,7 +111,7 @@ export function installIncrementReportApi(app, {authenticate, pool, renderExport
       return res.status(400).json({ok:false,message:'Invalid increment report selection.'});
     try {
       const [employeeRows, payrollRows, branchRows] = await Promise.all([
-        pool.query(`SELECT e.employee_id, e.name, e.branch_id, e.is_active, e.address, d.inc_details
+        pool.query(`SELECT e.employee_id, e.name, e.branch_id, e.is_active, e.address, d.inc_details,d.basic_salary,d.elaun_kedatangan,d.elaun_perkhidmatan,d.elaun_kerajinan,d.elaun_makanan
           FROM public.employees e LEFT JOIN public.employee_salary_defaults d ON d.employee_id=e.employee_id`),
         pool.query(`SELECT employee_id, period::text, basic_salary, elaun_kedatangan, elaun_perkhidmatan, elaun_kerajinan
           FROM public.payroll WHERE period >= (make_date($1,$2,1) - INTERVAL '7 months')::date
