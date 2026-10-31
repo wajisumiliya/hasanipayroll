@@ -10,7 +10,7 @@ import 'payroll_calculation_service.dart';
 /// 1. Employee is selected by Admin.
 /// 2. Salary defaults come from employee_salary_defaults.
 /// 3. cuti_umum uses the selected PH category: PH x1 when worked, PH-OFF has
-///    no additional pay, PH-SPL x2 when worked, and PH-GUNTI gives a replacement
+///    no additional pay, PH-SPL x2 when worked, and PH-GANTI gives a replacement
 ///    OFF instead of additional public-holiday pay.
 /// 4. For local staff, statutory wage = basic_salary - unpaid_deduction.
 /// 5. If employee_salary_defaults.epf_category = "normal":
@@ -489,10 +489,9 @@ class AttendancePayrollService {
           : 0.0;
       final attendanceStatus = _text(row['status']).trim().toUpperCase();
       final isUnpaid = _toBool(row['is_unpaid']) ||
-          attendanceStatus == 'UNPAID' ||
-          attendanceStatus == 'UNPAID LEAVE';
+          PayrollCalculationService.isUnpaidAttendanceStatus(attendanceStatus);
       final isPublicHoliday = _toBool(row['is_public_holiday']) ||
-          const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GUNTI'}
+          const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GANTI', 'PH-GUNTI'}
               .contains(attendanceStatus);
       final worked = workMinutes > 0;
 

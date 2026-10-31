@@ -69,6 +69,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261031_mc_opening_balances.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [mcOpeningVersion]);
     }
+    const attendanceStatusVersion = '20261031_attendance_ul_ph_ganti_v1';
+    const attendanceStatusMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [attendanceStatusVersion]);
+    if (!attendanceStatusMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261031_attendance_ul_ph_ganti.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [attendanceStatusVersion]);
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK'); throw error;

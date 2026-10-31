@@ -4,7 +4,7 @@ export function buildStatusReport(records,{status,branchId='',staffScope='',empl
   const groups=new Map();
   for(const {attendance:a,employee:e={}} of records) {
     const saved=key(a.status);
-    const unpaid=['UNPAID','UNPAID LEAVE'].includes(saved)||['TRUE','T','1'].includes(key(a.is_unpaid));
+    const unpaid=['UL','UNPAID','UNPAID LEAVE'].includes(saved)||['TRUE','T','1'].includes(key(a.is_unpaid));
     if(status==='MC'?!['MC','MEDICAL LEAVE'].includes(saved):!unpaid)continue;
     if(branchId&&key(a.branch_id)!==key(branchId))continue;
     const foreign=key(e?.address).includes('FRN');
@@ -56,7 +56,7 @@ export function installAttendanceStatusReportApi(app,{authenticate,pool,renderEx
         pool.query(`SELECT to_jsonb(a) AS attendance, to_jsonb(e) AS employee
           FROM public.attendance a LEFT JOIN public.employees e ON e.employee_id=a.employee_id
           WHERE a.attendance_date >= $1::date AND a.attendance_date < ($1::date + INTERVAL '1 month')
-            AND (UPPER(TRIM(COALESCE(to_jsonb(a)->>'status',''))) IN ('MC','MEDICAL LEAVE','UNPAID','UNPAID LEAVE')
+            AND (UPPER(TRIM(COALESCE(to_jsonb(a)->>'status',''))) IN ('MC','MEDICAL LEAVE','UL','UNPAID','UNPAID LEAVE')
               OR LOWER(COALESCE(to_jsonb(a)->>'is_unpaid','')) IN ('true','t','1'))`,[start]),
         pool.query('SELECT id,name FROM public.branches')]);
       const branches=Object.fromEntries(branchRows.rows.map(b=>[key(b.id),b.name==='SUNGAI PETANI'?'SP-EDAR':b.name]));

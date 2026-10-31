@@ -78,7 +78,9 @@ class AttendancePdfService {
     final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
     final unpaidTotal = days.where((day) {
           final status = day.status.trim().toUpperCase();
-          return status == 'UNPAID' || status == 'UNPAID LEAVE';
+          return status == 'UL' ||
+              status == 'UNPAID' ||
+              status == 'UNPAID LEAVE';
         }).length *
         450;
     final offDays =

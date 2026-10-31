@@ -1,3 +1,4 @@
+import {normalizeAttendanceWrite} from './attendance-status.js';
 // PostgREST-shaped adapter for the operations used by the existing Flutter
 // client. SQL identifiers come from a fixed table list plus schema metadata;
 // values are always parameters. PostgreSQL RLS authorizes every table query.
@@ -231,7 +232,8 @@ export function installDataApi(app, { pool, authenticate }) {
       const schema = await metadata(table, req);
       const params = new URL(req.originalUrl, 'http://api.invalid').searchParams;
       const prefer = String(req.get('Prefer') || '');
-      const query = compileTableQuery({ table, method: req.method, params, body: req.body, ...schema, prefer });
+      const body = table === 'attendance' && !readOnly ? (Array.isArray(req.body) ? req.body.map(normalizeAttendanceWrite) : normalizeAttendanceWrite(req.body)) : req.body;
+      const query = compileTableQuery({ table, method: req.method, params, body, ...schema, prefer });
       const rows = query.empty ? [] : await withDatabaseIdentity(pool, claimsForRequest(req), async (client) => (await client.query(query.sql, query.values)).rows.map((row) => row.data));
       res.set('Cache-Control', 'no-store');
       if (String(req.get('Accept')).includes('application/vnd.pgrst.object+json')) {

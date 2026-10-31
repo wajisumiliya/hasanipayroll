@@ -182,3 +182,20 @@ employee's dates across transfers. Negative closings remain visible as overuse.
 Missing openings remain Not set. No automatic annual reset or new entitlement
 is assumed. Printing reads the ledger and attendance only and never writes a
 second deduction. Unpaid/AL behavior is unchanged.
+
+### UL and corrected public-holiday spelling
+
+Attendance menus, roster assignment, status displays and exports now use PH-GANTI
+instead of PH-GUNTI. The migration updates existing text-backed attendance/roster
+records and extends their existing single-column status checks without dropping
+compound shift validation. Enum-backed schemas gain UL and use the corrected enum
+label. Old-client PH-GUNTI writes are normalized to PH-GANTI; the replacement-OFF
+calculation accepts both spellings for compatibility.
+
+UL is a distinct selectable code for unpaid leave. It sets is_unpaid on attendance
+writes and follows the existing unpaid-day payroll calculation. Unpaid Report
+lists/PDFs include saved UL dates as well as legacy UNPAID/UNPAID LEAVE entries and
+explicit unpaid flags. MC reports remain separate. UL is excluded from late and
+excess-break occurrence calculations and included in leave/off attendance totals.
+Deploy backend/migrations/20261031_attendance_ul_ph_ganti.sql through backend
+startup before using the new status in the rebuilt frontend.

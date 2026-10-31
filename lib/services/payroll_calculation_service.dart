@@ -4,6 +4,12 @@
 /// basic_salary and fw_salary. [salaryBase] deliberately chooses one salary
 /// source so those records are never double counted.
 class PayrollCalculationService {
+  static bool isUnpaidAttendanceStatus(String status) => const {
+        'UL',
+        'UNPAID',
+        'UNPAID LEAVE'
+      }.contains(status.trim().toUpperCase());
+
   static const Set<String> _overtimeExcludedEmployeeIds = {'HED1016'};
 
   /// Employees in this exception list cannot calculate, approve, display, or
@@ -67,7 +73,7 @@ class PayrollCalculationService {
   /// PH     + worked time = daily rate x 1
   /// PH-OFF               = no additional pay
   /// PH-SPL + worked time = daily rate x 2
-  /// PH-GUNTI + worked    = replacement OFF only; no additional PH pay
+  /// PH-GANTI + worked    = replacement OFF only; no additional PH pay
   static double publicHolidayPayForStatus({
     required double basicSalary,
     required String status,
@@ -88,7 +94,10 @@ class PayrollCalculationService {
     required String status,
     required bool worked,
   }) =>
-      status.trim().toUpperCase() == 'PH-GUNTI' && worked ? 1 : 0;
+      const {'PH-GANTI', 'PH-GUNTI'}.contains(status.trim().toUpperCase()) &&
+              worked
+          ? 1
+          : 0;
 
   /// Payable overtime comes only from Admin-approved minutes.
   static double approvedOvertimeHours(int? approvedMinutes) {

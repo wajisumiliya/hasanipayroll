@@ -1,3 +1,4 @@
+import {normalizeAttendanceWrite} from './attendance-status.js';
 const allowedAttendanceFields = [
   "id", "employee_id", "branch_id", "attendance_date", "check_in", "check_out",
   "status", "morning_in", "morning_out", "afternoon_in", "afternoon_out",
@@ -19,7 +20,8 @@ export function withCanonicalBranchId(row, branchId) {
 export function buildAttendanceUpserts(rows) {
   const groups = new Map();
 
-  for (const row of rows) {
+  for (const original of rows) {
+    const row = normalizeAttendanceWrite(original);
     const fields = allowedAttendanceFields.filter((field) => Object.hasOwn(row, field));
     const key = fields.join(",");
     const group = groups.get(key) ?? { fields, rows: [] };

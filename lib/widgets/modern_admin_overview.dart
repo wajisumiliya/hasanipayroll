@@ -65,6 +65,7 @@ class AdminOverviewMetrics {
                 'PL',
                 'AL',
                 'EL',
+                'UL',
                 'UNPAID',
                 'PH-OFF',
                 'PH-SPL',
@@ -106,6 +107,7 @@ class AdminOverviewMetrics {
                 'AL',
                 'EL',
                 'PH',
+                'UL',
                 'UNPAID',
                 'PH-OFF',
                 'PH-SPL',
@@ -2017,6 +2019,7 @@ class _ReferencePayrollDashboard extends StatelessWidget {
                           'PL',
                           'AL',
                           'EL',
+                          'UL',
                           'UNPAID',
                           'PH-OFF',
                           'PH-SPL'

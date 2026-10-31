@@ -3,6 +3,24 @@ import 'package:hasani_payroll_portal/models/payroll.dart';
 import 'package:hasani_payroll_portal/services/payroll_calculation_service.dart';
 
 void main() {
+  test('UL is unpaid and PH-GANTI preserves legacy replacement OFF entitlement',
+      () {
+    expect(PayrollCalculationService.isUnpaidAttendanceStatus('UL'), isTrue);
+    expect(
+        PayrollCalculationService.isUnpaidAttendanceStatus(' unpaid '), isTrue);
+    expect(PayrollCalculationService.isUnpaidAttendanceStatus('MC'), isFalse);
+    for (final code in ['PH-GANTI', 'PH-GUNTI']) {
+      expect(
+          PayrollCalculationService.replacementOffDaysForStatus(
+              status: code, worked: true),
+          1);
+      expect(
+          PayrollCalculationService.replacementOffDaysForStatus(
+              status: code, worked: false),
+          0);
+    }
+  });
+
   group('PayrollCalculationService salary base', () {
     test('uses local basic salary when FW salary is zero', () {
       expect(

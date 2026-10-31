@@ -10488,7 +10488,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'PH' => const Color(0xFFE53935),
         'PH-OFF' => const Color(0xFFF57C00),
         'PH-SPL' => const Color(0xFF8E24AA),
-        'PH-GUNTI' => const Color(0xFF00897B),
+        'PH-GANTI' => const Color(0xFF00897B),
         _ => _midnight,
       };
 
@@ -10503,7 +10503,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         : '$employeeId|${_attendanceDateText(_attendanceStatusDate)}';
     if (_attendanceStatusUpdatingIds.contains(updateKey)) return;
 
-    if (newStatus == 'PH-GUNTI') {
+    if (newStatus == 'PH-GANTI') {
       final netMinutes = num.tryParse(
             (record['net_working_minutes'] ?? record['work_minutes'] ?? '0')
                 .toString(),
@@ -10517,7 +10517,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               workingOut.isNotEmpty &&
               workingOut != '-');
       if (!hasWorkingTime) {
-        _message('PH-GUNTI requires working-in and working-out time.');
+        _message('PH-GANTI requires working-in and working-out time.');
         return;
       }
     }
@@ -10527,8 +10527,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       final values = <String, dynamic>{
         'status': newStatus,
         'is_public_holiday':
-            const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GUNTI'}.contains(newStatus),
-        'is_unpaid': newStatus == 'UNPAID',
+            const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GANTI'}.contains(newStatus),
+        'is_unpaid': (newStatus == 'UNPAID' || newStatus == 'UL'),
       };
       if (recordId.isNotEmpty) {
         await SupabaseService.updateAttendance(recordId, values);
@@ -10675,7 +10675,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       'PH',
       'PH-OFF',
       'PH-SPL',
-      'PH-GUNTI',
+      'PH-GANTI',
+      'UL',
       'UNPAID',
     ];
     return FutureBuilder<List<dynamic>>(
