@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.qr_attendance_events (
   CONSTRAINT qr_attendance_source CHECK (source = 'USB_QR')
 );
 CREATE INDEX IF NOT EXISTS qr_attendance_lookup_idx ON public.qr_attendance_events(employee_id, scanned_at DESC);
+CREATE INDEX IF NOT EXISTS qr_attendance_timestamp_idx ON public.qr_attendance_events(scanned_at);
 CREATE INDEX IF NOT EXISTS qr_attendance_branch_date_idx ON public.qr_attendance_events(branch_id, scanned_at DESC);
 REVOKE ALL ON public.qr_attendance_credentials FROM PUBLIC;
 REVOKE ALL ON public.qr_attendance_events FROM PUBLIC;
@@ -54,6 +55,7 @@ ALTER TABLE public.qr_attendance_events ADD COLUMN IF NOT EXISTS work_date date;
 ALTER TABLE public.qr_attendance_events ADD COLUMN IF NOT EXISTS paired_event_id bigint REFERENCES public.qr_attendance_events(id);
 ALTER TABLE public.qr_attendance_events ADD COLUMN IF NOT EXISTS verified_by text;
 UPDATE public.qr_attendance_events SET work_date=(scanned_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date WHERE work_date IS NULL;
+ALTER TABLE public.qr_attendance_events ALTER COLUMN work_date SET NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS qr_event_request_idx ON public.qr_attendance_events(session_id,request_id) WHERE request_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS qr_event_work_date_idx ON public.qr_attendance_events(branch_id,work_date,employee_id);
 CREATE TABLE IF NOT EXISTS public.qr_attendance_attempts (
@@ -106,6 +108,9 @@ CREATE TABLE IF NOT EXISTS public.qr_attendance_corrections (
   reviewed_by text,
   reviewed_at timestamptz
 );
+CREATE INDEX IF NOT EXISTS qr_correction_date_idx ON public.qr_attendance_corrections(corrected_at) WHERE status='APPROVED';
+CREATE INDEX IF NOT EXISTS qr_correction_event_latest_idx ON public.qr_attendance_corrections(event_id,id DESC) WHERE status='APPROVED';
+CREATE INDEX IF NOT EXISTS qr_correction_manual_time_idx ON public.qr_attendance_corrections(employee_id,corrected_at DESC) WHERE status='APPROVED' AND event_id IS NULL;
 CREATE INDEX IF NOT EXISTS qr_correction_employee_day_idx ON public.qr_attendance_corrections(employee_id,work_date,id DESC);
 CREATE TABLE IF NOT EXISTS public.qr_attendance_reconciliations (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -150,13 +155,15 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.qr_attendance_presence (
   employee_id text PRIMARY KEY REFERENCES public.employees(employee_id),
   branch_id text NOT NULL, action text NOT NULL CHECK(action IN ('IN','OUT')),
-  work_date date NOT NULL, scanned_at timestamptz NOT NULL
+  work_date date NOT NULL, scanned_at timestamptz NOT NULL,raw_id bigint,event_key text
 );
+ALTER TABLE public.qr_attendance_presence ADD COLUMN IF NOT EXISTS raw_id bigint;
+ALTER TABLE public.qr_attendance_presence ADD COLUMN IF NOT EXISTS event_key text;
 CREATE INDEX IF NOT EXISTS qr_presence_open_idx ON public.qr_attendance_presence(branch_id,work_date) WHERE action='IN';
-INSERT INTO public.qr_attendance_presence(employee_id,branch_id,action,work_date,scanned_at)
-SELECT DISTINCT ON(employee_id) employee_id,branch_id,action,work_date,scanned_at FROM public.qr_attendance_effective_events
+INSERT INTO public.qr_attendance_presence(employee_id,branch_id,action,work_date,scanned_at,raw_id,event_key)
+SELECT DISTINCT ON(employee_id) employee_id,branch_id,action,work_date,scanned_at,raw_id,event_key FROM public.qr_attendance_effective_events
 ORDER BY employee_id,scanned_at DESC,event_key DESC
-ON CONFLICT(employee_id) DO UPDATE SET branch_id=EXCLUDED.branch_id,action=EXCLUDED.action,work_date=EXCLUDED.work_date,scanned_at=EXCLUDED.scanned_at;
+ON CONFLICT(employee_id) DO UPDATE SET branch_id=EXCLUDED.branch_id,action=EXCLUDED.action,work_date=EXCLUDED.work_date,scanned_at=EXCLUDED.scanned_at,raw_id=EXCLUDED.raw_id,event_key=EXCLUDED.event_key;
 REVOKE ALL ON public.qr_attendance_presence FROM PUBLIC;
 DO $$ DECLARE r text; BEGIN FOREACH r IN ARRAY ARRAY['anon','authenticated'] LOOP
   IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=r) THEN EXECUTE format('REVOKE ALL ON public.qr_attendance_presence FROM %I',r); END IF;

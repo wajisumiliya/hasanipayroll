@@ -96,6 +96,8 @@ test('QR attendance PostgreSQL integration (isolated disposable database only)',
   await t.test('expired/revoked scanner sessions and different operators cannot punch',async()=>{
     const data=await setup();
     assert.equal((await api('/scan',{...data,request_id:crypto.randomUUID()},{'x-user':'different'})).code,'SESSION_EXPIRED');
+    await pool.query("UPDATE qr_attendance_sessions SET expires_at=clock_timestamp()-INTERVAL '1 second' WHERE id=$1",[data.session_id]);
+    assert.equal((await punch(data)).code,'SESSION_EXPIRED');
     await api('/session/revoke',{session_id:data.session_id});assert.equal((await punch(data)).code,'SESSION_EXPIRED');
   });
   async function seedWork(){
@@ -136,6 +138,79 @@ test('QR attendance PostgreSQL integration (isolated disposable database only)',
     const correction=await api('/corrections',{employee_id:'E1',date,action:'OUT',corrected_at:new Date(Date.now()-1800000).toISOString(),reason:'Invalid extra checkout test'});
     const result=await api('/corrections/review',{id:correction.id,approved:true},admin);assert.equal(result.code,'IMPOSSIBLE_CORRECTION');
     assert.equal((await pool.query('SELECT status FROM qr_attendance_corrections WHERE id=$1',[correction.id])).rows[0].status,'PENDING');
+  });
+  await t.test('uncertain requests can be atomically cancelled, including after session revocation',async()=>{
+    const data=await setup(),request_id=crypto.randomUUID();
+    await api('/session/revoke',{session_id:data.session_id});
+    const cancelled=await api('/requests/cancel',{session_id:data.session_id,request_id});
+    assert.equal(cancelled.cancelled,true);
+    const lookup=await api(`/requests/${request_id}?session_id=${data.session_id}`);assert.equal(lookup.code,'CANCELLED');assert.equal(lookup.attempt_recorded,true);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM qr_attendance_events')).rows[0].n,0);
+  });
+  await t.test('cancel versus scan race is resolved under the same request lock',async()=>{
+    const data=await setup(),request_id=crypto.randomUUID();
+    const [scan,cancel]=await Promise.all([api('/scan',{...data,request_id}),api('/requests/cancel',{session_id:data.session_id,request_id})]);
+    const count=(await pool.query('SELECT count(*)::int AS n FROM qr_attendance_events')).rows[0].n;
+    if(cancel.cancelled){assert.equal(count,0);assert.equal(scan.ok,false);}else{assert.equal(count,1);assert.equal(cancel.event_id,scan.event_id);}
+  });
+  await t.test('client clocks and action fields cannot override database-clock punches',async()=>{
+    const data=await setup(),before=new Date();
+    const recorded=await punch({...data,scanned_at:'1990-01-01T00:00:00Z',action:'OUT',employee_id:'E2',branch_id:'B'});
+    assert.equal(recorded.action,'IN');assert.equal(recorded.employee_id,'E1');assert.equal(recorded.branch_id,'A');
+    assert.ok(new Date(recorded.scanned_at)>=before);assert.ok(new Date(recorded.scanned_at)<=new Date());
+  });
+  await t.test('invalid previews are audited and scanner endpoints are rate limited',async()=>{
+    const data=await setup();let last;
+    for(let i=0;i<122;i++)last=await api('/preview',{...data,qr_value:'invalid'});
+    assert.equal(last.status,429);assert.equal(last.code,'RATE_LIMITED');
+    const audit=await api('/audit');assert.ok(audit.audit.some(row=>row.action==='PREVIEW_REJECTED'));
+  });
+  await t.test('administrators can close a historical branch session before an approved employee transfer',async()=>{
+    const data=await setup(),date=dayMY(new Date(Date.now()-7200000));
+    await pool.query("INSERT INTO qr_attendance_events(employee_id,branch_id,action,scanned_at,scanned_by,work_date) VALUES('E1','A','IN',clock_timestamp()-INTERVAL '2 hours','seed',$1)",[date]);
+    await pool.query("UPDATE employees SET branch_id='B' WHERE employee_id='E1'");
+    const correction=await api('/corrections',{employee_id:'E1',branch_id:'A',date,action:'OUT',corrected_at:new Date(Date.now()-3600000).toISOString(),reason:'Admin verified checkout before transfer'},admin);
+    assert.equal(correction.ok,true);assert.equal((await api('/corrections/review',{id:correction.id,approved:true},admin)).ok,true);
+    const station=await api('/stations',{branch_id:'B',label:'Transferred branch',verification_required:false},admin);
+    const b={'x-branch':'B','x-user':'branch-b'};
+    const session=await api('/session',{station_id:station.id},b);
+    const record=await api('/scan',{session_id:session.id,request_id:crypto.randomUUID(),qr_value:data.qr_value},b);
+    assert.equal(record.action,'IN');assert.equal(record.branch_id,'B');
+  });
+  await t.test('related corrections can be approved atomically while raw punches remain immutable',async()=>{
+    const {date}=await seedWork();const raw=(await pool.query('SELECT id,scanned_at FROM qr_attendance_events ORDER BY id')).rows;
+    const ids=[];
+    for(const event of raw){const c=await api('/corrections',{employee_id:'E1',date,event_id:event.id,action:'VOID',corrected_at:event.scanned_at,reason:'Supervisor confirmed accidental complete session'},admin);ids.push(c.id);}
+    const reviewed=await api('/corrections/review',{ids,approved:true},admin);assert.equal(reviewed.ok,true);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM qr_attendance_events')).rows[0].n,2);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM qr_attendance_effective_events')).rows[0].n,0);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM qr_attendance_presence')).rows[0].n,0);
+  });
+  await t.test('an existing card stops working when the employee is inactive or the credential expires',async()=>{
+    const data=await setup();await pool.query("UPDATE employees SET is_active=false WHERE employee_id='E1'");
+    assert.equal((await punch(data)).code,'INACTIVE_EMPLOYEE');
+    await pool.query("UPDATE employees SET is_active=true WHERE employee_id='E1'; UPDATE qr_attendance_credentials SET expires_at=clock_timestamp()-INTERVAL '1 hour'");
+    assert.equal((await punch(data)).code,'REVOKED_QR');
+  });
+  await t.test('overnight checkout appears on the next calendar day without merging separate work dates',async()=>{
+    await setup();
+    await pool.query(`INSERT INTO qr_attendance_events(employee_id,branch_id,action,scanned_at,scanned_by,work_date) VALUES
+      ('E1','A','IN','2026-10-30T14:10:00Z','seed','2026-10-30'),
+      ('E1','A','OUT','2026-10-30T22:00:00Z','seed','2026-10-30'),
+      ('E1','A','IN','2026-10-31T01:00:00Z','seed','2026-10-31')`);
+    await pool.query("INSERT INTO daily_rosters VALUES('E1','A','2026-10-30','22:00','06:00',60,'SHIFT'); INSERT INTO monthly_rosters VALUES('E1','A',2026,10,5,'09:00','18:00',60)");
+    const dashboard=await api('/dashboard?date=2026-10-31');
+    assert.equal(dashboard.ok,true);assert.equal(dashboard.employees.length,2);assert.equal(dashboard.totals.punches,2);
+    assert.equal(dashboard.totals.in,1);assert.equal(dashboard.totals.out,0);
+    assert.ok(dashboard.employees.some(row=>row.work_date==='2026-10-30'&&row.action==='OUT'&&row.late_minutes===10));
+  });
+  await t.test('reconciliation supports PostgreSQL enum statuses and time columns',async()=>{
+    const {date}=await seedWork();
+    await pool.query("CREATE TYPE qr_test_status AS ENUM ('Present','Late','MC'); ALTER TABLE attendance ALTER COLUMN status TYPE qr_test_status USING status::qr_test_status");
+    for(const field of ['check_in','check_out','morning_in','morning_out','afternoon_in','afternoon_out'])await pool.query(`ALTER TABLE attendance ALTER COLUMN ${field} TYPE time USING NULLIF(${field},'-')::time`);
+    const proposal=await api(`/reconciliation?employee_id=E1&date=${date}`,undefined,admin);
+    const result=await api('/reconcile',{employee_id:'E1',date,fingerprint:proposal.proposal.fingerprint},admin);
+    assert.equal(result.ok,true);assert.equal(result.attendance.status,'Present');
   });
   await t.test('PDF and Excel exports honor branch/date filters and render real files',async()=>{
     const {date}=await seedWork();

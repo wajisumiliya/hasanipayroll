@@ -57,16 +57,16 @@ async function effective(client,id,date=null) {
     ${date?'AND work_date=$2::date':''} ORDER BY scanned_at,event_key`,date?[id,date]:[id])).rows;
 }
 async function attemptResponse(client,attempt) {
-  if (attempt.status==='REJECTED') return {ok:false,code:attempt.code,message:attempt.message,http_status:attempt.http_status,request_id:attempt.request_id};
+  if (attempt.status==='REJECTED') return {ok:false,code:attempt.code,message:attempt.message,http_status:attempt.http_status,request_id:attempt.request_id,attempt_recorded:true};
   const result=await client.query(`SELECT v.id AS event_id,v.action,v.scanned_at,v.work_date::text,e.employee_id,e.name,e.branch_id
     FROM public.qr_attendance_events v JOIN public.employees e ON e.employee_id=v.employee_id WHERE v.id=$1`,[attempt.event_id]);
-  return {ok:true,...result.rows[0],request_id:attempt.request_id,replayed:true};
+  return {ok:true,...result.rows[0],request_id:attempt.request_id,replayed:true,attempt_recorded:true};
 }
 async function refreshPresence(client,id) {
-  await client.query(`INSERT INTO public.qr_attendance_presence(employee_id,branch_id,action,work_date,scanned_at)
-    SELECT employee_id,branch_id,action,work_date,scanned_at FROM public.qr_attendance_effective_events WHERE employee_id=$1
+  await client.query(`INSERT INTO public.qr_attendance_presence(employee_id,branch_id,action,work_date,scanned_at,raw_id,event_key)
+    SELECT employee_id,branch_id,action,work_date,scanned_at,raw_id,event_key FROM public.qr_attendance_effective_events WHERE employee_id=$1
     ORDER BY scanned_at DESC,event_key DESC LIMIT 1 ON CONFLICT(employee_id) DO UPDATE
-    SET branch_id=EXCLUDED.branch_id,action=EXCLUDED.action,work_date=EXCLUDED.work_date,scanned_at=EXCLUDED.scanned_at`,[id]);
+    SET branch_id=EXCLUDED.branch_id,action=EXCLUDED.action,work_date=EXCLUDED.work_date,scanned_at=EXCLUDED.scanned_at,raw_id=EXCLUDED.raw_id,event_key=EXCLUDED.event_key`,[id]);
   // If every raw punch was voided, there is no current presence to display.
   await client.query('DELETE FROM public.qr_attendance_presence WHERE employee_id=$1 AND NOT EXISTS(SELECT 1 FROM public.qr_attendance_effective_events WHERE employee_id=$1)',[id]);
 }
@@ -97,9 +97,9 @@ export function installQrAttendanceApi(app,pool,authenticate,{exportReport=rende
     app.use('/api/qr-attendance',authenticate,(_req,res)=>res.status(503).json({ok:false,code:'QR_DISABLED',message:'QR attendance is disabled until the approved migration and staging checks are completed.'}));
     return;
   }
-  const manage=rateLimit({windowMs:60000,limit:30,standardHeaders:true,legacyHeaders:false});
-  const scanLimit=rateLimit({windowMs:60000,limit:120,standardHeaders:true,legacyHeaders:false});
-  const readLimit=rateLimit({windowMs:60000,limit:180,standardHeaders:true,legacyHeaders:false});
+  const manage=rateLimit({windowMs:60000,limit:30,standardHeaders:true,legacyHeaders:false,message:{ok:false,code:'RATE_LIMITED',message:'Too many QR requests. Wait before trying again.'}});
+  const scanLimit=rateLimit({windowMs:60000,limit:120,standardHeaders:true,legacyHeaders:false,message:{ok:false,code:'RATE_LIMITED',message:'Too many QR requests. Wait before trying again.'}});
+  const readLimit=rateLimit({windowMs:60000,limit:180,standardHeaders:true,legacyHeaders:false,message:{ok:false,code:'RATE_LIMITED',message:'Too many QR requests. Wait before trying again.'}});
   const get=(path,permission,fn)=>app.get('/api/qr-attendance'+path,authenticate,readLimit,handler(pool,permission,fn));
   const post=(path,permission,fn,limiter=manage)=>app.post('/api/qr-attendance'+path,authenticate,limiter,handler(pool,permission,fn));
 
@@ -191,7 +191,7 @@ export function installQrAttendanceApi(app,pool,authenticate,{exportReport=rende
     try { e=await qrEmployee(client,req,token); }
     catch(error) {
       if (!(error instanceof QrError)) throw error;
-      await audit(client,req,'PREVIEW_REJECTED',null,station.branch_id,{code:error.code});
+      await audit(client,req,'PREVIEW_REJECTED',null,station.branch_id,{code:error.code,message:error.message});
       return {ok:false,http_status:error.status,code:error.code,message:error.message};
     }
     const ticket=crypto.randomBytes(32).toString('base64url');
@@ -213,7 +213,8 @@ export function installQrAttendanceApi(app,pool,authenticate,{exportReport=rende
       try {
         employee=await qrEmployee(client,req,token);
         const now=(await client.query('SELECT clock_timestamp() AS ts')).rows[0].ts;
-        const previous=(await client.query(`SELECT *,work_date::text FROM public.qr_attendance_effective_events
+        const presence=(await client.query('SELECT *,work_date::text FROM public.qr_attendance_presence WHERE employee_id=$1',[employee.employee_id])).rows[0];
+        const previous=presence??(await client.query(`SELECT *,work_date::text FROM public.qr_attendance_effective_events
           WHERE employee_id=$1 ORDER BY scanned_at DESC,event_key DESC LIMIT 1`,[employee.employee_id])).rows[0];
         const next=nextPunch(previous,now,station);
         if (next.action==='IN') {
@@ -234,7 +235,9 @@ export function installQrAttendanceApi(app,pool,authenticate,{exportReport=rende
         }
         const event=(await client.query(`INSERT INTO public.qr_attendance_events(employee_id,branch_id,action,scanned_at,scanned_by,session_id,request_id,work_date,paired_event_id,verified_by)
           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,scanned_at`,[employee.employee_id,employee.branch_id,next.action,now,actor(req),sessionId,requestId,next.work_date,next.paired_event_id,station.verification_required?actor(req):null])).rows[0];
-        await refreshPresence(client,employee.employee_id);
+        await client.query(`INSERT INTO public.qr_attendance_presence(employee_id,branch_id,action,work_date,scanned_at,raw_id,event_key)
+          VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(employee_id) DO UPDATE SET branch_id=EXCLUDED.branch_id,action=EXCLUDED.action,
+          work_date=EXCLUDED.work_date,scanned_at=EXCLUDED.scanned_at,raw_id=EXCLUDED.raw_id,event_key=EXCLUDED.event_key`,[employee.employee_id,employee.branch_id,next.action,next.work_date,now,event.id,'E'+event.id]);
         result={ok:true,code:'RECORDED',message:'Attendance recorded.',...publicEmployee(employee),...next,event_id:event.id,scanned_at:event.scanned_at,request_id:requestId};
         await audit(client,req,'PUNCH_'+next.action,employee.employee_id,employee.branch_id,{event_id:event.id,request_id:requestId,session_id:sessionId,verified:station.verification_required});
       } catch(error) {
@@ -243,9 +246,21 @@ export function installQrAttendanceApi(app,pool,authenticate,{exportReport=rende
       }
       await client.query(`INSERT INTO public.qr_attendance_attempts(session_id,request_id,credential_hash,employee_id,branch_id,operator,status,code,message,http_status,event_id)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,[sessionId,requestId,hashQr(token),employee?.employee_id??null,station.branch_id,actor(req),result.ok?'ACCEPTED':'REJECTED',result.code,result.message,result.http_status??200,result.event_id??null]);
+      result.attempt_recorded=true;
       return result;
     });
   },scanLimit);
+  post('/requests/cancel',isBranch,async req=>transaction(pool,async client=>{
+    const station=await session(client,req,req.body?.session_id,true),id=req.body?.request_id;
+    if(!validUuid(id))throw new QrError('INVALID_REQUEST','Invalid request identifier.',400);
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['qr-request:'+req.body.session_id+':'+id]);
+    const previous=(await client.query('SELECT * FROM public.qr_attendance_attempts WHERE session_id=$1 AND request_id=$2',[req.body.session_id,id])).rows[0];
+    if(previous?.status==='ACCEPTED')return attemptResponse(client,previous);
+    if(!previous)await client.query(`INSERT INTO public.qr_attendance_attempts(session_id,request_id,credential_hash,branch_id,operator,status,code,message,http_status)
+      VALUES($1,$2,$3,$4,$5,'REJECTED','CANCELLED','Request cancelled without recording a punch.',409)`,[req.body.session_id,id,hashQr('cancelled:'+id),station.branch_id,actor(req)]);
+    await audit(client,req,'SCAN_CANCELLED',null,station.branch_id,{request_id:id,session_id:req.body.session_id});
+    return {ok:true,cancelled:true,request_id:id,attempt_recorded:true};
+  }));
   get('/requests/:requestId',isBranch,async req=>transaction(pool,async client=>{
     await session(client,req,req.query.session_id,true);
     if (!validUuid(req.params.requestId)) throw new QrError('INVALID_REQUEST','Invalid request identifier.',400);
@@ -315,10 +330,12 @@ export function installQrAttendanceApi(app,pool,authenticate,{exportReport=rende
     if (action==='VOID'&&!body.event_id) throw new QrError('INVALID_CORRECTION','VOID requires an original event.',400);
     const e=(await client.query(`SELECT ${employeeSelect} FROM public.employees e WHERE employee_id=$1`,[id])).rows[0];ensureEmployeeScope(req,e);
     const eventId=body.event_id??null;
-    if (eventId&&!(await client.query('SELECT id FROM public.qr_attendance_events WHERE id=$1 AND employee_id=$2 AND work_date=$3::date AND upper(branch_id)=upper($4)',[eventId,id,date,e.branch_id])).rowCount) throw new QrError('INVALID_EVENT','Original event does not match this employee, branch and work date.',400);
+    const correctionBranch=isAdmin(req)?String(body.branch_id??e.branch_id):e.branch_id;
+    if (upper(correctionBranch)!==upper(e.branch_id)&&!(await client.query('SELECT id FROM public.qr_attendance_events WHERE employee_id=$1 AND work_date=$2::date AND upper(branch_id)=upper($3) LIMIT 1',[id,date,correctionBranch])).rowCount) throw new QrError('TRANSFER_REVIEW','No original punches establish this historical branch.',400);
+    if (eventId&&!(await client.query('SELECT id FROM public.qr_attendance_events WHERE id=$1 AND employee_id=$2 AND work_date=$3::date AND upper(branch_id)=upper($4)',[eventId,id,date,correctionBranch])).rowCount) throw new QrError('INVALID_EVENT','Original event does not match this employee, branch and work date.',400);
     const row=(await client.query(`INSERT INTO public.qr_attendance_corrections(employee_id,branch_id,work_date,event_id,action,corrected_at,reason,requested_by)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,[id,e.branch_id,date,eventId,action,timestamp,reason,actor(req)])).rows[0];
-    await audit(client,req,'CORRECTION_REQUESTED',id,e.branch_id,{correction_id:row.id,reason});return {ok:true,id:row.id};
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,[id,correctionBranch,date,eventId,action,timestamp,reason,actor(req)])).rows[0];
+    await audit(client,req,'CORRECTION_REQUESTED',id,correctionBranch,{correction_id:row.id,reason});return {ok:true,id:row.id};
   }));
   get('/corrections',req=>isAdmin(req)||isBranch(req),async req=>{
     const {date,branch}=selection(req);
@@ -328,24 +345,32 @@ export function installQrAttendanceApi(app,pool,authenticate,{exportReport=rende
     return {ok:true,corrections:result.rows};
   });
   post('/corrections/review',isAdmin,async req=>transaction(pool,async client=>{
-    const id=req.body?.id,approved=req.body?.approved===true;
-    const candidate=(await client.query('SELECT * FROM public.qr_attendance_corrections WHERE id=$1',[id])).rows[0];
+    const ids=req.body?.ids??[req.body?.id],approved=req.body?.approved===true;
+    if (!Array.isArray(ids)||!ids.length||ids.length>20||ids.some(id=>!/^\d+$/.test(String(id)))||new Set(ids.map(String)).size!==ids.length||typeof req.body?.approved!=='boolean') throw new QrError('INVALID_REVIEW','Choose up to 20 corrections and an explicit approve or reject action.',400);
+    const candidate=(await client.query('SELECT employee_id FROM public.qr_attendance_corrections WHERE id=$1',[ids[0]])).rows[0];
     if (!candidate) throw new QrError('NOT_FOUND','Correction not found.',404);
     await employeeLock(client,candidate.employee_id);
-    const c=(await client.query('SELECT *,work_date::text FROM public.qr_attendance_corrections WHERE id=$1 FOR UPDATE',[id])).rows[0];
-    const e=(await client.query(`SELECT ${employeeSelect} FROM public.employees e WHERE employee_id=$1`,[c.employee_id])).rows[0];ensureEmployeeScope(req,e);
-    if (c.status!=='PENDING') throw new QrError('ALREADY_REVIEWED','Correction already reviewed.');
-    const current=(await client.query('SELECT to_jsonb(a) AS data FROM public.attendance a WHERE employee_id=$1 AND attendance_date=$2::date FOR UPDATE',[c.employee_id,c.work_date])).rows[0]?.data;
-    if (approved&&current&&(bool(current.is_submitted)||bool(current.ot_authorized)||current.approved_ot_minutes!=null)) throw new QrError('ATTENDANCE_LOCKED','Unlock through the existing administrator workflow before correcting submitted or approved attendance.');
-    await client.query('UPDATE public.qr_attendance_corrections SET status=$2,reviewed_by=$3,reviewed_at=clock_timestamp() WHERE id=$1',[id,approved?'APPROVED':'REJECTED',actor(req)]);
-    if (approved) {
-      const all=await effective(client,c.employee_id);
-      for(let i=0;i<all.length;i++) {
-        if (all[i].action!==(i%2?'OUT':'IN')||(i&&new Date(all[i].scanned_at)<=new Date(all[i-1].scanned_at))) throw new QrError('IMPOSSIBLE_CORRECTION','Correction would create an impossible IN/OUT sequence. Adjust the request.');
-      }
+    const corrections=(await client.query('SELECT c.*,c.work_date::text FROM public.qr_attendance_corrections c WHERE c.id=ANY($1::bigint[]) ORDER BY c.work_date,c.id FOR UPDATE',[ids])).rows;
+    if(corrections.length!==ids.length||corrections.some(c=>c.employee_id!==candidate.employee_id))throw new QrError('INVALID_REVIEW','Review one employee at a time.',400);
+    const e=(await client.query(`SELECT ${employeeSelect} FROM public.employees e WHERE employee_id=$1`,[candidate.employee_id])).rows[0];ensureEmployeeScope(req,e);
+    for(const c of corrections) {
+      if(c.status!=='PENDING')throw new QrError('ALREADY_REVIEWED','A correction was already reviewed.');
+      const current=(await client.query('SELECT to_jsonb(a) AS data FROM public.attendance a WHERE employee_id=$1 AND attendance_date=$2::date FOR UPDATE',[c.employee_id,c.work_date])).rows[0]?.data;
+      if(approved&&current&&(bool(current.is_submitted)||bool(current.ot_authorized)||current.approved_ot_minutes!=null))throw new QrError('ATTENDANCE_LOCKED','Unlock through the existing administrator workflow before correcting submitted or approved attendance.');
     }
-    if (approved) await refreshPresence(client,c.employee_id);
-    await audit(client,req,approved?'CORRECTION_APPROVED':'CORRECTION_REJECTED',c.employee_id,c.branch_id,{correction_id:id,reason:c.reason});return {ok:true};
+    const before=approved?await effective(client,candidate.employee_id):[];
+    await client.query('UPDATE public.qr_attendance_corrections SET status=$2,reviewed_by=$3,reviewed_at=clock_timestamp() WHERE id=ANY($1::bigint[])',[ids,approved?'APPROVED':'REJECTED',actor(req)]);
+    if(approved) {
+      const after=await effective(client,candidate.employee_id);
+      const issues=events=>events.reduce((count,event,index)=>count+(event.action!==(index%2?'OUT':'IN')?1:0)+
+        (index&&new Date(event.scanned_at)<=new Date(events[index-1].scanned_at)?1:0)+
+        (index%2&&(event.work_date!==events[index-1].work_date||upper(event.branch_id)!==upper(events[index-1].branch_id))?1:0),0);
+      const afterIssues=issues(after);
+      if(afterIssues&&afterIssues>=issues(before))throw new QrError('IMPOSSIBLE_CORRECTION','Correction would create an impossible IN/OUT sequence. Review related corrections together.');
+      await refreshPresence(client,candidate.employee_id);
+    }
+    for(const c of corrections)await audit(client,req,approved?'CORRECTION_APPROVED':'CORRECTION_REJECTED',c.employee_id,c.branch_id,{correction_id:c.id,reason:c.reason,batch:ids});
+    return {ok:true};
   }));
 }
 
@@ -353,21 +378,24 @@ async function dashboard(pool,req) {
   const {date,branch}=selection(req),q=upper(req.query.q);
   const [eventRows,attemptRows,daily,monthly,previewRejects]=await Promise.all([
     pool.query(`SELECT v.*,v.work_date::text,e.name,e.address,e.is_active FROM public.qr_attendance_effective_events v
-      JOIN public.employees e ON e.employee_id=v.employee_id WHERE (v.work_date=$1::date OR ($3 AND EXISTS (SELECT 1 FROM public.qr_attendance_presence p WHERE p.employee_id=v.employee_id AND p.action='IN' AND p.work_date=v.work_date AND p.work_date<$1::date))) AND ($2='' OR upper(v.branch_id)=upper($2)) ORDER BY v.scanned_at`,[date,branch,date===dayMY(new Date())]),
-    pool.query(`SELECT a.request_id,a.employee_id,a.branch_id,a.operator,a.code,a.message,a.status,a.attempted_at FROM public.qr_attendance_attempts a
+      JOIN public.employees e ON e.employee_id=v.employee_id WHERE (v.work_date=$1::date OR (v.employee_id,v.work_date) IN (
+        SELECT employee_id,work_date FROM public.qr_attendance_events WHERE scanned_at>=($1::date::timestamp AT TIME ZONE 'Asia/Kuala_Lumpur') AND scanned_at<(($1::date+1)::timestamp AT TIME ZONE 'Asia/Kuala_Lumpur')
+        UNION SELECT employee_id,work_date FROM public.qr_attendance_corrections WHERE status='APPROVED' AND corrected_at>=($1::date::timestamp AT TIME ZONE 'Asia/Kuala_Lumpur') AND corrected_at<(($1::date+1)::timestamp AT TIME ZONE 'Asia/Kuala_Lumpur')
+      ) OR ($3 AND EXISTS (SELECT 1 FROM public.qr_attendance_presence p WHERE p.employee_id=v.employee_id AND p.action='IN' AND p.work_date=v.work_date AND p.work_date<$1::date))) AND ($2='' OR upper(v.branch_id)=upper($2)) ORDER BY v.scanned_at`,[date,branch,date===dayMY(new Date())]),
+    pool.query(`SELECT a.request_id,a.employee_id,a.branch_id,a.operator,a.code,a.message,a.status,a.attempted_at,count(*) FILTER (WHERE a.status='REJECTED') OVER() AS rejected_total FROM public.qr_attendance_attempts a
       LEFT JOIN public.employees e ON e.employee_id=a.employee_id WHERE (a.attempted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date=$1::date
       AND ($2='' OR upper(a.branch_id)=upper($2)) AND ($3 NOT IN ('local','foreign') OR ($3='local' AND COALESCE(e.address,'') NOT ILIKE '%FRN%') OR ($3='foreign' AND e.address ILIKE '%FRN%'))
       ORDER BY attempted_at DESC LIMIT 1000`,[date,branch,scope(req)]),
-    pool.query('SELECT to_jsonb(r) AS data FROM public.daily_rosters r WHERE roster_date=$1::date',[date]),
-    pool.query('SELECT to_jsonb(r) AS data FROM public.monthly_rosters r WHERE roster_year=$1 AND roster_month=$2',[Number(date.slice(0,4)),Number(date.slice(5,7))]),
-    pool.query(`SELECT count(*)::int AS count FROM public.qr_attendance_audit WHERE action='PREVIEW_REJECTED'
-      AND (created_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date=$1::date AND ($2='' OR upper(branch_id)=upper($2))`,[date,branch]),
+    pool.query("SELECT to_jsonb(r) AS data FROM public.daily_rosters r WHERE roster_date BETWEEN $1::date-INTERVAL '7 days' AND $1::date",[date]),
+    pool.query("SELECT to_jsonb(r) AS data FROM public.monthly_rosters r WHERE (roster_year=EXTRACT(YEAR FROM $1::date) AND roster_month=EXTRACT(MONTH FROM $1::date)) OR (roster_year=EXTRACT(YEAR FROM ($1::date-INTERVAL '1 month')) AND roster_month=EXTRACT(MONTH FROM ($1::date-INTERVAL '1 month')))",[date]),
+    pool.query(`SELECT id,branch_id,operator,details->>'code' AS code,COALESCE(details->>'message','Card validation rejected.') AS message,created_at AS attempted_at,count(*) OVER() AS total_count FROM public.qr_attendance_audit WHERE action='PREVIEW_REJECTED'
+      AND (created_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date=$1::date AND ($2='' OR upper(branch_id)=upper($2)) ORDER BY id DESC LIMIT 1000`,[date,branch]),
   ]);
   const events=eventRows.rows.filter(e=>{
     try {ensureEmployeeScope(req,e);return !q||upper(e.employee_id+' '+e.name).includes(q);}catch{return false;}
   }).map(({address,...row})=>row);
   const groups=new Map();
-  for(const e of events) {const id=upper(e.employee_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(e);}
+  for(const e of events) {const id=upper(e.employee_id)+'|'+e.work_date+'|'+upper(e.branch_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(e);}
   const employees=[...groups.values()].map(rows=>{
     const first=rows[0],last=rows.at(-1),proposal=attendanceProposal(rows);
     return {employee_id:first.employee_id,name:first.name,branch_id:first.branch_id,action:last.action,
@@ -375,18 +403,18 @@ async function dashboard(pool,req) {
       missing_out:last.action==='IN'&&first.work_date<dayMY(new Date()),issues:proposal.issues,
       proposal_valid:proposal.valid,fingerprint:proposal.fingerprint,net_minutes:proposal.fields?.net_working_minutes??null};
   });
-  const late=buildLateReport({attendance:employees.map(e=>({employee_id:e.employee_id,branch_id:e.branch_id,attendance_date:e.work_date,status:'Present',check_in:clockMY(e.first_in),break_minutes:0})),
-    daily:daily.rows.map(r=>r.data),monthly:monthly.rows.map(r=>r.data),employees,year:Number(date.slice(0,4)),month:Number(date.slice(5,7)),minimum:0});
+  const lateReports=[...new Set(employees.map(e=>e.work_date.slice(0,7)))].flatMap(period=>buildLateReport({attendance:employees.map(e=>({employee_id:e.employee_id,branch_id:e.branch_id,attendance_date:e.work_date,status:'Present',check_in:clockMY(e.first_in),break_minutes:0})),
+    daily:daily.rows.map(r=>r.data),monthly:monthly.rows.map(r=>r.data),employees,year:Number(period.slice(0,4)),month:Number(period.slice(5,7)),minimum:0}).reports);
   for(const e of employees) {
-    const arrival=late.reports.find(r=>upper(r.employee_id)===upper(e.employee_id))?.events.find(event=>event.type==='arrival');
+    const arrival=lateReports.filter(r=>upper(r.employee_id)===upper(e.employee_id)&&upper(r.branch_id)===upper(e.branch_id)).flatMap(r=>r.events).find(event=>event.type==='arrival'&&event.date===e.work_date);
     e.late_minutes=arrival?.minutes??null;
     const dailyRoster=daily.rows.map(r=>r.data).find(r=>upper(r.employee_id)===upper(e.employee_id)&&upper(r.branch_id)===upper(e.branch_id)&&String(r.roster_date).slice(0,10)===e.work_date);
-    const weeklyRoster=monthly.rows.map(r=>r.data).find(r=>upper(r.employee_id)===upper(e.employee_id)&&upper(r.branch_id)===upper(e.branch_id)&&Number(r.week_number)===Math.floor((Number(e.work_date.slice(8))-1)/7)+1);
+    const weeklyRoster=monthly.rows.map(r=>r.data).find(r=>upper(r.employee_id)===upper(e.employee_id)&&upper(r.branch_id)===upper(e.branch_id)&&Number(r.roster_year)===Number(e.work_date.slice(0,4))&&Number(r.roster_month)===Number(e.work_date.slice(5,7))&&Number(r.week_number)===Math.floor((Number(e.work_date.slice(8))-1)/7)+1);
     const roster=dailyRoster??weeklyRoster;
     const start=/^(\d{2}):(\d{2})/.exec(String(roster?.shift_start??''));
     const end=/^(\d{2}):(\d{2})/.exec(String(roster?.shift_end??''));
     e.early_minutes=null;
-    if (start&&end&&!['OFF','MC','AL','EL','PL','UNPAID','UL','UL-UNPAID','PH-OFF'].includes(upper(roster?.assignment_type))) {
+    if (start&&end&&!['OFF','MC','AL','EL','PL','UNPAID','UL','UL-UNPAID','PH','PH-OFF','PH-SPL','MEDICAL LEAVE'].includes(upper(roster?.assignment_type))) {
       const startMin=Number(start[1])*60+Number(start[2]),endMin=Number(end[1])*60+Number(end[2]);
       let scheduledEnd=new Date(e.work_date+'T'+end[0]+':00+08:00');
       if(endMin<=startMin)scheduledEnd=new Date(scheduledEnd.getTime()+86400000);
@@ -395,7 +423,12 @@ async function dashboard(pool,req) {
     }
 
   }
-  return {ok:true,date,branch:branch||'All branches',employees,events,attempts:attemptRows.rows.filter(a=>!q||upper(a.employee_id).includes(q)),
-    totals:{in:employees.filter(e=>e.action==='IN').length,out:employees.filter(e=>e.action==='OUT').length,punches:events.filter(event=>dayMY(event.scanned_at)===date).length,
-      missing:employees.filter(e=>e.missing_out).length,late:employees.filter(e=>e.late_minutes>0).length,rejected:attemptRows.rows.filter(a=>a.status==='REJECTED').length+(previewRejects.rows[0]?.count??0)}};
+  for(const e of employees)if(e.action==='IN'&&!e.missing_out)e.issues=e.issues.map(issue=>issue==='Missing OUT'?'Open work session':issue);
+  const currentByEmployee=new Map();
+  for(const e of employees){const previous=currentByEmployee.get(e.employee_id);if(!previous||new Date(e.last_punch)>new Date(previous.last_punch))currentByEmployee.set(e.employee_id,e);}
+  const current=[...currentByEmployee.values()],matchingIds=new Set(employees.map(e=>upper(e.employee_id)));
+  const attempts=[...attemptRows.rows,...previewRejects.rows.map(row=>({...row,status:'REJECTED',employee_id:null,request_id:'preview-'+row.id}))].filter(a=>!q||upper(a.employee_id).includes(q)||matchingIds.has(upper(a.employee_id))).sort((a,b)=>new Date(b.attempted_at)-new Date(a.attempted_at)).slice(0,1000);
+  return {ok:true,date,branch:branch||'All branches',employees,events,attempts,
+    totals:{in:current.filter(e=>e.action==='IN').length,out:current.filter(e=>e.action==='OUT').length,punches:events.filter(event=>dayMY(event.scanned_at)===date).length,
+      missing:employees.filter(e=>e.missing_out).length,late:employees.filter(e=>e.late_minutes>0).length,rejected:q?attempts.filter(a=>a.status==='REJECTED').length:Number(attemptRows.rows[0]?.rejected_total??0)+Number(previewRejects.rows[0]?.total_count??0)}};
 }
