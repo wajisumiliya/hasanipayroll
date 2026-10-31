@@ -1950,7 +1950,7 @@ app.post("/api/attendance-sheet/rosters", authenticate, async (req, res) => {
   } finally {client.release();}
 });
 
-installQrAttendanceApi(app, pool, authenticate);
+installQrAttendanceApi(app, pool, authenticate, { enabled: process.env.QR_ATTENDANCE_ENABLED === 'true' });
 
 app.post("/api/attendance-sheet/save", authenticate, async (req,res) => {
   const role = String(req.user?.role ?? "").toUpperCase();
