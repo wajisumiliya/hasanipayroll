@@ -10,6 +10,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../models/payroll.dart';
 import '../services/app_service.dart';
+import '../services/neon_api.dart';
 import '../theme/daily_portal_theme.dart';
 import '../services/ot_request_pdf_service.dart';
 import '../services/attendance_payroll_service.dart';
@@ -242,6 +243,63 @@ class _AdminDashboardState extends State<AdminDashboard>
   String? _payrollPageFutureKey;
   Future<List<Map<String, dynamic>>>? _branchLogsFuture;
   Future<List<Map<String, dynamic>>>? _adminEmployeesFuture;
+  static const _employeePageSize = 24;
+  int _adminEmployeePage = 0;
+  List<Map<String, dynamic>>? _employeeRowsSnapshot;
+  DateTime? _employeeRowsAt;
+  int _employeeSessionVersion = NeonApi.sessionVersion;
+  bool _employeeDirectoryRefreshing = false;
+  bool _employeeEditLoading = false;
+  int _employeeEditRequest = 0;
+  final Map<String, Map<String, dynamic>> _employeeSalaryCache = {};
+  final Map<String, DateTime> _employeeSalaryCacheTime = {};
+  void _ensureEmployeeSession() {
+    if (_employeeSessionVersion != NeonApi.sessionVersion) {
+      _employeeSessionVersion = NeonApi.sessionVersion;
+      _employeeRowsSnapshot = null;
+      _employeeRowsAt = null;
+      _adminEmployeesFuture = null;
+      _employeeSalaryCache.clear();
+      _employeeSalaryCacheTime.clear();
+      _employeeDirectoryRefreshing = false;
+    }
+  }
+
+  List<Map<String, dynamic>>? get _employeeSnapshot {
+    _ensureEmployeeSession();
+    return _employeeRowsSnapshot;
+  }
+
+  void _rememberEmployeeRows(List<Map<String, dynamic>> rows) {
+    _ensureEmployeeSession();
+    _employeeRowsSnapshot = _scopedEmployeeRows(rows);
+    _employeeRowsAt = DateTime.now();
+    for (final row in _employeeRowsSnapshot!) {
+      if (!row.containsKey('_salary_defaults')) continue;
+      final id = _dashboardBranchKey(row['employee_id']);
+      _employeeSalaryCache[id] = row['_salary_defaults'] is Map
+          ? Map<String, dynamic>.from(row['_salary_defaults'] as Map)
+          : {};
+      _employeeSalaryCacheTime[id] = _employeeRowsAt!;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _employeeDirectoryData() {
+    final snapshot = _employeeSnapshot;
+    final fresh = _employeeRowsAt != null &&
+        DateTime.now().difference(_employeeRowsAt!) <
+            const Duration(seconds: 30);
+    if (_adminEmployeesFuture == null && fresh && snapshot != null) {
+      _adminEmployeesFuture = Future.value(snapshot);
+    } else if (_adminEmployeesFuture == null ||
+        (!fresh && !_employeeDirectoryRefreshing)) {
+      _employeeDirectoryRefreshing = true;
+      _adminEmployeesFuture = _loadScopedEmployees()
+          .whenComplete(() => _employeeDirectoryRefreshing = false);
+    }
+    return _adminEmployeesFuture!;
+  }
+
   Future<List<Map<String, dynamic>>>? _employeeRequestsFuture;
   String _employeeRequestStatus = 'PENDING';
   Future<List<Map<String, dynamic>>>? _otRequestsFuture;
@@ -316,6 +374,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     setState(() {
       _adminEmployeesFuture = null;
+      _employeeRowsAt = null;
       _dashboardDataFuture = null;
       _dashboardDataFutureKey = null;
       _dashboardActivityFuture = null;
@@ -1245,7 +1304,10 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     if (!mounted) return;
     employee['is_active'] = isActive;
-    setState(() => _adminEmployeesFuture = null);
+    setState(() {
+      _adminEmployeesFuture = null;
+      _employeeRowsAt = null;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -1408,9 +1470,12 @@ class _AdminDashboardState extends State<AdminDashboard>
     // Keep the existing dashboard UI and data shape while reading from Neon.
     // Do not fall back to Supabase: its quota restriction is the reason
     // this dashboard previously failed to load.
+    final session = NeonApi.sessionVersion;
     final results =
         await service.loadNeonAdminDashboard(selectedDashboardMonth);
 
+    if (session != NeonApi.sessionVersion)
+      throw StateError('Session changed. Please reopen the dashboard.');
     var employees = (results['employees'] as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
@@ -1441,6 +1506,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       }).toList();
     }
 
+    if (mounted) _rememberEmployeeRows(employees);
     return {
       'employees': employees,
       'payroll': payroll,
@@ -2760,7 +2826,12 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<List<Map<String, dynamic>>> _loadScopedEmployees() async {
     // Employee directory uses the same authenticated Neon/Render backend as
     // the working dashboard. Do not fall back to Supabase when it is limited.
-    return _scopedEmployeeRows(await service.fetchEmployeeRowsFromNeon());
+    final session = NeonApi.sessionVersion;
+    final rows = _scopedEmployeeRows(await service.fetchEmployeeRowsFromNeon());
+    if (session != NeonApi.sessionVersion)
+      throw StateError('Session changed. Please reopen Employees.');
+    if (mounted) _rememberEmployeeRows(rows);
+    return rows;
   }
 
   Widget _dashboardFlagsAndClock() {
@@ -4337,12 +4408,16 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _employeesPage() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _adminEmployeesFuture ??= _loadScopedEmployees(),
+      future: _employeeDirectoryData(),
+      initialData: _employeeSnapshot,
       builder: (context, snapshot) {
+        final cachedRows = _employeeSnapshot;
         // ----------------------------------------------------------
         // LOADING
         // ----------------------------------------------------------
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData &&
+            cachedRows == null) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(40),
@@ -4354,7 +4429,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         // ----------------------------------------------------------
         // ERROR
         // ----------------------------------------------------------
-        if (snapshot.hasError) {
+        if (snapshot.hasError && !snapshot.hasData && cachedRows == null) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -4409,7 +4484,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                         const SizedBox(height: 16),
                         OutlinedButton.icon(
                           onPressed: () {
-                            setState(() {});
+                            setState(() {
+                              _adminEmployeesFuture = null;
+                              _employeeRowsAt = null;
+                            });
                           },
                           icon: const Icon(Icons.refresh),
                           label: const Text('Retry'),
@@ -4579,7 +4657,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         // ----------------------------------------------------------
         // DATA
         // ----------------------------------------------------------
-        final allEmployees = snapshot.data ?? [];
+        final allEmployees = snapshot.data ?? cachedRows ?? [];
         final compactEmployeeView = MediaQuery.sizeOf(context).width < 760;
         final search = _adminEmployeeSearch.trim().toLowerCase();
         final branchNames = allEmployees
@@ -4629,11 +4707,36 @@ class _AdminDashboardState extends State<AdminDashboard>
                 .compareTo((b['name']?.toString() ?? '').toLowerCase());
           });
 
+        final pageCount = (employees.length / _employeePageSize).ceil();
+        final currentPage = _adminEmployeePage
+            .clamp(0, pageCount > 0 ? pageCount - 1 : 0)
+            .toInt();
+        final visibleEmployees = employees
+            .skip(currentPage * _employeePageSize)
+            .take(_employeePageSize)
+            .toList();
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const LinearProgressIndicator(minHeight: 2),
+              if (cachedRows != null && snapshot.hasError)
+                const Padding(
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Text(
+                        'Showing saved employee data. Refresh to retry the latest records.')),
+              Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                      tooltip: 'Refresh employees',
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () => setState(() {
+                            _employeeRowsAt = null;
+                            _employeeSalaryCacheTime.clear();
+                            _adminEmployeesFuture = null;
+                          }))),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final statusFilters = Wrap(
@@ -4763,6 +4866,27 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ],
               ),
               const SizedBox(height: 16),
+              if (employees.length > _employeePageSize)
+                Row(children: [
+                  Expanded(
+                      child: Text(
+                          'Showing ${currentPage * _employeePageSize + 1}–${currentPage * _employeePageSize + visibleEmployees.length} of ${employees.length} employees')),
+                  IconButton(
+                      tooltip: 'Previous employees',
+                      onPressed: currentPage == 0
+                          ? null
+                          : () => setState(
+                              () => _adminEmployeePage = currentPage - 1),
+                      icon: const Icon(Icons.chevron_left)),
+                  Text('${currentPage + 1} / $pageCount'),
+                  IconButton(
+                      tooltip: 'Next employees',
+                      onPressed: currentPage + 1 >= pageCount
+                          ? null
+                          : () => setState(
+                              () => _adminEmployeePage = currentPage + 1),
+                      icon: const Icon(Icons.chevron_right)),
+                ]),
               _panel(
                 _adminEmployeeBranchFilter == null
                     ? 'Employee List · ${employees.length}'
@@ -4777,9 +4901,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                       )
                     : _adminEmployeeBranchFilter != null
-                        ? _branchEmployeeManagementGrid(employees)
+                        ? _branchEmployeeManagementGrid(visibleEmployees)
                         : Column(
-                            children: employees.map((employee) {
+                            children: visibleEmployees.map((employee) {
                               final String employeeId =
                                   employee['employee_id']?.toString() ?? '';
 
@@ -5952,7 +6076,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                           }
                           Navigator.pop(dialogContext);
                           if (!mounted) return;
-                          setState(() => _adminEmployeesFuture = null);
+                          setState(() {
+                            _adminEmployeesFuture = null;
+                            _employeeRowsAt = null;
+                          });
                           _message(result);
                         },
                   child: Text(saving ? 'Adding...' : 'Add Employee'),
@@ -6823,7 +6950,10 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   void _refreshEmployeePhotoData() {
     if (!mounted) return;
-    setState(() => _adminEmployeesFuture = null);
+    setState(() {
+      _adminEmployeesFuture = null;
+      _employeeRowsAt = null;
+    });
     service.loadEmployeesFromSupabase();
   }
 
@@ -6939,7 +7069,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                         );
                         if (!mounted) return;
                         Navigator.pop(dialogContext);
-                        setState(() => _adminEmployeesFuture = null);
+                        setState(() {
+                          _adminEmployeesFuture = null;
+                          _employeeRowsAt = null;
+                        });
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                               content: Text('Staff transferred successfully.')),
@@ -6961,21 +7094,62 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Future<void> _showSupabaseEmployeeEdit(Map<String, dynamic> employee) async {
     final employeeId = employee['employee_id']?.toString().trim() ?? '';
-    Map<String, dynamic> salaryDefault = <String, dynamic>{};
-    try {
-      final response = await SupabaseService.database
-          .from('employee_salary_defaults')
-          .select()
-          .eq('employee_id', employeeId)
-          .maybeSingle();
-      if (response != null) {
-        salaryDefault = Map<String, dynamic>.from(response);
+    _ensureEmployeeSession();
+    Map<String, dynamic> salaryDefault;
+    final id = _dashboardBranchKey(employeeId);
+    final cachedAt = _employeeSalaryCacheTime[id];
+    if (_employeeSalaryCache.containsKey(id) &&
+        cachedAt != null &&
+        DateTime.now().difference(cachedAt) < const Duration(seconds: 30)) {
+      salaryDefault = Map<String, dynamic>.from(_employeeSalaryCache[id]!);
+    } else {
+      if (_employeeEditLoading) return;
+      _employeeEditLoading = true;
+      final request = ++_employeeEditRequest;
+      var cancelled = false;
+      BuildContext? loadingContext;
+      final session = NeonApi.sessionVersion;
+      unawaited(showDialog<void>(
+          context: context,
+          builder: (dialogContext) {
+            loadingContext = dialogContext;
+            return AlertDialog(
+                title: const Text('Edit Employee'),
+                content: const Row(children: [
+                  SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 16),
+                  Expanded(child: Text('Loading current employee information…'))
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Cancel'))
+                ]);
+          }).then((_) {
+        cancelled = true;
+        if (request == _employeeEditRequest) _employeeEditLoading = false;
+      }));
+      try {
+        final data = await service.loadEmployeeEditData(employeeId);
+        if (cancelled || !mounted || session != NeonApi.sessionVersion) return;
+        employee.addAll(Map<String, dynamic>.from(data['employee'] as Map));
+        salaryDefault =
+            Map<String, dynamic>.from(data['salary_defaults'] as Map);
+        _employeeSalaryCache[id] = Map<String, dynamic>.from(salaryDefault);
+        _employeeSalaryCacheTime[id] = DateTime.now();
+        if (loadingContext?.mounted == true) Navigator.pop(loadingContext!);
+      } catch (error) {
+        if (!cancelled && loadingContext?.mounted == true)
+          Navigator.pop(loadingContext!);
+        if (mounted && !cancelled)
+          _message('Unable to load employee edit information: $error');
+        return;
+      } finally {
+        if (request == _employeeEditRequest) _employeeEditLoading = false;
       }
-    } catch (error) {
-      if (mounted) {
-        _message('Unable to load employee salary defaults: $error');
-      }
-      return;
     }
     if (!mounted) return;
 
@@ -7590,8 +7764,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           }
                           final savedFirstName = firstName.text.trim();
                           final savedLastName = lastName.text.trim();
-                          await SupabaseService.updateEmployee(
-                              employee['employee_id'], {
+                          final employeePayload = <String, dynamic>{
                             'name': isForeignEmployee
                                 ? '$savedFirstName $savedLastName'.trim()
                                 : fields['Name']!.text.trim(),
@@ -7622,7 +7795,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'payroll_branch_id': payrollBranchId.isEmpty
                                 ? null
                                 : payrollBranchId,
-                          });
+                          };
+                          await SupabaseService.updateEmployee(
+                              employee['employee_id'], employeePayload);
                           final salaryDefaultsPayload = <String, dynamic>{
                             'employee_id': employeeId,
                             'basic_salary': salaryValues['Basic Salary (RM)'],
@@ -7665,10 +7840,28 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 .upsert(salaryDefaultsPayload,
                                     onConflict: 'employee_id');
                           }
-                          await service.loadEmployeesFromSupabase();
+                          employee.addAll(employeePayload);
+                          employee['_salary_defaults'] =
+                              Map<String, dynamic>.from(salaryDefaultsPayload);
+                          _employeeSalaryCache[id] =
+                              Map<String, dynamic>.from(salaryDefaultsPayload);
+                          _employeeSalaryCacheTime[id] = DateTime.now();
+                          for (final row in _employeeRowsSnapshot ??
+                              <Map<String, dynamic>>[]) {
+                            if (_dashboardBranchKey(row['employee_id']) == id)
+                              row.addAll(employee);
+                          }
+                          if (_employeeRowsSnapshot != null) {
+                            _employeeRowsSnapshot =
+                                _scopedEmployeeRows(_employeeRowsSnapshot!);
+                          }
+                          unawaited(service.loadEmployeesFromSupabase());
                           if (!mounted) return;
                           Navigator.pop(dialogContext);
-                          setState(() => _adminEmployeesFuture = null);
+                          setState(() {
+                            _adminEmployeesFuture = null;
+                            _employeeRowsAt = null;
+                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content:

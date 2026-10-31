@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/neon_api.dart';
+import '../services/request_limiter.dart';
 
 // Image bytes stay private and are shared only within the current login session.
 final Map<String, Future<Uint8List?>> _photoCache = {};
 int _photoCacheSession = -1;
 int _photoRevision = 0;
+final _photoRequests = RequestLimiter(4);
 
 void invalidateEmployeePhoto(String employeeId) {
   _photoRevision++;
@@ -23,7 +25,12 @@ Future<Uint8List?> loadEmployeePhoto(
   if (_photoCache.containsKey(key)) return _photoCache[key];
   // Bound memory use for long-running admin sessions.
   if (_photoCache.length >= 100) _photoCache.remove(_photoCache.keys.first);
-  final future = NeonApi.photoRequest(employeeId);
+  final session = NeonApi.sessionVersion;
+  final future = _photoRequests.run<Uint8List?>(() async {
+    if (session != NeonApi.sessionVersion) return null;
+    final bytes = await NeonApi.photoRequest(employeeId);
+    return session == NeonApi.sessionVersion ? bytes : null;
+  });
   _photoCache[key] = future;
   try {
     final bytes = await future;

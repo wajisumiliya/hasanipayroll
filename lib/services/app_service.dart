@@ -934,6 +934,18 @@ class AppService extends ChangeNotifier {
         .toList();
   }
 
+  Future<Map<String, dynamic>> loadEmployeeEditData(String employeeId) async {
+    final data = await _getAuth(
+        '/api/admin/employees/${Uri.encodeComponent(employeeId.trim())}/edit-data');
+    if (data['ok'] != true ||
+        data['employee'] is! Map ||
+        data['salary_defaults'] is! Map) {
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to load employee edit data.');
+    }
+    return data;
+  }
+
   /// Read EA forms through the authenticated Neon API, never Supabase PostgREST.
   Future<List<Map<String, dynamic>>> fetchEaFormsFromNeon(int year) async {
     final data = await _getAuth('/api/ea-forms?year=$year');

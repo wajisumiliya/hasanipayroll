@@ -1,4 +1,5 @@
 import { installLateReportApi } from './late-report.js';
+import { installEmployeeEditorApi } from './employee-editor.js';
 import { createApiCorsOptions } from "./api-cors.js";
 import { isDailyReportPin } from "./daily-report-pin.js";
 import { findAccountByLogin, provisionEmployeeAccount, saveAccountPassword } from "./employee-accounts.js";
@@ -1689,7 +1690,7 @@ app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req,
       return res.status(400).json({ ok: false, message: "Invalid dashboard month." });
     }
     const [employeesResult, payrollResult, branchesResult] = await Promise.all([
-      pool.query(`SELECT to_jsonb(e) || jsonb_build_object('inc_details', d.inc_details) AS row
+      pool.query(`SELECT to_jsonb(e) || jsonb_build_object('inc_details', d.inc_details, '_salary_defaults', to_jsonb(d)) AS row
         FROM public.employees e LEFT JOIN public.employee_salary_defaults d
           ON d.employee_id = e.employee_id ORDER BY e.name ASC`),
       pool.query(
@@ -1862,6 +1863,7 @@ app.get("/api/branches", authenticate, async (req, res) => {
 });
 
 installLateReportApi(app, { authenticate, pool });
+installEmployeeEditorApi(app, { authenticate, pool });
 
 // Neon attendance-sheet dependencies: read only within the authenticated scope.
 app.get("/api/attendance-sheet/dependencies", authenticate, async (req, res) => {
@@ -2572,7 +2574,11 @@ app.get(
         return res.status(403).json({ ok: false, message: "Access denied." });
       }
       const result = await pool.query(
-        `SELECT to_jsonb(e) AS data FROM public.employees AS e ${where} ORDER BY e.employee_id ASC`,
+        role === 'ADMIN'
+          ? `SELECT to_jsonb(e) || jsonb_build_object('_salary_defaults', to_jsonb(d)) AS data
+             FROM public.employees AS e LEFT JOIN public.employee_salary_defaults d ON d.employee_id=e.employee_id
+             ${where} ORDER BY e.employee_id ASC`
+          : `SELECT to_jsonb(e) AS data FROM public.employees AS e ${where} ORDER BY e.employee_id ASC`,
         params,
       );
       const employees = result.rows.map((row) => row.data);
