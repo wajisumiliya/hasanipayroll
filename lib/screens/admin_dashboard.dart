@@ -1,3 +1,5 @@
+import 'employee_qr_cards_page.dart';
+import 'live_qr_attendance_page.dart';
 // ignore_for_file: unused_element, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
@@ -389,7 +391,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   void changePage(int page) {
-    if (_attendanceOnly && page != 3 && page != 16) return;
+    if (_attendanceOnly && ![3, 16, 19, 20].contains(page)) return;
 
     // RHB Layout is an export action, not a normal page.
     if (page == 8) {
@@ -549,6 +551,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Branch Passwords';
       case 18:
         return 'Late Report';
+      case 19:
+        return 'Employee QR Cards';
+      case 20:
+        return 'Live QR Attendance';
       default:
         return 'Dashboard';
     }
@@ -608,6 +614,8 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _currentPage() {
     if (_attendanceOnly) {
+      if (selectedPage == 19) return const EmployeeQrCardsPage();
+      if (selectedPage == 20) return const LiveQrAttendancePage(admin: true);
       return selectedPage == 16 ? _attendanceStatusPage() : _attendancePage();
     }
 
@@ -664,6 +672,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         return _branchPasswordPage();
       case 18:
         return _modernLateReportPage();
+      case 19:
+        return const EmployeeQrCardsPage();
+      case 20:
+        return const LiveQrAttendancePage(admin: true);
 
       default:
         return _dashboardPage();
@@ -975,12 +987,16 @@ class _AdminDashboardState extends State<AdminDashboard>
           ? [
               item('Attendance', Icons.event_available_rounded, 3),
               item('Status View', Icons.view_sidebar_rounded, 16),
+              item('Employee QR Cards', Icons.qr_code_rounded, 19),
+              item('Live QR Attendance', Icons.sensors_rounded, 20),
             ]
           : [
               item('Overview', Icons.grid_view_rounded, 0),
               item('Employees', Icons.groups_rounded, 1),
               item('Attendance', Icons.event_available_rounded, 3),
               item('Late Report', Icons.schedule_outlined, 18),
+              item('Employee QR Cards', Icons.qr_code_rounded, 19),
+              item('Live QR Attendance', Icons.sensors_rounded, 20),
               item('Payroll', Icons.account_balance_wallet_rounded, 2),
               item('Employee Payslips', Icons.badge_rounded, 12),
               item('EA Forms', Icons.description_rounded, 15),

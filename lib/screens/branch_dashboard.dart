@@ -1,3 +1,4 @@
+import 'live_qr_attendance_page.dart';
 // ignore_for_file: unused_element
 
 import 'dart:math' as math;
@@ -366,6 +367,8 @@ class _BranchPortalState extends State<BranchPortal>
                     _drawerItem(
                         'Leave Requests', Icons.flight_takeoff_outlined, 4),
                     _drawerItem('Daily Report', Icons.assignment_outlined, 5),
+                    _drawerItem('QR Scanner', Icons.qr_code_scanner, 6),
+                    _drawerItem('QR Attendance', Icons.sensors, 7),
                   ],
                 ),
               ),
@@ -414,6 +417,7 @@ class _BranchPortalState extends State<BranchPortal>
         item('Dashboard', Icons.grid_view_rounded, 0),
         item('Attendance', Icons.event_available_rounded, 1),
         item('QR Scanner', Icons.qr_code_scanner_rounded, 6),
+        item('QR Attendance', Icons.sensors_rounded, 7),
         item('Employees', Icons.groups_rounded, 2),
         item('OT Requests', Icons.more_time_rounded, 3),
         item('Leave Requests', Icons.flight_rounded, 4),
@@ -847,6 +851,8 @@ class _BranchPortalState extends State<BranchPortal>
         return 'Daily Report';
       case 6:
         return 'QR Scanner';
+      case 7:
+        return 'QR Attendance';
       default:
         return 'Dashboard';
     }
@@ -858,6 +864,8 @@ class _BranchPortalState extends State<BranchPortal>
         return _attendancePage();
       case 6:
         return const QrAttendancePage();
+      case 7:
+        return const LiveQrAttendancePage(admin: false);
       case 2:
         return _employeesPage();
       case 3:
