@@ -238,3 +238,18 @@ payroll recognition and the unpaid print filter. The startup migration renames
 existing UL records. Older attendance clients submitting UL are normalized to
 UL-UNPAID. Unpaid Print includes UL-UNPAID only; the separate UNPAID status and
 unpaid flags alone remain excluded. Earlier UL descriptions above are historical.
+
+### Payroll attendance allowance eligibility
+
+For the selected payroll month, membership in any MC, UL-UNPAID unpaid report,
+or Attendance Late (3+ combined main/break occurrences) report removes the full
+Elaun Kedatangan. Generated payroll saves the payable allowance as zero and keeps
+the configured salary default unchanged. Overlapping reports remove it once.
+Unknown late minutes do not exempt an employee who qualifies for the late list.
+Eligibility uses fresh report requests for both single and bulk generation; a
+failed lookup stops calculation rather than assuming eligibility. Payroll remarks
+record the configured/payable amount and disqualification result. Existing saved
+payroll must be regenerated to apply this rule.
+
+UL-UNPAID (and legacy UL) uses the same unpaid daily-rate deduction as UNPAID.
+Unpaid statuses are fetched even when the old row has no submitted/unpaid flag.

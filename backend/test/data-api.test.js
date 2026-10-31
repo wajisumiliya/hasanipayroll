@@ -37,3 +37,12 @@ test('successful identity scopes end at commit before releasing a pooled connect
   assert.equal(await withDatabaseIdentity({connect:async()=>client},{sub:'employee'},async()=>42),42);
   assert.deepEqual(calls.slice(-2),['COMMIT','release']);
 });
+
+test('payroll can include unpaid statuses without submission or unpaid flags',()=>{
+  const query=compile('GET',new URLSearchParams({
+    or:'(is_submitted.eq.true,status.in.(UL-UNPAID,UL,UNPAID,UNPAID LEAVE))',
+  }).toString());
+  assert.deepEqual(query.values,['true','UL-UNPAID','UL','UNPAID','UNPAID LEAVE']);
+  assert.match(query.sql,/ OR /);
+  assert.match(query.sql,/"status" IN/);
+});

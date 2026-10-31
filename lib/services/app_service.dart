@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:postgrest/postgrest.dart';
 import 'neon_api.dart';
+import 'attendance_allowance_service.dart';
 
 import '../models/payroll.dart';
 import '../screens/supabase_service.dart';
@@ -432,11 +433,13 @@ class AppService extends ChangeNotifier {
           data['message']?.toString() ?? 'Unable to submit attendance.');
   }
 
-  Future<Map<String, dynamic>> loadLateReport(DateTime month) async {
+  Future<Map<String, dynamic>> loadLateReport(DateTime month,
+      {bool forceRefresh = false}) async {
     final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
     final cachedAt = _lateReportCacheTime[key];
     final cached = _lateReportCache[key];
-    if (cached != null &&
+    if (!forceRefresh &&
+        cached != null &&
         cachedAt != null &&
         DateTime.now().difference(cachedAt) < const Duration(seconds: 30)) {
       return cached;
@@ -464,6 +467,18 @@ class AppService extends ChangeNotifier {
     _lateReportCache[cacheKey] = data;
     _lateReportCacheTime[cacheKey] = DateTime.now();
     return data;
+  }
+
+  /// Resolve eligibility from the same monthly lists used by dashboard reports.
+  /// Errors propagate so payroll never pays an unchecked attendance allowance.
+  Future<Set<String>> attendanceAllowanceDisqualifiedEmployees(
+      DateTime month, List<String> employeeIds) async {
+    return AttendanceAllowanceService.disqualifiedEmployees(
+      employeeIds: employeeIds,
+      loadLate: () => loadLateReport(month, forceRefresh: true),
+      loadStatus: (status, ids) => loadAttendanceStatusReport(
+          month: month, status: status, employeeIds: ids),
+    );
   }
 
   Future<Uint8List> loadLateReportExport(

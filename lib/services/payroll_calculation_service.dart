@@ -4,6 +4,12 @@
 /// basic_salary and fw_salary. [salaryBase] deliberately chooses one salary
 /// source so those records are never double counted.
 class PayrollCalculationService {
+  static double payableAttendanceAllowance({
+    required double configuredAmount,
+    required bool disqualified,
+  }) =>
+      disqualified ? 0.0 : configuredAmount;
+
   static bool isUnpaidAttendanceStatus(String status) => const {
         'UL',
         'UL-UNPAID',

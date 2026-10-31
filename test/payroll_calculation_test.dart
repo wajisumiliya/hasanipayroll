@@ -3,7 +3,22 @@ import 'package:hasani_payroll_portal/models/payroll.dart';
 import 'package:hasani_payroll_portal/services/payroll_calculation_service.dart';
 
 void main() {
-  test('UL-UNPAID is unpaid and PH-GANTI preserves legacy replacement OFF entitlement',
+  test('attendance report disqualification removes the full allowance', () {
+    expect(
+        PayrollCalculationService.payableAttendanceAllowance(
+            configuredAmount: 200, disqualified: true),
+        0);
+    expect(
+        PayrollCalculationService.payableAttendanceAllowance(
+            configuredAmount: 200, disqualified: false),
+        200);
+    expect(
+        PayrollCalculationService.payableAttendanceAllowance(
+            configuredAmount: 0, disqualified: true),
+        0);
+  });
+  test(
+      'UL-UNPAID is unpaid and PH-GANTI preserves legacy replacement OFF entitlement',
       () {
     expect(PayrollCalculationService.isUnpaidAttendanceStatus('UL-UNPAID'),
         isTrue);

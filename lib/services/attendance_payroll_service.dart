@@ -1,5 +1,6 @@
 import '../screens/supabase_service.dart';
 import 'payroll_calculation_service.dart';
+import 'app_service.dart';
 
 /// ============================================================================
 /// ATTENDANCE PAYROLL SERVICE
@@ -188,12 +189,15 @@ class AttendancePayrollService {
       _getSubmittedAttendanceForEmployeesMonth(normalizedIds, periodMonth),
       _getPayrollForEmployeesPeriod(normalizedIds, period),
       _getMonthlyRostersForEmployees(normalizedIds, periodMonth),
+      AppService.instance
+          .attendanceAllowanceDisqualifiedEmployees(periodMonth, normalizedIds),
     ]);
     final employees = bulkData[0] as List<Map<String, dynamic>>;
     final salaryDefaults = bulkData[1] as List<Map<String, dynamic>>;
     final attendanceRows = bulkData[2] as List<Map<String, dynamic>>;
     final existingPayrollRows = bulkData[3] as List<Map<String, dynamic>>;
     final rosterRows = bulkData[4] as List<Map<String, dynamic>>;
+    final allowanceDisqualified = bulkData[5] as Set<String>;
     final employeeMap = <String, Map<String, dynamic>>{};
     final salaryDefaultMap = <String, Map<String, dynamic>>{};
     final attendanceByEmployee = <String, List<Map<String, dynamic>>>{};
@@ -257,6 +261,8 @@ class AttendancePayrollService {
           preloadedRosterRows: rostersByEmployee[employeeId] ?? const [],
           pendingPayrollWrites: pendingPayrollWrites,
           usePreloadedData: true,
+          attendanceAllowanceDisqualified:
+              allowanceDisqualified.contains(employeeId),
         );
 
         if (result.generated) {
@@ -316,6 +322,7 @@ class AttendancePayrollService {
     List<Map<String, dynamic>>? preloadedRosterRows,
     List<Map<String, dynamic>>? pendingPayrollWrites,
     bool usePreloadedData = false,
+    bool? attendanceAllowanceDisqualified,
   }) async {
     final employeeId = _normalizeId(employee['employee_id']);
     final employeeName = _text(employee['name']);
@@ -376,7 +383,20 @@ class AttendancePayrollService {
 
     final basicSalary = _number(salaryDefault['basic_salary']);
     final fwSalary = _number(salaryDefault['fw_salary']);
-    final elaunKedatangan = _number(salaryDefault['elaun_kedatangan']);
+    final configuredAttendanceAllowance =
+        _number(salaryDefault['elaun_kedatangan']);
+    final disqualifiedForAttendanceAllowance =
+        attendanceAllowanceDisqualified ??
+            (configuredAttendanceAllowance > 0 &&
+                (await AppService.instance
+                        .attendanceAllowanceDisqualifiedEmployees(
+                            month, [employeeId]))
+                    .contains(employeeId));
+    final elaunKedatangan =
+        PayrollCalculationService.payableAttendanceAllowance(
+      configuredAmount: configuredAttendanceAllowance,
+      disqualified: disqualifiedForAttendanceAllowance,
+    );
     final elaunPerkhidmatan = _number(salaryDefault['elaun_perkhidmatan']);
     final elaunKerajinan = _number(salaryDefault['elaun_kerajinan']);
     final elaunMakanan = _number(salaryDefault['elaun_makanan']);
@@ -752,36 +772,39 @@ class AttendancePayrollService {
       'published_by': null,
 
       // Debug / audit information
-      'remarks': isPayrollOnlyStaff
-          ? 'Generated payroll-only staff payroll from salary defaults; attendance and roster calculations were excluded.'
-          : 'Generated payroll. '
-              'Attendance rows used: ${attendance.length}. '
-              'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
-              'Contribution eligibility wage: ${contributionEligibilityWage.toStringAsFixed(2)}. '
-              'EPF wage: ${epfWage.toStringAsFixed(2)}. '
-              'SOCSO wage: ${socsoWage.toStringAsFixed(2)}. '
-              'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
-              'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
-              'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '
-              'SOCSO employer: ${socso.employer.toStringAsFixed(2)}. '
-              'EIS employee: ${eis.employee.toStringAsFixed(2)}. '
-              'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
-              'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
-              'Approved OT days: $approvedOtDays. '
-              'Foreign worked OFF days: $foreignWorkedOffDays. '
-              'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
-              'Public holidays worked: $publicHolidayWorkedDays. '
-              'Public holiday off days: $publicHolidayOffDays. '
-              'Public holiday special worked days: $publicHolidaySpecialDays. '
-              'Public holiday replacement-off days: $publicHolidayReplacementDays. '
-              'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
-              'Roster weeks used: ${rosterByWeek.length}. '
-              'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
-              'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
-              'Unpaid days: $unpaidDays. '
-              'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
-              //'Public holiday worked days: $publicHolidayWorkedDays. '
-              'Cuti Umum: ${cutiUmum.toStringAsFixed(2)}.',
+      'remarks': 'Attendance allowance: ${elaunKedatangan.toStringAsFixed(2)}; '
+              'configured: ${configuredAttendanceAllowance.toStringAsFixed(2)}; '
+              'MC / UL-UNPAID / late-list disqualification: $disqualifiedForAttendanceAllowance. ' +
+          (isPayrollOnlyStaff
+              ? 'Generated payroll-only staff payroll from salary defaults; attendance and roster calculations were excluded.'
+              : 'Generated payroll. '
+                  'Attendance rows used: ${attendance.length}. '
+                  'Statutory wage: ${statutoryWage.toStringAsFixed(2)}. '
+                  'Contribution eligibility wage: ${contributionEligibilityWage.toStringAsFixed(2)}. '
+                  'EPF wage: ${epfWage.toStringAsFixed(2)}. '
+                  'SOCSO wage: ${socsoWage.toStringAsFixed(2)}. '
+                  'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
+                  'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
+                  'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '
+                  'SOCSO employer: ${socso.employer.toStringAsFixed(2)}. '
+                  'EIS employee: ${eis.employee.toStringAsFixed(2)}. '
+                  'EIS employer: ${eis.employer.toStringAsFixed(2)}. '
+                  'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
+                  'Approved OT days: $approvedOtDays. '
+                  'Foreign worked OFF days: $foreignWorkedOffDays. '
+                  'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
+                  'Public holidays worked: $publicHolidayWorkedDays. '
+                  'Public holiday off days: $publicHolidayOffDays. '
+                  'Public holiday special worked days: $publicHolidaySpecialDays. '
+                  'Public holiday replacement-off days: $publicHolidayReplacementDays. '
+                  'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
+                  'Roster weeks used: ${rosterByWeek.length}. '
+                  'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
+                  'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
+                  'Unpaid days: $unpaidDays. '
+                  'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
+                  //'Public holiday worked days: $publicHolidayWorkedDays. '
+                  'Cuti Umum: ${cutiUmum.toStringAsFixed(2)}.'),
     };
 
     // ------------------------------------------------------------------------
@@ -1006,7 +1029,7 @@ class AttendancePayrollService {
           .or(
             'is_submitted.eq.true,ot_authorized.eq.true,'
             'approved_ot_minutes.not.is.null,is_public_holiday.eq.true,'
-            'is_unpaid.eq.true',
+            'is_unpaid.eq.true,status.in.(UL-UNPAID,UL,UNPAID,UNPAID LEAVE)',
           )
           .gte('attendance_date', _dateText(start))
           .lt('attendance_date', _dateText(end))
@@ -1049,7 +1072,7 @@ class AttendancePayrollService {
         .or(
           'is_submitted.eq.true,ot_authorized.eq.true,'
           'approved_ot_minutes.not.is.null,is_public_holiday.eq.true,'
-          'is_unpaid.eq.true',
+          'is_unpaid.eq.true,status.in.(UL-UNPAID,UL,UNPAID,UNPAID LEAVE)',
         )
         .gte('attendance_date', _dateText(start))
         .lt('attendance_date', _dateText(end));
