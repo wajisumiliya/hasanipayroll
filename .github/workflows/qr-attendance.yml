@@ -1,0 +1,68 @@
+name: QR attendance validation
+on:
+  pull_request:
+    paths:
+      - 'backend/src/qr-attendance*'
+      - 'backend/src/scripts/check-qr-schema.js'
+      - 'backend/sql/qr-attendance.sql'
+      - 'backend/test/qr-attendance*'
+      - 'lib/**qr*'
+      - 'lib/widgets/qr_attendance/**'
+      - 'test/qr_*'
+      - 'assets/qr_fonts/**'
+      - 'pubspec.*'
+      - '.github/workflows/qr-attendance.yml'
+  push:
+    branches: [feature/live-qr-attendance]
+permissions:
+  contents: read
+jobs:
+  postgres-and-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: qr_local_test_only
+          POSTGRES_DB: hasani_qr_test
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      QR_TEST_DATABASE_URL: postgres://postgres:qr_local_test_only@127.0.0.1:55432/hasani_qr_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --prefix backend
+      - run: npm --prefix backend test
+      - run: node --check backend/src/server.js
+      - run: node --check backend/src/qr-attendance.js
+      - name: Read-only staging-schema fixture preflight
+        env:
+          DATABASE_URL: ${{ env.QR_TEST_DATABASE_URL }}
+        run: node backend/src/scripts/check-qr-schema.js
+  flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      # main has existing warnings/lints; compile errors still fail this job.
+      # Exact unmodified-main analysis comparison is documented in the PR notes.
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test
+      - name: Compile web without deploying
+        run: flutter build web --release --output=/tmp/hasani-qr-web-release --dart-define=API_BASE_URL=https://hasaniworkhub.onrender.com
