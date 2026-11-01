@@ -1,3 +1,4 @@
+import '../widgets/payroll_generation_dialog.dart';
 import '../widgets/payroll_editor_summary.dart';
 import '../widgets/employee_directory_pagination.dart';
 import '../widgets/payroll_excel_export_dialog.dart';
@@ -11824,268 +11825,122 @@ class _AdminDashboardState extends State<AdminDashboard>
 // ============================================================================
 
   Future<void> _showGenerateAttendancePayrollDialog() async {
-    DateTime selectedMonth = selectedPayrollMonth;
+    try {
+      final data = await Future.wait<dynamic>([
+        service.loadNeonBranches(),
+        SupabaseService.database
+            .from('employees')
+            .select()
+            .eq('is_active', true),
+      ]);
+      if (!mounted) return;
+      final branches = List<Map<String, dynamic>>.from(data[0]);
+      final employees = List<Map<String, dynamic>>.from(data[1])
+          .where((e) => _employmentStatus(e) == 'active')
+          .toList();
+      final names = <String, String>{
+        for (final branch in branches)
+          _branchIdFromMap(branch):
+              _branchNameFromMap(branch, _branchIdFromMap(branch))
+      };
+      final counts = <String, int>{};
+      for (final employee in employees) {
+        final id = _payrollBranchIdFromEmployee(employee);
+        if (id.isEmpty) continue;
+        names.putIfAbsent(id, () => id);
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+      final choice = await showDialog<PayrollGenerationChoice>(
+          context: context,
+          builder: (_) => PayrollGenerationDialog(
+              initialMonth: selectedPayrollMonth,
+              branches: names,
+              employeeCounts: counts));
+      if (choice == null || !mounted) return;
+      final selected = employees
+          .where(
+              (e) => choice.branchIds.contains(_payrollBranchIdFromEmployee(e)))
+          .toList();
+      await _showPayrollEmployeeSelection(
+          branchName: '${choice.branchIds.length} selected branches',
+          employees: selected,
+          month: choice.month,
+          onGenerated: (result) =>
+              _downloadGeneratedPayrollFiles(choice, result, names));
+    } catch (error) {
+      if (mounted) _message('Unable to prepare payroll generation: $error');
+    }
+  }
 
-    final branchesFuture = service.loadNeonBranches();
-    final employeesFuture = service.loadNeonAdminDashboard(selectedMonth).then(
-          (data) => (data['employees'] as List)
-              .map((row) => Map<String, dynamic>.from(row as Map))
-              .where((row) =>
-                  row['is_active'] == true &&
-                  row['employment_status']?.toString().toLowerCase() !=
-                      'vacation')
-              .toList(),
-        );
+  Future<void> _downloadGeneratedPayrollFiles(PayrollGenerationChoice choice,
+      PayrollGenerationResult result, Map<String, String> branchNames) async {
+    final ids = result.generated
+        .map((item) => _normalizeBranchValue(item.employeeId))
+        .toSet();
+    if (ids.isEmpty) {
+      _message('No payroll was generated; no files were exported.');
+      return;
+    }
+    if (!mounted) return;
+    showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const PopScope(
+            canPop: false,
+            child: AlertDialog(
+                title: Text('Preparing payroll files'),
+                content: Row(children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 16),
+                  Expanded(child: Text('Building selected Excel files...'))
+                ]))));
+    try {
+      selectedPayrollMonth = choice.month;
+      final files = <String, Uint8List>{};
+      void collect(String name, Uint8List bytes) {
+        files[name] = bytes;
+      }
 
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return FutureBuilder<List<dynamic>>(
-              future: Future.wait([
-                branchesFuture,
-                employeesFuture,
-              ]),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const AlertDialog(
-                    title: Text('Generate Payroll'),
-                    content: SizedBox(
-                      width: 500,
-                      height: 180,
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return AlertDialog(
-                    title: const Text('Generate Payroll'),
-                    content: Text(
-                      'Unable to load branches/employees:\n\n${snapshot.error}',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: const Text('Close'),
-                      ),
-                    ],
-                  );
-                }
-
-                final data = snapshot.data ?? const [[], []];
-                final branches = List<Map<String, dynamic>>.from(
-                  data[0] as List,
-                );
-                final employees = List<Map<String, dynamic>>.from(
-                  data[1] as List,
-                );
-
-                final branchGroups = <String, List<Map<String, dynamic>>>{};
-                final branchNames = <String, String>{};
-
-                for (final branch in branches) {
-                  final id = _branchIdFromMap(branch);
-                  final name = _branchNameFromMap(branch, id);
-                  if (id.isNotEmpty) {
-                    branchGroups.putIfAbsent(id, () => []);
-                    branchNames[id] = name;
-                  }
-                }
-
-                for (final employee in employees) {
-                  final branchId = _payrollBranchIdFromEmployee(employee);
-                  if (branchId.isEmpty) continue;
-                  branchGroups.putIfAbsent(branchId, () => []).add(employee);
-                  branchNames.putIfAbsent(
-                    branchId,
-                    () => branchId,
-                  );
-                }
-
-                final branchIds = branchGroups.keys.toList()
-                  ..sort(
-                    (a, b) => (branchNames[a] ?? a).toLowerCase().compareTo(
-                          (branchNames[b] ?? b).toLowerCase(),
-                        ),
-                  );
-
-                return AlertDialog(
-                  title: const Text('Generate Payroll'),
-                  content: SizedBox(
-                    width: 820,
-                    height: 590,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_month_outlined),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Payroll Month: ${DateFormat('MMMM yyyy').format(selectedMonth)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            OutlinedButton(
-                              onPressed: () async {
-                                final picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: selectedMonth,
-                                  firstDate: DateTime(2020),
-                                  lastDate: DateTime.now(),
-                                  helpText: 'Select Payroll Month',
-                                );
-
-                                if (picked != null) {
-                                  setDialogState(() {
-                                    selectedMonth = DateTime(
-                                      picked.year,
-                                      picked.month,
-                                    );
-                                  });
-                                }
-                              },
-                              child: const Text('Change'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Select a branch first. Then select the employees whose payroll you want to generate.',
-                          style: TextStyle(color: Colors.black54),
-                        ),
-                        const SizedBox(height: 18),
-                        Expanded(
-                          child: branchIds.isEmpty
-                              ? const Center(
-                                  child: Text('No branches found.'),
-                                )
-                              : GridView.builder(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithMaxCrossAxisExtent(
-                                    maxCrossAxisExtent: 270,
-                                    mainAxisExtent: 124,
-                                    crossAxisSpacing: 14,
-                                    mainAxisSpacing: 14,
-                                  ),
-                                  itemCount: branchIds.length,
-                                  itemBuilder: (context, index) {
-                                    final branchId = branchIds[index];
-                                    final branchEmployees =
-                                        branchGroups[branchId] ?? [];
-
-                                    return Card(
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        side: BorderSide(
-                                          color: Colors.blueGrey
-                                              .withValues(alpha: .20),
-                                        ),
-                                      ),
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(16),
-                                        onTap: () async {
-                                          await _showPayrollEmployeeSelection(
-                                            branchName: branchNames[branchId] ??
-                                                branchId,
-                                            employees: branchEmployees,
-                                            month: selectedMonth,
-                                            closeBranchDialog: () {
-                                              if (dialogContext.mounted)
-                                                Navigator.of(dialogContext)
-                                                    .pop();
-                                            },
-                                          );
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    width: 42,
-                                                    height: 42,
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                        0xFFF2F5FA,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        12,
-                                                      ),
-                                                      border: Border.all(
-                                                        color: const Color(
-                                                          0xFFD9DDE6,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons.storefront_outlined,
-                                                      color: Color(0xFF173A70),
-                                                    ),
-                                                  ),
-                                                  const Spacer(),
-                                                  const Icon(
-                                                    Icons.chevron_right,
-                                                    color: Colors.black45,
-                                                  ),
-                                                ],
-                                              ),
-                                              const Spacer(),
-                                              Text(
-                                                branchNames[branchId] ??
-                                                    branchId,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 17,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                '${branchEmployees.length} employees • Review readiness',
-                                                style: const TextStyle(
-                                                  color: Colors.black54,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
+      if (choice.files.contains('Branch Payroll')) {
+        final rows = (await SupabaseService.getPayrollForMonth(choice.month))
+            .where((r) => ids.contains(_normalizeBranchValue(r['employee_id'])))
+            .toList();
+        await _exportPayrollAllBranchesExcel(rows, branchNames,
+            onFile: collect);
+      }
+      for (final type in const ['EPF', 'SOCSO', 'EIS']) {
+        if (!choice.files.contains(type)) continue;
+        final report = await _fetchStatutoryReport(type, choice.month,
+            selectedEmployeeIds: ids);
+        await _exportStatutoryReportExcel(type, choice.month,
+            List<List<dynamic>>.from(report['rows'] ?? const []),
+            onFile: collect);
+      }
+      if (choice.files.contains('HRDF')) {
+        final rows = await _fetchDashboardReportRows(choice.month,
+            selectedEmployeeIds: ids);
+        await _exportDashboardSummaryExcel('HRDF', choice.month, rows,
+            onFile: collect);
+      }
+      if (files.length != choice.files.length)
+        throw StateError('Some selected files could not be generated.');
+      final archive = Archive();
+      for (final entry in files.entries) {
+        archive
+            .addFile(ArchiveFile(entry.key, entry.value.length, entry.value));
+      }
+      await FileSaver.instance.saveFile(
+          name:
+              'Generated_Payroll_${DateFormat('yyyy_MM').format(choice.month)}',
+          bytes: Uint8List.fromList(ZipEncoder().encode(archive)),
+          ext: 'zip',
+          mimeType: MimeType.other);
+      if (mounted)
+        _message(
+            'Downloaded ${files.length} payroll/statutory files for ${ids.length} generated employees.');
+    } finally {
+      if (mounted) Navigator.of(context).pop();
+    }
   }
 
   Widget _hasaniBranchLogo(double size) => Container(
@@ -12141,6 +11996,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     required List<Map<String, dynamic>> employees,
     required DateTime month,
     VoidCallback? closeBranchDialog,
+    Future<void> Function(PayrollGenerationResult)? onGenerated,
   }) async {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final today = DateTime.now();
@@ -12515,6 +12371,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                             employeeIds: ids,
                             overwriteExisting: overwriteExisting,
                             branchName: branchName,
+                            onGenerated: onGenerated,
                           );
                         },
                   icon: const Icon(Icons.calculate_outlined),
@@ -12535,6 +12392,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     required List<String> employeeIds,
     required bool overwriteExisting,
     required String branchName,
+    Future<void> Function(PayrollGenerationResult)? onGenerated,
   }) async {
     if (employeeIds.isEmpty || !mounted) return;
 
@@ -12589,6 +12447,15 @@ class _AdminDashboardState extends State<AdminDashboard>
         result,
         branchName: branchName,
       );
+      if (onGenerated != null && mounted) {
+        try {
+          await onGenerated(result);
+        } catch (error) {
+          if (mounted)
+            _message(
+                'Payroll was saved, but selected files could not be downloaded: $error');
+        }
+      }
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop();
@@ -17794,8 +17661,9 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Future<void> _exportPayrollAllBranchesExcel(
     List<Map<String, dynamic>> records,
-    Map<String, String> branchNames,
-  ) async {
+    Map<String, String> branchNames, {
+    void Function(String, Uint8List)? onFile,
+  }) async {
     if (records.isEmpty) {
       _message('No payroll records for the selected month.');
       return;
@@ -19111,12 +18979,15 @@ class _AdminDashboardState extends State<AdminDashboard>
       if (output == null || output.isEmpty) {
         throw Exception('Excel file could not be generated.');
       }
-      await FileSaver.instance.saveFile(
-        name: fileName.replaceFirst(RegExp(r'\.xlsx$'), ''),
-        bytes: Uint8List.fromList(output),
-        ext: 'xlsx',
-        mimeType: MimeType.microsoftExcel,
-      );
+      if (onFile != null) {
+        onFile(fileName, Uint8List.fromList(output));
+      } else
+        await FileSaver.instance.saveFile(
+          name: fileName.replaceFirst(RegExp(r'\.xlsx$'), ''),
+          bytes: Uint8List.fromList(output),
+          ext: 'xlsx',
+          mimeType: MimeType.microsoftExcel,
+        );
       _message('$fileName exported successfully with 11 formatted sheets.');
     } catch (e) {
       _message('Formatted all-branches workbook could not be exported: $e');
@@ -19955,8 +19826,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchDashboardReportRows(
-      DateTime month) async {
+  Future<List<Map<String, dynamic>>> _fetchDashboardReportRows(DateTime month,
+      {Set<String>? selectedEmployeeIds}) async {
     final source = await service.loadNeonAdminDashboard(month);
     final results = ['payroll', 'employees', 'branches']
         .map((key) => (source[key] as List)
@@ -19970,11 +19841,16 @@ class _AdminDashboardState extends State<AdminDashboard>
     final payroll = results[0]
         .where((row) => _payrollPeriodMatchesMonth(row['period'], month))
         .where((row) =>
+            selectedEmployeeIds == null ||
+            selectedEmployeeIds
+                .contains(_normalizeBranchValue(row['employee_id'])))
+        .where((row) =>
             service.currentUser?.staffScope == null ||
             scopedEmployeeIds
                 .contains(_normalizeBranchValue(row['employee_id'])))
         .where((row) {
-          if (selectedDashboardBranchId == null) return true;
+          if (selectedEmployeeIds != null || selectedDashboardBranchId == null)
+            return true;
           final own = _dashboardBranchKey(row['branch_id']);
           final person = scopedEmployeeRows
               .where((e) =>
@@ -20209,10 +20085,15 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<Map<String, dynamic>> _fetchStatutoryReport(
-      String report, DateTime month) async {
+      String report, DateTime month,
+      {Set<String>? selectedEmployeeIds}) async {
     final payrollResponse = await SupabaseService.getPayrollForMonth(month);
     final payrollRows = payrollResponse
         .where((row) => _payrollPeriodMatchesMonth(row['period'], month))
+        .where((row) =>
+            selectedEmployeeIds == null ||
+            selectedEmployeeIds
+                .contains(_normalizeBranchValue(row['employee_id'])))
         .toList();
     if (payrollRows.isEmpty) {
       return {'headers': <String>[], 'rows': <List<dynamic>>[]};
@@ -21029,7 +20910,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<void> _exportStatutoryReportExcel(
-      String report, DateTime month, List<List<dynamic>> rows) async {
+      String report, DateTime month, List<List<dynamic>> rows,
+      {void Function(String, Uint8List)? onFile}) async {
     final excel = xls.Excel.createExcel();
     final defaultName = excel.getDefaultSheet();
     if (defaultName != null) excel.rename(defaultName, report);
@@ -21046,12 +20928,16 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
     final output = excel.encode();
     if (output == null) throw Exception('Excel file could not be generated.');
-    await FileSaver.instance.saveFile(
-      name: '${report}_${DateFormat('yyyy_MM').format(month)}',
-      bytes: Uint8List.fromList(output),
-      ext: 'xlsx',
-      mimeType: MimeType.microsoftExcel,
-    );
+    if (onFile != null) {
+      onFile('${report}_${DateFormat('yyyy_MM').format(month)}.xlsx',
+          Uint8List.fromList(output));
+    } else
+      await FileSaver.instance.saveFile(
+        name: '${report}_${DateFormat('yyyy_MM').format(month)}',
+        bytes: Uint8List.fromList(output),
+        ext: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
     _message('$report Excel exported successfully.');
   }
 
@@ -21427,7 +21313,8 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<void> _exportDashboardSummaryExcel(
-      String report, DateTime month, List<Map<String, dynamic>> rows) async {
+      String report, DateTime month, List<Map<String, dynamic>> rows,
+      {void Function(String, Uint8List)? onFile}) async {
     final printedAt = DateTime.now();
     final excel = xls.Excel.createExcel();
     final defaultName = excel.getDefaultSheet();
@@ -21482,13 +21369,18 @@ class _AdminDashboardState extends State<AdminDashboard>
     footerCell.cellStyle = xls.CellStyle(bold: true);
     final output = excel.encode();
     if (output == null) throw Exception('Excel file could not be generated.');
-    await FileSaver.instance.saveFile(
-      name:
-          '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}',
-      bytes: Uint8List.fromList(output),
-      ext: 'xlsx',
-      mimeType: MimeType.microsoftExcel,
-    );
+    if (onFile != null) {
+      onFile(
+          '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}.xlsx',
+          Uint8List.fromList(output));
+    } else
+      await FileSaver.instance.saveFile(
+        name:
+            '${report.replaceAll(' ', '_')}_${DateFormat('yyyy_MM').format(month)}',
+        bytes: Uint8List.fromList(output),
+        ext: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
     _message('$report Excel exported successfully.');
   }
 
