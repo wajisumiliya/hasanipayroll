@@ -57,11 +57,13 @@ class AttendancePrintSheet {
       this.approvedOtAmount,
       this.lateDeductionAmount,
       this.unpaidDeductionAmount,
-      this.estimatedAmounts = false});
+      this.estimatedAmounts = false,
+      this.deductionMinutes});
   final String employeeId, employeeName, department, section, branchId;
   final bool isForeignEmployee, estimatedAmounts;
   final DateTime month;
   final List<AttendancePrintDay> days;
+  final int? deductionMinutes;
   final double? approvedOtAmount, lateDeductionAmount, unpaidDeductionAmount;
 }
 
@@ -82,6 +84,7 @@ class AttendancePdfService {
     required DateTime month,
     required List<AttendancePrintDay> days,
     bool estimatedAmounts = false,
+    int? deductionMinutes,
     double? approvedOtAmount,
     double? lateDeductionAmount,
     double? unpaidDeductionAmount,
@@ -100,6 +103,7 @@ class AttendancePdfService {
         lateDeductionAmount: lateDeductionAmount,
         unpaidDeductionAmount: unpaidDeductionAmount,
         estimatedAmounts: estimatedAmounts,
+        deductionMinutes: deductionMinutes,
       )
     ]);
   }
@@ -144,7 +148,8 @@ class AttendancePdfService {
     final breakTotal = days.fold<int>(0, (sum, day) => sum + day.breakMinutes);
     final netTotal = days.fold<int>(0, (sum, day) => sum + day.netMinutes);
     final otTotal = days.fold<int>(0, (sum, day) => sum + day.overtimeMinutes);
-    final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
+    final lateTotal = sheet.deductionMinutes ??
+        days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
     final unpaidTotal = days.where((day) {
           final status = day.status.trim().toUpperCase();
           return status == 'UL' ||
@@ -189,7 +194,9 @@ class AttendancePdfService {
                   pw.SizedBox(width: 5),
                   _summary(
                     'LATE HOURS',
-                    'After roster start',
+                    isForeignEmployee
+                        ? 'Exempt from deduction'
+                        : 'Deductible shortfall',
                     lateTotal,
                     PdfColors.black,
                     lateDeductionAmount,
@@ -214,6 +221,12 @@ class AttendancePdfService {
                   ),
                 ],
               ),
+              if (lateTotal == 0 && (lateDeductionAmount ?? 0) > 0)
+                pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 5),
+                    child: pw.Text(
+                        'Review saved payroll: the late deduction has no matching deductible shortfall in current attendance.',
+                        style: const pw.TextStyle(fontSize: 6))),
               if (estimatedAmounts)
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(top: 5),

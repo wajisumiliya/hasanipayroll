@@ -180,7 +180,16 @@ class AttendanceBatchPrintService {
           approvedOtAmount: overtime,
           lateDeductionAmount: lateAmount,
           unpaidDeductionAmount: unpaid,
-          estimatedAmounts: saved.isEmpty));
+          estimatedAmounts: saved.isEmpty,
+          deductionMinutes: AttendancePayrollService.attendanceShortageMinutes(
+              employee: employee,
+              salaryDefault: salary ??
+                  {
+                    'epf_category': local ? 'normal1' : 'normal',
+                    'eis_applicable': local
+                  },
+              attendance: records,
+              rosterRows: rosterRows)));
     }
     return AttendancePdfService.buildBatch(sheets);
   }

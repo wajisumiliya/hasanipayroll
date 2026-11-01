@@ -1014,29 +1014,52 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       });
 
-      if (approvedOtAmount == null) {
-        final attendance = <Map<String, dynamic>>[
-          for (final day in days)
+      final attendance = <Map<String, dynamic>>[
+        for (final day in days)
+          {
+            'employee_id': _employeeId(),
+            'attendance_date': DateFormat('yyyy-MM-dd').format(
+                DateTime(widget.month.year, widget.month.month, day.day)),
+            'check_in': day.workingIn,
+            'check_out': day.workingOut,
+            'status': day.status,
+            'net_working_minutes': day.netMinutes,
+            'work_minutes': day.workMinutes,
+            'break_minutes': day.breakMinutes,
+            'overtime_minutes': day.overtimeMinutes,
+            'approved_ot_minutes': _isAdminView()
+                ? (day.overtimeMinutes > 0 ? day.overtimeMinutes : null)
+                : (controllers[day.day - 1].approvedOtMinutes > 0
+                    ? controllers[day.day - 1].approvedOtMinutes
+                    : null),
+            'is_unpaid': controllers[day.day - 1].isUnpaid,
+            'is_public_holiday': controllers[day.day - 1].isPublicHoliday,
+          },
+      ];
+      final deductionMinutes =
+          AttendancePayrollService.attendanceShortageMinutes(
+        employee: {
+          ...widget.employee,
+          'employee_id': _employeeId(),
+          'branch_id': widget.branchId
+        },
+        salaryDefault: printSalary ??
             {
-              'employee_id': _employeeId(),
-              'attendance_date': DateFormat('yyyy-MM-dd').format(
-                  DateTime(widget.month.year, widget.month.month, day.day)),
-              'check_in': day.workingIn,
-              'check_out': day.workingOut,
-              'status': day.status,
-              'net_working_minutes': day.netMinutes,
-              'work_minutes': day.workMinutes,
-              'break_minutes': day.breakMinutes,
-              'overtime_minutes': day.overtimeMinutes,
-              'approved_ot_minutes': _isAdminView()
-                  ? (day.overtimeMinutes > 0 ? day.overtimeMinutes : null)
-                  : (controllers[day.day - 1].approvedOtMinutes > 0
-                      ? controllers[day.day - 1].approvedOtMinutes
-                      : null),
-              'is_unpaid': controllers[day.day - 1].isUnpaid,
-              'is_public_holiday': controllers[day.day - 1].isPublicHoliday,
+              'epf_category': _isLocalStaff ? 'normal1' : 'normal',
+              'eis_applicable': _isLocalStaff
             },
-        ];
+        attendance: attendance,
+        rosterRows: printRosters ??
+            [
+              for (final entry in _weeklyRoster.entries)
+                {
+                  ...entry.value,
+                  'branch_id': widget.branchId,
+                  'week_number': entry.key
+                }
+            ],
+      );
+      if (approvedOtAmount == null) {
         final estimate = await AttendancePayrollService.previewEmployeePayroll(
           employee: {
             ...widget.employee,
@@ -1067,6 +1090,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         month: widget.month,
         days: days,
         estimatedAmounts: estimatedAmounts,
+        deductionMinutes: deductionMinutes,
         approvedOtAmount: approvedOtAmount,
         lateDeductionAmount: lateDeductionAmount,
         unpaidDeductionAmount: unpaidDeductionAmount,

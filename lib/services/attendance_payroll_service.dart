@@ -347,6 +347,55 @@ class AttendancePayrollService {
     );
   }
 
+  /// Same deductible net-working shortfall as payroll; arrival lateness is a
+  /// different attendance measure and must not be paired with this RM amount.
+  static int attendanceShortageMinutes(
+      {required Map<String, dynamic> employee,
+      required Map<String, dynamic> salaryDefault,
+      required List<Map<String, dynamic>> attendance,
+      required List<Map<String, dynamic>> rosterRows}) {
+    if (['is_management_staff', 'is_temp_staff', 'is_support_staff']
+        .any((field) => _toBool(employee[field]))) return 0;
+    final foreign =
+        '${_text(employee['address'])} ${_text(salaryDefault['address'])}'
+            .toUpperCase();
+    final isForeign = foreign.contains('FRN') || foreign.contains('FOREIGN');
+    final target = _requiredWorkMinutes(
+        epfCategory: _normalizeCategory(salaryDefault['epf_category']),
+        eisApplicable: _isApplicable(salaryDefault['eis_applicable']));
+    final id = _normalizeId(employee['employee_id']);
+    final branch = _text(employee['branch_id'] ?? employee['branch']).trim();
+    final rosters = <int, Map<String, dynamic>>{
+      for (final r in rosterRows)
+        if (_text(r['branch_id']).trim() == branch)
+          _intNumber(r['week_number']): r
+    };
+    return attendance.fold<int>(0, (sum, row) {
+      final date = DateTime.tryParse(_text(row['attendance_date']));
+      final roster = rosters[date == null ? 0 : ((date.day - 1) ~/ 7) + 1];
+      return sum +
+          _shortageMinutesForRow(row, roster,
+              _rosterRequiredMinutes(roster) ?? target, isForeign, id);
+    });
+  }
+
+  static int _shortageMinutesForRow(Map<String, dynamic> row,
+      Map<String, dynamic>? roster, int target, bool foreign, String id) {
+    final status = _text(row['status']).trim().toUpperCase();
+    final work = _attendanceNetMinutes(row);
+    if (!PayrollCalculationService.shouldApplyShortageDeduction(
+        isUnpaid: _toBool(row['is_unpaid']) ||
+            PayrollCalculationService.isUnpaidAttendanceStatus(status),
+        isPublicHoliday: _toBool(row['is_public_holiday']) ||
+            const {'PH', 'PH-OFF', 'PH-SPL', 'PH-GANTI', 'PH-GUNTI'}
+                .contains(status),
+        worked: work > 0,
+        isForeignEmployee: foreign,
+        employeeId: id)) return 0;
+    final shortage = target - work - _checkoutGraceMinutes(row, roster);
+    return shortage > 0 ? shortage : 0;
+  }
+
   static Future<PayrollGenerationItem> _generateEmployeePayroll({
     required Map<String, dynamic> employee,
     required DateTime month,
@@ -530,6 +579,9 @@ class AttendancePayrollService {
     int publicHolidayReplacementDays = 0;
     int approvedOtDays = 0;
     int foreignWorkedOffDays = 0;
+    final foreignTakenOffDates = <int>{};
+    final foreignWorkedOffDates = <int>{};
+    final foreignRecordedDates = <int>{};
 
     for (final row in attendance) {
       final workMinutes = _attendanceNetMinutes(row);
@@ -551,8 +603,24 @@ class AttendancePayrollService {
               .contains(attendanceStatus);
       final worked = workMinutes > 0;
 
-      if (isForeignEmployee && attendanceStatus == 'OFF' && worked) {
-        foreignWorkedOffDays++;
+      if (isForeignEmployee &&
+          attendanceDate != null &&
+          attendanceDate.year == month.year &&
+          attendanceDate.month == month.month) {
+        if (worked ||
+            isUnpaid ||
+            isPublicHoliday ||
+            const {'OFF', 'MC', 'MEDICAL LEAVE', 'PL', 'AL', 'EL'}
+                .contains(attendanceStatus)) {
+          foreignRecordedDates.add(attendanceDate.day);
+        }
+        if (attendanceStatus == 'OFF') {
+          if (worked) {
+            foreignWorkedOffDates.add(attendanceDate.day);
+          } else {
+            foreignTakenOffDates.add(attendanceDate.day);
+          }
+        }
       }
 
       // --------------------------------------------------------------
@@ -591,23 +659,12 @@ class AttendancePayrollService {
       // --------------------------------------------------------------
       // Unpaid and public-holiday rows are excluded from the normal-day
       // shortage calculation. A normal worked day below the target creates
-      // a deduction based on the configured unpaid daily rate / target hours.
-      if (PayrollCalculationService.shouldApplyShortageDeduction(
-        isUnpaid: isUnpaid,
-        isPublicHoliday: isPublicHoliday,
-        worked: worked,
-        isForeignEmployee: isForeignEmployee,
-        employeeId: employeeId,
-      )) {
-        // Checkout has a 15-minute grace window. This grace is applied only
-        // to an early checkout and never offsets late check-in time.
-        final checkoutGrace = _checkoutGraceMinutes(row, roster);
-        final shortage = dailyRequiredMinutes - workMinutes - checkoutGrace;
-
-        if (shortage > 0) {
-          totalShortageMinutes += shortage;
-          totalLateDeduction += (shortage / 60.0) * dailyShortageRate;
-        }
+      // a deduction based on the normal shortage daily rate / target hours.
+      final shortage = _shortageMinutesForRow(
+          row, roster, dailyRequiredMinutes, isForeignEmployee, employeeId);
+      if (shortage > 0) {
+        totalShortageMinutes += shortage;
+        totalLateDeduction += (shortage / 60.0) * dailyShortageRate;
       }
 
       // --------------------------------------------------------------
@@ -646,8 +703,20 @@ class AttendancePayrollService {
       unpaidDailySalary * unpaidDays,
     );
 
-    if (isForeignEmployee && foreignWorkedOffDays > 0) {
-      totalOvertimeAmount += (basicSalary / 28.0) * foreignWorkedOffDays;
+    foreignWorkedOffDays = foreignWorkedOffDates.length;
+    final lastDay = DateTime.utc(month.year, month.month + 1, 0);
+    final malaysiaNow = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final malaysiaDay =
+        DateTime.utc(malaysiaNow.year, malaysiaNow.month, malaysiaNow.day);
+    final foreignRestDayOtDays = isForeignEmployee && overtimeEligible
+        ? PayrollCalculationService.foreignRestDayOtDays(
+            offDaysTaken: foreignTakenOffDates.length,
+            workedOffDays: foreignWorkedOffDays,
+            completeMonth: foreignRecordedDates.length == lastDay.day &&
+                !lastDay.isAfter(malaysiaDay))
+        : 0;
+    if (foreignRestDayOtDays > 0) {
+      totalOvertimeAmount += (basicSalary / 28.0) * foreignRestDayOtDays;
     }
     final overtimeAmount = PayrollCalculationService.roundPayrollAmount(
       totalOvertimeAmount,
@@ -828,6 +897,8 @@ class AttendancePayrollService {
                   'Approved OT hours: ${totalOvertimeHours.toStringAsFixed(2)}. '
                   'Approved OT days: $approvedOtDays. '
                   'Foreign worked OFF days: $foreignWorkedOffDays. '
+                  'Foreign OFF days taken: ${foreignTakenOffDates.length}. '
+                  'Foreign rest-day OT paid days: $foreignRestDayOtDays. '
                   'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
                   'Public holidays worked: $publicHolidayWorkedDays. '
                   'Public holiday off days: $publicHolidayOffDays. '

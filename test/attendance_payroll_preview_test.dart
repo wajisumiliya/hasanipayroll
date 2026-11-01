@@ -70,4 +70,83 @@ void main() {
     expect(result.lateDeduction, 0);
     expect(result.generated, isFalse);
   });
+  test('FRN full month with one OFF adds one basic/28 day to OT', () async {
+    final rows = List<Map<String, dynamic>>.generate(
+        31,
+        (i) => {
+              'attendance_date':
+                  '2026-10-${(i + 1).toString().padLeft(2, '0')}',
+              'status': i == 0 ? 'OFF' : 'Present',
+              'net_working_minutes': i == 0 ? 0 : 630,
+            });
+    final result = await preview(rows, address: 'FRN');
+    expect(result.overtimeAmount, 92.9);
+    final excluded = await preview(rows, address: 'FRN', id: 'HED1016');
+    expect(excluded.overtimeAmount, 0);
+    final partial = await preview(rows.sublist(0, 15), address: 'FRN');
+    expect(partial.overtimeAmount, 0);
+  });
+
+  test('printed deductible hours and payroll use the same net shortage',
+      () async {
+    const employee = <String, dynamic>{
+      'employee_id': 'TEST001',
+      'name': 'Test',
+      'branch_id': 'A'
+    };
+    const roster = <String, dynamic>{
+      'employee_id': 'TEST001',
+      'branch_id': 'A',
+      'week_number': 1,
+      'shift_start': '09:00',
+      'shift_end': '17:30',
+      'break_minutes': 60
+    };
+    final rows = <Map<String, dynamic>>[
+      {
+        'attendance_date': '2026-10-01',
+        'status': 'Present',
+        'check_in': '09:00',
+        'check_out': '16:15',
+        'net_working_minutes': 375
+      }
+    ];
+    final minutes = AttendancePayrollService.attendanceShortageMinutes(
+        employee: employee,
+        salaryDefault: salary,
+        attendance: rows,
+        rosterRows: [roster]);
+    final result = await AttendancePayrollService.previewEmployeePayroll(
+        employee: employee,
+        month: DateTime(2026, 10),
+        attendance: rows,
+        salaryDefault: salary,
+        rosterRows: [roster]);
+    expect(minutes, 60);
+    expect(result.shortageMinutes, minutes);
+    expect(result.lateDeduction, 13.3);
+    final madeUp = <Map<String, dynamic>>[
+      {
+        'attendance_date': '2026-10-01',
+        'status': 'Present',
+        'check_in': '09:30',
+        'check_out': '18:00',
+        'net_working_minutes': 450
+      }
+    ];
+    expect(
+        AttendancePayrollService.attendanceShortageMinutes(
+            employee: employee,
+            salaryDefault: salary,
+            attendance: madeUp,
+            rosterRows: [roster]),
+        0);
+    expect(
+        AttendancePayrollService.attendanceShortageMinutes(
+            employee: {...employee, 'address': 'FRN'},
+            salaryDefault: salary,
+            attendance: rows,
+            rosterRows: [roster]),
+        0);
+  });
 }

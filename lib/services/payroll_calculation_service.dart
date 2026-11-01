@@ -34,6 +34,18 @@ class PayrollCalculationService {
     return basicSalary;
   }
 
+  /// Two monthly rest days. Existing explicitly worked OFF days remain payable;
+  /// infer unused entitlement only from a complete month's attendance.
+  static int foreignRestDayOtDays(
+      {required int offDaysTaken,
+      required int workedOffDays,
+      required bool completeMonth}) {
+    final explicitDays = workedOffDays < 0 ? 0 : workedOffDays;
+    if (!completeMonth) return explicitDays;
+    final unused = (2 - offDaysTaken).clamp(0, 2).toInt();
+    return explicitDays > unused ? explicitDays : unused;
+  }
+
   /// Daily rate used only for explicit UNPAID attendance days.
   /// The divisor is the actual number of calendar days in the payroll month.
   static double unpaidDailyRate({

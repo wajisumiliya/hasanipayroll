@@ -3,6 +3,23 @@ import 'package:hasani_payroll_portal/models/payroll.dart';
 import 'package:hasani_payroll_portal/services/payroll_calculation_service.dart';
 
 void main() {
+  test(
+      'FRN monthly rest-day OT pays unused entitlement without double counting',
+      () {
+    int days(int taken, int worked, {bool complete = true}) =>
+        PayrollCalculationService.foreignRestDayOtDays(
+            offDaysTaken: taken,
+            workedOffDays: worked,
+            completeMonth: complete);
+    expect(days(1, 0), 1);
+    expect(days(0, 0), 2);
+    expect(days(2, 0), 0);
+    expect(days(3, 0), 0);
+    expect(days(1, 1), 1);
+    expect(days(1, 0, complete: false), 0);
+    expect(days(0, 1, complete: false), 1);
+  });
+
   test('attendance report disqualification removes the full allowance', () {
     expect(
         PayrollCalculationService.payableAttendanceAllowance(
