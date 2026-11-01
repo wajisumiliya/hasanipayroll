@@ -1,25 +1,17 @@
-# Payroll Excel generation dialog
+# Payroll Excel selection dialog
 
-The RHB Layout menu opens the cream and navy Hasani Books Generate Payroll Excel Files
-dialog, with white Year/Month selectors, Cancel and a navy Generate 4 Excel Files
-button. Generation remains in the dialog, locks the period/actions, prevents
-repeat submissions, and shows progress. Failure/no payroll leaves the dialog open
-for correction/retry; successful downloads close it. Closing/back is disabled
-during generation. Month/year selection uses the existing saved-payroll month
-query. This is an export, not payroll generation.
+RHB Layout opens Generate Payroll Excel Files with the original Hasani Books
+logo, Month then Year selectors, and a pale blue panel containing Branch Payroll,
+EPF, SOCSO, EIS and HRDF checkboxes. All five start selected. Generate Selected
+Files exports only those chosen, disables when empty, and locks choices while busy.
 
-The combined action encodes four real Excel workbooks: one consolidated RHB
-salary workbook, EPF, EIS and SOCSO. Each workbook is downloaded separately as XLSX. The browser may ask for permission
-to allow multiple downloads. No ZIP archive is generated. The individual RHB export
-retains branch-specific filenames/files; other individual statutory exports
-continue to download XLSX. Existing identity/text formatting, contribution/net
-calculations, missing-account exclusions and statutory layouts are retained.
-Success is shown after the file saver completes, rather than after unawaited
-per-workbook download triggers. No database values are modified.
+Branch Payroll uses the existing formatted all-branches payroll workbook; the
+other choices use the existing statutory/HRDF report exporters. Inputs are saved
+payroll for the selected month. Files are built before downloads start, then saved
+as separate XLSX files. Allow multiple downloads in the browser. No ZIP is made.
+Individual RHB bank-format exports elsewhere remain available with their existing
+bank columns. No payroll or database values are modified.
 
-Dart formatter/parser and diff checks passed. Flutter widget tests cover period
-capture, duplicate-click prevention, success dismissal and retry after failure;
-Flutter execution is unavailable in the workspace. No backend/migration change
-is needed. Rebuild Flutter web and allow multiple file downloads in the browser.
-
-Generated-payroll selected exports also save separate XLSX files rather than a ZIP.
+Dart parse/format and diff checks pass. The dialog test verifies selected-file
+capture and duplicate-action prevention. Flutter tests require local execution.
+Rebuild web after pulling to see the updated dialog.

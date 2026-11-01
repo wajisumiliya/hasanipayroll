@@ -5,7 +5,7 @@ class PayrollExcelExportDialog extends StatefulWidget {
   const PayrollExcelExportDialog(
       {super.key, required this.initialMonth, required this.onGenerate});
   final DateTime initialMonth;
-  final Future<bool> Function(DateTime month) onGenerate;
+  final Future<bool> Function(DateTime month, Set<String> files) onGenerate;
   @override
   State<PayrollExcelExportDialog> createState() =>
       _PayrollExcelExportDialogState();
@@ -13,17 +13,25 @@ class PayrollExcelExportDialog extends StatefulWidget {
 
 class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
   late int year = widget.initialMonth.year, month = widget.initialMonth.month;
+  final selectedFiles = <String>{
+    'Branch Payroll',
+    'EPF',
+    'SOCSO',
+    'EIS',
+    'HRDF'
+  };
   bool busy = false;
   String? error;
   static const ink = Color(0xFF0B2859);
   Future<void> generate() async {
-    if (busy) return;
+    if (busy || selectedFiles.isEmpty) return;
     setState(() {
       busy = true;
       error = null;
     });
     try {
-      final success = await widget.onGenerate(DateTime(year, month));
+      final success = await widget.onGenerate(
+          DateTime(year, month), Set<String>.of(selectedFiles));
       if (!mounted) return;
       if (success) {
         Navigator.of(context).pop(true);
@@ -59,7 +67,8 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
     return PopScope(
         canPop: !busy,
         child: AlertDialog(
-          backgroundColor: const Color(0xFFFFFCF7),
+          scrollable: true,
+          backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -72,38 +81,17 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                     style: TextStyle(fontSize: 23, color: Color(0xFF19283F))))
           ]),
           content: SizedBox(
-              width: 420,
+              width: 660,
               child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                        'Select the payroll year and month. Four Excel files will be generated: RHB, EPF, EIS and SOCSO.',
+                        'Select the payroll month, year, and file types to generate.',
                         style:
                             TextStyle(color: Color(0xFF77777E), height: 1.5)),
                     const SizedBox(height: 18),
                     Row(children: [
-                      Expanded(
-                          child: DropdownButtonFormField<int>(
-                              key: const Key('payroll-export-year'),
-                              initialValue: year,
-                              decoration: decoration('Year'),
-                              style: const TextStyle(
-                                  color: ink,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600),
-                              isExpanded: true,
-                              items: years
-                                  .map((y) => DropdownMenuItem(
-                                      value: y, child: Text('$y')))
-                                  .toList(),
-                              onChanged: busy
-                                  ? null
-                                  : (value) {
-                                      if (value != null)
-                                        setState(() => year = value);
-                                    })),
-                      const SizedBox(width: 12),
                       Expanded(
                           child: DropdownButtonFormField<int>(
                               key: const Key('payroll-export-month'),
@@ -126,12 +114,60 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                                       if (value != null)
                                         setState(() => month = value);
                                     })),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: DropdownButtonFormField<int>(
+                              key: const Key('payroll-export-year'),
+                              initialValue: year,
+                              decoration: decoration('Year'),
+                              style: const TextStyle(
+                                  color: ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600),
+                              isExpanded: true,
+                              items: years
+                                  .map((y) => DropdownMenuItem(
+                                      value: y, child: Text('$y')))
+                                  .toList(),
+                              onChanged: busy
+                                  ? null
+                                  : (value) {
+                                      if (value != null)
+                                        setState(() => year = value);
+                                    })),
                     ]),
-                    const SizedBox(height: 10),
-                    const Text(
-                        'Downloads four separate Excel files. Allow multiple downloads in your browser.',
-                        style:
-                            TextStyle(fontSize: 12, color: Color(0xFF77777E))),
+                    const SizedBox(height: 20),
+                    Container(
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFEEF2FF),
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Column(children: [
+                          for (final file in const [
+                            'Branch Payroll',
+                            'EPF',
+                            'SOCSO',
+                            'EIS',
+                            'HRDF'
+                          ])
+                            CheckboxListTile(
+                                dense: true,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                activeColor: ink,
+                                title: Text(file,
+                                    style: const TextStyle(color: ink)),
+                                value: selectedFiles.contains(file),
+                                onChanged: busy
+                                    ? null
+                                    : (checked) => setState(() {
+                                          if (checked == true) {
+                                            selectedFiles.add(file);
+                                          } else {
+                                            selectedFiles.remove(file);
+                                          }
+                                        }))
+                        ])),
                     if (error != null)
                       Padding(
                           padding: const EdgeInsets.only(top: 10),
@@ -143,7 +179,7 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                 onPressed: busy ? null : () => Navigator.of(context).pop(false),
                 child: const Text('Cancel')),
             FilledButton.icon(
-                onPressed: busy ? null : generate,
+                onPressed: busy || selectedFiles.isEmpty ? null : generate,
                 style: FilledButton.styleFrom(
                     backgroundColor: ink,
                     foregroundColor: Colors.white,
@@ -155,7 +191,7 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.download, size: 18),
-                label: Text(busy ? 'Generating...' : 'Generate 4 Excel Files'))
+                label: Text(busy ? 'Generating...' : 'Generate Selected Files'))
           ],
         ));
   }

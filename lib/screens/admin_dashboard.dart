@@ -417,6 +417,56 @@ class _AdminDashboardState extends State<AdminDashboard>
     });
   }
 
+  Future<bool> _exportSelectedPayrollExcel(
+      DateTime month, Set<String> selected) async {
+    try {
+      final files = <String, Uint8List>{};
+      void collect(String name, Uint8List bytes) {
+        files[name] = bytes;
+      }
+
+      if (selected.contains('Branch Payroll')) {
+        final records = await SupabaseService.getPayrollForMonth(month);
+        if (records.isEmpty) {
+          _message('No payroll records for the selected month.');
+          return false;
+        }
+        final branches = await service.loadNeonBranches();
+        final names = <String, String>{
+          for (final branch in branches)
+            _branchIdFromMap(branch):
+                _branchNameFromMap(branch, _branchIdFromMap(branch))
+        };
+        await _exportPayrollAllBranchesExcel(records, names, onFile: collect);
+      }
+      for (final type in const ['EPF', 'SOCSO', 'EIS']) {
+        if (!selected.contains(type)) continue;
+        final report = await _fetchStatutoryReport(type, month);
+        await _exportStatutoryReportExcel(
+            type, month, List<List<dynamic>>.from(report['rows'] ?? const []),
+            onFile: collect);
+      }
+      if (selected.contains('HRDF')) {
+        final rows = await _fetchDashboardReportRows(month);
+        await _exportDashboardSummaryExcel('HRDF', month, rows,
+            onFile: collect);
+      }
+      if (files.length != selected.length) return false;
+      for (final file in files.entries) {
+        await FileSaver.instance.saveFile(
+            name: file.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
+            bytes: file.value,
+            ext: 'xlsx',
+            mimeType: MimeType.microsoftExcel);
+      }
+      _message('Downloaded ${files.length} separate Excel files.');
+      return true;
+    } catch (error) {
+      _message('Excel export failed: $error');
+      return false;
+    }
+  }
+
   bool _payrollExcelExportBusy = false;
   Future<void> _showRhbPeriodDialog() async {
     if (_payrollExcelExportBusy) return;
@@ -427,9 +477,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         barrierDismissible: false,
         builder: (_) => PayrollExcelExportDialog(
           initialMonth: selectedPayrollMonth,
-          onGenerate: (period) async {
+          onGenerate: (period, files) async {
             setState(() => selectedPayrollMonth = period);
-            return _exportRhbLayout();
+            return _exportSelectedPayrollExcel(period, files);
           },
         ),
       );

@@ -9,6 +9,7 @@ void main() {
     final done = Completer<bool>();
     var calls = 0;
     DateTime? selected;
+    Set<String>? chosen;
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(
             body: Builder(
@@ -17,8 +18,9 @@ void main() {
                           context: context,
                           builder: (_) => PayrollExcelExportDialog(
                               initialMonth: DateTime(2026, 11),
-                              onGenerate: (month) {
+                              onGenerate: (month, files) {
                                 selected = month;
+                                chosen = files;
                                 calls++;
                                 return done.future;
                               })),
@@ -27,10 +29,12 @@ void main() {
     await tester.tap(find.text('Open export'));
     await tester.pumpAndSettle();
     expect(find.text('Generate Payroll Excel Files'), findsOneWidget);
-    await tester.tap(find.text('Generate 4 Excel Files'));
+    await tester.ensureVisible(find.text('Generate Selected Files'));
+    await tester.tap(find.text('Generate Selected Files'));
     await tester.pump();
     expect(selected, DateTime(2026, 11));
     expect(calls, 1);
+    expect(chosen, {'Branch Payroll', 'EPF', 'SOCSO', 'EIS', 'HRDF'});
     expect(find.text('Generating...'), findsOneWidget);
     expect(
         tester
@@ -48,8 +52,9 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: PayrollExcelExportDialog(
-            initialMonth: DateTime(2026, 11), onGenerate: (_) async => false)));
-    await tester.tap(find.text('Generate 4 Excel Files'));
+            initialMonth: DateTime(2026, 11),
+            onGenerate: (_, files) async => false)));
+    await tester.tap(find.text('Generate Selected Files'));
     await tester.pumpAndSettle();
     expect(
         find.text(
