@@ -227,6 +227,7 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
                 child: DropdownButtonFormField<int>(
                     key: ValueKey('payslip-year-${widget.period.year}'),
                     initialValue: widget.period.year,
+                    isExpanded: true,
                     decoration: input('Year', Icons.calendar_today_outlined),
                     items: years
                         .map((y) =>
@@ -254,6 +255,7 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
             SizedBox(
                 width: 180,
                 child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: widget.active == null
                         ? 'all'
                         : widget.active!

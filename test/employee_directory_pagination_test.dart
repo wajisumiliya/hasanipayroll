@@ -18,11 +18,12 @@ void main() {
     expect(find.text('10'), findsOneWidget);
     await tester.tap(find.text('3'));
     expect(selected, 2);
-    await tester.tap(find.byTooltip('Next employees'));
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.chevron_right));
     expect(selected, 1);
     expect(
         tester
-            .widget<IconButton>(find.byTooltip('Previous employees'))
+            .widget<IconButton>(
+                find.widgetWithIcon(IconButton, Icons.chevron_left))
             .onPressed,
         isNull);
     expect(tester.takeException(), isNull);
@@ -35,7 +36,10 @@ void main() {
                 page: 9, pageCount: 10, compact: true, onChanged: (_) {}))));
     expect(find.text('10 / 10'), findsOneWidget);
     expect(
-        tester.widget<IconButton>(find.byTooltip('Next employees')).onPressed,
+        tester
+            .widget<IconButton>(
+                find.widgetWithIcon(IconButton, Icons.chevron_right))
+            .onPressed,
         isNull);
   });
 }
