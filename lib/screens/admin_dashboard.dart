@@ -1,3 +1,4 @@
+import '../widgets/payroll_excel_export_dialog.dart';
 import '../widgets/admin_activity_cards.dart';
 import '../services/attendance_batch_print_service.dart';
 // ignore_for_file: unused_element, use_build_context_synchronously
@@ -411,107 +412,25 @@ class _AdminDashboardState extends State<AdminDashboard>
     });
   }
 
+  bool _payrollExcelExportBusy = false;
   Future<void> _showRhbPeriodDialog() async {
-    var year = selectedPayrollMonth.year;
-    var month = selectedPayrollMonth.month;
-    final currentYear = DateTime.now().year;
-    final years = <int>{
-      ...List.generate(currentYear - 2019, (index) => currentYear - index),
-      year,
-    }.toList()
-      ..sort((a, b) => b.compareTo(a));
-
-    final selectedPeriod = await showDialog<DateTime>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.account_balance_outlined),
-              SizedBox(width: 10),
-              Text('Generate Payroll Excel Files'),
-            ],
-          ),
-          content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Select the payroll year and month. Four Excel files will be generated: RHB, EPF, EIS and SOCSO.',
-                  style: TextStyle(color: Colors.black54),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        initialValue: year,
-                        decoration: const InputDecoration(
-                          labelText: 'Year',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: years
-                            .map((value) => DropdownMenuItem<int>(
-                                  value: value,
-                                  child: Text(value.toString()),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() => year = value);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        initialValue: month,
-                        decoration: const InputDecoration(
-                          labelText: 'Month',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: List.generate(
-                          12,
-                          (index) => DropdownMenuItem<int>(
-                            value: index + 1,
-                            child: Text(DateFormat('MMMM')
-                                .format(DateTime(2000, index + 1))),
-                          ),
-                        ),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() => month = value);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton.icon(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, DateTime(year, month)),
-              icon: const Icon(Icons.download_outlined),
-              label: const Text('Generate 4 Excel Files'),
-            ),
-          ],
+    if (_payrollExcelExportBusy) return;
+    _payrollExcelExportBusy = true;
+    try {
+      await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => PayrollExcelExportDialog(
+          initialMonth: selectedPayrollMonth,
+          onGenerate: (period) async {
+            setState(() => selectedPayrollMonth = period);
+            return _exportRhbLayout();
+          },
         ),
-      ),
-    );
-
-    if (selectedPeriod == null || !mounted) return;
-    setState(() => selectedPayrollMonth = selectedPeriod);
-    await _exportRhbLayout();
+      );
+    } finally {
+      _payrollExcelExportBusy = false;
+    }
   }
 
   String _pageTitle() {
@@ -21657,7 +21576,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Future<void> _exportRhbLayout({String? only}) async {
+  Future<bool> _exportRhbLayout({String? only}) async {
     try {
       _message(
         only == 'rhb'
@@ -21713,7 +21632,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         _message(
           'No generated payroll found for $selectedMonth.',
         );
-        return;
+        return false;
       }
 
       // ============================================================
@@ -22026,6 +21945,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       // SAVE EXCEL
       // ============================================================
 
+      final generatedFiles = <String, Uint8List>{};
       void saveExcel(
         String fileName,
         String sheetName,
@@ -22124,15 +22044,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
         }
 
-        final bytes = excel.save(
-          fileName: fileName,
-        );
+        final bytes = excel.encode();
 
         if (bytes == null || bytes.isEmpty) {
           throw Exception(
             '$fileName could not be generated.',
           );
         }
+        generatedFiles[fileName] = Uint8List.fromList(bytes);
       }
 
       // ============================================================
@@ -22451,9 +22370,14 @@ class _AdminDashboardState extends State<AdminDashboard>
       // ============================================================
 
       if (only == null || only == 'rhb') {
-        for (final branchExport in rhbByBranch.entries) {
+        final rhbExports = only == null
+            ? <String, List<List<dynamic>>>{'ALL_BRANCHES': rhb}
+            : rhbByBranch;
+        for (final branchExport in rhbExports.entries) {
           saveExcel(
-            rhbFileName(branchExport.key),
+            only == null
+                ? 'RHB_${monthFile}_$exportStamp.xlsx'
+                : rhbFileName(branchExport.key),
             'SALARY',
             const [
               'NAME',
@@ -22550,8 +22474,31 @@ class _AdminDashboardState extends State<AdminDashboard>
       // SUCCESS
       // ============================================================
 
+      if (only == null) {
+        if (generatedFiles.length != 4)
+          throw StateError('Expected four payroll workbooks.');
+        final archive = Archive();
+        for (final file in generatedFiles.entries) {
+          archive.addFile(ArchiveFile(file.key, file.value.length, file.value));
+        }
+        final zip = ZipEncoder().encode(archive);
+        await FileSaver.instance.saveFile(
+            name: 'Payroll_Excel_${monthFile}_$exportStamp',
+            bytes: Uint8List.fromList(zip),
+            ext: 'zip',
+            mimeType: MimeType.other);
+      } else {
+        for (final file in generatedFiles.entries) {
+          await FileSaver.instance.saveFile(
+              name: file.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
+              bytes: file.value,
+              ext: 'xlsx',
+              mimeType: MimeType.microsoftExcel);
+        }
+      }
+
       _message(only == null
-          ? 'Generated 4 Excel files for $selectedMonth: '
+          ? 'Downloaded ZIP containing 4 Excel files for $selectedMonth: '
               'RHB Layout, EPF, EIS and SOCSO (export $exportStamp). '
               'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
               'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '
@@ -22561,10 +22508,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               ? '${rhbByBranch.length} branch-wise RHB Excel file(s) exported '
                   'for $selectedMonth with ${rhb.length} employee(s).'
               : '${only.toUpperCase()} Excel exported for $selectedMonth.');
+      return true;
     } catch (e) {
       _message(
         'RHB / statutory Excel export failed: $e',
       );
+      return false;
     }
   }
 
