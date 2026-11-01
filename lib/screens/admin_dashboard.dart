@@ -1,3 +1,4 @@
+import '../widgets/payroll_editor_summary.dart';
 import '../widgets/employee_directory_pagination.dart';
 import '../widgets/payroll_excel_export_dialog.dart';
 import '../widgets/admin_activity_cards.dart';
@@ -13191,7 +13192,6 @@ class _AdminDashboardState extends State<AdminDashboard>
 
             final earnings = totalFor('Earnings');
             final deductions = totalFor('Deductions');
-            final employerContributions = totalFor('Employer Contributions');
             final net = earnings - deductions;
             final dialogWidth = (MediaQuery.sizeOf(dialogContext).width - 80)
                 .clamp(280.0, 1180.0)
@@ -13206,6 +13206,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                 child: TextField(
                   controller: controllers[field.$1],
                   enabled: employeeId != null && !loading && !saving,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF18365F),
+                      fontWeight: FontWeight.w600),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (_) {
@@ -13259,7 +13263,35 @@ class _AdminDashboardState extends State<AdminDashboard>
                   decoration: InputDecoration(
                     labelText: field.$2,
                     prefixText: 'RM ',
-                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    filled: true,
+                    fillColor: Colors.white,
+                    labelStyle:
+                        const TextStyle(fontSize: 12, color: Color(0xFF1A3458)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 13),
+                    prefixIcon: Icon(
+                        switch (field.$1) {
+                          'basic_salary' ||
+                          'fw_salary' =>
+                            Icons.payments_outlined,
+                          'overtime' || 'late_deduction' => Icons.schedule,
+                          'cuti_umum' => Icons.calendar_month_outlined,
+                          'bonus' => Icons.card_giftcard,
+                          'elaun_makanan' => Icons.restaurant_outlined,
+                          'unpaid_deduction' => Icons.remove_circle_outline,
+                          'zakat' => Icons.volunteer_activism_outlined,
+                          'advance' => Icons.handshake_outlined,
+                          _ => Icons.account_balance_outlined,
+                        },
+                        size: 18,
+                        color: const Color(0xFF9C6A21)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: const BorderSide(color: Color(0xFFD4D9E5))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: const BorderSide(color: Color(0xFFD4D9E5))),
                   ),
                 ),
               );
@@ -13269,91 +13301,67 @@ class _AdminDashboardState extends State<AdminDashboard>
               final groupFields =
                   fields.where((field) => field.$3 == title).toList();
               return Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .72),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFD9DDE6)),
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = constraints.maxWidth >= 820
-                        ? 3
-                        : constraints.maxWidth >= 520
-                            ? 2
-                            : 1;
-                    final fieldWidth =
-                        (constraints.maxWidth - ((columns - 1) * 12)) / columns;
-                    return Column(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFFFEFC),
+                      borderRadius: BorderRadius.circular(11),
+                      border: Border.all(color: const Color(0xFFE0E3EC))),
+                  child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (title == 'Deductions') ...[
-                          const SizedBox(height: 5),
-                          const Text(
-                            'EPF, SOCSO and EIS are calculated automatically and remain editable.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF65738A),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: groupFields
-                              .map((field) => amountField(field, fieldWidth))
-                              .toList(),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              );
-            }
-
-            Widget summaryItem(
-              String label,
-              double value,
-              IconData icon, {
-              bool emphasized = false,
-            }) {
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                decoration: BoxDecoration(
-                  color: emphasized
-                      ? const Color(0xFFE7F6EC)
-                      : const Color(0xFFF5F6F9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: emphasized
-                        ? const Color(0xFF9DD5AE)
-                        : const Color(0xFFD9DDE6),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 18),
-                    const SizedBox(width: 8),
-                    Text('$label  ', style: const TextStyle(fontSize: 12)),
-                    Text(
-                      _money(value),
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-              );
+                        Container(
+                            width: double.infinity,
+                            color: const Color(0xFF06366F),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            child: Row(children: [
+                              Icon(
+                                  title == 'Earnings'
+                                      ? Icons.payments_outlined
+                                      : title == 'Deductions'
+                                          ? Icons.shield_outlined
+                                          : Icons.business_outlined,
+                                  color: const Color(0xFFFFC247),
+                                  size: 20),
+                              const SizedBox(width: 10),
+                              Text(title,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700))
+                            ])),
+                        Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: LayoutBuilder(builder: (_, box) {
+                              final columns = box.maxWidth >= 600
+                                  ? 3
+                                  : box.maxWidth >= 380
+                                      ? 2
+                                      : 1;
+                              final fieldWidth =
+                                  (box.maxWidth - (columns - 1) * 12) / columns;
+                              return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (title == 'Deductions') ...[
+                                      const Text(
+                                          'EPF, SOCSO and EIS are calculated automatically and remain editable.',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF65738A))),
+                                      const SizedBox(height: 12)
+                                    ],
+                                    Wrap(
+                                        spacing: 12,
+                                        runSpacing: 12,
+                                        children: groupFields
+                                            .map((field) =>
+                                                amountField(field, fieldWidth))
+                                            .toList()),
+                                  ]);
+                            })),
+                      ]));
             }
 
             return PopScope(
@@ -13366,13 +13374,30 @@ class _AdminDashboardState extends State<AdminDashboard>
                 }
               },
               child: AlertDialog(
-                title: const Row(
-                  children: [
-                    Icon(Icons.edit_note_outlined),
-                    SizedBox(width: 10),
-                    Text('Edit Payroll'),
-                  ],
-                ),
+                backgroundColor: const Color(0xFFFFFCF7),
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
+                title: Row(children: [
+                  Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFFFFEDC9),
+                          borderRadius: BorderRadius.circular(9)),
+                      child: const Icon(Icons.edit_note_outlined,
+                          color: Color(0xFF98651D))),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                      child: Text('Edit Payroll',
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF142C4B)))),
+                  Image.asset('assets/hasani_books_logo.jpg',
+                      width: dialogWidth < 600 ? 90 : 130,
+                      height: 40,
+                      fit: BoxFit.contain),
+                ]),
                 content: SizedBox(
                   width: dialogWidth,
                   height: (MediaQuery.sizeOf(dialogContext).height * .70)
@@ -13383,7 +13408,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Choose a branch, payroll month, and employee. Employees are listed by Employee ID from A to Z. Existing values load automatically; if no record exists, a new one will be created.',
+                          'Choose a branch, payroll month, and employee. Update earnings and deductions, then save the payroll.',
                         ),
                         const SizedBox(height: 18),
                         Wrap(
@@ -13567,7 +13592,26 @@ class _AdminDashboardState extends State<AdminDashboard>
                             ),
                           ],
                           const SizedBox(height: 20),
-                          fieldGroup('Earnings'),
+                          LayoutBuilder(builder: (_, box) {
+                            final summary = PayrollEditorSummary(
+                                earnings: earnings,
+                                deductions: deductions,
+                                net: net);
+                            return box.maxWidth >= 900
+                                ? Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                        Expanded(child: fieldGroup('Earnings')),
+                                        const SizedBox(width: 14),
+                                        SizedBox(width: 285, child: summary)
+                                      ])
+                                : Column(children: [
+                                    fieldGroup('Earnings'),
+                                    summary,
+                                    const SizedBox(height: 12)
+                                  ]);
+                          }),
                           fieldGroup('Deductions'),
                           fieldGroup('Employer Contributions'),
                           TextField(
@@ -13582,34 +13626,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                               labelText: 'Remarks',
                               border: OutlineInputBorder(),
                             ),
-                          ),
-                          const SizedBox(height: 18),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              summaryItem(
-                                'Gross',
-                                earnings,
-                                Icons.trending_up_outlined,
-                              ),
-                              summaryItem(
-                                'Deductions',
-                                deductions,
-                                Icons.trending_down_outlined,
-                              ),
-                              summaryItem(
-                                'Employer',
-                                employerContributions,
-                                Icons.business_outlined,
-                              ),
-                              summaryItem(
-                                'Net Pay',
-                                net,
-                                Icons.account_balance_wallet_outlined,
-                                emphasized: true,
-                              ),
-                            ],
                           ),
                           const SizedBox(height: 24),
                         ],
@@ -13647,35 +13663,64 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
                 actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 18),
+                actionsAlignment: MainAxisAlignment.spaceBetween,
                 actions: [
-                  TextButton(
-                    onPressed: saving
-                        ? null
-                        : () async {
-                            if (await confirmDiscardChanges() &&
-                                dialogContext.mounted) {
-                              setDialogState(() => hasUnsavedChanges = false);
-                              Navigator.pop(dialogContext);
-                            }
-                          },
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: employeeId == null ||
-                            loading ||
-                            saving ||
-                            calculatingStatutory
-                        ? null
-                        : savePayroll,
-                    icon: saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(saving ? 'Saving...' : 'Save Payroll'),
-                  ),
+                  OutlinedButton.icon(
+                      onPressed: loading || saving || employeeId == null
+                          ? null
+                          : () async {
+                              if (!await confirmDiscardChanges() ||
+                                  !dialogContext.mounted) return;
+                              setDialogState(() {
+                                statutoryRevision++;
+                                calculatingStatutory = false;
+                                fillControllers(storedRecord);
+                                hasUnsavedChanges = false;
+                                statutoryInfo = null;
+                                success = null;
+                                error = null;
+                              });
+                            },
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF98651D),
+                          side: const BorderSide(color: Color(0xFFBD8F3C))),
+                      icon: const Icon(Icons.restart_alt),
+                      label: const Text('Reset')),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    TextButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (await confirmDiscardChanges() &&
+                                  dialogContext.mounted) {
+                                setDialogState(() => hasUnsavedChanges = false);
+                                Navigator.pop(dialogContext);
+                              }
+                            },
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF07356E),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10))),
+                      onPressed: employeeId == null ||
+                              loading ||
+                              saving ||
+                              calculatingStatutory
+                          ? null
+                          : savePayroll,
+                      icon: saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(saving ? 'Saving...' : 'Save Payroll'),
+                    ),
+                  ]),
                 ],
               ),
             );
