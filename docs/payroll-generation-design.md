@@ -32,3 +32,24 @@ Dart formatter/parser and diff checks passed. Flutter widget tests cover branch/
 file selection capture and disabled generation with no selected branches. Flutter
 execution is unavailable in this workspace; run tests locally/CI and rebuild
 Flutter web to apply this design and workflow.
+
+## Employee readiness dialog
+
+The follow-on employee selector now uses the same cream/navy design and original
+Hasani Books header, with month/branch/employee information tiles, readiness banner,
+All/Ready/Follow-up/Submitted filters, ID/name search and a compact white list.
+Staff exemptions appear as management/temporary/support badges. Submitted means
+at least one submitted day; it does not bypass the complete-attendance readiness
+requirement. Follow-up employees retain their expandable missing-day explanation
+and cannot be checked for generation.
+
+Select all visible employees applies only to ready IDs in the current filtered
+results; deselecting them preserves hidden selections. The footer shows selected
+employee count, Cancel and Generate Payroll. The replace-existing option is in a
+separate tinted panel. Existing overwrite confirmation, exemption rules and payroll
+writes are unchanged. Small screens use an outer scroll area and bounded employee
+list so the additional controls remain reachable.
+
+Selection helper tests cover incomplete submitted attendance being unselectable,
+hidden selection retention, and ID/name filtering. Dart formatter/parser checks
+pass; Flutter tests still need local/CI execution. Rebuild Flutter web to apply.

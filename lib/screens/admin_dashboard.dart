@@ -1,3 +1,4 @@
+import '../services/payroll_readiness_selection.dart';
 import '../widgets/payroll_generation_dialog.dart';
 import '../widgets/payroll_editor_summary.dart';
 import '../widgets/employee_directory_pagination.dart';
@@ -12065,7 +12066,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         .toSet();
 
     final selectedIds = <String>{};
-    bool selectAll = false;
+    String readinessFilter = 'all';
+    String readinessSearch = '';
     bool overwriteExisting = true;
     final expandedMissingIds = <String>{};
 
@@ -12074,11 +12076,17 @@ class _AdminDashboardState extends State<AdminDashboard>
       builder: (selectionContext) {
         return StatefulBuilder(
           builder: (context, setSelectionState) {
-            final allIds = employees
-                .map((e) => _normalizeBranchValue(e['employee_id']))
-                .where((id) => id.isNotEmpty && readyIds.contains(id))
+            final submittedIds = submittedDaysByEmployee.entries
+                .where((entry) => entry.value.isNotEmpty)
+                .map((entry) => entry.key)
                 .toSet();
-            final displayEmployees = [...employees]..sort((a, b) {
+            final displayEmployees = PayrollReadinessSelection.visible(
+                employees,
+                readyIds: readyIds,
+                submittedIds: submittedIds,
+                filter: readinessFilter,
+                search: readinessSearch)
+              ..sort((a, b) {
                 final aId = _normalizeBranchValue(a['employee_id']);
                 final bId = _normalizeBranchValue(b['employee_id']);
                 final aReady = readyIds.contains(aId);
@@ -12089,28 +12097,117 @@ class _AdminDashboardState extends State<AdminDashboard>
                     .compareTo((b['name'] ?? bId).toString());
               });
 
+            final allIds = PayrollReadinessSelection.selectable(
+                displayEmployees, readyIds);
+            final allVisibleSelected =
+                allIds.isNotEmpty && selectedIds.containsAll(allIds);
+            Widget infoTile(String label, String value, IconData icon) =>
+                Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFFF9FAFE),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE4E7EF))),
+                    child: Row(children: [
+                      Icon(icon, color: const Color(0xFFAC771F), size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text(label,
+                                style: const TextStyle(
+                                    fontSize: 10, color: Color(0xFF65738A))),
+                            const SizedBox(height: 3),
+                            Text(value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF12315E)))
+                          ]))
+                    ]));
+            final compactSelection =
+                MediaQuery.sizeOf(selectionContext).width < 600;
+            Widget arrangeBody(Widget child) =>
+                compactSelection ? SingleChildScrollView(child: child) : child;
+            Widget listArea(Widget child) {
+              final panel = Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE1E6EF))),
+                  child: child);
+              return compactSelection
+                  ? SizedBox(height: 300, child: panel)
+                  : Expanded(child: panel);
+            }
+
             return AlertDialog(
-              title: Text('Generate Payroll • $branchName'),
+              backgroundColor: const Color(0xFFFFFCF8),
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: Row(children: [
+                Image.asset('assets/hasani_books_logo.jpg',
+                    width: compactSelection ? 70 : 100,
+                    height: 38,
+                    fit: BoxFit.contain),
+                const SizedBox(width: 12),
+                const Icon(Icons.assignment_outlined, color: Color(0xFFAD761D)),
+                const SizedBox(width: 9),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Generate Payroll • $branchName',
+                          style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF12315E))),
+                      const Text(
+                          'Select employees to generate payroll for the chosen month.',
+                          style:
+                              TextStyle(fontSize: 11, color: Color(0xFF62708A)))
+                    ])),
+                IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(selectionContext).pop(),
+                    icon: const Icon(Icons.close, size: 20)),
+              ]),
               content: SizedBox(
                 width: 720,
-                height: 650,
-                child: Column(
+                height: (MediaQuery.sizeOf(selectionContext).height * .66)
+                    .clamp(300.0, 650.0)
+                    .toDouble(),
+                child: arrangeBody(Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_month_outlined),
-                        const SizedBox(width: 8),
-                        Text(
-                          DateFormat('MMMM yyyy').format(month),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text('${employees.length} employee(s)'),
-                      ],
-                    ),
+                    LayoutBuilder(
+                        builder: (_, box) =>
+                            Wrap(spacing: 10, runSpacing: 8, children: [
+                              for (final item in [
+                                (
+                                  'Payroll Month',
+                                  DateFormat('MMMM yyyy').format(month),
+                                  Icons.calendar_month_outlined
+                                ),
+                                ('Branch', branchName, Icons.groups_outlined),
+                                (
+                                  'Total Employees',
+                                  '${employees.length}',
+                                  Icons.people_outline
+                                )
+                              ])
+                                SizedBox(
+                                    width: box.maxWidth >= 540
+                                        ? (box.maxWidth - 20) / 3
+                                        : box.maxWidth,
+                                    child: infoTile(item.$1, item.$2, item.$3)),
+                            ])),
                     const SizedBox(height: 10),
                     Container(
                       width: double.infinity,
@@ -12137,40 +12234,112 @@ class _AdminDashboardState extends State<AdminDashboard>
                             '${employees.length - readyIds.length} need follow-up • '
                             '$requiredDayCount submitted days required'
                             '${isCurrentMonth ? ' through ${DateFormat('d MMM').format(today)}' : ''}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ]),
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: selectAll,
-                          onChanged: (value) {
-                            setSelectionState(() {
-                              selectAll = value ?? false;
-                              selectedIds
-                                ..clear()
-                                ..addAll(
-                                  selectAll ? allIds : <String>{},
-                                );
-                            });
-                          },
-                        ),
-                        const Text(
-                          'Select all ready employees',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const Spacer(),
-                        Text('${selectedIds.length} selected'),
-                      ],
-                    ),
+                    LayoutBuilder(builder: (_, box) {
+                      final tabs = Wrap(spacing: 6, runSpacing: 6, children: [
+                        for (final item in [
+                          ('all', 'All', employees.length),
+                          ('ready', 'Ready', readyIds.length),
+                          (
+                            'followup',
+                            'Follow-up',
+                            employees.length - readyIds.length
+                          ),
+                          ('submitted', 'Submitted', submittedIds.length)
+                        ])
+                          ChoiceChip(
+                              label: Text('${item.$2} (${item.$3})',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: readinessFilter == item.$1
+                                          ? Colors.white
+                                          : const Color(0xFF18365E))),
+                              selected: readinessFilter == item.$1,
+                              showCheckmark: false,
+                              selectedColor: const Color(0xFF10346A),
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFFE0E5EF)),
+                              shape: const StadiumBorder(),
+                              onSelected: (_) => setSelectionState(
+                                  () => readinessFilter = item.$1)),
+                      ]);
+                      final search = SizedBox(
+                          width: box.maxWidth >= 650 ? 230 : box.maxWidth,
+                          height: 36,
+                          child: TextField(
+                              onChanged: (value) => setSelectionState(
+                                  () => readinessSearch = value),
+                              decoration: InputDecoration(
+                                  hintText: 'Search employee (ID or name)...',
+                                  hintStyle: const TextStyle(fontSize: 11),
+                                  prefixIcon:
+                                      const Icon(Icons.search, size: 17),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  contentPadding: EdgeInsets.zero,
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                      borderSide: const BorderSide(
+                                          color: Color(0xFFE1E6EF))))));
+                      return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: box.maxWidth >= 700
+                              ? Row(children: [
+                                  Expanded(child: tabs),
+                                  const SizedBox(width: 8),
+                                  search
+                                ])
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                      tabs,
+                                      const SizedBox(height: 8),
+                                      search
+                                    ]));
+                    }),
+                    Container(
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFF0F3F8),
+                            borderRadius: BorderRadius.circular(9)),
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: allVisibleSelected,
+                              onChanged: allIds.isEmpty
+                                  ? null
+                                  : (value) {
+                                      setSelectionState(() {
+                                        final next = PayrollReadinessSelection
+                                            .toggleVisible(selectedIds, allIds,
+                                                value == true);
+                                        selectedIds
+                                          ..clear()
+                                          ..addAll(next);
+                                      });
+                                    },
+                            ),
+                            const Expanded(
+                                child: Text('Select all visible employees',
+                                    maxLines: 2,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700))),
+                            Text('${selectedIds.length} selected',
+                                style: const TextStyle(fontSize: 11)),
+                            const SizedBox(width: 10),
+                          ],
+                        )),
                     const Divider(),
-                    Expanded(
-                      child: employees.isEmpty
+                    listArea(
+                      displayEmployees.isEmpty
                           ? const Center(
-                              child: Text('No employees in this branch.'),
+                              child: Text('No employees match this filter.'),
                             )
                           : ListView.separated(
                               itemCount: displayEmployees.length,
@@ -12221,6 +12390,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             }
                                           }),
                                   child: CheckboxListTile(
+                                    dense: true,
+                                    visualDensity:
+                                        const VisualDensity(vertical: -2),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 3),
                                     value: checked,
                                     onChanged: !attendanceReady
                                         ? null
@@ -12230,26 +12404,42 @@ class _AdminDashboardState extends State<AdminDashboard>
                                                 selectedIds.add(employeeId);
                                               } else {
                                                 selectedIds.remove(employeeId);
-                                                selectAll = false;
-                                              }
-
-                                              if (selectedIds.length ==
-                                                      allIds.length &&
-                                                  allIds.isNotEmpty) {
-                                                selectAll = true;
                                               }
                                             });
                                           },
-                                    title: Text(
-                                      name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                    title: Row(children: [
+                                      Expanded(
+                                          child: Text(name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF16325B)))),
+                                      if (attendanceExempt &&
+                                          !compactSelection) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 7, vertical: 3),
+                                            decoration: BoxDecoration(
+                                                color: _attendanceBool(employee[
+                                                        'is_management_staff'])
+                                                    ? const Color(0xFFEEE8FF)
+                                                    : const Color(0xFFE2F7E8),
+                                                borderRadius:
+                                                    BorderRadius.circular(10)),
+                                            child: Text(attendanceExemptLabel,
+                                                style: const TextStyle(
+                                                    fontSize: 9,
+                                                    color: Color(0xFF3E3B8B),
+                                                    fontWeight:
+                                                        FontWeight.w600)))
+                                      ],
+                                    ]),
                                     subtitle: Text(
                                       attendanceExempt
-                                          ? '$employeeId • Attendance not required '
-                                              '($attendanceExemptLabel)'
+                                          ? '$employeeId  •  Attendance not required${compactSelection ? ' ($attendanceExemptLabel)' : ''}'
                                           : attendanceReady
                                               ? '$employeeId • Attendance complete ($requiredDayCount/$requiredDayCount)'
                                               : missingDatesExpanded
@@ -12259,6 +12449,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       maxLines: missingDatesExpanded ? 4 : 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
+                                        fontSize: 10,
                                         color: attendanceReady
                                             ? const Color(0xFF168653)
                                             : const Color(0xFFC13B31),
@@ -12272,7 +12463,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                           name: name,
                                           photoUrl:
                                               employee['photo_url']?.toString(),
-                                          radius: 23,
+                                          radius: 18,
                                           borderColor: attendanceReady
                                               ? const Color(0xFF168653)
                                               : const Color(0xFFC13B31),
@@ -12310,9 +12501,20 @@ class _AdminDashboardState extends State<AdminDashboard>
                     ),
                     const Divider(),
                     SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
+                      tileColor: const Color(0xFFF0F3FA),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      secondary: const CircleAvatar(
+                          backgroundColor: Color(0xFFE1E9FF),
+                          child: Icon(Icons.sync, color: Color(0xFF244C8B))),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12),
                       value: overwriteExisting,
-                      title: const Text('Replace existing payroll'),
+                      title: const Text('Replace existing payroll',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF143361))),
                       subtitle: const Text(
                         'Update the selected employee payroll if it already exists for this month.',
                       ),
@@ -12323,14 +12525,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                       },
                     ),
                   ],
-                ),
+                )),
               ),
+              actionsAlignment: MainAxisAlignment.spaceBetween,
               actions: [
+                Text(
+                    '${selectedIds.length} employee${selectedIds.length == 1 ? '' : 's'} selected',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: Color(0xFF143361))),
                 TextButton(
                   onPressed: () => Navigator.of(selectionContext).pop(),
                   child: const Text('Cancel'),
                 ),
                 FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF082E64),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(9))),
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () async {
@@ -12375,9 +12587,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                           );
                         },
                   icon: const Icon(Icons.calculate_outlined),
-                  label: Text(
-                    'Generate ${selectedIds.length} Payroll',
-                  ),
+                  label: const Text('Generate Payroll'),
                 ),
               ],
             );
