@@ -1,3 +1,4 @@
+import '../widgets/employee_directory_pagination.dart';
 import '../widgets/payroll_excel_export_dialog.dart';
 import '../widgets/admin_activity_cards.dart';
 import '../services/attendance_batch_print_service.dart';
@@ -546,7 +547,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return _dashboardPage();
 
       case 1:
-        return _employeesPage();
+        return ColoredBox(
+            color: const Color(0xFFF5F8FE), child: _employeesPage());
 
       case 2:
         return _payrollPage();
@@ -4417,6 +4419,21 @@ class _AdminDashboardState extends State<AdminDashboard>
   // EMPLOYEES
   // ===========================================================================
 
+  Widget _employeeDirectoryPanel(String title, Widget child) => Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE1E7F2)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x0A243D70),
+                  blurRadius: 18,
+                  offset: Offset(0, 7))
+            ]),
+        child: child,
+      );
+
   Widget _employeesPage() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _employeeDirectoryData(),
@@ -4465,7 +4482,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ],
                 ),
                 const SizedBox(height: 20),
-                _panel(
+                _employeeDirectoryPanel(
                   'Employee List',
                   Padding(
                     padding: const EdgeInsets.all(30),
@@ -4636,9 +4653,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('$year',
-                              style: const TextStyle(
-                                  fontSize: 10.5, fontWeight: FontWeight.w800)),
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.calendar_month_outlined, size: 10),
+                            const SizedBox(width: 4),
+                            Text('$year',
+                                style: const TextStyle(
+                                    fontSize: 10, fontWeight: FontWeight.w700)),
+                          ]),
                           Text(
                             notDue
                                 ? 'Not due yet'
@@ -4738,16 +4759,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                     padding: EdgeInsets.only(bottom: 10),
                     child: Text(
                         'Showing saved employee data. Refresh to retry the latest records.')),
-              Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
-                      tooltip: 'Refresh employees',
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () => setState(() {
-                            _employeeRowsAt = null;
-                            _employeeSalaryCacheTime.clear();
-                            _adminEmployeesFuture = null;
-                          }))),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final statusFilters = Wrap(
@@ -4763,6 +4774,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                     ].map((filter) {
                       final selected = _adminEmployeeStatusFilter == filter.$1;
                       return FilterChip(
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(9)),
                         avatar: Icon(filter.$3,
                             size: 16,
                             color: selected
@@ -4773,8 +4787,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                         selected: selected,
                         showCheckmark: false,
-                        selectedColor: const Color(0xFF17233A),
-                        backgroundColor: Colors.white,
+                        selectedColor: const Color(0xFF14345F),
+                        backgroundColor: const Color(0xFFFAFCFF),
                         side: BorderSide(
                           color: selected
                               ? const Color(0xFF17233A)
@@ -4786,23 +4800,54 @@ class _AdminDashboardState extends State<AdminDashboard>
                           fontWeight: FontWeight.w700,
                         ),
                         onSelected: (_) => setState(
-                          () => _adminEmployeeStatusFilter = filter.$1,
+                          () {
+                            _adminEmployeeStatusFilter = filter.$1;
+                            _adminEmployeePage = 0;
+                          },
                         ),
                       );
                     }).toList(),
                   );
-                  final title = const Text(
-                    'Employees',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
+                  final title = Row(children: [
+                    Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFE8EDFF),
+                            borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.groups_rounded,
+                            color: Color(0xFF5266A5), size: 22)),
+                    const SizedBox(width: 12),
+                    const Flexible(
+                        child: Text('Employees',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 25,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF172D50)))),
+                  ]);
+                  final addButton =
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                    IconButton(
+                        tooltip: 'Refresh employees',
+                        icon: const Icon(Icons.refresh, size: 19),
+                        onPressed: () => setState(() {
+                              _employeeRowsAt = null;
+                              _employeeSalaryCacheTime.clear();
+                              _adminEmployeesFuture = null;
+                            })),
+                    const SizedBox(width: 6),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF073AA3),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8))),
+                      onPressed: _showAddEmployee,
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Add Employee'),
                     ),
-                  );
-                  final addButton = FilledButton.icon(
-                    onPressed: _showAddEmployee,
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Add Employee'),
-                  );
+                  ]);
                   if (constraints.maxWidth < 980) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4837,10 +4882,18 @@ class _AdminDashboardState extends State<AdminDashboard>
               const SizedBox(height: 20),
               TextField(
                 controller: _adminEmployeeSearchController,
-                onChanged: (value) =>
-                    setState(() => _adminEmployeeSearch = value),
+                onChanged: (value) => setState(() {
+                  _adminEmployeeSearch = value;
+                  _adminEmployeePage = 0;
+                }),
                 decoration: InputDecoration(
                   hintText: 'Search employee, department or branch',
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.white,
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFDEE6F3))),
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _adminEmployeeSearch.isEmpty
                       ? null
@@ -4861,43 +4914,45 @@ class _AdminDashboardState extends State<AdminDashboard>
               _responsiveBranchButtonRow(
                 buttons: [
                   _employeeBranchFilterButton(
-                    label: 'All Branches',
+                    directoryStyle: true,
+                    label: 'All branches',
                     selected: _adminEmployeeBranchFilter == null,
-                    onTap: () =>
-                        setState(() => _adminEmployeeBranchFilter = null),
+                    onTap: () => setState(() {
+                      _adminEmployeeBranchFilter = null;
+                      _adminEmployeePage = 0;
+                    }),
                   ),
                   for (final branch in branchNames)
                     _employeeBranchFilterButton(
+                      directoryStyle: true,
                       label: branch,
                       selected: _adminEmployeeBranchFilter == branch,
                       onTap: () => setState(
-                        () => _adminEmployeeBranchFilter = branch,
+                        () {
+                          _adminEmployeeBranchFilter = branch;
+                          _adminEmployeePage = 0;
+                        },
                       ),
                     ),
                 ],
               ),
               const SizedBox(height: 16),
-              if (employees.length > _employeePageSize)
-                Row(children: [
-                  Expanded(
-                      child: Text(
-                          'Showing ${currentPage * _employeePageSize + 1}–${currentPage * _employeePageSize + visibleEmployees.length} of ${employees.length} employees')),
-                  IconButton(
-                      tooltip: 'Previous employees',
-                      onPressed: currentPage == 0
-                          ? null
-                          : () => setState(
-                              () => _adminEmployeePage = currentPage - 1),
-                      icon: const Icon(Icons.chevron_left)),
-                  Text('${currentPage + 1} / $pageCount'),
-                  IconButton(
-                      tooltip: 'Next employees',
-                      onPressed: currentPage + 1 >= pageCount
-                          ? null
-                          : () => setState(
-                              () => _adminEmployeePage = currentPage + 1),
-                      icon: const Icon(Icons.chevron_right)),
-                ]),
+              Row(children: [
+                Expanded(
+                    child: Text(
+                        employees.isEmpty
+                            ? 'Showing 0 of 0 employees'
+                            : 'Showing ${currentPage * _employeePageSize + 1}–${currentPage * _employeePageSize + visibleEmployees.length} of ${employees.length} employees',
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF647590)))),
+                EmployeeDirectoryPagination(
+                    page: currentPage,
+                    pageCount: pageCount,
+                    compact: MediaQuery.sizeOf(context).width < 1000,
+                    onChanged: (page) =>
+                        setState(() => _adminEmployeePage = page)),
+              ]),
+              const SizedBox(height: 8),
               _panel(
                 _adminEmployeeBranchFilter == null
                     ? 'Employee List · ${employees.length}'
@@ -4942,45 +4997,56 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   .where((item) => item.trim().isNotEmpty)
                                   .join(' · ');
 
-                              return Card(
-                                elevation: 0,
-                                margin: const EdgeInsets.only(
-                                  bottom: 8,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: const BorderSide(
-                                    color: Color(0xFFE2E5EB),
-                                  ),
-                                ),
+                              return Container(
+                                decoration: const BoxDecoration(
+                                    border: Border(
+                                        bottom: BorderSide(
+                                            color: Color(0xFFE8EDF6)))),
                                 child: ListTile(
                                   dense: true,
                                   visualDensity:
-                                      const VisualDensity(vertical: -1),
+                                      const VisualDensity(vertical: -2),
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 14,
-                                    vertical: 3,
+                                    vertical: 4,
                                   ),
                                   leading: EmployeePhoto(
                                     name: name,
                                     photoUrl: employee['photo_url']?.toString(),
-                                    radius: 22,
+                                    radius: 17,
                                   ),
                                   title: Row(
                                     children: [
                                       Expanded(
                                         flex: 3,
-                                        child: Text(
-                                          name.isEmpty
-                                              ? 'Unnamed Employee'
-                                              : name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
+                                        child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                name.isEmpty
+                                                    ? 'Unnamed Employee'
+                                                    : name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              if (!compactEmployeeView) ...[
+                                                const SizedBox(height: 4),
+                                                Text(metadata,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                        fontSize: 10,
+                                                        color:
+                                                            Color(0xFF71809A)))
+                                              ],
+                                            ]),
                                       ),
                                       if (!compactEmployeeView) ...[
                                         const SizedBox(width: 12),
@@ -4996,9 +5062,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: active
-                                              ? const Color(0xFFE8F7EF)
-                                              : const Color(0xFFFFECEC),
+                                          color: switch (
+                                              _employmentStatus(employee)) {
+                                            'active' => const Color(0xFFDCF7E4),
+                                            'vacation' =>
+                                              const Color(0xFFDFF5F8),
+                                            _ => const Color(0xFFFFE5E9),
+                                          },
                                           borderRadius:
                                               BorderRadius.circular(20),
                                         ),
@@ -5015,25 +5085,27 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       ),
                                     ],
                                   ),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        metadata,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Color(0xFF6F7785),
-                                          fontSize: 11.5,
+                                  subtitle: !compactEmployeeView
+                                      ? null
+                                      : Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              metadata,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: Color(0xFF6F7785),
+                                                fontSize: 11.5,
+                                              ),
+                                            ),
+                                            if (compactEmployeeView) ...[
+                                              const SizedBox(height: 5),
+                                              payrollCoverage(employeeId),
+                                            ],
+                                          ],
                                         ),
-                                      ),
-                                      if (compactEmployeeView) ...[
-                                        const SizedBox(height: 5),
-                                        payrollCoverage(employeeId),
-                                      ],
-                                    ],
-                                  ),
                                   trailing: compactEmployeeView
                                       ? PopupMenuButton<String>(
                                           tooltip: 'Employee actions',
@@ -5124,8 +5196,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             IconButton(
                                               tooltip: 'Edit',
                                               icon: const Icon(
-                                                Icons.edit,
-                                                color: Colors.blue,
+                                                Icons.edit_outlined,
+                                                color: Color(0xFF334568),
                                               ),
                                               onPressed: () {
                                                 _showSupabaseEmployeeEdit(
@@ -5321,6 +5393,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     required String label,
     required bool selected,
     required VoidCallback onTap,
+    bool directoryStyle = false,
   }) {
     final allBranches = label.trim().toLowerCase() == 'all branches';
     return SizedBox(
@@ -5332,10 +5405,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           borderRadius: BorderRadius.circular(26),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            height: 44,
+            height: directoryStyle ? 34 : 44,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: selected ? _midnight : const Color(0xFFF8F7F3),
+              color: directoryStyle
+                  ? (selected
+                      ? const Color(0xFF16365E)
+                      : const Color(0xFFFAFCFF))
+                  : (selected ? _midnight : const Color(0xFFF8F7F3)),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(
                 color: selected ? _midnight : const Color(0xFFD9DDE5),
@@ -5349,7 +5426,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                   Icon(
                     Icons.grid_view_rounded,
                     color: selected
-                        ? const Color(0xFFD6B24F)
+                        ? (directoryStyle
+                            ? Colors.white
+                            : const Color(0xFFD6B24F))
                         : const Color(0xFF252418),
                     size: 18,
                   ),
