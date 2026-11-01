@@ -28,6 +28,7 @@ test('eligibility PDF list exists before payroll, scopes branches and excludes i
   assert.deepEqual(report.reports.map(row=>row.employee_id),['E1']);
   assert.equal(report.basic_total,2000);assert.equal(report.allowance_total,375);assert.equal(report.eligible_count,1);
   assert.equal(report.reports[0].result,'Eligible');
+  assert.equal(report.reports[0].inc_details,'APR-26/100');
 });
 
 test('comparison separates paid, missed, different, additional and not-generated payroll',()=>{

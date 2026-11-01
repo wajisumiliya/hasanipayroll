@@ -334,3 +334,8 @@ Kerajinan and Makanan. The card totals and eligibility PDF use these values;
 unknown salary defaults stay unknown. Payroll comparison still reports actual
 increases from saved payroll as Received, Not received or Additional without
 using the historical increment amount as a promised future award.
+
+The increment list and both PDFs retain the original inc_details text in a
+Last Increment column (for example APR-26/50), alongside basic salary and total
+allowances. The separate last-increment amount totals remain removed; the exact
+six-month cohort rule is unchanged.

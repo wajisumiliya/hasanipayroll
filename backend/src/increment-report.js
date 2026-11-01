@@ -87,7 +87,7 @@ export function buildIncrementReport({employees, payroll, year, month, mode, bra
       else result = 'Received';
     }
     rows.push({employee_id:id,name:employee.name ?? id,branch_id:employee.branch_id ?? '',
-      eligible:eligibility != null,last_increment_month:eligibility?.last_increment_month??null,eligible_from:eligibility?.eligible_from??null,
+      inc_details:employee.inc_details??'',eligible:eligibility != null,last_increment_month:eligibility?.last_increment_month??null,eligible_from:eligibility?.eligible_from??null,
       basic_salary:basicSalary,total_allowances:totalAllowances,...evidence,result});
   }
   rows.sort((a,b) => a.result.localeCompare(b.result) || key(a.branch_id).localeCompare(key(b.branch_id)) || key(a.name).localeCompare(key(b.name)));
