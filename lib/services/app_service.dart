@@ -562,6 +562,24 @@ class AppService extends ChangeNotifier {
   }
 
   /// Salary and roster data for one employee, scoped by the Node JWT.
+  Future<Map<String, dynamic>> loadAttendanceBatchPrint({
+    required List<String> employeeIds,
+    required String branchId,
+    required DateTime month,
+  }) async {
+    final data = await _getAuth(
+        Uri(path: '/api/attendance-sheet/print-batch', queryParameters: {
+      'employees': jsonEncode(employeeIds),
+      'branch_id': branchId,
+      'year': '${month.year}',
+      'month': '${month.month}',
+    }).toString());
+    if (data['ok'] != true)
+      throw StateError(data['message']?.toString() ??
+          'Unable to load attendance print data.');
+    return data;
+  }
+
   Future<Map<String, dynamic>> loadAttendancePrintContext({
     required String employeeId,
     required int year,

@@ -1,3 +1,4 @@
+import '../services/attendance_batch_print_service.dart';
 // ignore_for_file: unused_element, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
@@ -321,6 +322,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   String? _adminEmployeeBranchFilter;
   String _adminEmployeeStatusFilter = 'all';
   String _attendanceEmployeeSearch = '';
+  bool _attendancePrintMode = false, _attendanceBatchPrinting = false;
+  String? _attendancePrintScope;
+  final Set<String> _attendancePrintIds = {};
   String _payslipEmployeeSearch = '';
   bool? _payslipShowActiveEmployees = true;
   String _attendanceSubmissionFilter = 'submitted';
@@ -9909,6 +9913,37 @@ class _AdminDashboardState extends State<AdminDashboard>
     _attendancePageFutureKey = null;
   }
 
+  Future<void> _printSelectedAttendance(
+      List<String> ids, String branchId, String branchName) async {
+    if (_attendanceBatchPrinting || ids.isEmpty) return;
+    if (ids.length > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Print up to 100 employees at a time.')));
+      return;
+    }
+    final month = selectedAttendanceMonth;
+    setState(() => _attendanceBatchPrinting = true);
+    try {
+      final data = await service.loadAttendanceBatchPrint(
+          employeeIds: ids, branchId: branchId, month: month);
+      final bytes = await AttendanceBatchPrintService.build(
+          data: data, employeeIds: ids, month: month, branchName: branchName);
+      if (!mounted) return;
+      await Printing.layoutPdf(
+          name:
+              'Attendance_${branchId}_${DateFormat('yyyy_MM').format(month)}.pdf',
+          format: PdfPageFormat.a4,
+          dynamicLayout: false,
+          onLayout: (_) async => bytes);
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unable to print attendance: $error')));
+    } finally {
+      if (mounted) setState(() => _attendanceBatchPrinting = false);
+    }
+  }
+
   int _attendanceOtMinutes(Map<String, dynamic> record) {
     final employeeId = (record['employee_id'] ?? '').toString();
     if (!PayrollCalculationService.isEmployeeOvertimeEligible(employeeId)) {
@@ -10047,6 +10082,13 @@ class _AdminDashboardState extends State<AdminDashboard>
           );
         }
 
+        final printScope =
+            '$branchId|${selectedAttendanceMonth.year}|${selectedAttendanceMonth.month}';
+        if (_attendancePrintScope != printScope) {
+          _attendancePrintScope = printScope;
+          _attendancePrintIds.clear();
+          _attendancePrintMode = false;
+        }
         final data = snapshot.data ?? const [[], [], []];
         final branches = List<Map<String, dynamic>>.from(data[0] as List);
         final employees = List<Map<String, dynamic>>.from(data[1] as List);
@@ -10192,6 +10234,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                         () => _attendanceSubmissionFilter = 'ot',
                       ),
                     ),
+                    OutlinedButton.icon(
+                      onPressed: _attendanceBatchPrinting
+                          ? null
+                          : () => setState(() {
+                                _attendancePrintMode = !_attendancePrintMode;
+                                _attendancePrintIds.clear();
+                              }),
+                      icon: const Icon(Icons.print_outlined),
+                      label: Text(
+                          _attendancePrintMode ? 'Cancel selection' : 'Print'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -10247,6 +10300,45 @@ class _AdminDashboardState extends State<AdminDashboard>
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (_attendancePrintMode)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text('${_attendancePrintIds.length} selected'),
+                            TextButton(
+                                onPressed: _attendanceBatchPrinting
+                                    ? null
+                                    : () => setState(() {
+                                          _attendancePrintIds.addAll(
+                                              filteredEmployees.map((e) =>
+                                                  (e['employee_id'] ??
+                                                          e['id'] ??
+                                                          '')
+                                                      .toString()));
+                                        }),
+                                child: const Text('Select visible')),
+                            TextButton(
+                                onPressed: _attendanceBatchPrinting
+                                    ? null
+                                    : () => setState(_attendancePrintIds.clear),
+                                child: const Text('Clear selection')),
+                            FilledButton.icon(
+                                onPressed: _attendanceBatchPrinting ||
+                                        _attendancePrintIds.isEmpty
+                                    ? null
+                                    : () => _printSelectedAttendance(
+                                        List<String>.from(_attendancePrintIds),
+                                        branchId,
+                                        branchName),
+                                icon: const Icon(Icons.print),
+                                label: Text(_attendanceBatchPrinting
+                                    ? 'Preparing PDF...'
+                                    : 'Print selected')),
+                          ])),
                 if (filteredEmployees.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 54),
@@ -10312,17 +10404,24 @@ class _AdminDashboardState extends State<AdminDashboard>
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(18),
-                        onTap: showingOt
-                            ? () => _showEmployeeAttendanceOtDays(
-                                  employee,
-                                  otRecords,
-                                )
-                            : submitted
-                                ? () => _openAdminAttendance(
-                                      employee,
-                                      branchId,
-                                    )
-                                : null,
+                        onTap: _attendanceBatchPrinting
+                            ? null
+                            : _attendancePrintMode
+                                ? () => setState(() {
+                                      if (!_attendancePrintIds.add(employeeId))
+                                        _attendancePrintIds.remove(employeeId);
+                                    })
+                                : showingOt
+                                    ? () => _showEmployeeAttendanceOtDays(
+                                          employee,
+                                          otRecords,
+                                        )
+                                    : submitted
+                                        ? () => _openAdminAttendance(
+                                              employee,
+                                              branchId,
+                                            )
+                                        : null,
                         child: Card(
                           elevation: 0,
                           color: Colors.white.withValues(alpha: .82),
@@ -10351,6 +10450,29 @@ class _AdminDashboardState extends State<AdminDashboard>
                                       foregroundColor: accent,
                                       borderColor: accent,
                                     ),
+                                    if (_attendancePrintMode)
+                                      SizedBox(
+                                          height: 30,
+                                          width: 36,
+                                          child: Checkbox(
+                                              value: _attendancePrintIds
+                                                  .contains(employeeId),
+                                              onChanged:
+                                                  _attendanceBatchPrinting
+                                                      ? null
+                                                      : (checked) =>
+                                                          setState(() {
+                                                            if (checked ==
+                                                                true) {
+                                                              _attendancePrintIds
+                                                                  .add(
+                                                                      employeeId);
+                                                            } else {
+                                                              _attendancePrintIds
+                                                                  .remove(
+                                                                      employeeId);
+                                                            }
+                                                          }))),
                                     const Spacer(),
                                     Container(
                                       padding: const EdgeInsets.symmetric(

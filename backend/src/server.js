@@ -1,3 +1,4 @@
+import { installAttendanceBatchPrintApi } from './attendance-batch-print.js';
 import { installApprovedOtReportApi } from './approved-ot-report.js';
 import { createReadResponseCache } from './read-response-cache.js';
 import { dashboardPayrollQuery, payrollAttendanceQuery, expandAttendanceCounts } from './admin-read-queries.js';
@@ -1871,6 +1872,7 @@ installAttendanceStatusReportApi(app, { authenticate, pool });
 installApprovedOtReportApi(app, { authenticate, pool });
 installIncrementReportApi(app, { authenticate, pool });
 installAttendancePrintContextApi(app, { authenticate, pool });
+installAttendanceBatchPrintApi(app, { authenticate, pool });
 installEmployeeEditorApi(app, { authenticate, pool });
 
 // Neon attendance-sheet dependencies: read only within the authenticated scope.

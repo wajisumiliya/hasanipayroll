@@ -41,6 +41,27 @@ class AttendancePrintDay {
   final int lateMinutes;
 }
 
+class AttendancePrintSheet {
+  const AttendancePrintSheet(
+      {required this.employeeId,
+      required this.employeeName,
+      required this.department,
+      required this.section,
+      required this.branchId,
+      required this.isForeignEmployee,
+      required this.month,
+      required this.days,
+      this.approvedOtAmount,
+      this.lateDeductionAmount,
+      this.unpaidDeductionAmount,
+      this.estimatedAmounts = false});
+  final String employeeId, employeeName, department, section, branchId;
+  final bool isForeignEmployee, estimatedAmounts;
+  final DateTime month;
+  final List<AttendancePrintDay> days;
+  final double? approvedOtAmount, lateDeductionAmount, unpaidDeductionAmount;
+}
+
 class AttendancePdfService {
   static const _blue = PdfColors.black;
   static const _red = PdfColors.black;
@@ -62,7 +83,47 @@ class AttendancePdfService {
     double? lateDeductionAmount,
     double? unpaidDeductionAmount,
   }) async {
+    return buildBatch([
+      AttendancePrintSheet(
+        employeeId: employeeId,
+        employeeName: employeeName,
+        department: department,
+        section: section,
+        branchId: branchId,
+        isForeignEmployee: isForeignEmployee,
+        month: month,
+        days: days,
+        approvedOtAmount: approvedOtAmount,
+        lateDeductionAmount: lateDeductionAmount,
+        unpaidDeductionAmount: unpaidDeductionAmount,
+        estimatedAmounts: estimatedAmounts,
+      )
+    ]);
+  }
+
+  static Future<Uint8List> buildBatch(List<AttendancePrintSheet> sheets) async {
+    if (sheets.isEmpty) throw ArgumentError('Select at least one employee.');
     final document = pw.Document();
+    for (final sheet in sheets) {
+      await _append(document, sheet);
+    }
+    return document.save();
+  }
+
+  static Future<void> _append(
+      pw.Document document, AttendancePrintSheet sheet) async {
+    final employeeId = sheet.employeeId,
+        employeeName = sheet.employeeName,
+        department = sheet.department,
+        section = sheet.section,
+        branchId = sheet.branchId;
+    final isForeignEmployee = sheet.isForeignEmployee,
+        month = sheet.month,
+        days = sheet.days;
+    final approvedOtAmount = sheet.approvedOtAmount,
+        lateDeductionAmount = sheet.lateDeductionAmount,
+        unpaidDeductionAmount = sheet.unpaidDeductionAmount,
+        estimatedAmounts = sheet.estimatedAmounts;
     pw.MemoryImage? logo;
     try {
       final bytes = await rootBundle.load('assets/hasani_books_logo.jpg');
@@ -189,8 +250,6 @@ class AttendancePdfService {
         ),
       ),
     );
-
-    return document.save();
   }
 
   static pw.Widget _header(pw.MemoryImage? logo, String title, DateTime month) {
