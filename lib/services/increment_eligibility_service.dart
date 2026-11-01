@@ -52,7 +52,10 @@ class IncrementEligibilityService {
     if (year < 100) year += 2000;
     final last = DateTime(year, months[match[1]]!);
     final due = DateTime(last.year, last.month + 6);
-    if (due != DateTime(selectedMonth.year, selectedMonth.month)) {
+    final monthsSinceIncrement = (selectedMonth.year - last.year) * 12 +
+        selectedMonth.month -
+        last.month;
+    if (monthsSinceIncrement < 6 || monthsSinceIncrement > 10) {
       return null;
     }
     final separator = text.lastIndexOf('/');

@@ -812,7 +812,7 @@ class AdminActivityCards extends StatelessWidget {
                         : money(number(r['total_allowances']))
                   ],
               note:
-                  'Exactly six payroll months after the last increment, or joining month when inc_details is empty. Salary and allowances come from salary defaults.',
+                  'Six through ten payroll months after the last increment. Blank inc_details uses six or more months of service for employees who joined from 1 January 2026. Active employees only. Salary and allowances come from salary defaults.',
               increments: true),
           card(context,
               title: 'Upcoming Birthdays',

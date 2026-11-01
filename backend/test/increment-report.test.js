@@ -8,13 +8,16 @@ const pay=(id,period,basic=2000,extra={})=>({employee_id:id,period,basic_salary:
 const build=(employees,payroll,mode='comparison',extra={})=>buildIncrementReport({employees,payroll,mode,year:2026,month:10,...extra});
 const response=()=>({code:200,status(code){this.code=code;return this;},json(body){this.body=body;return this;}});
 
-test('eligibility includes only the exact six-month cohort and excludes overdue employees',()=>{
+test('last increment eligibility includes six through ten months inclusive',()=>{
   assert.equal(incrementEligibility('Jan-26/50',2026,6),null);
   assert.deepEqual(incrementEligibility('Jan-26/50',2026,7),{
     last_increment_month:'2026-01-01',eligible_from:'2026-07-01',last_amount:50});
-  assert.equal(incrementEligibility('Jan-26/50',2026,10),null);
+  assert.equal(incrementEligibility('Jan-26/50',2026,10).eligible_from,'2026-07-01');
   assert.equal(incrementEligibility('APR-26/50',2026,10).eligible_from,'2026-10-01');
-  assert.equal(incrementEligibility('MAR-26/50',2026,10),null);
+  assert.equal(incrementEligibility('MAR-26/50',2026,10).eligible_from,'2026-09-01');
+  assert.equal(incrementEligibility('DEC-25/50',2026,10).eligible_from,'2026-06-01');
+  assert.equal(incrementEligibility('NOV-25/50',2026,10),null);
+  assert.equal(incrementEligibility('OCT-26/50',2026,10),null);
   assert.equal(incrementEligibility('SEPT-26/125',2027,2),null);
   assert.equal(incrementEligibility('SEPT-26/125',2027,3).last_amount,125);
   assert.equal(incrementEligibility('JUL/2026/100',2027,1).eligible_from,'2027-01-01');

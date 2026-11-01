@@ -452,3 +452,13 @@ The existing employee print path is unchanged. Duplicate payroll selections retu
 an explicit review error. Six new backend permission/input tests passed, along
 with JavaScript syntax, Dart formatter/parser and diff checks. Flutter tests need
 execution in local/CI Flutter. Deploy the backend and rebuild web for this route.
+
+### Expanded last-increment window: six through ten months
+
+Nonblank inc_details now qualifies when the selected payroll month is 6–10
+calendar months after the last increment, inclusive. October 2026 therefore
+includes December 2025 through April 2026 increments; November 2025 and May
+2026 increments are excluded. Eligible-from remains the original six-month
+anniversary. Both dashboard and report/comparison use this window, including
+pre-payroll snapshots after metadata synchronization. Active-only status filters,
+January 2026 joining cutoff and blank-details joining fallback remain unchanged.

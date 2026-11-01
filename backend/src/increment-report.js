@@ -32,7 +32,8 @@ export function incrementEligibility(value, year, month, joiningDate=null) {
   const lastMonth = months[match[1]];
   if (!lastMonth) return null;
   const dueKey = monthKey(scheduleYear,lastMonth) + 6;
-  if (dueKey !== monthKey(year,month)) return null;
+  const overdueMonths = monthKey(year,month) - dueKey;
+  if (overdueMonths < 0 || overdueMonths > 4) return null;
   const dueDate = new Date(Date.UTC(scheduleYear,lastMonth - 1 + 6,1)).toISOString().slice(0,10);
   return {last_increment_month:`${scheduleYear}-${String(lastMonth).padStart(2,'0')}-01`,eligible_from:dueDate,
     last_amount:Number.isFinite(amount) && separator >= 0 && text.slice(separator+1).trim() !== '' && amount >= 0 ? amount : null};
