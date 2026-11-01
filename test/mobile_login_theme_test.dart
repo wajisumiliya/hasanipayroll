@@ -27,8 +27,9 @@ void main() {
           widget is Image &&
           widget.image is AssetImage &&
           (widget.image as AssetImage).assetName == asset);
-      await tester.pumpWidget(
-          MaterialApp(home: LoginScreen(hatchController: controller)));
+      await tester.pumpWidget(MaterialApp(
+          theme: ThemeData(platform: TargetPlatform.windows),
+          home: LoginScreen(hatchController: controller)));
       await tester.pump(const Duration(seconds: 1));
       expect(image('assets/login_habitats/friday_afternoon.png'),
           findsNWidgets(2));
@@ -52,14 +53,17 @@ void main() {
     });
   }
 
-  testWidgets('portrait login cycles seven scenes and keeps logo above fields',
+  testWidgets(
+      'narrow desktop/web login cycles seven scenes and keeps logo above fields',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+    await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.windows),
+        home: LoginScreen()));
     await tester.pump(const Duration(seconds: 2));
 
     const days = [

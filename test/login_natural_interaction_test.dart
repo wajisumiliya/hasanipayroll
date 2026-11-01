@@ -9,7 +9,7 @@ import 'package:hasani_payroll_portal/widgets/portal_penguin_companion.dart';
 
 void main() {
   testWidgets(
-      'desktop and mobile login have a silent companion and usable fields',
+      'desktop and narrow web login retain their companion and usable fields',
       (tester) async {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -24,6 +24,7 @@ void main() {
                 'stage': 'chick',
               });
       await tester.pumpWidget(MaterialApp(
+          theme: ThemeData(platform: TargetPlatform.windows),
           home: LoginScreen(
               hatchController: controller, showThemePreview: false)));
       await tester.pump(const Duration(seconds: 1));

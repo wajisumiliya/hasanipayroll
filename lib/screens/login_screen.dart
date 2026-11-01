@@ -14,6 +14,7 @@ import '../services/login_habitat_scene.dart';
 import '../services/mystery_egg_hatch_controller.dart';
 import '../theme/daily_portal_theme.dart';
 import '../widgets/portal_penguin_companion.dart';
+import '../widgets/mobile_reference_login.dart';
 import 'admin_dashboard.dart';
 import 'branch_dashboard.dart';
 import 'employee_portal.dart';
@@ -778,7 +779,27 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   @override
-  Widget build(BuildContext context) => _sevenDayLoginPage(context);
+  Widget build(BuildContext context) {
+    final platform = Theme.of(context).platform;
+    final nativePhone = !kIsWeb &&
+        (platform == TargetPlatform.android ||
+            platform == TargetPlatform.iOS) &&
+        MediaQuery.sizeOf(context).shortestSide < 600;
+    if (nativePhone) {
+      return MobileReferenceLogin(
+        usernameController: usernameController,
+        passwordController: passwordController,
+        obscurePassword: obscurePassword,
+        loading: loading,
+        errorMessage: errorMessage,
+        onTogglePassword: () =>
+            setState(() => obscurePassword = !obscurePassword),
+        onSignIn: _login,
+        onForgotPassword: _showForgotPasswordDialog,
+      );
+    }
+    return _sevenDayLoginPage(context);
+  }
 
   Widget _sevenDayLoginPage(BuildContext context) {
     final theme = _todayTheme;
