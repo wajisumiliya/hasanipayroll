@@ -1,3 +1,4 @@
+import '../widgets/admin_activity_cards.dart';
 import '../services/attendance_batch_print_service.dart';
 // ignore_for_file: unused_element, use_build_context_synchronously
 
@@ -393,7 +394,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   void changePage(int page) {
-    if (_attendanceOnly && page != 3 && page != 16) return;
+    if (_attendanceOnly && !const {3, 16, 19}.contains(page)) return;
 
     // RHB Layout is an export action, not a normal page.
     if (page == 8) {
@@ -553,6 +554,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Branch Passwords';
       case 18:
         return 'Late Report';
+      case 19:
+        return 'Attendance Late';
       default:
         return 'Dashboard';
     }
@@ -612,7 +615,11 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _currentPage() {
     if (_attendanceOnly) {
-      return selectedPage == 16 ? _attendanceStatusPage() : _attendancePage();
+      return switch (selectedPage) {
+        16 => _attendanceStatusPage(),
+        19 => _accountAttendanceLatePage(),
+        _ => _attendancePage(),
+      };
     }
 
     switch (selectedPage) {
@@ -979,6 +986,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           ? [
               item('Attendance', Icons.event_available_rounded, 3),
               item('Status View', Icons.view_sidebar_rounded, 16),
+              item('Attendance Late', Icons.alarm, 19),
             ]
           : [
               item('Overview', Icons.grid_view_rounded, 0),
@@ -1582,6 +1590,85 @@ class _AdminDashboardState extends State<AdminDashboard>
     try {
       await Future.wait([_dashboardPageData(), _dashboardActivityData()]);
     } catch (_) {/* The dashboard FutureBuilder presents retry. */}
+  }
+
+  Future<List<dynamic>>? _accountLateCardFuture;
+  String? _accountLateCardKey;
+  Widget _accountAttendanceLatePage() {
+    final month = selectedDashboardMonth;
+    final key = '${month.year}-${month.month}';
+    if (_accountLateCardFuture == null || _accountLateCardKey != key) {
+      _accountLateCardKey = key;
+      _accountLateCardFuture = Future.wait<dynamic>([
+        SupabaseService.getBranches(),
+        SupabaseService.database.from('employees').select(
+            'employee_id,name,branch_id,is_active,department,designation'),
+        service.loadLateReport(month),
+      ]);
+    }
+    return FutureBuilder<List<dynamic>>(
+      future: _accountLateCardFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasError)
+          return Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Unable to load attendance late data.'),
+            TextButton(
+                onPressed: () => setState(() => _accountLateCardFuture = null),
+                child: const Text('Retry')),
+          ]));
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
+        final data = snapshot.data!;
+        final branches = <String, String>{
+          for (final raw in data[0] as List)
+            _dashboardBranchKey(raw['id'] ?? raw['branch_id']):
+                (raw['name'] ?? raw['branch_name'] ?? raw['id']).toString(),
+        };
+        final employees = (data[1] as List)
+            .map((raw) => {
+                  ...Map<String, dynamic>.from(raw as Map),
+                  'branch_id': _dashboardBranchKey(raw['branch_id']),
+                })
+            .toList();
+        final reports = ((data[2] as Map)['reports'] as List)
+            .map((raw) => {
+                  ...Map<String, dynamic>.from(raw as Map),
+                  'branch_id': _dashboardBranchKey(raw['branch_id']),
+                })
+            .toList();
+        return RefreshIndicator(
+          onRefresh: () async {
+            setState(() => _accountLateCardFuture = null);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            child: Align(
+                alignment: Alignment.topLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: AdminActivityCards(
+                    month: month,
+                    branch: null,
+                    branchLabels: branches,
+                    employees: employees,
+                    payroll: const [],
+                    lateOnly: true,
+                    activity: Future.value(
+                        {'late': reports, 'staff_scope': 'attendance'}),
+                    onMonth: (value) => setState(() {
+                      selectedDashboardMonth = value;
+                      _accountLateCardFuture = null;
+                    }),
+                    onLate: () {},
+                    onPayroll: () {},
+                  ),
+                )),
+          ),
+        );
+      },
+    );
   }
 
   Widget _modernLateReportPage() => FutureBuilder<List<Map<String, dynamic>>>(

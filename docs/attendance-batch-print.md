@@ -35,3 +35,19 @@ four pages and empty selections fail. Flutter execution could not run because
 the temporary SDK image exceeded workspace disk capacity; failed image layers
 were cleaned up automatically. Deploy the backend and rebuild Flutter web for
 this feature. No database migration is needed.
+
+## Attendance-only account late card
+
+The `account` attendance administrator now has an Attendance Late sidebar entry
+(page 19). It reuses the overview's Late card with its monthly selector, summary
+metrics, employee detail/View All and Late/MC/Unpaid/OT print actions. A late-only
+presentation flag hides increment, birthday and anniversary cards on this page.
+The account still starts on Attendance; the navigation allowlist adds only this
+new page to Attendance and Status View. Other administrative pages stay blocked.
+The page loads only branch labels, selected employee identity/position fields and
+the existing late-report API; it does not load the financial overview, payroll
+history or salary defaults. Existing backend report permissions already accept
+the attendance scope, so no wider role/database grants are introduced.
+A Flutter widget regression test covers the standalone card and print buttons.
+Dart formatter/parser checks pass; Flutter execution remains unavailable here.
+Rebuild Flutter web to show the new navigation item.

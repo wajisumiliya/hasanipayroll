@@ -3,6 +3,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/widgets/admin_activity_cards.dart';
 
 void main() {
+  testWidgets('attendance-only card retains reports without financial cards',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SingleChildScrollView(
+      child: AdminActivityCards(
+          month: DateTime(2026, 10),
+          branch: null,
+          employees: const [],
+          payroll: const [],
+          lateOnly: true,
+          activity: Future.value({'late': <Map<String, dynamic>>[]}),
+          onMonth: (_) {},
+          onLate: () {},
+          onPayroll: () {}),
+    ))));
+    await tester.pumpAndSettle();
+    expect(find.text('Attendance Late (3 and above)'), findsOneWidget);
+    expect(find.text('Print PDF'), findsOneWidget);
+    expect(find.text('MC Print'), findsOneWidget);
+    expect(find.text('Unpaid Print'), findsOneWidget);
+    expect(find.text('OT Print'), findsOneWidget);
+    expect(find.text('Increment List'), findsNothing);
+    expect(find.text('Work Anniversary'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   test('five-day service dates respect branch and completed years', () {
     final widget = AdminActivityCards(
       month: DateTime(2026, 9),

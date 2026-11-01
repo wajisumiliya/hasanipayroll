@@ -20,6 +20,7 @@ class AdminActivityCards extends StatelessWidget {
       required this.onLate,
       required this.onPayroll,
       this.referenceDate,
+      this.lateOnly = false,
       this.branchLabels = const {}});
   final DateTime month;
   final String? branch;
@@ -28,6 +29,7 @@ class AdminActivityCards extends StatelessWidget {
   final ValueChanged<DateTime> onMonth;
   final VoidCallback onLate, onPayroll;
   final DateTime? referenceDate;
+  final bool lateOnly;
   final Map<String, String> branchLabels;
   static const ink = Color(0xFF0B1A3C), muted = Color(0xFF3C587F);
   static const pink = Color(0xFFFF214B),
@@ -843,6 +845,7 @@ class AdminActivityCards extends StatelessWidget {
               note: 'Shows work anniversaries within the next 5 days.',
               upcoming: true)
         ];
+        if (lateOnly) return cards.first;
         return LayoutBuilder(
             builder: (_, c) => Wrap(spacing: 16, runSpacing: 12, children: [
                   for (final item in cards)
