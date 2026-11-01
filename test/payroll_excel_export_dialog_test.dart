@@ -34,7 +34,8 @@ void main() {
     await tester.pump();
     expect(selected, DateTime(2026, 11));
     expect(calls, 1);
-    expect(chosen, {'Branch Payroll', 'EPF', 'SOCSO', 'EIS', 'HRDF'});
+    expect(chosen,
+        {'Branch Payroll', 'RHB Layout', 'EPF', 'SOCSO', 'EIS', 'HRDF'});
     expect(find.text('Generating...'), findsOneWidget);
     expect(
         tester

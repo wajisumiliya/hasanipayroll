@@ -451,7 +451,12 @@ class _AdminDashboardState extends State<AdminDashboard>
         await _exportDashboardSummaryExcel('HRDF', month, rows,
             onFile: collect);
       }
-      if (files.length != selected.length) return false;
+      final ordinaryReports =
+          selected.length - (selected.contains('RHB Layout') ? 1 : 0);
+      if (files.length != ordinaryReports) return false;
+      if (selected.contains('RHB Layout')) {
+        if (!await _exportRhbLayout(only: 'rhb', onFile: collect)) return false;
+      }
       for (final file in files.entries) {
         await FileSaver.instance.saveFile(
             name: file.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
@@ -21818,7 +21823,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Future<bool> _exportRhbLayout({String? only}) async {
+  Future<bool> _exportRhbLayout(
+      {String? only, void Function(String, Uint8List)? onFile}) async {
     try {
       _message(
         only == 'rhb'
@@ -22719,13 +22725,22 @@ class _AdminDashboardState extends State<AdminDashboard>
       if (only == null && generatedFiles.length != 4) {
         throw StateError('Expected four payroll workbooks.');
       }
-      for (final file in generatedFiles.entries) {
-        await FileSaver.instance.saveFile(
-            name: file.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
-            bytes: file.value,
-            ext: 'xlsx',
-            mimeType: MimeType.microsoftExcel);
+      if (generatedFiles.isEmpty) {
+        _message('No eligible files to export for $selectedMonth.');
+        return false;
       }
+      for (final file in generatedFiles.entries) {
+        if (onFile != null) {
+          onFile(file.key, file.value);
+        } else {
+          await FileSaver.instance.saveFile(
+              name: file.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
+              bytes: file.value,
+              ext: 'xlsx',
+              mimeType: MimeType.microsoftExcel);
+        }
+      }
+      if (onFile != null) return true;
 
       _message(only == null
           ? 'Downloaded 4 separate Excel files for $selectedMonth: '

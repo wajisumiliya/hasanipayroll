@@ -15,6 +15,7 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
   late int year = widget.initialMonth.year, month = widget.initialMonth.month;
   final selectedFiles = <String>{
     'Branch Payroll',
+    'RHB Layout',
     'EPF',
     'SOCSO',
     'EIS',
@@ -146,6 +147,7 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                             child: Column(children: [
                               for (final file in const [
                                 'Branch Payroll',
+                                'RHB Layout',
                                 'EPF',
                                 'SOCSO',
                                 'EIS',
