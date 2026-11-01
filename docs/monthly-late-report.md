@@ -410,3 +410,21 @@ Both increment report modes and the increment dashboard require is_active=true
 and employment_status=active. Blank legacy status falls back to is_active.
 Vacation, transferred and resigned staff are excluded even when their active flag
 is still true. This also excludes them from additional-increment comparison rows.
+
+### Attendance printing before payroll generation
+
+Attendance print already included unpaid/approved OT durations, but its RM
+amounts came only from an existing payroll row. When there is no saved payroll,
+printing now uses a read-only invocation of the same attendance payroll calculator
+with the displayed sheet rows and current salary/roster configuration. It prints
+unpaid deduction, shortage deduction and payable approved OT amounts, with an
+estimate note. Existing payroll amounts remain authoritative after generation.
+Preview bypasses the entire payroll lookup/write section, so printing cannot
+create payroll or trigger automatic inc_details updates. It retains calendar-day
+unpaid rates, roster OT rates, OT approval and employee exceptions, rounding,
+and foreign-worker rules. Missing salary configuration is reported as a print
+error rather than displaying invented zero amounts.
+
+Added tests cover calculation without an initialized database, unpaid rates,
+approved versus unapproved overtime, and foreign staff shortages. Flutter tests
+require execution in CI/local Flutter; the SDK is unavailable in this workspace.

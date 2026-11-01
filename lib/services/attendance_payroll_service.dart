@@ -312,6 +312,41 @@ class AttendancePayrollService {
     );
   }
 
+  /// Calculates print estimates without creating or changing payroll records.
+  /// Explicit inputs also allow the loaded attendance sheet to be previewed.
+  static Future<PayrollGenerationItem> previewEmployeePayroll({
+    required Map<String, dynamic> employee,
+    required DateTime month,
+    required List<Map<String, dynamic>> attendance,
+    Map<String, dynamic>? salaryDefault,
+    List<Map<String, dynamic>>? rosterRows,
+  }) async {
+    final employeeId = _normalizeId(employee['employee_id']);
+    final branchId = _text(employee['branch_id'] ?? employee['branch']).trim();
+    final salary = salaryDefault ?? await _getSalaryDefault(employeeId);
+    final rosters = rosterRows ??
+        (branchId.isEmpty
+            ? <Map<String, dynamic>>[]
+            : await SupabaseService.getMonthlyRosters(
+                branchId: branchId,
+                year: month.year,
+                month: month.month,
+                employeeId: employeeId,
+              ));
+    return _generateEmployeePayroll(
+      employee: employee,
+      month: month,
+      overwriteExisting: true,
+      preloadedSalaryDefault: salary,
+      preloadedAttendance: attendance,
+      preloadedRosterRows: rosters,
+      usePreloadedData: true,
+      previewOnly: true,
+      // Attendance allowance is not part of the three printed RM values.
+      attendanceAllowanceDisqualified: false,
+    );
+  }
+
   static Future<PayrollGenerationItem> _generateEmployeePayroll({
     required Map<String, dynamic> employee,
     required DateTime month,
@@ -322,6 +357,7 @@ class AttendancePayrollService {
     List<Map<String, dynamic>>? preloadedRosterRows,
     List<Map<String, dynamic>>? pendingPayrollWrites,
     bool usePreloadedData = false,
+    bool previewOnly = false,
     bool? attendanceAllowanceDisqualified,
   }) async {
     final employeeId = _normalizeId(employee['employee_id']);
@@ -811,75 +847,80 @@ class AttendancePayrollService {
     // 10. EXISTING PAYROLL
     // ------------------------------------------------------------------------
 
-    final existing = usePreloadedData
-        ? preloadedExistingPayroll
-        : await _getPayrollForPeriod(
-            employeeId,
-            period,
+    if (!previewOnly) {
+      final existing = usePreloadedData
+          ? preloadedExistingPayroll
+          : await _getPayrollForPeriod(
+              employeeId,
+              period,
+            );
+
+      if (existing != null) {
+        if (!overwriteExisting) {
+          return PayrollGenerationItem(
+            employeeId: employeeId,
+            employeeName: employeeName,
+            generated: false,
+            message: 'Payroll already exists for $employeeId for $period.',
+            basicSalary: basicSalary,
+            fwSalary: fwSalary,
+            elaunKedatangan: elaunKedatangan,
+            elaunPerkhidmatan: elaunPerkhidmatan,
+            elaunKerajinan: elaunKerajinan,
+            elaunMakanan: elaunMakanan,
+            overtimeDuration: totalOvertimeHours,
+            overtimeAmount: overtimeAmount,
+            cutiUmum: cutiUmum,
+            lateDeduction: totalLateDeduction,
+            unpaidDeduction: unpaidDeduction,
+            unpaidDays: unpaidDays,
+            publicHolidayReplacementDays: publicHolidayReplacementDays,
+            //publicHolidayWorkedDays: publicHolidayWorkedDays,
+            shortageMinutes: totalShortageMinutes,
+            epfEmployee: epf.employee,
+            epfEmployer: epf.employer,
+            socsoEmployee: socso.employee,
+            socsoEmployer: socso.employer,
+            eisEmployee: eis.employee,
+            eisEmployer: eis.employer,
+            zakat: zakat,
+            advance: 0,
+            statutoryWage: statutoryWage,
           );
+        }
 
-    if (existing != null) {
-      if (!overwriteExisting) {
-        return PayrollGenerationItem(
-          employeeId: employeeId,
-          employeeName: employeeName,
-          generated: false,
-          message: 'Payroll already exists for $employeeId for $period.',
-          basicSalary: basicSalary,
-          fwSalary: fwSalary,
-          elaunKedatangan: elaunKedatangan,
-          elaunPerkhidmatan: elaunPerkhidmatan,
-          elaunKerajinan: elaunKerajinan,
-          elaunMakanan: elaunMakanan,
-          overtimeDuration: totalOvertimeHours,
-          overtimeAmount: overtimeAmount,
-          cutiUmum: cutiUmum,
-          lateDeduction: totalLateDeduction,
-          unpaidDeduction: unpaidDeduction,
-          unpaidDays: unpaidDays,
-          publicHolidayReplacementDays: publicHolidayReplacementDays,
-          //publicHolidayWorkedDays: publicHolidayWorkedDays,
-          shortageMinutes: totalShortageMinutes,
-          epfEmployee: epf.employee,
-          epfEmployer: epf.employer,
-          socsoEmployee: socso.employee,
-          socsoEmployer: socso.employer,
-          eisEmployee: eis.employee,
-          eisEmployer: eis.employer,
-          zakat: zakat,
-          advance: 0,
-          statutoryWage: statutoryWage,
-        );
-      }
+        final existingId = existing['id'];
 
-      final existingId = existing['id'];
+        if (existingId == null || _text(existingId).isEmpty) {
+          throw Exception('Existing payroll record has no id.');
+        }
 
-      if (existingId == null || _text(existingId).isEmpty) {
-        throw Exception('Existing payroll record has no id.');
-      }
-
-      if (pendingPayrollWrites != null) {
-        pendingPayrollWrites.add(data);
+        if (pendingPayrollWrites != null) {
+          pendingPayrollWrites.add(data);
+        } else {
+          await SupabaseService.database
+              .from('payroll')
+              .update(data)
+              .eq('id', existingId);
+        }
       } else {
-        await SupabaseService.database
-            .from('payroll')
-            .update(data)
-            .eq('id', existingId);
-      }
-    } else {
-      if (pendingPayrollWrites != null) {
-        pendingPayrollWrites.add(data);
-      } else {
-        // Do not send payroll.id. The database generates it.
-        await SupabaseService.database.from('payroll').insert(data);
+        if (pendingPayrollWrites != null) {
+          pendingPayrollWrites.add(data);
+        } else {
+          // Do not send payroll.id. The database generates it.
+          await SupabaseService.database.from('payroll').insert(data);
+        }
       }
     }
 
     return PayrollGenerationItem(
       employeeId: employeeId,
       employeeName: employeeName,
-      generated: true,
-      message: 'Payroll generated successfully.',
+      calculated: true,
+      generated: !previewOnly,
+      message: previewOnly
+          ? 'Attendance print estimate; payroll has not been saved.'
+          : 'Payroll generated successfully.',
       basicSalary: basicSalary,
       fwSalary: fwSalary,
       elaunKedatangan: elaunKedatangan,
@@ -2095,6 +2136,7 @@ class PayrollGenerationItem {
   final String employeeId;
   final String employeeName;
   final bool generated;
+  final bool calculated;
   final String message;
 
   final double basicSalary;
@@ -2130,6 +2172,7 @@ class PayrollGenerationItem {
     required this.employeeId,
     required this.employeeName,
     required this.generated,
+    this.calculated = false,
     required this.message,
     this.basicSalary = 0.0,
     this.fwSalary = 0.0,

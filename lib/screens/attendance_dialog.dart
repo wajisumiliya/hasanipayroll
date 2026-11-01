@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
+import '../services/attendance_payroll_service.dart';
 import '../services/app_service.dart';
 import '../services/payroll_calculation_service.dart';
 import '../widgets/employee_photo.dart';
@@ -923,6 +924,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       double? approvedOtAmount;
       double? lateDeductionAmount;
       double? unpaidDeductionAmount;
+      var estimatedAmounts = false;
       try {
         final periodStart = DateTime(widget.month.year, widget.month.month);
         final periodEnd = DateTime(widget.month.year, widget.month.month + 1);
@@ -947,8 +949,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           unpaidDeductionAmount = amount(payroll['unpaid_deduction']);
         }
       } catch (_) {
-        // Attendance can still be printed before payroll is generated or on
-        // older schemas. In that case the report keeps the duration only.
+        // Fall back to a read-only calculation when saved payroll is unavailable.
       }
 
       final days = List<AttendancePrintDay>.generate(daysInMonth, (index) {
@@ -980,6 +981,47 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       });
 
+      if (approvedOtAmount == null) {
+        final attendance = <Map<String, dynamic>>[
+          for (final day in days)
+            {
+              'employee_id': _employeeId(),
+              'attendance_date': DateFormat('yyyy-MM-dd').format(
+                  DateTime(widget.month.year, widget.month.month, day.day)),
+              'check_in': day.workingIn,
+              'check_out': day.workingOut,
+              'status': day.status,
+              'net_working_minutes': day.netMinutes,
+              'work_minutes': day.workMinutes,
+              'break_minutes': day.breakMinutes,
+              'overtime_minutes': day.overtimeMinutes,
+              'approved_ot_minutes': _isAdminView()
+                  ? (day.overtimeMinutes > 0 ? day.overtimeMinutes : null)
+                  : (controllers[day.day - 1].approvedOtMinutes > 0
+                      ? controllers[day.day - 1].approvedOtMinutes
+                      : null),
+              'is_unpaid': controllers[day.day - 1].isUnpaid,
+              'is_public_holiday': controllers[day.day - 1].isPublicHoliday,
+            },
+        ];
+        final estimate = await AttendancePayrollService.previewEmployeePayroll(
+          employee: {
+            ...widget.employee,
+            'employee_id': _employeeId(),
+            'branch_id': widget.branchId,
+          },
+          month: widget.month,
+          attendance: attendance,
+        );
+        if (!estimate.calculated) {
+          throw StateError(estimate.message);
+        }
+        approvedOtAmount = estimate.overtimeAmount;
+        lateDeductionAmount = estimate.lateDeduction;
+        unpaidDeductionAmount = estimate.unpaidDeduction;
+        estimatedAmounts = true;
+      }
+
       final bytes = await AttendancePdfService.build(
         employeeId: _employeeId(),
         employeeName: _employeeName(),
@@ -989,6 +1031,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         isForeignEmployee: !_isLocalStaff,
         month: widget.month,
         days: days,
+        estimatedAmounts: estimatedAmounts,
         approvedOtAmount: approvedOtAmount,
         lateDeductionAmount: lateDeductionAmount,
         unpaidDeductionAmount: unpaidDeductionAmount,

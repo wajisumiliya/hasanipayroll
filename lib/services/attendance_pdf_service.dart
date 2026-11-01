@@ -57,6 +57,7 @@ class AttendancePdfService {
     required bool isForeignEmployee,
     required DateTime month,
     required List<AttendancePrintDay> days,
+    bool estimatedAmounts = false,
     double? approvedOtAmount,
     double? lateDeductionAmount,
     double? unpaidDeductionAmount,
@@ -145,6 +146,14 @@ class AttendancePdfService {
                   ),
                 ],
               ),
+              if (estimatedAmounts)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(top: 5),
+                  child: pw.Text(
+                    'RM values are estimates from current attendance and salary defaults; payroll has not been saved.',
+                    style: const pw.TextStyle(fontSize: 6),
+                  ),
+                ),
               pw.SizedBox(height: 8),
               _workTable(days),
               pw.Spacer(),
