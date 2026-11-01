@@ -44,8 +44,11 @@ void main() {
         employeeIds: ['E1', 'E2'],
         month: DateTime(2026, 10),
         branchName: 'Branch A');
-    expect(
-        RegExp(r'/Type\s*/Page\b').allMatches(latin1.decode(bytes)).length, 4);
+    final pdf = latin1.decode(bytes);
+    expect(RegExp(r'/Type\s*/Page\b').allMatches(pdf).length, 4);
+    expect(pdf, contains('/ViewerPreferences'));
+    expect(pdf, contains('/DuplexFlipLongEdge'));
+    expect(pdf, contains('/PrintScaling'));
   });
   test('empty selection cannot produce a misleading blank PDF', () async {
     await expectLater(AttendancePdfService.buildBatch([]), throwsArgumentError);

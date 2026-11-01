@@ -51,3 +51,17 @@ the attendance scope, so no wider role/database grants are introduced.
 A Flutter widget regression test covers the standalone card and print buttons.
 Dart formatter/parser checks pass; Flutter execution remains unavailable here.
 Rebuild Flutter web to show the new navigation item.
+
+## Duplex A4 preference
+
+Both single and batch attendance PDFs now use PDF 1.7 ViewerPreferences with
+DuplexFlipLongEdge and PrintScaling None. Employee page order is unchanged:
+work/front, break/back, then the next employee's work/front and break/back. The
+batch job uses the same A4 layoutPdf options as single-employee Print A4, and the
+selection bar states the two-sided/long-edge setting. Browsers and printer drivers
+can override or ignore PDF viewer preferences; physical duplex still requires
+Two-sided / Flip on long edge in a duplex-capable printer's dialog. It cannot be
+forced by the Flutter web API. The batch test also asserts the PDF preferences.
+The PdfDict import is limited to the package's pinned 3.13.1 dictionary type;
+that version's catalog.prepare retains these preferences. Dart formatter/parser
+checks passed. Flutter execution remains unavailable in this workspace.

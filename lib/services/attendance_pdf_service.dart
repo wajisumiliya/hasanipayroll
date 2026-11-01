@@ -3,6 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
+// Viewer preferences are not exposed by the pdf widgets API.
+// ignore: implementation_imports
+import 'package:pdf/src/pdf/format/dict.dart' show PdfDict;
 import 'package:pdf/widgets.dart' as pw;
 
 class AttendancePrintDay {
@@ -103,7 +106,11 @@ class AttendancePdfService {
 
   static Future<Uint8List> buildBatch(List<AttendancePrintSheet> sheets) async {
     if (sheets.isEmpty) throw ArgumentError('Select at least one employee.');
-    final document = pw.Document();
+    final document = pw.Document(version: PdfVersion.pdf_1_7);
+    document.document.catalog.params['/ViewerPreferences'] = PdfDict.values({
+      '/Duplex': const PdfName('/DuplexFlipLongEdge'),
+      '/PrintScaling': const PdfName('/None'),
+    });
     for (final sheet in sheets) {
       await _append(document, sheet);
     }

@@ -10020,7 +10020,6 @@ class _AdminDashboardState extends State<AdminDashboard>
           name:
               'Attendance_${branchId}_${DateFormat('yyyy_MM').format(month)}.pdf',
           format: PdfPageFormat.a4,
-          dynamicLayout: false,
           onLayout: (_) async => bytes);
     } catch (error) {
       if (mounted)
@@ -10396,6 +10395,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text('${_attendancePrintIds.length} selected'),
+                            const Text(
+                                'A4 front & back · Two-sided / long-edge printing'),
                             TextButton(
                                 onPressed: _attendanceBatchPrinting
                                     ? null
