@@ -428,3 +428,12 @@ error rather than displaying invented zero amounts.
 Added tests cover calculation without an initialized database, unpaid rates,
 approved versus unapproved overtime, and foreign staff shortages. Flutter tests
 require execution in CI/local Flutter; the SDK is unavailable in this workspace.
+
+### Attendance RM display and web deployment
+
+Summary boxes print durations and RM amounts on separate lines so amounts do
+not share the narrow duration line. At this change, the tracked build/web bundle
+was still from b30efaf and lacked the pre-payroll estimate code. Pulling Dart
+source alone does not update that bundle: rebuild Flutter web and deploy the
+resulting build/web directory (or use the Render Flutter build script).
+Dart formatter/parser and diff checks passed; Flutter execution remains unavailable.

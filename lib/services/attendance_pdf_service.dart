@@ -360,15 +360,21 @@ class AttendancePdfService {
                     style: const pw.TextStyle(
                         fontSize: 4.5, color: PdfColors.black)),
                 pw.SizedBox(height: 2),
-                pw.Text(
-                    amount == null
-                        ? _duration(minutes)
-                        : '${_duration(minutes)} / RM ${amount.toStringAsFixed(2)}',
+                pw.Text(_duration(minutes),
                     maxLines: 1,
                     style: pw.TextStyle(
-                        fontSize: amount == null ? 10 : 7,
+                        fontSize: 10,
                         fontWeight: pw.FontWeight.bold,
                         color: color)),
+                if (amount != null) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text('RM ${amount.toStringAsFixed(2)}',
+                      maxLines: 1,
+                      style: pw.TextStyle(
+                          fontSize: 7,
+                          fontWeight: pw.FontWeight.bold,
+                          color: color)),
+                ],
               ]),
         ),
       );
