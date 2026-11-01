@@ -1536,6 +1536,7 @@ class SupabaseService {
     final id = employeeId.toString().trim();
     if (id.isEmpty) return <Map<String, dynamic>>[];
     final rows = await AppService.instance.loadNeonAttendance(
+      employeeId: id,
       year: year,
       month: month,
     );
