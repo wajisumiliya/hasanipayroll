@@ -451,8 +451,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         await _exportDashboardSummaryExcel('HRDF', month, rows,
             onFile: collect);
       }
-      final ordinaryReports =
-          selected.length - (selected.contains('RHB Layout') ? 1 : 0);
+      final ordinaryReports = selected.length -
+          (selected.contains('RHB Layout') ? 1 : 0) -
+          (selected.contains('Payroll Summary PDF') ? 1 : 0);
       if (files.length != ordinaryReports) return false;
       if (selected.contains('RHB Layout')) {
         if (!await _exportRhbLayout(only: 'rhb', onFile: collect)) return false;
@@ -464,7 +465,16 @@ class _AdminDashboardState extends State<AdminDashboard>
             ext: 'xlsx',
             mimeType: MimeType.microsoftExcel);
       }
-      _message('Downloaded ${files.length} separate Excel files.');
+      if (selected.contains('Payroll Summary PDF')) {
+        final rows = await _fetchDashboardReportRows(month, allBranches: true);
+        if (rows.isEmpty) {
+          _message('No payroll summary for the selected month.');
+          return false;
+        }
+        await _printDashboardReport('Payroll Summary', month, rows);
+      }
+      _message(
+          'Prepared selected payroll files${selected.contains('Payroll Summary PDF') ? ' and Payroll Summary PDF' : ''}.');
       return true;
     } catch (error) {
       _message('Excel export failed: $error');
@@ -20099,7 +20109,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Future<List<Map<String, dynamic>>> _fetchDashboardReportRows(DateTime month,
-      {Set<String>? selectedEmployeeIds}) async {
+      {Set<String>? selectedEmployeeIds, bool allBranches = false}) async {
     final source = await service.loadNeonAdminDashboard(month);
     final results = ['payroll', 'employees', 'branches']
         .map((key) => (source[key] as List)
@@ -20121,8 +20131,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             scopedEmployeeIds
                 .contains(_normalizeBranchValue(row['employee_id'])))
         .where((row) {
-          if (selectedEmployeeIds != null || selectedDashboardBranchId == null)
-            return true;
+          if (allBranches ||
+              selectedEmployeeIds != null ||
+              selectedDashboardBranchId == null) return true;
           final own = _dashboardBranchKey(row['branch_id']);
           final person = scopedEmployeeRows
               .where((e) =>
@@ -20178,6 +20189,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                 'socsoEmployer': 0.0,
                 'eisEmployee': 0.0,
                 'eisEmployer': 0.0,
+                'excludedEpf': 0.0,
+                'excludedSocso': 0.0,
+                'excludedEis': 0.0,
                 'unpaid': 0.0,
                 'pcb': 0.0,
                 'zakat': 0.0,
@@ -20209,6 +20223,22 @@ class _AdminDashboardState extends State<AdminDashboard>
       final socsoEmployer = _number(row['socso_employer']);
       final eisEmployee = _number(row['eis_employee']);
       final eisEmployer = _number(row['eis_employer']);
+      bool hasNumber(List<String> keys) => keys.any((key) {
+            final value = employee[key]?.toString().trim() ?? '';
+            return value.isNotEmpty &&
+                !{'-', 'N/A', 'NA', 'NULL', '0'}.contains(value.toUpperCase());
+          });
+      if (!hasNumber(const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo'])) {
+        summary['excludedEpf'] =
+            _number(summary['excludedEpf']) + epfEmployee + epfEmployer;
+      }
+      if (!hasNumber(
+          const ['socso_no', 'socsoNo', 'socso_number', 'SOCSO_NO'])) {
+        summary['excludedSocso'] =
+            _number(summary['excludedSocso']) + socsoEmployee + socsoEmployer;
+        summary['excludedEis'] =
+            _number(summary['excludedEis']) + eisEmployee + eisEmployer;
+      }
       final deductions = unpaid +
           late +
           epfEmployee +
@@ -20282,6 +20312,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         'socsoEmployer': 0.0,
         'eisEmployee': 0.0,
         'eisEmployer': 0.0,
+        'excludedEpf': 0.0,
+        'excludedSocso': 0.0,
+        'excludedEis': 0.0,
         'unpaid': 0.0,
         'pcb': 0.0,
         'zakat': 0.0,
@@ -20305,6 +20338,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         'socsoEmployer',
         'eisEmployee',
         'eisEmployer',
+        'excludedEpf',
+        'excludedSocso',
+        'excludedEis',
         'unpaid',
         'pcb',
         'zakat',
@@ -21830,6 +21866,57 @@ class _AdminDashboardState extends State<AdminDashboard>
               cellStyle: const pw.TextStyle(fontSize: 5.5),
               cellPadding: const pw.EdgeInsets.all(3),
             ),
+          if (report == 'Payroll Summary') ...[
+            pw.SizedBox(height: 10),
+            pw.Text('Statutory payment reconciliation (employee + employer)',
+                style:
+                    pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 4),
+            pw.TableHelper.fromTextArray(
+                headers: const [
+                  'CONTRIBUTION',
+                  'ORIGINAL TOTAL RM',
+                  'LESS: MISSING NUMBER RM',
+                  'NET PAYABLE RM'
+                ],
+                data: [
+                  for (final item in const [
+                    ('EPF', 'epfEmployee', 'epfEmployer', 'excludedEpf'),
+                    (
+                      'SOCSO',
+                      'socsoEmployee',
+                      'socsoEmployer',
+                      'excludedSocso'
+                    ),
+                    ('EIS', 'eisEmployee', 'eisEmployer', 'excludedEis')
+                  ])
+                    (() {
+                      final branches =
+                          rows.where((row) => row['branch'] != 'GRAND TOTAL');
+                      final total = branches.fold<double>(
+                          0,
+                          (sum, row) =>
+                              sum +
+                              _number(row[item.$2]) +
+                              _number(row[item.$3]));
+                      final excluded = branches.fold<double>(
+                          0, (sum, row) => sum + _number(row[item.$4]));
+                      return [
+                        item.$1,
+                        total.toStringAsFixed(2),
+                        excluded.toStringAsFixed(2),
+                        (total - excluded).toStringAsFixed(2)
+                      ];
+                    })()
+                ],
+                headerStyle:
+                    pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+                cellStyle: const pw.TextStyle(fontSize: 7),
+                cellPadding: const pw.EdgeInsets.all(4)),
+            pw.Text(
+                'EPF excludes missing EPF numbers. SOCSO/EIS exclude missing SOCSO numbers. Saved payroll net pay is unchanged.',
+                style: const pw.TextStyle(fontSize: 6)),
+          ],
           if (report == 'Payroll Summary' || report == 'HRDF') ...[
             pw.Spacer(),
             pw.Align(

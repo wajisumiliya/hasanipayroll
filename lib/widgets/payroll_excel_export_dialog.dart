@@ -16,6 +16,7 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
   final selectedFiles = <String>{
     'Branch Payroll',
     'RHB Layout',
+    'Payroll Summary PDF',
     'EPF',
     'SOCSO',
     'EIS',
@@ -148,6 +149,7 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                               for (final file in const [
                                 'Branch Payroll',
                                 'RHB Layout',
+                                'Payroll Summary PDF',
                                 'EPF',
                                 'SOCSO',
                                 'EIS',
