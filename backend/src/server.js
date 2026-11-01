@@ -2,6 +2,7 @@ import { installIncrementReportApi } from './increment-report.js';
 import { installLateReportApi } from './late-report.js';
 import { installEmployeeEditorApi } from './employee-editor.js';
 import { installAttendanceStatusReportApi } from './attendance-status-report.js';
+import { installQrAttendanceApi } from './qr-attendance.js';
 import { employeeLeaveView } from './employee-leave-balances.js';
 import { createApiCorsOptions } from "./api-cors.js";
 import { isDailyReportPin } from "./daily-report-pin.js";
@@ -1948,6 +1949,8 @@ app.post("/api/attendance-sheet/rosters", authenticate, async (req, res) => {
     return genericError(res,503);
   } finally {client.release();}
 });
+
+installQrAttendanceApi(app, pool, authenticate, { enabled: process.env.QR_ATTENDANCE_ENABLED === 'true' });
 
 app.post("/api/attendance-sheet/save", authenticate, async (req,res) => {
   const role = String(req.user?.role ?? "").toUpperCase();

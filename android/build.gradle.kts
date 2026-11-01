@@ -8,7 +8,8 @@ allprojects {
 val flutterBuildDir =
     providers.gradleProperty("flutterBuildDir")
         .map { rootProject.file(it) }
-        .orElse(rootProject.file("../../build"))
+        // rootProject is android/, so one parent is the Flutter project root.
+        .orElse(rootProject.file("../build"))
         .get()
 rootProject.layout.buildDirectory.set(flutterBuildDir)
 

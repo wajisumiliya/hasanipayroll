@@ -3,6 +3,16 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:postgrest/postgrest.dart';
 
+class NeonApiException implements Exception {
+  const NeonApiException(this.message, this.statusCode, this.code, [this.data]);
+  final String message;
+  final int statusCode;
+  final String? code;
+  final Map<String, dynamic>? data;
+  @override
+  String toString() => message;
+}
+
 /// One session for the existing authenticated Node API and its Neon adapter.
 /// Employee photo bytes use this same authenticated backend.
 class NeonApi {
@@ -36,8 +46,9 @@ class NeonApi {
   }) async {
     if (!path.startsWith('/api/')) throw ArgumentError('Invalid API path');
     final token = _accessToken;
-    if (token == null || token.isEmpty)
+    if (token == null || token.isEmpty) {
       throw StateError('Please sign in again.');
+    }
     final request = http.Request(method, Uri.parse('$baseUrl$path'));
     request.headers.addAll({
       'Accept': 'application/json',
@@ -58,7 +69,8 @@ class NeonApi {
       if (response.statusCode < 200 ||
           response.statusCode >= 300 ||
           data['ok'] == false) {
-        throw StateError(data['message']?.toString() ?? 'Request failed.');
+        throw NeonApiException(data['message']?.toString() ?? 'Request failed.',
+            response.statusCode, data['code']?.toString(), data);
       }
       return data;
     } finally {
