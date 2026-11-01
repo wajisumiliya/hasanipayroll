@@ -109,6 +109,7 @@ void main() {
     expect(widget.increments().first['event'], DateTime(2026, 10));
     final employee =
         widget.increments().firstWhere((row) => row['employee_id'] == 'E1');
+    expect(employee['inc_details'], 'APR-26/100');
     expect(employee['basic_salary'], 2000);
     expect(employee['total_allowances'], 375);
   });

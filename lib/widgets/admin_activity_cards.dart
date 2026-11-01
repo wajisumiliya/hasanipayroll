@@ -788,8 +788,9 @@ class AdminActivityCards extends StatelessWidget {
                 )
               ],
               rows: inc,
-              headers: ['Basic Salary', 'Total Allowances'],
+              headers: ['Last Increment', 'Basic Salary', 'Total Allowances'],
               values: (r) => [
+                    '${r['inc_details'] ?? '—'}',
                     r['basic_salary'] == null
                         ? 'Not set'
                         : money(number(r['basic_salary'])),
