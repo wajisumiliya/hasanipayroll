@@ -113,6 +113,43 @@ void main() {
     expect(employee['basic_salary'], 2000);
     expect(employee['total_allowances'], 375);
   });
+  test(
+      'joining-date starters and auto-updated recipients stay in the payroll-month list',
+      () {
+    final widget = AdminActivityCards(
+        month: DateTime(2026, 10),
+        branch: null,
+        employees: const [
+          {
+            'employee_id': 'JOIN',
+            'is_active': true,
+            'joining_date': '2026-04-15',
+            'inc_details': null
+          },
+          {
+            'employee_id': 'OLD',
+            'is_active': true,
+            'joining_date': '2026-03-15'
+          },
+          {
+            'employee_id': 'PAID',
+            'is_active': true,
+            'inc_details': 'OCT-26/50',
+            '_increment_eligibility': {
+              'inc_details_before': 'APR-26/50',
+              'joining_date_before': '2026-01-01'
+            }
+          },
+        ],
+        payroll: const [],
+        activity: Future.value({}),
+        onMonth: (_) {},
+        onLate: () {},
+        onPayroll: () {});
+    expect(widget.increments().map((row) => row['employee_id']).toSet(),
+        {'JOIN', 'PAID'});
+  });
+
   test('five-day window crosses New Year and excludes sixth day', () {
     final widget = AdminActivityCards(
         month: DateTime(2026, 12),

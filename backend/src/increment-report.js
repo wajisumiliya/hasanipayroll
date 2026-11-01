@@ -13,8 +13,15 @@ function amounts(row) {
   const values = fields.map(field => Number(row[field] ?? 0));
   return values.every(value => Number.isFinite(value) && value >= 0) ? values : null;
 }
-export function incrementEligibility(value, year, month) {
+export function incrementEligibility(value, year, month, joiningDate=null) {
   const text = key(value);
+  if (!text) {
+    const raw=joiningDate instanceof Date?`${joiningDate.getFullYear()}-${String(joiningDate.getMonth()+1).padStart(2,'0')}-${String(joiningDate.getDate()).padStart(2,'0')}`:String(joiningDate??'').slice(0,10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)||!Number.isFinite(Date.parse(raw))||new Date(raw).toISOString().slice(0,10)!==raw) return null;
+    const joined=new Date(raw),due=new Date(Date.UTC(joined.getUTCFullYear(),joined.getUTCMonth()+6,1));
+    if (due.getUTCFullYear()!==year||due.getUTCMonth()+1!==month) return null;
+    return {last_increment_month:null,eligible_from:due.toISOString().slice(0,10),last_amount:null};
+  }
   const match = /^([A-Z]{3,4})[-/](\d{4}|\d{2})(?:\D|$)/.exec(text);
   const months = {JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,SEPT:9,OCT:10,NOV:11,DEC:12};
   if (!match) return null;
@@ -66,7 +73,10 @@ export function buildIncrementReport({employees, payroll, year, month, mode, bra
     if (!id || (branchId && key(employee.branch_id) !== key(branchId))) continue;
     const foreign = key(employee.address).includes('FRN');
     if ((staffScope === 'local' && foreign) || (staffScope === 'foreign' && !foreign)) continue;
-    const eligibility = key(employee.is_active) === 'TRUE' ? incrementEligibility(employee.inc_details, year, month) : null;
+    const snapshot=employee.increment_snapshot;
+    const basis=snapshot?snapshot.inc_details_before:employee.inc_details;
+    const joining=snapshot?snapshot.joining_date_before:employee.joining_date;
+    const eligibility = key(employee.is_active) === 'TRUE' ? incrementEligibility(basis, year, month, joining) : null;
     const salaryValue=value=>value==null?null:(Number.isFinite(Number(value))&&Number(value)>=0?Number(value):null);
     const allowanceFields=['elaun_kedatangan','elaun_perkhidmatan','elaun_kerajinan','elaun_makanan'];
     const basicSalary=salaryValue(employee.basic_salary);
@@ -87,7 +97,7 @@ export function buildIncrementReport({employees, payroll, year, month, mode, bra
       else result = 'Received';
     }
     rows.push({employee_id:id,name:employee.name ?? id,branch_id:employee.branch_id ?? '',
-      inc_details:employee.inc_details??'',eligible:eligibility != null,last_increment_month:eligibility?.last_increment_month??null,eligible_from:eligibility?.eligible_from??null,
+      inc_details:employee.inc_details??'',eligibility_joining_date:joining??null,eligible:eligibility != null,last_increment_month:eligibility?.last_increment_month??null,eligible_from:eligibility?.eligible_from??null,
       basic_salary:basicSalary,total_allowances:totalAllowances,...evidence,result});
   }
   rows.sort((a,b) => a.result.localeCompare(b.result) || key(a.branch_id).localeCompare(key(b.branch_id)) || key(a.name).localeCompare(key(b.name)));
@@ -111,8 +121,9 @@ export function installIncrementReportApi(app, {authenticate, pool, renderExport
       return res.status(400).json({ok:false,message:'Invalid increment report selection.'});
     try {
       const [employeeRows, payrollRows, branchRows] = await Promise.all([
-        pool.query(`SELECT e.employee_id, e.name, e.branch_id, e.is_active, e.address, d.inc_details,d.basic_salary,d.elaun_kedatangan,d.elaun_perkhidmatan,d.elaun_kerajinan,d.elaun_makanan
-          FROM public.employees e LEFT JOIN public.employee_salary_defaults d ON d.employee_id=e.employee_id`),
+        pool.query(`SELECT e.employee_id, e.name, e.branch_id, e.is_active, e.address,e.joining_date::text AS joining_date,to_jsonb(s) AS increment_snapshot, d.inc_details,d.basic_salary,d.elaun_kedatangan,d.elaun_perkhidmatan,d.elaun_kerajinan,d.elaun_makanan
+          FROM public.employees e LEFT JOIN public.employee_salary_defaults d ON d.employee_id=e.employee_id
+          LEFT JOIN app_private.payroll_increment_state s ON s.employee_id=e.employee_id AND s.period=make_date($1,$2,1)`,[year,month]),
         pool.query(`SELECT employee_id, period::text, basic_salary, elaun_kedatangan, elaun_perkhidmatan, elaun_kerajinan
           FROM public.payroll WHERE period >= (make_date($1,$2,1) - INTERVAL '7 months')::date
           AND period < (make_date($1,$2,1) + INTERVAL '1 month') ORDER BY period`, [year,month]),

@@ -1693,9 +1693,9 @@ app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req,
       return res.status(400).json({ ok: false, message: "Invalid dashboard month." });
     }
     const [employeesResult, payrollResult, branchesResult] = await Promise.all([
-      pool.query(`SELECT to_jsonb(e) || jsonb_build_object('inc_details', d.inc_details, '_salary_defaults', to_jsonb(d)) AS row
+      pool.query(`SELECT to_jsonb(e) || jsonb_build_object('inc_details', d.inc_details, '_salary_defaults', to_jsonb(d), '_increment_eligibility', to_jsonb(s)) AS row
         FROM public.employees e LEFT JOIN public.employee_salary_defaults d
-          ON d.employee_id = e.employee_id ORDER BY e.name ASC`),
+          ON d.employee_id = e.employee_id LEFT JOIN app_private.payroll_increment_state s ON s.employee_id=e.employee_id AND s.period=make_date($1,$2,1) ORDER BY e.name ASC`,[year,month]),
       pool.query(
         `SELECT to_jsonb(p) AS row, p.period >= make_date($1, $2, 1) AS selected FROM public.payroll p
          WHERE p.period >= (make_date($1, $2, 1) - INTERVAL '7 months')

@@ -12506,6 +12506,10 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   void _invalidatePayrollReportCaches() {
+    _employeeSalaryCache.clear();
+    _employeeSalaryCacheTime.clear();
+    _employeeRowsAt = null;
+    _adminEmployeesFuture = null;
     _dashboardReportCache.clear();
     _statutoryReportCache.clear();
     _dashboardReportCacheTime.clear();

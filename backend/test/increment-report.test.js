@@ -23,6 +23,25 @@ test('eligibility includes only the exact six-month cohort and excludes overdue 
     assert.equal(incrementEligibility(value,2026,10),null);
 });
 
+test('blank inc_details falls back to the exact six-month joining cohort',()=>{
+  assert.equal(incrementEligibility(null,2026,10,'2026-04-15').eligible_from,'2026-10-01');
+  assert.equal(incrementEligibility('  ',2026,10,'2026-04-30').last_increment_month,null);
+  assert.equal(incrementEligibility('',2026,10,'2026-03-15'),null);
+  assert.equal(incrementEligibility('',2026,10,'2026-05-15'),null);
+  assert.equal(incrementEligibility('MAY-26/50',2026,10,'2026-04-15'),null);
+  assert.equal(incrementEligibility('bad',2026,10,'2026-04-15'),null);
+  assert.equal(incrementEligibility('',2026,10,'2026-02-30'),null);
+  const report=build([employee('JOIN',{inc_details:null,joining_date:'2026-04-15'})],[],'eligible');
+  assert.equal(report.reports.length,1);assert.equal(report.reports[0].inc_details,'');
+});
+
+test('pre-save eligibility snapshot keeps an auto-updated current-month recipient visible',()=>{
+  const e=employee('E',{inc_details:'OCT-26/50',increment_snapshot:{inc_details_before:'APR-26/50',joining_date_before:'2026-01-01'}});
+  const report=build([e],[pay('E','2026-09-01'),pay('E','2026-10-01',2050)]);
+  assert.equal(report.reports[0].eligible,true);assert.equal(report.reports[0].result,'Received');
+  assert.equal(report.reports[0].inc_details,'OCT-26/50');
+});
+
 test('eligibility PDF list exists before payroll, scopes branches and excludes inactive employees',()=>{
   const report=build([employee('E1'),employee('E2',{branch_id:'B'}),employee('E3',{is_active:false}),employee('E4',{inc_details:'MAY-26/100'})],[],'eligible',{branchId:'a'});
   assert.deepEqual(report.reports.map(row=>row.employee_id),['E1']);

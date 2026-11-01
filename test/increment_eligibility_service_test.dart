@@ -42,6 +42,40 @@ void main() {
         isNull);
   });
 
+  test('empty inc_details uses joining month for the exact six-month cohort',
+      () {
+    expect(
+        IncrementEligibilityService.dueForMonth(null, DateTime(2026, 10),
+                joiningDate: '2026-04-15')!
+            .dueMonth,
+        DateTime(2026, 10));
+    expect(
+        IncrementEligibilityService.dueForMonth(' ', DateTime(2026, 10),
+            joiningDate: '2026-03-15'),
+        isNull);
+    expect(
+        IncrementEligibilityService.dueForMonth('', DateTime(2026, 10),
+            joiningDate: '2026-05-15'),
+        isNull);
+    expect(
+        IncrementEligibilityService.dueForMonth('MAY-26/50', DateTime(2026, 10),
+            joiningDate: '2026-04-15'),
+        isNull);
+    expect(
+        IncrementEligibilityService.dueForMonth('bad', DateTime(2026, 10),
+            joiningDate: '2026-04-15'),
+        isNull);
+    expect(
+        IncrementEligibilityService.dueForMonth('', DateTime(2026, 10),
+            joiningDate: '2026-02-30'),
+        isNull);
+    expect(
+        IncrementEligibilityService.dueForMonth(null, DateTime(2027, 3),
+                joiningDate: '2026-09-30')!
+            .dueMonth,
+        DateTime(2027, 3));
+  });
+
   test('year rollover and long month names use six calendar months', () {
     expect(
         IncrementEligibilityService.dueForMonth(

@@ -95,8 +95,16 @@ class AdminActivityCards extends StatelessWidget {
   List<Map<String, dynamic>> increments() {
     final result = <Map<String, dynamic>>[];
     for (final e in people) {
-      final schedule =
-          IncrementEligibilityService.dueForMonth(e['inc_details'], month);
+      final snapshot = e['_increment_eligibility'] is Map
+          ? e['_increment_eligibility'] as Map
+          : null;
+      final basis =
+          snapshot == null ? e['inc_details'] : snapshot['inc_details_before'];
+      final joining = snapshot == null
+          ? e['joining_date']
+          : snapshot['joining_date_before'];
+      final schedule = IncrementEligibilityService.dueForMonth(basis, month,
+          joiningDate: joining);
       if (schedule == null) continue;
       final salary = e['_salary_defaults'] is Map
           ? Map<String, dynamic>.from(e['_salary_defaults'] as Map)
@@ -122,6 +130,7 @@ class AdminActivityCards extends StatelessWidget {
         'total_allowances': totalAllowances,
         'event': schedule.dueMonth,
         'last_event': schedule.lastMonth,
+        'eligibility_joining_date': joining,
       });
     }
     result.sort((a, b) => canonical(a['name']).compareTo(canonical(b['name'])));
@@ -790,7 +799,9 @@ class AdminActivityCards extends StatelessWidget {
               rows: inc,
               headers: ['Last Increment', 'Basic Salary', 'Total Allowances'],
               values: (r) => [
-                    '${r['inc_details'] ?? '—'}',
+                    canonical(r['inc_details']).isEmpty
+                        ? 'Joined ${r['eligibility_joining_date']?.toString().split('T').first ?? '—'}'
+                        : '${r['inc_details']}',
                     r['basic_salary'] == null
                         ? 'Not set'
                         : money(number(r['basic_salary'])),
@@ -799,7 +810,7 @@ class AdminActivityCards extends StatelessWidget {
                         : money(number(r['total_allowances']))
                   ],
               note:
-                  'Only employees whose last increment was exactly six payroll months ago. Salary and allowances come from salary defaults.',
+                  'Exactly six payroll months after the last increment, or joining month when inc_details is empty. Salary and allowances come from salary defaults.',
               increments: true),
           card(context,
               title: 'Upcoming Birthdays',

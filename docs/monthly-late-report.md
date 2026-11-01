@@ -339,3 +339,50 @@ The increment list and both PDFs retain the original inc_details text in a
 Last Increment column (for example APR-26/50), alongside basic salary and total
 allowances. The separate last-increment amount totals remain removed; the exact
 six-month cohort rule is unchanged.
+
+### Joining-date fallback and payroll-driven inc_details
+
+When inc_details is NULL/blank, use the employee joining month plus six calendar
+months. April 2026 starters qualify for October 2026 only; March/May starters do
+not. A nonempty increment reference takes precedence over joining date. Invalid
+nonempty references and invalid/missing joining dates are not silently inferred.
+
+The additive startup migration 20261101_payroll_increment_sync.sql maintains
+salary-default inc_details from committed payroll writes, across normal generation,
+manual edits and imports. A verified RM50 increase in October 2026 becomes
+OCT-26/50. It also synchronizes existing latest payroll records once, without
+rewriting payroll rows or changing any salary/allowance amounts.
+
+Detection follows the established report basis: positive changes in basic salary,
+Kedatangan, Perkhidmatan and Kerajinan against each field's highest normal amount
+in the prior seven months. Overtime/bonuses/food allowance are not increment
+components. First payroll or missing normal history cannot establish an increase;
+partial-pay restoration does not create one. Attendance-allowance forfeiture does
+not cancel a simultaneous basic-salary increment. No future award is assumed.
+
+Per-employee salary-row locks and database triggers keep payroll and metadata in
+the same transaction. Repeat saves do not add the increment again. Historical
+writes cannot overwrite a later increment reference. Corrections/deletions restore
+previous metadata only while the field still matches the automatically written
+value, preserving later manual references. Relevant changes recheck the latest
+payroll too. Payroll rollbacks also roll back metadata/snapshot changes.
+
+A private employee/month record preserves the pre-save inc_details and joining
+date used for eligibility. Thus an April-reference employee or April starter stays
+in October's comparison after the new actual OCT-26/50 value is written. Future
+periods use the newly recorded increment date. Both card/PDF display current
+inc_details and retain basic/allowance columns. Employee salary edit caches expire
+after payroll generation to avoid presenting an old increment reference.
+
+Validation: PostgreSQL 17 fixtures cover migration backfill/restart, authenticated
+admin writes, concurrent repeated saves, joining-date eligibility retention,
+correction/deletion, period moves, missing history, partial pay, allowance
+forfeiture, historical protection and rollback. Flutter tests were added for
+joining-date cohorts and preserved recipients; local Flutter execution could not
+be repeated because the temporary SDK container exceeded the environment disk.
+Dart sources were parsed/formatted, and the full backend suite passed 154 tests
+with the bootstrap database enabled and no skips.
+
+An intermediate full test run encountered the existing reminder fixture's
+"terminating connection due to administrator command" during database cleanup;
+no reminder code was changed. The isolated rerun completed all 154 tests cleanly.

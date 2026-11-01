@@ -158,7 +158,7 @@ export async function renderIncrementSummary(data) {
   const labels=comparison?['No.','Employee ID','Employee Name','Branch','Last increment (inc_details)','Basic salary RM','Allowances RM','Previous base','Current base','Actual inc. RM','Result']:
     ['No.','Employee ID','Employee Name','Branch','Last increment (inc_details)','Basic salary RM','Total allowances RM','Eligible from'];
   const cellsFor=(row,index)=>[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
-    row.inc_details||'—',...(comparison?[cash(row.basic_salary),cash(row.total_allowances),cash(row.previous_total),cash(row.current_total),cash(row.actual),row.result]:[cash(row.basic_salary),cash(row.total_allowances),row.eligible_from??'—'])];
+    row.inc_details||(row.eligibility_joining_date?'Joined '+String(row.eligibility_joining_date).slice(0,10):'—'),...(comparison?[cash(row.basic_salary),cash(row.total_allowances),cash(row.previous_total),cash(row.current_total),cash(row.actual),row.result]:[cash(row.basic_salary),cash(row.total_allowances),row.eligible_from??'—'])];
   const rows=data.reports.map(cellsFor);
   const heights=measureRows(rows,widths,8,12,26);
   const countText=Object.entries(data.counts).map(([status,count])=>`${status}: ${count}`).join(' · ')||'No matching employees';
@@ -192,13 +192,13 @@ export async function renderIncrementSummary(data) {
   const notes=comparison?[
     'Basis: Basic salary + Elaun Kedatangan + Elaun Perkhidmatan + Elaun Kerajinan. RM amounts; other earnings are excluded.',
     'Actual increment = sum of positive increases per field versus its highest saved value in the preceding seven calendar months. Reductions do not offset increases.',
-    'Eligibility requires the last increment month to be exactly six calendar months before the selected payroll month. Older and newer months are excluded.',
+    'Eligibility requires the last increment month to be exactly six calendar months before the selected payroll month. When inc_details is empty, the joining month is used. Older and newer months are excluded.',
     'Review means missing prior payroll, invalid values or duplicate payroll; no increment is assumed. Unverified amounts are excluded from verified totals.',
     'Displayed basic salary and allowances come from salary defaults. Allowances include Kedatangan, Perkhidmatan, Kerajinan and Makanan; no future increment amount is assumed.',
   ]:[
-    'Eligibility: last increment month is exactly six months before the selected payroll month (OCT-26 selects APR-26 only). Older and newer months are excluded.',
+    'Eligibility: last increment month is exactly six months before the selected payroll month (OCT-26 selects APR-26 only). When inc_details is empty, the joining month is used. Older and newer months are excluded.',
     'Basic salary and total allowances come from employee_salary_defaults. Allowances = Kedatangan + Perkhidmatan + Kerajinan + Makanan; inc_details shows the last recorded increment.',
-    'This report does not change salaries. After payroll generation, print the comparison to check recipients, missed increases and additional increases outside eligibility.',
+    'Eligibility retains its pre-payroll basis when inc_details updates. The column shows the latest inc_details. After generation, compare actual recipients and additional increases.',
   ];
   notes.forEach((note,index)=>text(note,24,y+16+index*17,tableWidth,{size:7}));
   finishOnePage(doc);return done;

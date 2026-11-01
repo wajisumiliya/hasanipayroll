@@ -1,8 +1,32 @@
 /// inc_details records the last award, not a future increment schedule.
 class IncrementEligibilityService {
   static ({DateTime lastMonth, DateTime dueMonth, double? lastAmount})?
-      dueForMonth(dynamic value, DateTime selectedMonth) {
+      dueForMonth(dynamic value, DateTime selectedMonth,
+          {dynamic joiningDate}) {
     final text = '${value ?? ''}'.trim().toUpperCase();
+    if (text.isEmpty) {
+      final raw = '${joiningDate ?? ''}';
+      final parsed =
+          joiningDate is DateTime ? joiningDate : DateTime.tryParse(raw);
+      if (parsed == null) {
+        return null;
+      }
+      if (joiningDate is! DateTime) {
+        final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(raw);
+        if (iso == null ||
+            parsed.year != int.parse(iso[1]!) ||
+            parsed.month != int.parse(iso[2]!) ||
+            parsed.day != int.parse(iso[3]!)) {
+          return null;
+        }
+      }
+      final last = DateTime(parsed.year, parsed.month);
+      final due = DateTime(parsed.year, parsed.month + 6);
+      if (due != DateTime(selectedMonth.year, selectedMonth.month)) {
+        return null;
+      }
+      return (lastMonth: last, dueMonth: due, lastAmount: null);
+    }
     final match =
         RegExp(r'^([A-Z]{3,4})[-/](\d{4}|\d{2})(?:\D|$)').firstMatch(text);
     const months = {
