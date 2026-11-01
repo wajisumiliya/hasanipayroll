@@ -1,3 +1,5 @@
+import { createReadResponseCache } from './read-response-cache.js';
+import { dashboardPayrollQuery, payrollAttendanceQuery, expandAttendanceCounts } from './admin-read-queries.js';
 import { installAttendancePrintContextApi } from './attendance-print-context.js';
 import { installIncrementReportApi } from './increment-report.js';
 import { installLateReportApi } from './late-report.js';
@@ -163,6 +165,8 @@ if (
 // ============================================================
 
 const app = express();
+const adminReadCache = createReadResponseCache();
+app.use(adminReadCache.writeInvalidation);
 
 app.disable("x-powered-by");
 
@@ -1685,7 +1689,7 @@ app.post(
 // Original Flutter admin dashboard, backed by existing Neon tables.
 // Data shape mirrors the previous Supabase rows so the current UI can render
 // without changes to its visual design. Only administrators may access it.
-app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req, res) => {
+app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, adminReadCache.middleware, async (req, res) => {
   try {
     const year = Number(req.query.year);
     const month = Number(req.query.month);
@@ -1698,10 +1702,7 @@ app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req,
         FROM public.employees e LEFT JOIN public.employee_salary_defaults d
           ON d.employee_id = e.employee_id LEFT JOIN app_private.payroll_increment_state s ON s.employee_id=e.employee_id AND s.period=make_date($1,$2,1) ORDER BY e.name ASC`,[year,month]),
       pool.query(
-        `SELECT to_jsonb(p) AS row, p.period >= make_date($1, $2, 1) AS selected FROM public.payroll p
-         WHERE p.period >= (make_date($1, $2, 1) - INTERVAL '7 months')
-           AND p.period < (make_date($1, $2, 1) + INTERVAL '1 month')
-         ORDER BY p.employee_id ASC`,
+        dashboardPayrollQuery,
         [year, month],
       ),
       pool.query("SELECT to_jsonb(b) AS row FROM public.branches b ORDER BY b.name ASC"),
@@ -1727,7 +1728,7 @@ app.get("/api/admin/dashboard/overview", authenticate, requireAdmin, async (req,
 });
 
 // Admin payroll screen: all five datasets come from Neon under server JWT auth.
-app.get("/api/admin/payroll-page", authenticate, requireAdmin, async (req, res) => {
+app.get("/api/admin/payroll-page", authenticate, requireAdmin, adminReadCache.middleware, async (req, res) => {
   try {
     const year = Number(req.query.year);
     const month = Number(req.query.month);
@@ -1749,9 +1750,7 @@ app.get("/api/admin/payroll-page", authenticate, requireAdmin, async (req, res) 
         [year, month],
       ),
       pool.query("SELECT employee_id, inc_details FROM public.employee_salary_defaults"),
-      pool.query(`SELECT employee_id, branch_id FROM public.attendance
-                  WHERE attendance_date >= make_date($1,$2,1)
-                    AND attendance_date < (make_date($1,$2,1) + INTERVAL '1 month')`, [year, month]),
+      pool.query(payrollAttendanceQuery, [year, month]),
     ]);
     return res.json({
       ok: true,
@@ -1759,7 +1758,7 @@ app.get("/api/admin/payroll-page", authenticate, requireAdmin, async (req, res) 
       employees: employees.rows.map(r => r.data),
       payroll: payroll.rows.map(r => r.data),
       salary_defaults: defaults.rows,
-      attendance: attendance.rows,
+      attendance: expandAttendanceCounts(attendance.rows),
     });
   } catch (error) {
     console.error("PAYROLL PAGE LOAD ERROR:", error.message);
