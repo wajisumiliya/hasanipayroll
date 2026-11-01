@@ -39,6 +39,7 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
   const weeklyByKey = new Map(monthly.filter(r => +r.roster_year === year && +r.roster_month === month)
     .map(r => [key(r.branch_id, r.employee_id, r.week_number), r]));
   const names = new Map(employees.map(r => [key(r.employee_id), r.name]));
+  const profiles = new Map(employees.map(r => [key(r.employee_id), Object.fromEntries(['photo_url','address','department'].filter(field=>r[field]!=null).map(field=>[field,r[field]]))]));
   const reviewByKey = new Map();
   for (const review of reviews) {
     const id = key(review.branch_id, review.employee_id, dateOnly(review.event_date), review.event_type);
@@ -115,7 +116,7 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     }
     const groupKey = key(row.branch_id, row.employee_id);
     if (!grouped.has(groupKey)) grouped.set(groupKey, { branch_id: row.branch_id, employee_id: row.employee_id,
-      name: names.get(key(row.employee_id)) ?? row.employee_id, events: [] });
+      name: names.get(key(row.employee_id)) ?? row.employee_id, ...profiles.get(key(row.employee_id)), events: [] });
     grouped.get(groupKey).events.push(...events);
   }
   const reports = [...grouped.values()].map(r => ({ ...r,
@@ -136,7 +137,7 @@ async function loadPeriod(pool, year, month) {
     pool.query("SELECT to_jsonb(a) AS data FROM public.attendance a WHERE attendance_date >= $1::date AND attendance_date < ($1::date + INTERVAL '1 month') ORDER BY attendance_date, id", [start]),
     pool.query("SELECT to_jsonb(r) AS data FROM public.daily_rosters r WHERE roster_date >= $1::date AND roster_date < ($1::date + INTERVAL '1 month')", [start]),
     pool.query('SELECT to_jsonb(r) AS data FROM public.monthly_rosters r WHERE roster_year=$1 AND roster_month=$2', [year, month]),
-    pool.query('SELECT employee_id,name FROM public.employees'),
+    pool.query('SELECT employee_id,name,photo_url,address,department FROM public.employees'),
     pool.query("SELECT id,branch_id,employee_id,event_date::text,event_type,event_fingerprint,event_snapshot,status,reason_code,reason,reviewed_by,reviewed_at FROM app_private.late_report_reviews WHERE event_date >= $1::date AND event_date < ($1::date + INTERVAL '1 month') ORDER BY id DESC", [start]),
   ]);
   return buildLateReport({ attendance: attendance.rows.map(r => r.data), daily: daily.rows.map(r => r.data),

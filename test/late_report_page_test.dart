@@ -102,6 +102,30 @@ Future<void> chooseBranch(WidgetTester tester) async {
 
 void main() {
   testWidgets(
+      'compact row review action opens details without approving events',
+      (tester) async {
+    var saves = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: LateReportPage(
+            month: DateTime(2026, 10),
+            branches: branches,
+            loader: (_) async => fixture(),
+            reviewSaver: (_) async {
+              saves++;
+            })));
+    await tester.pumpAndSettle();
+    expect(find.text('#'), findsOneWidget);
+    expect(find.byTooltip('View attendance'), findsNWidgets(2));
+    final review = find.byTooltip('Review events').first;
+    await tester.ensureVisible(review);
+    await tester.tap(review);
+    await tester.pumpAndSettle();
+    expect(find.text('Review event'), findsWidgets);
+    expect(saves, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
       'shows summaries and details without incomplete sections even from older servers',
       (tester) async {
     final months = <DateTime>[];
