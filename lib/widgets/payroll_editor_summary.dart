@@ -61,20 +61,36 @@ class PayrollEditorSummary extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: const Color(0xFFE8EFFF),
                         borderRadius: BorderRadius.circular(9)),
-                    child: Row(children: [
-                      const Icon(Icons.account_balance_wallet_outlined,
-                          size: 19, color: ink),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                          child: Text('Net Payroll',
-                              style: TextStyle(
-                                  color: ink, fontWeight: FontWeight.w800))),
-                      Text(money(net),
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      const label = Row(children: [
+                        Icon(Icons.account_balance_wallet_outlined,
+                            size: 19, color: ink),
+                        SizedBox(width: 8),
+                        Expanded(
+                            child: Text('Net Payroll',
+                                style: TextStyle(
+                                    color: ink, fontWeight: FontWeight.w800)))
+                      ]);
+                      final amount = Text(money(net),
                           style: const TextStyle(
                               color: ink,
                               fontSize: 17,
-                              fontWeight: FontWeight.w900))
-                    ])),
+                              fontWeight: FontWeight.w900));
+                      if (constraints.maxWidth < 320) {
+                        return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              label,
+                              const SizedBox(height: 8),
+                              FittedBox(fit: BoxFit.scaleDown, child: amount)
+                            ]);
+                      }
+                      return Row(children: [
+                        Expanded(child: label),
+                        const SizedBox(width: 8),
+                        Flexible(child: amount)
+                      ]);
+                    })),
               ])),
         ]));
   }
