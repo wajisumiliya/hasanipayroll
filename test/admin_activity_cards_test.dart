@@ -267,6 +267,7 @@ void main() {
     expect(find.text('Print PDF'), findsOneWidget);
     expect(find.text('MC Print'), findsOneWidget);
     expect(find.text('Unpaid Print'), findsOneWidget);
+    expect(find.text('OT Print'), findsOneWidget);
     await tester.ensureVisible(find.text('Aina'));
     await tester.tap(find.text('Aina'));
     await tester.pumpAndSettle();

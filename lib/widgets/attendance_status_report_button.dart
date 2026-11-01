@@ -73,13 +73,17 @@ class _AttendanceStatusReportButtonState
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2))
           : Icon(
-              widget.status == 'MC'
-                  ? Icons.medical_services_outlined
-                  : Icons.event_busy,
+              widget.status == 'OT'
+                  ? Icons.more_time
+                  : widget.status == 'MC'
+                      ? Icons.medical_services_outlined
+                      : Icons.event_busy,
               size: 18),
       label: Text(busy
           ? 'Preparing PDF…'
-          : widget.status == 'MC'
-              ? 'MC Print'
-              : 'Unpaid Print'));
+          : widget.status == 'OT'
+              ? 'OT Print'
+              : widget.status == 'MC'
+                  ? 'MC Print'
+                  : 'Unpaid Print'));
 }

@@ -2,7 +2,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
-import { renderAttendanceSummary, renderStatusSummary, renderIncrementSummary } from './late-attendance-summary.js';
+import { renderAttendanceSummary, renderStatusSummary, renderIncrementSummary, renderOtSummary, reportMonthLabel } from './late-attendance-summary.js';
 
 const status = value => ({noted:'Reviewed',approved:'Approved',correction_required:'Correction required'}[value] ?? 'Pending');
 const category = value => ({transport:'Transport delay',approved_late:'Approved late arrival / break',attendance_error:'Incorrect attendance'}[value] ?? 'Other');
@@ -61,7 +61,7 @@ async function pdf(data) {
   const line = (text,bold=false,size=9) => {
     doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#18344d').text(String(text),{paragraphGap:5});
   };
-  line('Hasani Books - Late Report',true,20);
+  line(`Late Attendance Report - ${reportMonthLabel(data)}`,true,20);
   line(`${data.year}-${String(data.month).padStart(2,'0')} | ${data.branchLabel}`,true,12);
   const total=field=>data.reports.reduce((sum,r)=>sum+r[field],0);
   line(`${data.reports.length} flagged employees | ${total('arrival_count')} late arrivals | ${total('break_count')} exceeded breaks | ${total('total_minutes')} excess minutes`);
@@ -84,13 +84,14 @@ async function pdf(data) {
   const range=doc.bufferedPageRange();
   for(let i=0;i<range.count;i++) {
     doc.switchToPage(i);
-    doc.font('Body').fontSize(8).text(`Hasani Books | ${data.year}-${String(data.month).padStart(2,'0')} | ${i+1}/${range.count}`,30,doc.page.height-22,{lineBreak:false});
+    doc.font('Body').fontSize(8).text('Approved by: ____________________',30,doc.page.height-24,{lineBreak:false});
+    doc.text('Date: _______________',doc.page.width-210,doc.page.height-24,{lineBreak:false});
   }
   doc.end();
   return done;
 }
 try {
   if(!['pdf','xlsx'].includes(workerData.format)) throw new Error('Invalid report format.');
-  const bytes=Uint8Array.from(await (workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):workerData.view==='status-summary'?renderStatusSummary(workerData):workerData.view==='increment-summary'?renderIncrementSummary(workerData):pdf(workerData)):excel(workerData)));
+  const bytes=Uint8Array.from(await (workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):workerData.view==='status-summary'?renderStatusSummary(workerData):workerData.view==='increment-summary'?renderIncrementSummary(workerData):workerData.view==='ot-summary'?renderOtSummary(workerData):pdf(workerData)):excel(workerData)));
   parentPort.postMessage({bytes},[bytes.buffer]);
 } catch(error) { parentPort.postMessage({error:error.message}); }

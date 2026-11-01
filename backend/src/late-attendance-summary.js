@@ -1,7 +1,8 @@
 import PDFDocument from 'pdfkit';
 import {fileURLToPath} from 'node:url';
 
-const navy='#073D68', blue='#1687FF', red='#FFDADD';
+const navy='#073D68', blue='#1687FF';
+export const reportMonthLabel = ({year,month}) => new Date(Date.UTC(year,month-1,1)).toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})+"'"+String(year).slice(-2);
 export const hhmm = minutes => minutes == null ? '—' : `${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(Math.round(minutes%60)).padStart(2,'0')}`;
 export function attendanceSummaryRows(data) {
   return data.reports.filter(r=>(Number(r.arrival_count)||0)+(Number(r.break_count)||0)>=3).map(r=>{
@@ -47,7 +48,8 @@ function onePage(width,height) {
 }
 function finishOnePage(doc) {
   doc.restore();doc.page.margins.bottom=0;
-  doc.font('Body').fontSize(7).fillColor('#102943').text('Page 1 of 1',14,doc.page.height-22,{width:doc.page.width-28,align:'right',lineBreak:false});
+  doc.font('Body').fontSize(8).fillColor('#102943').text('Approved by: ____________________',24,doc.page.height-24,{width:doc.page.width*.6,lineBreak:false});
+  doc.text('Date: _______________',doc.page.width*.68,doc.page.height-24,{width:doc.page.width*.32-24,lineBreak:false});
   doc.end();
 }
 export async function renderAttendanceSummary(data) {
@@ -58,7 +60,7 @@ export async function renderAttendanceSummary(data) {
   const cellsFor=(row,index)=>[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
     shortMonthLabel,hhmm(row.arrival_minutes)+(row.arrival_minutes!=null&&row.arrival_minutes_partial?'*':''),row.arrival_count,hhmm(row.break_minutes)+(row.break_minutes!=null&&row.break_minutes_partial?'*':''),row.break_count];
   const heights=measureRows(rows.map(cellsFor),widths,8,10,22);
-  const {doc,done}=onePage(842,127+heights.reduce((a,b)=>a+b,0)+88);
+  const {doc,done}=onePage(842,127+heights.reduce((a,b)=>a+b,0)+48);
   const period=new Date(Date.UTC(data.year,data.month-1,1));
   const month=period.toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
   const shortMonth=period.toLocaleDateString('en-GB',{month:'short',year:'numeric',timeZone:'UTC'});
@@ -70,7 +72,7 @@ export async function renderAttendanceSummary(data) {
     for(let i=0;i<4;i++)doc.rect(x+i*8,40-(i+1)*7,6,(i+1)*7).fill(i%2?blue:'#0069DC');
     text('HASANI PAYROLL',x+46,11,300,{bold:true,size:18});
     text('Employee Attendance Report',x+46,33,300,{size:10});
-    text('LATE ATTENDANCE EMPLOYEES (3 AND ABOVE)',x+380,15,w-380,{bold:true,size:11,align:'right'});
+    text(`Late Attendance Employees (3 and above) - ${reportMonthLabel(data)}`,x+340,15,w-340,{bold:true,size:11,align:'right'});
     doc.moveTo(x+480,43).lineTo(x+w,43).strokeColor(blue).lineWidth(1).stroke();
     doc.moveTo(x,52).lineTo(x+w,52).strokeColor(blue).lineWidth(.7).stroke();
     text('Payroll Month   :',x,61,85,{bold:true});text(month,x+88,61,300);
@@ -90,7 +92,7 @@ export async function renderAttendanceSummary(data) {
     const height=heights[index];
     let left=x;
     cells.forEach((cell,i)=>{
-      doc.rect(left,y,widths[i],height).fillAndStroke(i===6||i===8?red:index%2?'#F1F2F4':'#FFFFFF','#B8C8D8');
+      doc.rect(left,y,widths[i],height).fillAndStroke('#FFFFFF','#B8C8D8');
       text(cell,left+4,y+6,widths[i]-8,{size:8,align:i===2?'left':'center',color:i===6||i===8?'#B00014':'#102943'});
       left+=widths[i];
     });
@@ -98,18 +100,14 @@ export async function renderAttendanceSummary(data) {
   }
   const total=field=>rows.length && rows.every(r=>r[field]==null)?null:rows.reduce((sum,r)=>sum+(r[field]??0),0);
   const merged=widths.slice(0,5).reduce((a,b)=>a+b,0);
-  doc.rect(x,y,merged,24).fillAndStroke('#D7E8FA','#A3BDDA');text('TOTAL',x,y+6,merged,{bold:true,size:10,align:'center'});
+  doc.rect(x,y,merged,24).fillAndStroke('#FFFFFF','#A3BDDA');text('TOTAL',x,y+6,merged,{bold:true,size:10,align:'center'});
   let left=x+merged;
   [hhmm(total('arrival_minutes'))+(total('arrival_minutes')!=null&&rows.some(r=>r.arrival_minutes_partial)?'*':''),total('arrival_count'),hhmm(total('break_minutes'))+(total('break_minutes')!=null&&rows.some(r=>r.break_minutes_partial)?'*':''),total('break_count')].forEach((value,i)=>{
-    doc.rect(left,y,widths[i+5],24).fillAndStroke(i%2?'#FFC6CD':'#D7E8FA','#A3BDDA');
+    doc.rect(left,y,widths[i+5],24).fillAndStroke('#FFFFFF','#A3BDDA');
     text(value,left,y+6,widths[i+5],{bold:true,size:10,align:'center'});left+=widths[i+5];
   });
   y+=32;
-  text('Note:',x,y,w,{bold:true,size:7});
-  text('1. This report shows employees with 3 or more combined main late and excess-break occurrences in the selected payroll month.',x,y+11,w,{size:7});
-  text('2. Main exceed time and break exceed time are total accumulated time for the selected month.',x,y+21,w,{size:7});
-  if(rows.some(r=>r.arrival_minutes_partial||r.break_minutes_partial))text('3. * Partial total of recorded minutes. — means no recorded duration. Missing times are not estimated.',x,y+31,w,{size:7});
-  if(!rows.length)text('No employees meet the selected monthly threshold.',x,y+31,w,{size:8});
+  if(!rows.length)text('No employees meet the selected monthly threshold.',x,y,w,{size:8});
   finishOnePage(doc);return done;
 }
 
@@ -126,10 +124,10 @@ export async function renderStatusSummary(data) {
   const cellsFor=(r,i)=>[i+1,r.employee_id,r.name,r.branch_names??data.branches[String(r.branch_id).trim().toUpperCase()]??r.branch_id,
     ...(isMc?[dayValue(r.opening_mc),r.mc_taken??r.count,dayValue(r.closing_mc)]:[r.count]),r.dates.join(', ')];
   const heights=measureRows(data.reports.map(cellsFor),cols,8,12,25);
-  const {doc,done}=onePage(canvasWidth,98+heights.reduce((a,b)=>a+b,0)+78);
+  const {doc,done}=onePage(canvasWidth,98+heights.reduce((a,b)=>a+b,0)+55);
   function text(v,x,y,w,bold=false,size=8){doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#102943').text(String(v),x,y,{width:w});}
   function header() {
-    text('HASANI PAYROLL',24,18,width*.52,true,canvasWidth<600?14:18);text(`${label} ATTENDANCE REPORT`,24+width*.55,22,width*.45,true,canvasWidth<600?10:13);
+    text('HASANI PAYROLL',24,18,width*.52,true,canvasWidth<600?14:18);text(`${label} Attendance Report - ${reportMonthLabel(data)}`,24+width*.55,22,width*.45,true,canvasWidth<600?10:13);
     text(`${month} · ${data.branchLabel} · ${data.reports.length} employees`,24,48,width,false,10);
     let x=24;['No.','Employee ID','Employee Name','Branch',...(isMc?['Opening MC','MC Taken','Closing MC']:['Days']),`${label} dates`].forEach((v,i)=>{
       doc.rect(x,72,cols[i],26).fill(navy);doc.font('Bold').fontSize(8).fillColor('white').text(v,x+5,78,{width:cols[i]-10});x+=cols[i];
@@ -139,19 +137,17 @@ export async function renderStatusSummary(data) {
   for(let i=0;i<data.reports.length;i++) {
     const r=data.reports[i],cells=cellsFor(r,i);
     const height=heights[i];
-    let x=24;cells.forEach((v,j)=>{doc.rect(x,y,cols[j],height).fillAndStroke(i%2?'#F1F3F6':'#FFFFFF','#B8C8D8');text(v,x+5,y+6,cols[j]-10);x+=cols[j];});y+=height;
+    let x=24;cells.forEach((v,j)=>{doc.rect(x,y,cols[j],height).fillAndStroke('#FFFFFF','#B8C8D8');text(v,x+5,y+6,cols[j]-10);x+=cols[j];});y+=height;
   }
   text(`TOTAL: ${data.reports.length} employees · ${data.reports.reduce((sum,r)=>sum+(isMc?(r.mc_taken??r.count):r.count),0)} ${label} days`,24,y+12,width,true,10);
-  text(isMc?'Opening MC minus MC taken = Closing MC (days). Balances include MC at every branch; duplicate employee dates count once.':'Source: saved attendance records for the selected month. Duplicate dates are counted once per employee and branch.',24,y+32,width,false,8);
-  if(isMc&&data.reports.some(r=>r.opening_mc==null))text('Not set: no opening MC balance is recorded for this report month.',24,y+44,width,false,7);
-  if(!data.reports.length)text(`No ${label} attendance records for this selection.`,24,y+46,width);
+  if(!data.reports.length)text(`No ${label} attendance records for this selection.`,24,y+36,width);
   finishOnePage(doc);return done;
 }
 
 export async function renderIncrementSummary(data) {
   const comparison=data.mode==='comparison';
   const cash=value=>value==null?'—':Number(value).toFixed(2);
-  const title=comparison?'INCREMENT PAYROLL COMPARISON':'INCREMENT ELIGIBILITY REPORT';
+  const title=(comparison?'Increment Payroll Comparison':'Increment Eligibility Report')+' - '+reportMonthLabel(data);
   const month=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
   const widths=comparison?[26,60,130,70,90,70,75,70,70,65,140]:[28,65,165,90,100,95,110,100];
   const tableWidth=widths.reduce((sum,value)=>sum+value,0),canvasWidth=tableWidth+48;
@@ -164,7 +160,7 @@ export async function renderIncrementSummary(data) {
   const countText=Object.entries(data.counts).map(([status,count])=>`${status}: ${count}`).join(' · ')||'No matching employees';
   const summaryHeight=measureRows([[countText]],[tableWidth],9,10,24)[0];
   const tableTop=102+summaryHeight;
-  const {doc,done}=onePage(canvasWidth,tableTop+30+heights.reduce((sum,value)=>sum+value,0)+126);
+  const {doc,done}=onePage(canvasWidth,tableTop+30+heights.reduce((sum,value)=>sum+value,0)+55);
   const text=(value,x,y,w,{bold=false,size=8,color='#102943'}={})=>doc.font(bold?'Bold':'Body').fontSize(size).fillColor(color).text(String(value),x,y,{width:w});
   text('HASANI PAYROLL',24,18,tableWidth*.4,{bold:true,size:18});
   text(title,24+tableWidth*.43,23,tableWidth*.57,{bold:true,size:12});
@@ -178,10 +174,8 @@ export async function renderIncrementSummary(data) {
   let y=tableTop+30;
   rows.forEach((cells,index)=>{
     let left=24;
-    const row=data.reports[index];
-    const flagged=comparison&&!row.result.startsWith('Received');
     cells.forEach((value,column)=>{
-      const fill=comparison&&column===labels.length-1?(flagged?'#FFE5E5':'#D8F1E8'):(index%2?'#F1F3F6':'#FFFFFF');
+      const fill='#FFFFFF';
       doc.rect(left,y,widths[column],heights[index]).fillAndStroke(fill,'#B8C8D8');
       text(value,left+5,y+6,widths[column]-10,{bold:comparison&&column===labels.length-1});
       left+=widths[column];
@@ -189,17 +183,29 @@ export async function renderIncrementSummary(data) {
     y+=heights[index];
   });
   if(!rows.length){text('No matching employees for this selection.',24,y+12,tableWidth);y+=22;}
-  const notes=comparison?[
-    'Basis: Basic salary + Elaun Kedatangan + Elaun Perkhidmatan + Elaun Kerajinan. RM amounts; other earnings are excluded.',
-    'Actual increment = sum of positive increases per field versus its highest saved value in the preceding seven calendar months. Reductions do not offset increases.',
-    'Eligibility requires the last increment month to be six through ten calendar months before the selected payroll month. When inc_details is empty, employees who joined on or after 1 January 2026 and six or more calendar months before the selected payroll month are eligible.',
-    'Review means missing prior payroll, invalid values or duplicate payroll; no increment is assumed. Unverified amounts are excluded from verified totals.',
-    'Displayed basic salary and allowances come from salary defaults. Allowances include Kedatangan, Perkhidmatan, Kerajinan and Makanan; no future increment amount is assumed.',
-  ]:[
-    'Eligibility: last increment month is six through ten months before the selected payroll month (OCT-26 selects DEC-25 through APR-26). When inc_details is empty, employees who joined on or after 1 January 2026 and six or more calendar months before the selected payroll month are eligible.',
-    'Basic salary and total allowances come from employee_salary_defaults. Allowances = Kedatangan + Perkhidmatan + Kerajinan + Makanan; inc_details shows the last recorded increment.',
-    'Eligibility retains its pre-payroll basis when inc_details updates. The column shows the latest inc_details. After generation, compare actual recipients and additional increases.',
-  ];
-  notes.forEach((note,index)=>text(note,24,y+16+index*17,tableWidth,{size:7}));
+  finishOnePage(doc);return done;
+}
+
+export async function renderOtSummary(data) {
+  const widths=[35,100,260,140,140],tableWidth=widths.reduce((sum,n)=>sum+n,0);
+  const cells=data.reports.map((row,index)=>[index+1,row.employee_id,row.name,
+    hhmm(row.approved_minutes),row.ot_amount==null?'Not set':Number(row.ot_amount).toFixed(2)]);
+  const heights=measureRows(cells,widths,9,12,27);
+  const {doc,done}=onePage(tableWidth+48,100+heights.reduce((sum,n)=>sum+n,0)+65);
+  const text=(value,x,y,width,bold=false,size=9)=>doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#102943').text(String(value),x,y,{width});
+  text('HASANI PAYROLL',24,18,tableWidth*.4,true,18);
+  text(`Approved OT Report - ${reportMonthLabel(data)}`,24+tableWidth*.45,23,tableWidth*.55,true,12);
+  text(`${data.branchLabel} · ${data.reports.length} employees`,24,50,tableWidth,false,10);
+  let left=24;
+  ['No.','Employee ID','Employee Name','Total Approved OT (HH:MM)','OT Amount RM'].forEach((label,index)=>{
+    doc.rect(left,73,widths[index],28).fill(navy);
+    doc.font('Bold').fontSize(8).fillColor('white').text(label,left+5,80,{width:widths[index]-10});left+=widths[index];
+  });
+  let y=101;
+  cells.forEach((row,index)=>{let x=24;row.forEach((value,column)=>{
+    doc.rect(x,y,widths[column],heights[index]).fillAndStroke('#FFFFFF','#B8C8D8');text(value,x+5,y+7,widths[column]-10);x+=widths[column];
+  });y+=heights[index];});
+  if(!cells.length)text('No approved overtime for this selection.',24,y+12,tableWidth);
+  else text(`TOTAL: ${hhmm(data.reports.reduce((sum,row)=>sum+row.approved_minutes,0))} hours · RM ${data.reports.some(row=>row.ot_amount==null)?'Not set':data.reports.reduce((sum,row)=>sum+row.ot_amount,0).toFixed(2)}`,24,y+12,tableWidth,true,10);
   finishOnePage(doc);return done;
 }

@@ -509,15 +509,18 @@ class AppService extends ChangeNotifier {
       String? branchId,
       required List<String> employeeIds,
       bool pdf = false}) async {
-    final data = await _getAuth(
-        Uri(path: '/api/attendance/status-report', queryParameters: {
-      'year': '${month.year}',
-      'month': '${month.month}',
-      'status': status,
-      if (branchId != null) 'branch_id': branchId,
-      'employees': jsonEncode(employeeIds),
-      if (pdf) 'format': 'pdf',
-    }).toString());
+    final data = await _getAuth(Uri(
+        path: status == 'OT'
+            ? '/api/attendance/approved-ot-report'
+            : '/api/attendance/status-report',
+        queryParameters: {
+          'year': '${month.year}',
+          'month': '${month.month}',
+          'status': status,
+          if (branchId != null) 'branch_id': branchId,
+          'employees': jsonEncode(employeeIds),
+          if (pdf) 'format': 'pdf',
+        }).toString());
     if (data['ok'] != true ||
         (pdf ? data['file_base64'] is! String : data['reports'] is! List)) {
       throw StateError(

@@ -1,3 +1,4 @@
+import { installApprovedOtReportApi } from './approved-ot-report.js';
 import { createReadResponseCache } from './read-response-cache.js';
 import { dashboardPayrollQuery, payrollAttendanceQuery, expandAttendanceCounts } from './admin-read-queries.js';
 import { installAttendancePrintContextApi } from './attendance-print-context.js';
@@ -1867,6 +1868,7 @@ app.get("/api/branches", authenticate, async (req, res) => {
 
 installLateReportApi(app, { authenticate, pool });
 installAttendanceStatusReportApi(app, { authenticate, pool });
+installApprovedOtReportApi(app, { authenticate, pool });
 installIncrementReportApi(app, { authenticate, pool });
 installAttendancePrintContextApi(app, { authenticate, pool });
 installEmployeeEditorApi(app, { authenticate, pool });

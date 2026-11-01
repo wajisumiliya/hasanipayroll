@@ -656,7 +656,7 @@ class AdminActivityCards extends StatelessWidget {
                       month: month,
                       branch: branch,
                       employeeIds: rows?.map(employeeId).toSet().toList()),
-                  for (final status in ['MC', 'UNPAID'])
+                  for (final status in ['MC', 'UNPAID', 'OT'])
                     AttendanceStatusReportButton(
                         month: month,
                         branch: branch,

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/widgets/attendance_status_report_button.dart';
 
 void main() {
-  for (final status in ['MC', 'UNPAID']) {
+  for (final status in ['MC', 'UNPAID', 'OT']) {
     testWidgets('$status prints directly with no report dialog',
         (tester) async {
       final load = Completer<Uint8List>();
@@ -25,7 +25,11 @@ void main() {
                     prints++;
                     expect(bytes, [1, 2, 3]);
                   }))));
-      await tester.tap(find.text(status == 'MC' ? 'MC Print' : 'Unpaid Print'));
+      await tester.tap(find.text(status == 'OT'
+          ? 'OT Print'
+          : status == 'MC'
+              ? 'MC Print'
+              : 'Unpaid Print'));
       await tester.pump();
       expect(find.byType(Dialog), findsNothing);
       expect(find.text('Preparing PDF…'), findsOneWidget);
