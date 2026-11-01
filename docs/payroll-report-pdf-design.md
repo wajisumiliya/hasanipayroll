@@ -69,3 +69,11 @@ for all six summary variants. One PostgreSQL-specific OT test was skipped becaus
 no test database was started for this image/layout-only change. JavaScript syntax
 and diff checks passed; Late and OT PDF samples were rendered and visually checked.
 Deploy the backend to apply this change; no Flutter rebuild is required.
+
+## Handwritten increment amount
+
+The Increment Eligibility PDF has an `inc_amount` column immediately after
+Eligible from. Every employee cell is blank and bordered for the accountant to
+write an amount on the printed report. No existing/last increment value is
+inserted in this column. This is print layout only and does not save amounts or
+change eligibility/payroll calculations. The comparison layout is unchanged.
