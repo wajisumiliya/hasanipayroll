@@ -106,7 +106,7 @@ class AttendancePdfService {
 
   static Future<Uint8List> buildBatch(List<AttendancePrintSheet> sheets) async {
     if (sheets.isEmpty) throw ArgumentError('Select at least one employee.');
-    final document = pw.Document(version: PdfVersion.pdf_1_7);
+    final document = pw.Document();
     document.document.catalog.params['/ViewerPreferences'] = PdfDict.values({
       '/Duplex': const PdfName('/DuplexFlipLongEdge'),
       '/PrintScaling': const PdfName('/None'),
