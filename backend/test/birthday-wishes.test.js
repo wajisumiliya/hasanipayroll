@@ -28,7 +28,14 @@ test('automatic birthday wishes use Malaysia time and atomic annual deduplicatio
         title text NOT NULL, body text NOT NULL, notification_type text, audience text, employee_id text);`);
     const migration = await readFile(new URL('../migrations/20261023_birthday_wishes.sql', import.meta.url), 'utf8');
     await pool.query(migration);
+    // Reapplication must remove grants while tolerating absent legacy roles.
+    await pool.query('GRANT SELECT ON app_private.birthday_wishes TO PUBLIC');
+    const legacyRoles=(await pool.query("SELECT rolname FROM pg_roles WHERE rolname IN ('anon','authenticated')")).rows;
+    for(const {rolname} of legacyRoles) await pool.query(`GRANT SELECT ON app_private.birthday_wishes TO "${rolname}"`);
     await pool.query(migration);
+    const publicGrants=(await pool.query("SELECT 1 FROM pg_class c CROSS JOIN LATERAL aclexplode(c.relacl) acl WHERE c.oid='app_private.birthday_wishes'::regclass AND acl.grantee=0")).rowCount;
+    assert.equal(publicGrants,0);
+    for(const {rolname} of legacyRoles) assert.equal((await pool.query("SELECT has_table_privilege($1,'app_private.birthday_wishes','SELECT') AS allowed",[rolname])).rows[0].allowed,false);
     await pool.query(`INSERT INTO employees VALUES
       ('active','Amina','1990-10-23',true), ('inactive','Former','1991-10-23',false),
       ('tomorrow','Later','1992-10-24',true), ('unknown','Unknown',null,true),
