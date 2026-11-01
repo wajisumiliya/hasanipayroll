@@ -20,6 +20,9 @@ class IncrementEligibilityService {
           return null;
         }
       }
+      if (parsed.isBefore(DateTime(2026, 1, 1))) {
+        return null;
+      }
       final last = DateTime(parsed.year, parsed.month);
       final due = DateTime(parsed.year, parsed.month + 6);
       if (due.isAfter(DateTime(selectedMonth.year, selectedMonth.month))) {

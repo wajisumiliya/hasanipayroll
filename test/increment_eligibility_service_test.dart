@@ -45,6 +45,14 @@ void main() {
   test('empty inc_details includes six or more months of service', () {
     expect(
         IncrementEligibilityService.dueForMonth(null, DateTime(2026, 10),
+            joiningDate: '2025-12-31'),
+        isNull);
+    expect(
+        IncrementEligibilityService.dueForMonth(null, DateTime(2026, 10),
+            joiningDate: '2026-01-01'),
+        isNotNull);
+    expect(
+        IncrementEligibilityService.dueForMonth(null, DateTime(2026, 10),
                 joiningDate: '2026-04-15')!
             .dueMonth,
         DateTime(2026, 10));

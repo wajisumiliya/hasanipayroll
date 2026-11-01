@@ -395,3 +395,11 @@ calendar months before the selected payroll month. October 2026 includes April
 Existing nonblank inc_details retains the exact six-month increment rule, with
 pre-payroll snapshots preserving the comparison after automatic updates.
 The eligible-from date remains the original joining month plus six months.
+
+### First-increment joining-date cutoff
+
+The blank inc_details fallback now starts at 1 January 2026 (inclusive).
+For October 2026, January through April 2026 joiners with no increment details
+qualify; pre-2026 joiners and May 2026 or later joiners do not.
+Nonblank increment details and saved-payroll comparison rules are unchanged.
+Only active employees are included in the eligible list, including this fallback.

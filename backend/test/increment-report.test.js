@@ -27,12 +27,14 @@ test('blank inc_details includes employees with six or more months of service',(
   assert.equal(incrementEligibility(null,2026,10,'2026-04-15').eligible_from,'2026-10-01');
   assert.equal(incrementEligibility('  ',2026,10,'2026-04-30').last_increment_month,null);
   assert.equal(incrementEligibility('',2026,10,'2026-03-15').eligible_from,'2026-09-01');
-  assert.equal(incrementEligibility('',2026,10,'2020-01-15').eligible_from,'2020-07-01');
+  assert.equal(incrementEligibility('',2026,10,'2020-01-15'),null);
+  assert.equal(incrementEligibility('',2026,10,'2025-12-31'),null);
+  assert.equal(incrementEligibility('',2026,10,'2026-01-01').eligible_from,'2026-07-01');
   assert.equal(incrementEligibility('',2026,10,'2026-05-15'),null);
   assert.equal(incrementEligibility('MAY-26/50',2026,10,'2026-04-15'),null);
   assert.equal(incrementEligibility('bad',2026,10,'2026-04-15'),null);
   assert.equal(incrementEligibility('',2026,10,'2026-02-30'),null);
-  const report=build([employee('JOIN',{inc_details:null,joining_date:'2026-04-15'})],[],'eligible');
+  const report=build([employee('JOIN',{inc_details:null,joining_date:'2026-04-15'}),employee('INACTIVE',{inc_details:null,joining_date:'2026-01-01',is_active:false})],[],'eligible');
   assert.equal(report.reports.length,1);assert.equal(report.reports[0].inc_details,'');
 });
 

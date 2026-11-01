@@ -192,11 +192,11 @@ export async function renderIncrementSummary(data) {
   const notes=comparison?[
     'Basis: Basic salary + Elaun Kedatangan + Elaun Perkhidmatan + Elaun Kerajinan. RM amounts; other earnings are excluded.',
     'Actual increment = sum of positive increases per field versus its highest saved value in the preceding seven calendar months. Reductions do not offset increases.',
-    'Eligibility requires the last increment month to be exactly six calendar months before the selected payroll month. When inc_details is empty, employees who joined six or more calendar months before the selected payroll month are eligible.',
+    'Eligibility requires the last increment month to be exactly six calendar months before the selected payroll month. When inc_details is empty, employees who joined on or after 1 January 2026 and six or more calendar months before the selected payroll month are eligible.',
     'Review means missing prior payroll, invalid values or duplicate payroll; no increment is assumed. Unverified amounts are excluded from verified totals.',
     'Displayed basic salary and allowances come from salary defaults. Allowances include Kedatangan, Perkhidmatan, Kerajinan and Makanan; no future increment amount is assumed.',
   ]:[
-    'Eligibility: last increment month is exactly six months before the selected payroll month (OCT-26 selects APR-26 only). When inc_details is empty, employees who joined six or more calendar months before the selected payroll month are eligible.',
+    'Eligibility: last increment month is exactly six months before the selected payroll month (OCT-26 selects APR-26 only). When inc_details is empty, employees who joined on or after 1 January 2026 and six or more calendar months before the selected payroll month are eligible.',
     'Basic salary and total allowances come from employee_salary_defaults. Allowances = Kedatangan + Perkhidmatan + Kerajinan + Makanan; inc_details shows the last recorded increment.',
     'Eligibility retains its pre-payroll basis when inc_details updates. The column shows the latest inc_details. After generation, compare actual recipients and additional increases.',
   ];
