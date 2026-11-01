@@ -12741,6 +12741,16 @@ class _AdminDashboardState extends State<AdminDashboard>
     PayrollGenerationResult result, {
     required String branchName,
   }) async {
+    final missingContributions = result.generated
+        .where((item) =>
+            (item.epfEmployee == 0 && item.epfEmployer == 0) ||
+            (item.socsoEmployee == 0 && item.socsoEmployer == 0))
+        .toList()
+      ..sort((a, b) => a.employeeName.compareTo(b.employeeName));
+    String missingLabel(PayrollGenerationItem item) => [
+          if (item.epfEmployee == 0 && item.epfEmployer == 0) 'No EPF',
+          if (item.socsoEmployee == 0 && item.socsoEmployer == 0) 'No SOCSO',
+        ].join(' / ');
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -12781,6 +12791,31 @@ class _AdminDashboardState extends State<AdminDashboard>
                 Expanded(
                   child: ListView(
                     children: [
+                      Text(
+                          'No EPF / SOCSO: ${missingContributions.length} employee(s)',
+                          style: const TextStyle(fontWeight: FontWeight.w800)),
+                      const Text(
+                          'Listed when either contribution has RM0 for both employee and employer.',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.black54)),
+                      if (missingContributions.isEmpty)
+                        const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                                'All generated employees have EPF and SOCSO contributions.')),
+                      for (final item in missingContributions)
+                        ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.info_outline,
+                                color: Colors.orange),
+                            title: Text(
+                                '${item.employeeId} • ${item.employeeName}'),
+                            subtitle: Text('${missingLabel(item)}\n'
+                                'EPF: employee RM ${item.epfEmployee.toStringAsFixed(2)}, employer RM ${item.epfEmployer.toStringAsFixed(2)} • '
+                                'SOCSO: employee RM ${item.socsoEmployee.toStringAsFixed(2)}, employer RM ${item.socsoEmployer.toStringAsFixed(2)}')),
+                      const Divider(),
+                      const Text('Generated payroll',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
                       ...result.generated.map(
                         (item) => ListTile(
                           dense: true,
