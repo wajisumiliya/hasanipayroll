@@ -1,3 +1,4 @@
+import '../widgets/employee_payslip_directory.dart';
 import '../services/payroll_readiness_selection.dart';
 import '../widgets/payroll_generation_dialog.dart';
 import '../widgets/payroll_editor_summary.dart';
@@ -13846,25 +13847,217 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
   }
 
+  DateTime? _payslipDirectoryPeriod;
+  String? _payslipDirectoryBranch;
+  String _payslipDirectoryTab = 'list';
+  bool _payslipDirectoryExporting = false;
+
+  Future<void> _viewPayslipDirectoryEmployee(Employee employee) async {
+    try {
+      final row = await SupabaseService.database
+          .from('employees')
+          .select()
+          .eq('employee_id', employee.employeeId)
+          .maybeSingle();
+      if (row != null && mounted)
+        _showSupabaseEmployee(Map<String, dynamic>.from(row));
+    } catch (error) {
+      if (mounted) _message('Unable to open employee: $error');
+    }
+  }
+
+  Future<void> _exportPayslipDirectory(
+      String format,
+      List<Employee> employees,
+      DateTime period,
+      Map<String, List<PayrollRecord>> byEmployee,
+      Employee? selectedEmployee,
+      int? activeYear) async {
+    if (_payslipDirectoryExporting) return;
+    setState(() => _payslipDirectoryExporting = true);
+    try {
+      List<String> headers;
+      List<List<dynamic>> rows;
+      final tab = _payslipDirectoryTab;
+      if (tab == 'history' && selectedEmployee == null) {
+        _message('Choose an employee to export payslip history.');
+        return;
+      }
+      if (tab == 'history' && selectedEmployee != null) {
+        headers = [
+          'Employee ID',
+          'Employee Name',
+          'Payroll Month',
+          'Earnings RM',
+          'Deductions RM',
+          'Net RM'
+        ];
+        rows =
+            (byEmployee[selectedEmployee.employeeId.trim().toUpperCase()] ?? [])
+                .where((p) => p.period.year == activeYear)
+                .map((p) => <dynamic>[
+                      selectedEmployee.employeeId,
+                      selectedEmployee.name,
+                      DateFormat('MMM yyyy').format(p.period),
+                      p.totalEarnings,
+                      p.totalDeductions,
+                      p.storedNetSalary ?? p.netPay
+                    ])
+                .toList();
+      } else if (tab == 'summary') {
+        headers = [
+          'Employee ID',
+          'Employee Name',
+          'Branch',
+          'Payroll Month',
+          'Earnings RM',
+          'Deductions RM',
+          'Net RM'
+        ];
+        rows = [
+          for (final e in employees)
+            for (final p in byEmployee[e.employeeId.trim().toUpperCase()] ??
+                <PayrollRecord>[])
+              if (p.period.year == period.year &&
+                  p.period.month == period.month)
+                <dynamic>[
+                  e.employeeId,
+                  e.name,
+                  e.branchId,
+                  DateFormat('MMM yyyy').format(period),
+                  p.totalEarnings,
+                  p.totalDeductions,
+                  p.storedNetSalary ?? p.netPay
+                ]
+        ];
+      } else {
+        headers = [
+          'Employee ID',
+          'Employee Name',
+          'Branch',
+          'Status',
+          'Total Payslips (all periods)'
+        ];
+        rows = employees
+            .map((e) => <dynamic>[
+                  e.employeeId,
+                  e.name,
+                  e.branchId,
+                  e.isActive ? 'Active' : 'Inactive',
+                  byEmployee[e.employeeId.trim().toUpperCase()]?.length ?? 0
+                ])
+            .toList();
+      }
+      if (rows.isEmpty) {
+        _message('No payslips or employees match these filters.');
+        return;
+      }
+      final title = tab == 'history'
+          ? 'Payslip History - $activeYear - ${selectedEmployee!.name}'
+          : tab == 'summary'
+              ? 'Payslip Summary - ${DateFormat('MMM yyyy').format(period)}'
+              : 'Employee Payslips - All-period history counts';
+      final name =
+          'Employee_Payslips_${DateFormat('yyyy_MM').format(period)}_$tab';
+      if (format == 'xlsx') {
+        final book = xls.Excel.createExcel();
+        final defaultSheet = book.getDefaultSheet();
+        if (defaultSheet != null) book.rename(defaultSheet, 'Payslips');
+        final sheet = book['Payslips'];
+        final values = <List<dynamic>>[headers, ...rows];
+        for (var r = 0; r < values.length; r++) {
+          for (var c = 0; c < values[r].length; c++) {
+            final cell = sheet.cell(
+                xls.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r));
+            final value = values[r][c];
+            cell.value = value is num
+                ? xls.DoubleCellValue(value.toDouble())
+                : xls.TextCellValue('$value');
+            if (r == 0) cell.cellStyle = _excelHeaderStyle(cell.cellStyle);
+          }
+        }
+        final bytes = book.encode();
+        if (bytes == null) throw StateError('Excel generation failed.');
+        await FileSaver.instance.saveFile(
+            name: name,
+            bytes: Uint8List.fromList(bytes),
+            ext: 'xlsx',
+            mimeType: MimeType.microsoftExcel);
+      } else {
+        final data = await rootBundle.load('assets/hasani_books_logo.jpg');
+        final logo = pw.MemoryImage(
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
+        final doc = pw.Document();
+        doc.addPage(pw.MultiPage(
+            pageFormat: PdfPageFormat.a4.landscape,
+            header: (_) => pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Image(logo,
+                          width: 100, height: 35, fit: pw.BoxFit.contain),
+                      pw.Text(title,
+                          style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold, fontSize: 12))
+                    ]),
+            build: (_) => [
+                  pw.SizedBox(height: 12),
+                  pw.TableHelper.fromTextArray(
+                      headers: headers,
+                      data: rows,
+                      headerStyle: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white),
+                      headerDecoration: const pw.BoxDecoration(
+                          color: PdfColor.fromInt(0xFF11345F)),
+                      cellStyle: const pw.TextStyle(fontSize: 8),
+                      cellAlignment: pw.Alignment.centerLeft)
+                ],
+            footer: (context) => pw.Text(
+                '${context.pageNumber} / ${context.pagesCount}',
+                style: const pw.TextStyle(fontSize: 8))));
+        final bytes = await doc.save();
+        await FileSaver.instance.saveFile(
+            name: name, bytes: bytes, ext: 'pdf', mimeType: MimeType.pdf);
+      }
+    } catch (error) {
+      if (mounted) _message('Unable to export payslip report: $error');
+    } finally {
+      if (mounted) setState(() => _payslipDirectoryExporting = false);
+    }
+  }
+
   Widget _employeePayslipsPage() {
     final employees = service.allEmployees.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final period = _payslipDirectoryPeriod ?? selectedPayrollMonth;
     final query = _payslipEmployeeSearch.trim().toLowerCase();
-    final statusEmployees = _payslipShowActiveEmployees == null
-        ? employees
-        : employees
-            .where(
-              (employee) => employee.isActive == _payslipShowActiveEmployees,
-            )
-            .toList();
-    final filteredEmployees = query.isEmpty
-        ? statusEmployees
-        : statusEmployees.where((employee) {
-            return employee.name.toLowerCase().contains(query) ||
-                employee.employeeId.toLowerCase().contains(query) ||
-                employee.department.toLowerCase().contains(query) ||
-                employee.branchId.toLowerCase().contains(query);
-          }).toList();
+    final byEmployee = <String, List<PayrollRecord>>{};
+    final allowedIds =
+        employees.map((e) => e.employeeId.trim().toUpperCase()).toSet();
+    for (final record in service.payroll) {
+      final id = record.employeeId.trim().toUpperCase();
+      if (allowedIds.contains(id))
+        byEmployee.putIfAbsent(id, () => []).add(record);
+    }
+    for (final rows in byEmployee.values) {
+      rows.sort((a, b) => b.period.compareTo(a.period));
+    }
+    final branchNames = <String, String>{
+      for (final e in employees)
+        if (e.branchId.trim().isNotEmpty)
+          e.branchId: service.branchById(e.branchId)?.branchName ?? e.branchId
+    };
+    final filteredEmployees = employees
+        .where((e) =>
+            (_payslipShowActiveEmployees == null ||
+                e.isActive == _payslipShowActiveEmployees) &&
+            (_payslipDirectoryBranch == null ||
+                e.branchId == _payslipDirectoryBranch) &&
+            (query.isEmpty ||
+                '${e.name} ${e.employeeId} ${e.newIcNo} ${e.department} ${e.branchId}'
+                    .toLowerCase()
+                    .contains(query)))
+        .toList();
     final selectedEmployee = selectedPayslipEmployeeId == null
         ? null
         : service.findEmployee(selectedPayslipEmployeeId!);
@@ -13879,285 +14072,9 @@ class _AdminDashboardState extends State<AdminDashboard>
     final activeYear = years.contains(selectedEmployeePayslipYear)
         ? selectedEmployeePayslipYear
         : (years.isEmpty ? null : years.first);
-    final employeeStatusLabel = switch (_payslipShowActiveEmployees) {
-      true => 'active ',
-      false => 'inactive ',
-      null => '',
-    };
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Employee Payslips',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Search for an employee, then select a month from their year-wise payslip history.',
-            style: TextStyle(color: Colors.black54),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              FilterChip(
-                selected: _payslipShowActiveEmployees == null,
-                avatar: Icon(
-                  Icons.people_outline,
-                  size: 18,
-                  color: _payslipShowActiveEmployees == null
-                      ? Colors.white
-                      : _midnight,
-                ),
-                label: Text('All (${employees.length})'),
-                selectedColor: _midnight,
-                checkmarkColor: Colors.white,
-                labelStyle: TextStyle(
-                  color: _payslipShowActiveEmployees == null
-                      ? Colors.white
-                      : _midnight,
-                  fontWeight: FontWeight.w700,
-                ),
-                onSelected: (_) => setState(() {
-                  _payslipShowActiveEmployees = null;
-                  selectedPayslipEmployeeId = null;
-                  selectedEmployeePayslipYear = null;
-                }),
-              ),
-              FilterChip(
-                selected: _payslipShowActiveEmployees == true,
-                avatar: Icon(
-                  Icons.check_circle_outline,
-                  size: 18,
-                  color: _payslipShowActiveEmployees == true
-                      ? Colors.white
-                      : _midnight,
-                ),
-                label: Text(
-                  'Active (${employees.where((employee) => employee.isActive).length})',
-                ),
-                selectedColor: _midnight,
-                checkmarkColor: Colors.white,
-                labelStyle: TextStyle(
-                  color: _payslipShowActiveEmployees == true
-                      ? Colors.white
-                      : _midnight,
-                  fontWeight: FontWeight.w700,
-                ),
-                onSelected: (_) => setState(() {
-                  _payslipShowActiveEmployees = true;
-                  selectedPayslipEmployeeId = null;
-                  selectedEmployeePayslipYear = null;
-                }),
-              ),
-              FilterChip(
-                selected: _payslipShowActiveEmployees == false,
-                avatar: Icon(
-                  Icons.person_off_outlined,
-                  size: 18,
-                  color: _payslipShowActiveEmployees == false
-                      ? Colors.white
-                      : _midnight,
-                ),
-                label: Text(
-                  'Inactive (${employees.where((employee) => !employee.isActive).length})',
-                ),
-                selectedColor: _midnight,
-                checkmarkColor: Colors.white,
-                labelStyle: TextStyle(
-                  color: _payslipShowActiveEmployees == false
-                      ? Colors.white
-                      : _midnight,
-                  fontWeight: FontWeight.w700,
-                ),
-                onSelected: (_) => setState(() {
-                  _payslipShowActiveEmployees = false;
-                  selectedPayslipEmployeeId = null;
-                  selectedEmployeePayslipYear = null;
-                }),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _payslipEmployeeSearchController,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              labelText: 'Search employee',
-              hintText: 'Name, employee ID, department or branch',
-              prefixIcon: const Icon(Icons.person_search_outlined),
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_payslipEmployeeSearch.isNotEmpty)
-                    IconButton(
-                      tooltip: 'Clear search',
-                      onPressed: () {
-                        _payslipEmployeeSearchController.clear();
-                        setState(() => _payslipEmployeeSearch = '');
-                      },
-                      icon: const Icon(Icons.close),
-                    ),
-                  IconButton(
-                    tooltip: 'Refresh employees and payroll',
-                    onPressed: () async {
-                      await service.loadEmployeesFromSupabase();
-                      await service.loadPayrollFromSupabase();
-                      if (mounted) setState(() {});
-                    },
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
-              border: const OutlineInputBorder(),
-            ),
-            onChanged: (value) => setState(() {
-              _payslipEmployeeSearch = value;
-              selectedPayslipEmployeeId = null;
-              selectedEmployeePayslipYear = null;
-            }),
-          ),
-          const SizedBox(height: 16),
-          if (selectedEmployee == null) ...[
-            Text(
-              '${filteredEmployees.length} ${employeeStatusLabel}employees',
-              style: const TextStyle(
-                color: Colors.black54,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            if (filteredEmployees.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.search_off_outlined,
-                          size: 40, color: Colors.black38),
-                      const SizedBox(height: 10),
-                      const Text('No employees match this search.'),
-                      if (_payslipEmployeeSearch.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        TextButton.icon(
-                          onPressed: () {
-                            _payslipEmployeeSearchController.clear();
-                            setState(() => _payslipEmployeeSearch = '');
-                          },
-                          icon: const Icon(Icons.close),
-                          label: const Text('Clear search'),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              )
-            else
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = constraints.maxWidth >= 1440
-                      ? 4
-                      : constraints.maxWidth >= 900
-                          ? 3
-                          : constraints.maxWidth >= 560
-                              ? 2
-                              : 1;
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: filteredEmployees.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      mainAxisExtent: 100,
-                    ),
-                    itemBuilder: (context, index) {
-                      final employee = filteredEmployees[index];
-                      final payslipCount =
-                          service.employeePayroll(employee.employeeId).length;
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => setState(() {
-                          selectedPayslipEmployeeId = employee.employeeId;
-                          selectedEmployeePayslipYear = null;
-                        }),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E5EB)),
-                          ),
-                          child: Row(
-                            children: [
-                              EmployeePhoto(
-                                name: employee.name,
-                                photoUrl: employee.photoUrl,
-                                radius: 24,
-                                borderColor: const Color(0xFFD9DDE5),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      employee.name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        height: 1.1,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${employee.employeeId} • ${employee.branchId}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF0F2F6),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        '$payslipCount payslips',
-                                        style: const TextStyle(
-                                          color: _midnight,
-                                          fontSize: 9.5,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-          ] else ...[
+    final history = selectedEmployee == null
+        ? null
+        : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             _adminPayslipEmployeeHeader(selectedEmployee, employeePayroll),
             const SizedBox(height: 16),
             if (years.isEmpty)
@@ -14191,6 +14108,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     ),
                     onSelected: (_) => setState(() {
                       selectedEmployeePayslipYear = year;
+                      _payslipDirectoryPeriod = DateTime(year, period.month);
                     }),
                   );
                 }).toList(),
@@ -14203,10 +14121,62 @@ class _AdminDashboardState extends State<AdminDashboard>
                   recordsByYear[activeYear]!,
                 ),
             ],
-          ],
-        ],
-      ),
-    );
+          ]);
+    return ColoredBox(
+        color: const Color(0xFFFFFCF8),
+        child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: EmployeePayslipDirectory(
+              employees: filteredEmployees,
+              records: byEmployee,
+              totalEmployees: employees.length,
+              activeEmployees: employees.where((e) => e.isActive).length,
+              totalPayslips: byEmployee.values
+                  .fold<int>(0, (sum, rows) => sum + rows.length),
+              period: period,
+              branches: branchNames,
+              branch: _payslipDirectoryBranch,
+              active: _payslipShowActiveEmployees,
+              searchController: _payslipEmployeeSearchController,
+              tab: _payslipDirectoryTab,
+              history: history,
+              exporting: _payslipDirectoryExporting,
+              onPeriod: (value) => setState(() {
+                _payslipDirectoryPeriod = value;
+                selectedEmployeePayslipYear = value.year;
+              }),
+              onBranch: (value) => setState(() {
+                _payslipDirectoryBranch = value;
+                selectedPayslipEmployeeId = null;
+              }),
+              onActive: (value) => setState(() {
+                _payslipShowActiveEmployees = value;
+                selectedPayslipEmployeeId = null;
+              }),
+              onSearch: (value) => setState(() {
+                _payslipEmployeeSearch = value;
+                selectedPayslipEmployeeId = null;
+              }),
+              onTab: (value) => setState(() => _payslipDirectoryTab = value),
+              onView: _viewPayslipDirectoryEmployee,
+              onPayslips: (employee) => setState(() {
+                selectedPayslipEmployeeId = employee.employeeId;
+                selectedEmployeePayslipYear = null;
+                _payslipDirectoryTab = 'history';
+              }),
+              onRefresh: () async {
+                await service.loadEmployeesFromSupabase();
+                await service.loadPayrollFromSupabase();
+                if (mounted) setState(() {});
+              },
+              onExport: (format) => _exportPayslipDirectory(
+                  format,
+                  filteredEmployees,
+                  period,
+                  byEmployee,
+                  selectedEmployee,
+                  activeYear),
+            )));
   }
 
   Widget _adminPayslipEmployeeHeader(
