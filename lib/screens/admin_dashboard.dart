@@ -11926,17 +11926,13 @@ class _AdminDashboardState extends State<AdminDashboard>
       }
       if (files.length != choice.files.length)
         throw StateError('Some selected files could not be generated.');
-      final archive = Archive();
       for (final entry in files.entries) {
-        archive
-            .addFile(ArchiveFile(entry.key, entry.value.length, entry.value));
+        await FileSaver.instance.saveFile(
+            name: entry.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
+            bytes: entry.value,
+            ext: 'xlsx',
+            mimeType: MimeType.microsoftExcel);
       }
-      await FileSaver.instance.saveFile(
-          name:
-              'Generated_Payroll_${DateFormat('yyyy_MM').format(choice.month)}',
-          bytes: Uint8List.fromList(ZipEncoder().encode(archive)),
-          ext: 'zip',
-          mimeType: MimeType.other);
       if (mounted)
         _message(
             'Downloaded ${files.length} payroll/statutory files for ${ids.length} generated employees.');
@@ -22670,31 +22666,19 @@ class _AdminDashboardState extends State<AdminDashboard>
       // SUCCESS
       // ============================================================
 
-      if (only == null) {
-        if (generatedFiles.length != 4)
-          throw StateError('Expected four payroll workbooks.');
-        final archive = Archive();
-        for (final file in generatedFiles.entries) {
-          archive.addFile(ArchiveFile(file.key, file.value.length, file.value));
-        }
-        final zip = ZipEncoder().encode(archive);
+      if (only == null && generatedFiles.length != 4) {
+        throw StateError('Expected four payroll workbooks.');
+      }
+      for (final file in generatedFiles.entries) {
         await FileSaver.instance.saveFile(
-            name: 'Payroll_Excel_${monthFile}_$exportStamp',
-            bytes: Uint8List.fromList(zip),
-            ext: 'zip',
-            mimeType: MimeType.other);
-      } else {
-        for (final file in generatedFiles.entries) {
-          await FileSaver.instance.saveFile(
-              name: file.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
-              bytes: file.value,
-              ext: 'xlsx',
-              mimeType: MimeType.microsoftExcel);
-        }
+            name: file.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
+            bytes: file.value,
+            ext: 'xlsx',
+            mimeType: MimeType.microsoftExcel);
       }
 
       _message(only == null
-          ? 'Downloaded ZIP containing 4 Excel files for $selectedMonth: '
+          ? 'Downloaded 4 separate Excel files for $selectedMonth: '
               'RHB Layout, EPF, EIS and SOCSO (export $exportStamp). '
               'EPF: ${epfLocal.length} local, ${epfForeign.length} foreign. '
               'EIS: ${eisLocal.length} local, ${eisForeign.length} foreign. '

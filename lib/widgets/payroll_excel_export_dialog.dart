@@ -59,14 +59,15 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
     return PopScope(
         canPop: !busy,
         child: AlertDialog(
-          backgroundColor: const Color(0xFFE8E7EF),
+          backgroundColor: const Color(0xFFFFFCF7),
           surfaceTintColor: Colors.transparent,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          title: const Row(children: [
-            Icon(Icons.account_balance_outlined, size: 23),
-            SizedBox(width: 12),
-            Expanded(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(children: [
+            Image.asset('assets/hasani_books_logo.jpg',
+                width: 95, height: 40, fit: BoxFit.contain),
+            const SizedBox(width: 12),
+            const Expanded(
                 child: Text('Generate Payroll Excel Files',
                     style: TextStyle(fontSize: 23, color: Color(0xFF19283F))))
           ]),
@@ -127,7 +128,8 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                                     })),
                     ]),
                     const SizedBox(height: 10),
-                    const Text('Downloaded together in one ZIP file.',
+                    const Text(
+                        'Downloads four separate Excel files. Allow multiple downloads in your browser.',
                         style:
                             TextStyle(fontSize: 12, color: Color(0xFF77777E))),
                     if (error != null)
