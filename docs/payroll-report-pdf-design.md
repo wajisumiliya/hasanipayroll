@@ -53,3 +53,19 @@ Flutter web for the new OT button (tracked old bundles do not contain the button
 
 Final backend validation: all 178 tests passed with the bootstrap PostgreSQL
 fixture enabled and serial test execution; zero failures or skips.
+
+## Supplied Hasani Payroll logo
+
+Report headers now embed the exact artwork uploaded as
+`assets/Hasani Payroll Logo.png`, replacing the text brand and the Late report's
+chart icon. A byte-identical copy lives at `backend/assets/hasani_payroll_logo.png`
+so backend-only deployments contain the image. The shared branding helper clips
+only the source image's outer whitespace in the PDF viewport and preserves the
+artwork's proportions and colors. All six summary variants and the detailed Late
+PDF use the logo; month-labelled titles and approval/date fields are retained.
+
+Validation: 34 focused report/PDF tests passed, including embedded-image checks
+for all six summary variants. One PostgreSQL-specific OT test was skipped because
+no test database was started for this image/layout-only change. JavaScript syntax
+and diff checks passed; Late and OT PDF samples were rendered and visually checked.
+Deploy the backend to apply this change; no Flutter rebuild is required.

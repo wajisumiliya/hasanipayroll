@@ -1,3 +1,4 @@
+import {drawReportLogo} from './report-branding.js';
 import PDFDocument from 'pdfkit';
 import {fileURLToPath} from 'node:url';
 
@@ -69,9 +70,7 @@ export async function renderAttendanceSummary(data) {
     doc.font(bold?'Bold':'Body').fontSize(size).fillColor(color).text(String(value),left,top,{width,align,lineGap:1});
   }
   function header() {
-    for(let i=0;i<4;i++)doc.rect(x+i*8,40-(i+1)*7,6,(i+1)*7).fill(i%2?blue:'#0069DC');
-    text('HASANI PAYROLL',x+46,11,300,{bold:true,size:18});
-    text('Employee Attendance Report',x+46,33,300,{size:10});
+    drawReportLogo(doc,x,10,{width:260,height:33});
     text(`Late Attendance Employees (3 and above) - ${reportMonthLabel(data)}`,x+340,15,w-340,{bold:true,size:11,align:'right'});
     doc.moveTo(x+480,43).lineTo(x+w,43).strokeColor(blue).lineWidth(1).stroke();
     doc.moveTo(x,52).lineTo(x+w,52).strokeColor(blue).lineWidth(.7).stroke();
@@ -127,7 +126,7 @@ export async function renderStatusSummary(data) {
   const {doc,done}=onePage(canvasWidth,98+heights.reduce((a,b)=>a+b,0)+55);
   function text(v,x,y,w,bold=false,size=8){doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#102943').text(String(v),x,y,{width:w});}
   function header() {
-    text('HASANI PAYROLL',24,18,width*.52,true,canvasWidth<600?14:18);text(`${label} Attendance Report - ${reportMonthLabel(data)}`,24+width*.55,22,width*.45,true,canvasWidth<600?10:13);
+    drawReportLogo(doc,24,14,{width:Math.min(260,width*.48),height:30});text(`${label} Attendance Report - ${reportMonthLabel(data)}`,24+width*.55,22,width*.45,true,canvasWidth<600?10:13);
     text(`${month} · ${data.branchLabel} · ${data.reports.length} employees`,24,48,width,false,10);
     let x=24;['No.','Employee ID','Employee Name','Branch',...(isMc?['Opening MC','MC Taken','Closing MC']:['Days']),`${label} dates`].forEach((v,i)=>{
       doc.rect(x,72,cols[i],26).fill(navy);doc.font('Bold').fontSize(8).fillColor('white').text(v,x+5,78,{width:cols[i]-10});x+=cols[i];
@@ -162,7 +161,7 @@ export async function renderIncrementSummary(data) {
   const tableTop=102+summaryHeight;
   const {doc,done}=onePage(canvasWidth,tableTop+30+heights.reduce((sum,value)=>sum+value,0)+55);
   const text=(value,x,y,w,{bold=false,size=8,color='#102943'}={})=>doc.font(bold?'Bold':'Body').fontSize(size).fillColor(color).text(String(value),x,y,{width:w});
-  text('HASANI PAYROLL',24,18,tableWidth*.4,{bold:true,size:18});
+  drawReportLogo(doc,24,12,{width:Math.min(285,tableWidth*.38),height:33});
   text(title,24+tableWidth*.43,23,tableWidth*.57,{bold:true,size:12});
   text(`${month} · ${data.branchLabel} · ${data.eligible_count} eligible · ${data.reports.length} report rows`,24,50,tableWidth,{size:10});
   text(`Basic salary: RM ${cash(data.basic_total)} · Total allowances: RM ${cash(data.allowance_total)}${comparison?` · Verified increases: RM ${cash(data.actual_total)}`:''}`,24,69,tableWidth,{bold:true,size:10});
@@ -193,7 +192,7 @@ export async function renderOtSummary(data) {
   const heights=measureRows(cells,widths,9,12,27);
   const {doc,done}=onePage(tableWidth+48,100+heights.reduce((sum,n)=>sum+n,0)+65);
   const text=(value,x,y,width,bold=false,size=9)=>doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#102943').text(String(value),x,y,{width});
-  text('HASANI PAYROLL',24,18,tableWidth*.4,true,18);
+  drawReportLogo(doc,24,12,{width:260,height:33});
   text(`Approved OT Report - ${reportMonthLabel(data)}`,24+tableWidth*.45,23,tableWidth*.55,true,12);
   text(`${data.branchLabel} · ${data.reports.length} employees`,24,50,tableWidth,false,10);
   let left=24;

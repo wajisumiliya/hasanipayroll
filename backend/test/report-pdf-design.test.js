@@ -24,6 +24,7 @@ test('all summary PDF variants have no alternating row or result-column fill col
   for(const view of views){
     const bytes=await renderLateReport({format:'pdf',year:2026,month:10,branchLabel:'All branches',branches:{A:'Branch A'},
       reports:[basic,{...basic,employee_id:'E2',result:'Received'}],counts:{Eligible:2},eligible_count:2,basic_total:4000,allowance_total:600,...view});
+    assert.match(bytes.toString('latin1'),/\/Subtype \/Image\b/,'supplied logo must be embedded in every report');
     const commands=streams(bytes);
     const colors=[...commands.matchAll(/\/DeviceRGB cs\s+([\d.]+) ([\d.]+) ([\d.]+) scn/g)].map(m=>m.slice(1).map(Number));
     assert.ok(colors.length>0);

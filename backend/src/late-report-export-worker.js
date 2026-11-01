@@ -1,3 +1,4 @@
+import {drawReportLogo} from './report-branding.js';
 import { parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import PDFDocument from 'pdfkit';
@@ -61,6 +62,8 @@ async function pdf(data) {
   const line = (text,bold=false,size=9) => {
     doc.font(bold?'Bold':'Body').fontSize(size).fillColor('#18344d').text(String(text),{paragraphGap:5});
   };
+  drawReportLogo(doc,30,22,{width:240,height:36});
+  doc.y=72;
   line(`Late Attendance Report - ${reportMonthLabel(data)}`,true,20);
   line(`${data.year}-${String(data.month).padStart(2,'0')} | ${data.branchLabel}`,true,12);
   const total=field=>data.reports.reduce((sum,r)=>sum+r[field],0);
