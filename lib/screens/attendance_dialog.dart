@@ -925,31 +925,64 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       double? lateDeductionAmount;
       double? unpaidDeductionAmount;
       var estimatedAmounts = false;
-      try {
-        final periodStart = DateTime(widget.month.year, widget.month.month);
-        final periodEnd = DateTime(widget.month.year, widget.month.month + 1);
-        String dateText(DateTime value) =>
-            '${value.year.toString().padLeft(4, '0')}-'
-            '${value.month.toString().padLeft(2, '0')}-01';
-        final payroll = await SupabaseService.database
-            .from('payroll')
-            .select('overtime,late_deduction,unpaid_deduction')
-            .eq('employee_id', _employeeId())
-            .gte('period', dateText(periodStart))
-            .lt('period', dateText(periodEnd))
-            .maybeSingle();
-        double amount(dynamic value) {
-          if (value is num) return value.toDouble();
-          return double.tryParse(value?.toString() ?? '') ?? 0;
+      Map<String, dynamic>? printSalary;
+      List<Map<String, dynamic>>? printRosters;
+      final role = AppService.instance.currentUser?.role.trim().toUpperCase();
+      final scopedPrint = role == 'ADMIN' || role == 'BRANCH';
+      if (scopedPrint) {
+        final context = await AppService.instance.loadAttendancePrintContext(
+          employeeId: _employeeId(),
+          year: widget.month.year,
+          month: widget.month.month,
+        );
+        if (context['salary'] is Map) {
+          printSalary = {
+            ...Map<String, dynamic>.from(context['salary'] as Map),
+            'epf_enabled': false,
+            'socso_enabled': false,
+            'eis_enabled': false,
+          };
         }
-
-        if (payroll != null) {
+        printRosters = (context['monthly_rosters'] as List)
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+        final payroll = context['payroll'];
+        if (payroll is Map) {
+          double amount(dynamic value) => double.tryParse('$value') ?? 0;
           approvedOtAmount = amount(payroll['overtime']);
           lateDeductionAmount = amount(payroll['late_deduction']);
           unpaidDeductionAmount = amount(payroll['unpaid_deduction']);
+        } else if (printSalary == null) {
+          throw StateError(
+              'No salary default found for attendance print values.');
         }
-      } catch (_) {
-        // Fall back to a read-only calculation when saved payroll is unavailable.
+      } else {
+        try {
+          final periodStart = DateTime(widget.month.year, widget.month.month);
+          final periodEnd = DateTime(widget.month.year, widget.month.month + 1);
+          String dateText(DateTime value) =>
+              '${value.year.toString().padLeft(4, '0')}-'
+              '${value.month.toString().padLeft(2, '0')}-01';
+          final payroll = await SupabaseService.database
+              .from('payroll')
+              .select('overtime,late_deduction,unpaid_deduction')
+              .eq('employee_id', _employeeId())
+              .gte('period', dateText(periodStart))
+              .lt('period', dateText(periodEnd))
+              .maybeSingle();
+          double amount(dynamic value) {
+            if (value is num) return value.toDouble();
+            return double.tryParse(value?.toString() ?? '') ?? 0;
+          }
+
+          if (payroll != null) {
+            approvedOtAmount = amount(payroll['overtime']);
+            lateDeductionAmount = amount(payroll['late_deduction']);
+            unpaidDeductionAmount = amount(payroll['unpaid_deduction']);
+          }
+        } catch (_) {
+          // Fall back to a read-only calculation when saved payroll is unavailable.
+        }
       }
 
       final days = List<AttendancePrintDay>.generate(daysInMonth, (index) {
@@ -1012,6 +1045,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           },
           month: widget.month,
           attendance: attendance,
+          salaryDefault: printSalary,
+          rosterRows: printRosters,
         );
         if (!estimate.calculated) {
           throw StateError(estimate.message);

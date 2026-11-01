@@ -437,3 +437,18 @@ was still from b30efaf and lacked the pre-payroll estimate code. Pulling Dart
 source alone does not update that bundle: rebuild Flutter web and deploy the
 resulting build/web directory (or use the Render Flutter build script).
 Dart formatter/parser and diff checks passed; Flutter execution remains unavailable.
+
+### Branch and admin attendance PDF access
+
+Attendance Print A4 remains available when the sheet is read-only or submitted.
+Admin/branch printing now obtains its monetary inputs from the authenticated,
+read-only /api/attendance-sheet/print-context route rather than requiring general
+salary-default/payroll table access. Admin can select any employee. Branch access
+is checked against the employee's current database branch, and missing/foreign
+branch identities are rejected before salary queries. Only the basic/rate inputs,
+three printed saved payroll amounts and the selected monthly rosters are returned;
+no bank details, statutory amounts or payroll editing permission are granted.
+The existing employee print path is unchanged. Duplicate payroll selections return
+an explicit review error. Six new backend permission/input tests passed, along
+with JavaScript syntax, Dart formatter/parser and diff checks. Flutter tests need
+execution in local/CI Flutter. Deploy the backend and rebuild web for this route.
