@@ -109,11 +109,11 @@ test('history uses seven calendar months, handles year rollover, and ignores fut
   assert.equal(payrollIncrementEvidence([pay('E','2026-12-01'),pay('E','2027-01-01',2100)],2027,1).actual,100);
 });
 
-test('inactive recipients can still be detected as additional; scopes do not include other employee groups',()=>{
+test('inactive recipients and other employee scopes are excluded from comparison',()=>{
   const employees=[employee('E1',{address:'FRN'}),employee('E2',{is_active:false}),employee('E3',{branch_id:'B'})];
   const payroll=employees.flatMap(e=>[pay(e.employee_id,'2026-09-01'),pay(e.employee_id,'2026-10-01',2100)]);
   const report=build(employees,payroll,'comparison',{staffScope:'local',branchId:'A'});
-  assert.equal(report.reports.length,1);assert.equal(report.reports[0].employee_id,'E2');assert.equal(report.reports[0].result,'Additional: not eligible');
+  assert.equal(report.reports.length,0);
 });
 
 function api(options={}) {
@@ -169,5 +169,14 @@ test('both PDF modes render empty and dense selections on a real single A4 page'
     const content=bytes.toString('latin1');
     assert.equal((content.match(/\/Type \/Page\b/g)??[]).length,1);
     assert.match(content,/\/MediaBox \[0 0 (595\.28 841\.89|841\.89 595\.28)\]/);
+  }
+});
+
+ test('vacation, transferred and resigned staff are excluded even with is_active true',()=>{
+  const employees=['vacation','transferred','resigned','transfered','resign'].map(status=>employee(status,{employment_status:status,joining_date:'2026-01-01',inc_details:null}));
+  employees.push(employee('ACTIVE',{employment_status:' active ',joining_date:'2026-01-01',inc_details:null}));
+  const payroll=employees.flatMap(e=>[pay(e.employee_id,'2026-09-01'),pay(e.employee_id,'2026-10-01',2100)]);
+  for(const mode of ['eligible','comparison']) {
+    assert.deepEqual(build(employees,payroll,mode).reports.map(r=>r.employee_id),['ACTIVE']);
   }
 });

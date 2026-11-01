@@ -403,3 +403,10 @@ For October 2026, January through April 2026 joiners with no increment details
 qualify; pre-2026 joiners and May 2026 or later joiners do not.
 Nonblank increment details and saved-payroll comparison rules are unchanged.
 Only active employees are included in the eligible list, including this fallback.
+
+### Employment status exclusion
+
+Both increment report modes and the increment dashboard require is_active=true
+and employment_status=active. Blank legacy status falls back to is_active.
+Vacation, transferred and resigned staff are excluded even when their active flag
+is still true. This also excludes them from additional-increment comparison rows.

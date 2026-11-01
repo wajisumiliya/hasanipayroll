@@ -127,6 +127,24 @@ void main() {
             'inc_details': null
           },
           {
+            'employee_id': 'VACATION',
+            'is_active': true,
+            'employment_status': 'vacation',
+            'joining_date': '2026-01-01'
+          },
+          {
+            'employee_id': 'TRANSFERRED',
+            'is_active': true,
+            'employment_status': 'transferred',
+            'joining_date': '2026-01-01'
+          },
+          {
+            'employee_id': 'RESIGNED',
+            'is_active': true,
+            'employment_status': 'resigned',
+            'joining_date': '2026-01-01'
+          },
+          {
             'employee_id': 'OLD',
             'is_active': true,
             'joining_date': '2026-03-15'

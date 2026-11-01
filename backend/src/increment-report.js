@@ -72,6 +72,7 @@ export function buildIncrementReport({employees, payroll, year, month, mode, bra
   for (const employee of employees) {
     const id = key(employee.employee_id);
     if (!id || (branchId && key(employee.branch_id) !== key(branchId))) continue;
+    if (key(employee.is_active) !== 'TRUE' || !['', 'ACTIVE'].includes(key(employee.employment_status))) continue;
     const foreign = key(employee.address).includes('FRN');
     if ((staffScope === 'local' && foreign) || (staffScope === 'foreign' && !foreign)) continue;
     const snapshot=employee.increment_snapshot;
@@ -122,7 +123,7 @@ export function installIncrementReportApi(app, {authenticate, pool, renderExport
       return res.status(400).json({ok:false,message:'Invalid increment report selection.'});
     try {
       const [employeeRows, payrollRows, branchRows] = await Promise.all([
-        pool.query(`SELECT e.employee_id, e.name, e.branch_id, e.is_active, e.address,e.joining_date::text AS joining_date,to_jsonb(s) AS increment_snapshot, d.inc_details,d.basic_salary,d.elaun_kedatangan,d.elaun_perkhidmatan,d.elaun_kerajinan,d.elaun_makanan
+        pool.query(`SELECT e.employee_id, e.name, e.branch_id, e.is_active, e.employment_status, e.address,e.joining_date::text AS joining_date,to_jsonb(s) AS increment_snapshot, d.inc_details,d.basic_salary,d.elaun_kedatangan,d.elaun_perkhidmatan,d.elaun_kerajinan,d.elaun_makanan
           FROM public.employees e LEFT JOIN public.employee_salary_defaults d ON d.employee_id=e.employee_id
           LEFT JOIN app_private.payroll_increment_state s ON s.employee_id=e.employee_id AND s.period=make_date($1,$2,1)`,[year,month]),
         pool.query(`SELECT employee_id, period::text, basic_salary, elaun_kedatangan, elaun_perkhidmatan, elaun_kerajinan

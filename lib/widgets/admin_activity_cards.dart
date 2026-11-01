@@ -91,10 +91,12 @@ class AdminActivityCards extends StatelessWidget {
     return result;
   }
 
-  // Only the cohort whose last increment was exactly six payroll months ago.
+  // Active staff only; vacation and departed staff are excluded.
   List<Map<String, dynamic>> increments() {
     final result = <Map<String, dynamic>>[];
     for (final e in people) {
+      final status = canonical(e['employment_status']);
+      if (status.isNotEmpty && status != 'ACTIVE') continue;
       final snapshot = e['_increment_eligibility'] is Map
           ? e['_increment_eligibility'] as Map
           : null;
