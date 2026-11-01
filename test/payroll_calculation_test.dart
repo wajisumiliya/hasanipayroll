@@ -423,13 +423,15 @@ void main() {
       );
     });
 
-    test('local EPF SOCSO and SIP wage is basic less unpaid deduction', () {
+    test('local EPF SOCSO and SIP wage subtracts late and unpaid deductions',
+        () {
       expect(
         PayrollCalculationService.localStatutoryWage(
           basicSalary: 1700,
           unpaidDeduction: 56.67,
+          lateDeduction: 20,
         ),
-        1643.33,
+        1623.33,
       );
     });
 

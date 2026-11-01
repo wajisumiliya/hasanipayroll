@@ -13292,6 +13292,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   employeeId: selectedId,
                   basicSalary: number('basic_salary'),
                   unpaidDeduction: unpaidDeduction,
+                  lateDeduction: number('late_deduction'),
                 );
                 if (revision != statutoryRevision || !dialogContext.mounted) {
                   return;
@@ -13303,7 +13304,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   calculatingStatutory = false;
                   statutoryInfo = result['contributions_applicable'] == 0
                       ? 'EPF, SOCSO and EIS are RM0 because basic salary minus '
-                          'unpaid deduction is below RM500.'
+                          'late and unpaid deductions is below RM500.'
                       : 'EPF updated from wage '
                           '${_money(result['epf_wage']!)}; SOCSO updated from '
                           'wage ${_money(result['socso_wage']!)}; EIS updated '
@@ -16223,7 +16224,12 @@ class _AdminDashboardState extends State<AdminDashboard>
     final unpaidDeduction = _payrollNumber(
       payroll['unpaid_deduction'] ?? payroll['unpaidDeduction'],
     );
-    return math.max(0, basicSalary - unpaidDeduction).toDouble();
+    final lateDeduction = _payrollNumber(
+      payroll['late_deduction'] ?? payroll['lateDeduction'],
+    );
+    return math
+        .max(0, basicSalary - unpaidDeduction - lateDeduction)
+        .toDouble();
   }
 
 // ============================================================================
