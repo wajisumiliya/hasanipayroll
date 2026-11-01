@@ -137,37 +137,38 @@ class _PayrollExcelExportDialogState extends State<PayrollExcelExportDialog> {
                                     })),
                     ]),
                     const SizedBox(height: 20),
-                    Container(
-                        decoration: BoxDecoration(
-                            color: const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Column(children: [
-                          for (final file in const [
-                            'Branch Payroll',
-                            'EPF',
-                            'SOCSO',
-                            'EIS',
-                            'HRDF'
-                          ])
-                            CheckboxListTile(
-                                dense: true,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                activeColor: ink,
-                                title: Text(file,
-                                    style: const TextStyle(color: ink)),
-                                value: selectedFiles.contains(file),
-                                onChanged: busy
-                                    ? null
-                                    : (checked) => setState(() {
-                                          if (checked == true) {
-                                            selectedFiles.add(file);
-                                          } else {
-                                            selectedFiles.remove(file);
-                                          }
-                                        }))
-                        ])),
+                    Material(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(12),
+                        clipBehavior: Clip.antiAlias,
+                        child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Column(children: [
+                              for (final file in const [
+                                'Branch Payroll',
+                                'EPF',
+                                'SOCSO',
+                                'EIS',
+                                'HRDF'
+                              ])
+                                CheckboxListTile(
+                                    dense: true,
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    activeColor: ink,
+                                    title: Text(file,
+                                        style: const TextStyle(color: ink)),
+                                    value: selectedFiles.contains(file),
+                                    onChanged: busy
+                                        ? null
+                                        : (checked) => setState(() {
+                                              if (checked == true) {
+                                                selectedFiles.add(file);
+                                              } else {
+                                                selectedFiles.remove(file);
+                                              }
+                                            }))
+                            ]))),
                     if (error != null)
                       Padding(
                           padding: const EdgeInsets.only(top: 10),
