@@ -19,7 +19,7 @@ export function incrementEligibility(value, year, month, joiningDate=null) {
     const raw=joiningDate instanceof Date?`${joiningDate.getFullYear()}-${String(joiningDate.getMonth()+1).padStart(2,'0')}-${String(joiningDate.getDate()).padStart(2,'0')}`:String(joiningDate??'').slice(0,10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)||!Number.isFinite(Date.parse(raw))||new Date(raw).toISOString().slice(0,10)!==raw) return null;
     const joined=new Date(raw),due=new Date(Date.UTC(joined.getUTCFullYear(),joined.getUTCMonth()+6,1));
-    if (due.getUTCFullYear()!==year||due.getUTCMonth()+1!==month) return null;
+    if (due > new Date(Date.UTC(year,month-1,1))) return null;
     return {last_increment_month:null,eligible_from:due.toISOString().slice(0,10),last_amount:null};
   }
   const match = /^([A-Z]{3,4})[-/](\d{4}|\d{2})(?:\D|$)/.exec(text);

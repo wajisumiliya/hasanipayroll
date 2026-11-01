@@ -42,8 +42,7 @@ void main() {
         isNull);
   });
 
-  test('empty inc_details uses joining month for the exact six-month cohort',
-      () {
+  test('empty inc_details includes six or more months of service', () {
     expect(
         IncrementEligibilityService.dueForMonth(null, DateTime(2026, 10),
                 joiningDate: '2026-04-15')!
@@ -52,7 +51,7 @@ void main() {
     expect(
         IncrementEligibilityService.dueForMonth(' ', DateTime(2026, 10),
             joiningDate: '2026-03-15'),
-        isNull);
+        isNotNull);
     expect(
         IncrementEligibilityService.dueForMonth('', DateTime(2026, 10),
             joiningDate: '2026-05-15'),

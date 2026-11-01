@@ -23,10 +23,11 @@ test('eligibility includes only the exact six-month cohort and excludes overdue 
     assert.equal(incrementEligibility(value,2026,10),null);
 });
 
-test('blank inc_details falls back to the exact six-month joining cohort',()=>{
+test('blank inc_details includes employees with six or more months of service',()=>{
   assert.equal(incrementEligibility(null,2026,10,'2026-04-15').eligible_from,'2026-10-01');
   assert.equal(incrementEligibility('  ',2026,10,'2026-04-30').last_increment_month,null);
-  assert.equal(incrementEligibility('',2026,10,'2026-03-15'),null);
+  assert.equal(incrementEligibility('',2026,10,'2026-03-15').eligible_from,'2026-09-01');
+  assert.equal(incrementEligibility('',2026,10,'2020-01-15').eligible_from,'2020-07-01');
   assert.equal(incrementEligibility('',2026,10,'2026-05-15'),null);
   assert.equal(incrementEligibility('MAY-26/50',2026,10,'2026-04-15'),null);
   assert.equal(incrementEligibility('bad',2026,10,'2026-04-15'),null);

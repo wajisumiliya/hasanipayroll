@@ -386,3 +386,12 @@ with the bootstrap database enabled and no skips.
 An intermediate full test run encountered the existing reminder fixture's
 "terminating connection due to administrator command" during database cleanup;
 no reminder code was changed. The isolated rerun completed all 154 tests cleanly.
+
+### Joining-date fallback includes overdue first increments
+
+For blank/null inc_details, include employees whose joining month is six or more
+calendar months before the selected payroll month. October 2026 includes April
+2026 and earlier starters without increment details; May 2026 starters are excluded.
+Existing nonblank inc_details retains the exact six-month increment rule, with
+pre-payroll snapshots preserving the comparison after automatic updates.
+The eligible-from date remains the original joining month plus six months.

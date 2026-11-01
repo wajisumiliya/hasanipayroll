@@ -22,7 +22,7 @@ class IncrementEligibilityService {
       }
       final last = DateTime(parsed.year, parsed.month);
       final due = DateTime(parsed.year, parsed.month + 6);
-      if (due != DateTime(selectedMonth.year, selectedMonth.month)) {
+      if (due.isAfter(DateTime(selectedMonth.year, selectedMonth.month))) {
         return null;
       }
       return (lastMonth: last, dueMonth: due, lastAmount: null);

@@ -147,7 +147,7 @@ void main() {
         onLate: () {},
         onPayroll: () {});
     expect(widget.increments().map((row) => row['employee_id']).toSet(),
-        {'JOIN', 'PAID'});
+        {'JOIN', 'OLD', 'PAID'});
   });
 
   test('five-day window crosses New Year and excludes sixth day', () {
