@@ -43,9 +43,12 @@ class PayrollEditorSummary extends StatelessWidget {
               child: const Row(children: [
                 Icon(Icons.calculate_outlined, color: ink, size: 20),
                 SizedBox(width: 9),
-                Text('Payroll Summary',
-                    style: TextStyle(
-                        color: ink, fontSize: 16, fontWeight: FontWeight.w800))
+                Expanded(
+                    child: Text('Payroll Summary',
+                        style: TextStyle(
+                            color: ink,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800)))
               ])),
           Padding(
               padding: const EdgeInsets.fromLTRB(15, 3, 15, 15),
