@@ -11931,78 +11931,9 @@ class _AdminDashboardState extends State<AdminDashboard>
       await _showPayrollEmployeeSelection(
           branchName: '${choice.branchIds.length} selected branches',
           employees: selected,
-          month: choice.month,
-          onGenerated: (result) =>
-              _downloadGeneratedPayrollFiles(choice, result, names));
+          month: choice.month);
     } catch (error) {
       if (mounted) _message('Unable to prepare payroll generation: $error');
-    }
-  }
-
-  Future<void> _downloadGeneratedPayrollFiles(PayrollGenerationChoice choice,
-      PayrollGenerationResult result, Map<String, String> branchNames) async {
-    final ids = result.generated
-        .map((item) => _normalizeBranchValue(item.employeeId))
-        .toSet();
-    if (ids.isEmpty) {
-      _message('No payroll was generated; no files were exported.');
-      return;
-    }
-    if (!mounted) return;
-    showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const PopScope(
-            canPop: false,
-            child: AlertDialog(
-                title: Text('Preparing payroll files'),
-                content: Row(children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 16),
-                  Expanded(child: Text('Building selected Excel files...'))
-                ]))));
-    try {
-      selectedPayrollMonth = choice.month;
-      final files = <String, Uint8List>{};
-      void collect(String name, Uint8List bytes) {
-        files[name] = bytes;
-      }
-
-      if (choice.files.contains('Branch Payroll')) {
-        final rows = (await SupabaseService.getPayrollForMonth(choice.month))
-            .where((r) => ids.contains(_normalizeBranchValue(r['employee_id'])))
-            .toList();
-        await _exportPayrollAllBranchesExcel(rows, branchNames,
-            onFile: collect);
-      }
-      for (final type in const ['EPF', 'SOCSO', 'EIS']) {
-        if (!choice.files.contains(type)) continue;
-        final report = await _fetchStatutoryReport(type, choice.month,
-            selectedEmployeeIds: ids);
-        await _exportStatutoryReportExcel(type, choice.month,
-            List<List<dynamic>>.from(report['rows'] ?? const []),
-            onFile: collect);
-      }
-      if (choice.files.contains('HRDF')) {
-        final rows = await _fetchDashboardReportRows(choice.month,
-            selectedEmployeeIds: ids);
-        await _exportDashboardSummaryExcel('HRDF', choice.month, rows,
-            onFile: collect);
-      }
-      if (files.length != choice.files.length)
-        throw StateError('Some selected files could not be generated.');
-      for (final entry in files.entries) {
-        await FileSaver.instance.saveFile(
-            name: entry.key.replaceFirst(RegExp(r'\.xlsx$'), ''),
-            bytes: entry.value,
-            ext: 'xlsx',
-            mimeType: MimeType.microsoftExcel);
-      }
-      if (mounted)
-        _message(
-            'Downloaded ${files.length} payroll/statutory files for ${ids.length} generated employees.');
-    } finally {
-      if (mounted) Navigator.of(context).pop();
     }
   }
 
@@ -12059,7 +11990,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     required List<Map<String, dynamic>> employees,
     required DateTime month,
     VoidCallback? closeBranchDialog,
-    Future<void> Function(PayrollGenerationResult)? onGenerated,
   }) async {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final today = DateTime.now();
@@ -12645,7 +12575,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                             employeeIds: ids,
                             overwriteExisting: overwriteExisting,
                             branchName: branchName,
-                            onGenerated: onGenerated,
                           );
                         },
                   icon: const Icon(Icons.calculate_outlined),
@@ -12664,7 +12593,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     required List<String> employeeIds,
     required bool overwriteExisting,
     required String branchName,
-    Future<void> Function(PayrollGenerationResult)? onGenerated,
   }) async {
     if (employeeIds.isEmpty || !mounted) return;
 
@@ -12719,15 +12647,6 @@ class _AdminDashboardState extends State<AdminDashboard>
         result,
         branchName: branchName,
       );
-      if (onGenerated != null && mounted) {
-        try {
-          await onGenerated(result);
-        } catch (error) {
-          if (mounted)
-            _message(
-                'Payroll was saved, but selected files could not be downloaded: $error');
-        }
-      }
     } catch (e) {
       if (mounted) {
         Navigator.of(context).pop();

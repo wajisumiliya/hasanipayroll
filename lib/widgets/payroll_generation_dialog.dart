@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class PayrollGenerationChoice {
-  const PayrollGenerationChoice(this.month, this.branchIds, this.files);
+  const PayrollGenerationChoice(this.month, this.branchIds);
   final DateTime month;
-  final Set<String> branchIds, files;
+  final Set<String> branchIds;
 }
 
 class PayrollGenerationDialog extends StatefulWidget {
@@ -27,7 +27,6 @@ class _PayrollGenerationDialogState extends State<PayrollGenerationDialog> {
   late final selected = widget.branches.keys
       .where((id) => (widget.employeeCounts[id] ?? 0) > 0)
       .toSet();
-  final files = <String>{'Branch Payroll', 'EPF', 'SOCSO', 'EIS', 'HRDF'};
   Widget heading(int number, String title, {bool dark = false}) =>
       Row(children: [
         CircleAvatar(
@@ -109,39 +108,6 @@ class _PayrollGenerationDialogState extends State<PayrollGenerationDialog> {
                     })),
           ])
         ]));
-    Widget outputs() => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: panel(),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          heading(2, 'Select Files to Generate'),
-          const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final name in const [
-              'Branch Payroll',
-              'EPF',
-              'SOCSO',
-              'EIS',
-              'HRDF'
-            ])
-              FilterChip(
-                  label: Text(name,
-                      style: const TextStyle(
-                          color: navy,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700)),
-                  selected: files.contains(name),
-                  selectedColor: const Color(0xFFEAF3FF),
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFFD7E6F8)),
-                  onSelected: (checked) => setState(() {
-                        if (checked) {
-                          files.add(name);
-                        } else {
-                          files.remove(name);
-                        }
-                      }))
-          ])
-        ]));
     return AlertDialog(
         backgroundColor: const Color(0xFFFFFCF7),
         surfaceTintColor: Colors.transparent,
@@ -165,7 +131,7 @@ class _PayrollGenerationDialogState extends State<PayrollGenerationDialog> {
                         fontWeight: FontWeight.w800,
                         color: navy)),
                 Text(
-                    'Generate payroll and related statutory files for selected branches.',
+                    'Generate payroll for selected branches. Export Excel manually from RHB Layout.',
                     style: TextStyle(fontSize: 11, color: Color(0xFF62708A)))
               ])),
           IconButton(
@@ -178,20 +144,7 @@ class _PayrollGenerationDialogState extends State<PayrollGenerationDialog> {
             height: MediaQuery.sizeOf(context).height * .62,
             child: SingleChildScrollView(
                 child: Column(children: [
-              LayoutBuilder(
-                  builder: (_, box) => box.maxWidth >= 780
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                              SizedBox(width: 330, child: period()),
-                              const SizedBox(width: 12),
-                              Expanded(child: outputs())
-                            ])
-                      : Column(children: [
-                          period(),
-                          const SizedBox(height: 10),
-                          outputs()
-                        ])),
+              period(),
               const SizedBox(height: 14),
               Container(
                   decoration: panel(),
@@ -208,7 +161,7 @@ class _PayrollGenerationDialogState extends State<PayrollGenerationDialog> {
                             children: [
                               SizedBox(
                                   width: 190,
-                                  child: heading(3, 'Select Branches',
+                                  child: heading(2, 'Select Branches',
                                       dark: true)),
                               Row(mainAxisSize: MainAxisSize.min, children: [
                                 Checkbox(
@@ -350,13 +303,11 @@ class _PayrollGenerationDialogState extends State<PayrollGenerationDialog> {
                 FilledButton.icon(
                     style: FilledButton.styleFrom(
                         backgroundColor: navy, foregroundColor: Colors.white),
-                    onPressed: selected.isEmpty || files.isEmpty
+                    onPressed: selected.isEmpty
                         ? null
-                        : () => Navigator.pop(
-                            context,
-                            PayrollGenerationChoice(
-                                month, Set.from(selected), Set.from(files))),
-                    icon: const Icon(Icons.download_outlined),
+                        : () => Navigator.pop(context,
+                            PayrollGenerationChoice(month, Set.from(selected))),
+                    icon: const Icon(Icons.calculate_outlined),
                     label: const Text('Generate Payroll'))
               ])
         ]);

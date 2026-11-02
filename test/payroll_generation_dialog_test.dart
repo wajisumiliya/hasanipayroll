@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/widgets/payroll_generation_dialog.dart';
 
 void main() {
-  testWidgets('branch and file selections are captured before readiness review',
+  testWidgets(
+      'branch selection generates payroll without automatic file selection',
       (tester) async {
     PayrollGenerationChoice? selected;
     await tester.pumpWidget(MaterialApp(
@@ -32,17 +33,17 @@ void main() {
     await tester.ensureVisible(find.text('AMANJAYA'));
     await tester.tap(find.text('AMANJAYA'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('EPF'));
-    await tester.tap(find.text('EPF'));
-    await tester.pumpAndSettle();
+    expect(find.byType(FilterChip), findsNothing);
+    expect(find.text('Select Files to Generate'), findsNothing);
+    expect(find.textContaining('Export Excel manually from RHB Layout'),
+        findsOneWidget);
     final generate = find.byWidgetPredicate((widget) => widget is FilledButton);
     await tester.ensureVisible(generate);
     await tester.tap(generate);
     await tester.pumpAndSettle();
     expect(selected!.month, DateTime(2026, 11));
     expect(selected!.branchIds, {'A'});
-    expect(selected!.files.contains('EPF'), isFalse);
-    expect(selected!.files.contains('HRDF'), isTrue);
+
     expect(tester.takeException(), isNull);
   });
   testWidgets('no branches selected disables generation', (tester) async {
