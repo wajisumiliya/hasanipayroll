@@ -704,6 +704,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       '13:00 - 22:00 (90 min break)': ['13:00', '22:00', 90],
       '09:00 - 21:00 (90 min break)': ['09:00', '21:00', 90],
       '10:00 - 22:00 (90 min break)': ['10:00', '22:00', 90],
+      '09:00 - 21:00 (120 min break)': ['09:00', '21:00', 120],
+      '09:00 - 19:00 (60 min break)': ['09:00', '19:00', 60],
+      '09:00 - 18:00 (60 min break)': ['09:00', '18:00', 60],
     };
     const nonWorking = <String>[
       'OFF',

@@ -51,6 +51,9 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
     _Shift('1:00 PM – 10:00 PM', '13:00', '22:00', 90),
     _Shift('9:00 AM - 9:00 PM', '09:00', '21:00', 90),
     _Shift('10:00 AM - 10:00 PM', '10:00', '22:00', 90),
+    _Shift('9:00 AM – 9:00 PM', '09:00', '21:00', 120),
+    _Shift('9:00 AM – 7:00 PM', '09:00', '19:00', 60),
+    _Shift('9:00 AM – 6:00 PM', '09:00', '18:00', 60),
   ];
   late DateTime month;
   late Future<List<dynamic>> _loadFuture;
@@ -222,11 +225,16 @@ class _MonthlyRosterPageState extends State<MonthlyRosterPage> {
                         width: 300,
                         child: DropdownButtonFormField<_Shift>(
                           initialValue: shift,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                               labelText: 'Available shift', isDense: true),
                           items: shifts
                               .map((item) => DropdownMenuItem(
-                                  value: item, child: Text(item.label)))
+                                  value: item,
+                                  child: Text(
+                                      '${item.label} • ${item.breakMinutes} min break',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12))))
                               .toList(),
                           onChanged: (value) =>
                               setState(() => shift = value ?? shift),
