@@ -1,3 +1,4 @@
+import 'early_out_calculation.dart';
 import '../screens/supabase_service.dart';
 import 'payroll_calculation_service.dart';
 import 'app_service.dart';
@@ -195,6 +196,7 @@ class AttendancePayrollService {
       _getMonthlyRostersForEmployees(normalizedIds, periodMonth),
       AppService.instance
           .attendanceAllowanceDisqualifiedEmployees(periodMonth, normalizedIds),
+      AppService.instance.loadEarlyOutContext(periodMonth, normalizedIds),
     ]);
     final employees = bulkData[0] as List<Map<String, dynamic>>;
     final salaryDefaults = bulkData[1] as List<Map<String, dynamic>>;
@@ -264,6 +266,7 @@ class AttendancePayrollService {
           preloadedExistingPayroll: existingPayrollMap[employeeId],
           preloadedRosterRows: rostersByEmployee[employeeId] ?? const [],
           pendingPayrollWrites: pendingPayrollWrites,
+          earlyOutContext: bulkData[6] as Map<String, dynamic>,
           usePreloadedData: true,
           attendanceAllowanceDisqualified:
               allowanceDisqualified.contains(employeeId),
@@ -324,6 +327,8 @@ class AttendancePayrollService {
     required List<Map<String, dynamic>> attendance,
     Map<String, dynamic>? salaryDefault,
     List<Map<String, dynamic>>? rosterRows,
+    Map<String, dynamic>? earlyOutContext,
+    bool loadEarlyOutApprovals = false,
   }) async {
     final employeeId = _normalizeId(employee['employee_id']);
     final branchId = _text(employee['branch_id'] ?? employee['branch']).trim();
@@ -346,9 +351,39 @@ class AttendancePayrollService {
       preloadedRosterRows: rosters,
       usePreloadedData: true,
       previewOnly: true,
+      earlyOutContext: earlyOutContext ??
+          (loadEarlyOutApprovals
+              ? await AppService.instance
+                  .loadEarlyOutContext(month, [employeeId])
+              : null),
       // Attendance allowance is not part of the three printed RM values.
       attendanceAllowanceDisqualified: false,
     );
+  }
+
+  static List<Map<String, dynamic>> withEarlyOutContext(
+      List<Map<String, dynamic>> rows,
+      Map<String, dynamic> context,
+      String employeeId) {
+    final events = (context['events'] as List? ?? []).whereType<Map>();
+    return rows.map((row) {
+      final date = '${row['attendance_date']}'.split('T').first;
+      final matching = events.where((event) =>
+          event['employee_id'] == employeeId &&
+          event['attendance_date'] == date);
+      return {...row, if (matching.isNotEmpty) '_early_out': matching.first};
+    }).toList();
+  }
+
+  static Map<String, dynamic>? _earlyOutRoster(
+      Map<String, dynamic> row, Map<String, dynamic>? fallback) {
+    final context = row['_early_out'];
+    if (context is! Map) return fallback;
+    return {
+      'shift_start': context['shift_start'],
+      'shift_end': context['shift_end'],
+      'break_minutes': context['break_allowance']
+    };
   }
 
   /// Same deductible net-working shortfall as payroll; arrival lateness is a
@@ -359,7 +394,9 @@ class AttendancePayrollService {
       required List<Map<String, dynamic>> attendance,
       required List<Map<String, dynamic>> rosterRows}) {
     if (['is_management_staff', 'is_temp_staff', 'is_support_staff']
-        .any((field) => _toBool(employee[field]))) return 0;
+        .any((field) => _toBool(employee[field]))) {
+      return 0;
+    }
     final foreign =
         '${_text(employee['address'])} ${_text(salaryDefault['address'])}'
             .toUpperCase();
@@ -376,7 +413,8 @@ class AttendancePayrollService {
     };
     return attendance.fold<int>(0, (sum, row) {
       final date = DateTime.tryParse(_text(row['attendance_date']));
-      final roster = rosters[date == null ? 0 : ((date.day - 1) ~/ 7) + 1];
+      final roster = _earlyOutRoster(
+          row, rosters[date == null ? 0 : ((date.day - 1) ~/ 7) + 1]);
       return sum +
           _shortageMinutesForRow(row, roster,
               _rosterRequiredMinutes(roster) ?? target, isForeign, id);
@@ -385,6 +423,8 @@ class AttendancePayrollService {
 
   static int _shortageMinutesForRow(Map<String, dynamic> row,
       Map<String, dynamic>? roster, int target, bool foreign, String id) {
+    if (row['_early_out'] is Map &&
+        row['_early_out']['deduction_eligible'] == false) return 0;
     final status = _text(row['status']).trim().toUpperCase();
     final work = _attendanceNetMinutes(row);
     if (!PayrollCalculationService.shouldApplyShortageDeduction(
@@ -395,9 +435,17 @@ class AttendancePayrollService {
                 .contains(status),
         worked: work > 0,
         isForeignEmployee: foreign,
-        employeeId: id)) return 0;
+        employeeId: id)) {
+      return 0;
+    }
     final shortage = target - work - _checkoutGraceMinutes(row, roster);
-    return shortage > 0 ? shortage : 0;
+    final eligible = shortage > 0 ? shortage : 0;
+    return eligible -
+        EarlyOutCalculation.exemptMinutes(
+            row: row,
+            requiredMinutes: target,
+            workedMinutes: work,
+            shortageMinutes: eligible);
   }
 
   static Future<PayrollGenerationItem> _generateEmployeePayroll({
@@ -411,6 +459,7 @@ class AttendancePayrollService {
     List<Map<String, dynamic>>? pendingPayrollWrites,
     bool usePreloadedData = false,
     bool previewOnly = false,
+    Map<String, dynamic>? earlyOutContext,
     bool? attendanceAllowanceDisqualified,
   }) async {
     final employeeId = _normalizeId(employee['employee_id']);
@@ -489,8 +538,9 @@ class AttendancePayrollService {
     final elaunPerkhidmatan = _number(salaryDefault['elaun_perkhidmatan']);
     final elaunKerajinan = _number(salaryDefault['elaun_kerajinan']);
     final elaunMakanan = _number(salaryDefault['elaun_makanan']);
-    final pcb = _number(salaryDefault['pcb']);
-    final zakat = _number(salaryDefault['zakat']);
+    var pcb = _number(salaryDefault['pcb']);
+    var zakat = _number(salaryDefault['zakat']);
+    var advance = 0.0;
 
     // Employee-specific statutory settings.
     //
@@ -527,7 +577,31 @@ class AttendancePayrollService {
     // Public holiday and unpaid days are explicit attendance flags.
     // ------------------------------------------------------------------------
 
-    final attendance = isPayrollOnlyStaff
+    final existingPayroll = previewOnly
+        ? null
+        : usePreloadedData
+            ? preloadedExistingPayroll
+            : await _getPayrollForPeriod(employeeId, _periodText(month));
+    if (existingPayroll != null) {
+      pcb = _number(existingPayroll['pcb'] ?? pcb);
+      zakat = _number(existingPayroll['zakat'] ?? zakat);
+      advance = _number(existingPayroll['advance']);
+    }
+    if (existingPayroll != null &&
+        EarlyOutCalculation.locked(existingPayroll)) {
+      return PayrollGenerationItem(
+          employeeId: employeeId,
+          employeeName: employeeName,
+          generated: false,
+          message:
+              'Published/finalized/paid payroll cannot be regenerated. Arrange an authorized adjustment.');
+    }
+    final approvalContext = earlyOutContext ??
+        (previewOnly
+            ? <String, dynamic>{'events': []}
+            : await AppService.instance
+                .loadEarlyOutContext(month, [employeeId]));
+    final rawAttendance = isPayrollOnlyStaff
         ? <Map<String, dynamic>>[]
         : usePreloadedData
             ? preloadedAttendance ?? <Map<String, dynamic>>[]
@@ -536,6 +610,8 @@ class AttendancePayrollService {
                 month,
               );
 
+    final attendance =
+        withEarlyOutContext(rawAttendance, approvalContext, employeeId);
     final branchId = _text(employee['branch_id'] ?? employee['branch']).trim();
     final rosterRows = isPayrollOnlyStaff || branchId.isEmpty
         ? <Map<String, dynamic>>[]
@@ -572,6 +648,7 @@ class AttendancePayrollService {
       isForeignEmployee: isForeignEmployee,
     );
     double totalShortageMinutes = 0.0;
+    final appliedExemptions = <String, int>{};
     double totalLateDeduction = 0.0;
     double totalOvertimeHours = 0.0;
     double totalOvertimeAmount = 0.0;
@@ -592,7 +669,7 @@ class AttendancePayrollService {
       final attendanceDate = DateTime.tryParse(_text(row['attendance_date']));
       final weekNumber =
           attendanceDate == null ? 0 : ((attendanceDate.day - 1) ~/ 7) + 1;
-      final roster = rosterByWeek[weekNumber];
+      final roster = _earlyOutRoster(row, rosterByWeek[weekNumber]);
       final dailyRequiredMinutes =
           _rosterRequiredMinutes(roster) ?? requiredWorkMinutes;
       final dailyRequiredHours = dailyRequiredMinutes / 60.0;
@@ -666,6 +743,12 @@ class AttendancePayrollService {
       // a deduction based on the normal shortage daily rate / target hours.
       final shortage = _shortageMinutesForRow(
           row, roster, dailyRequiredMinutes, isForeignEmployee, employeeId);
+      final originalRow = Map<String, dynamic>.of(row)..remove('_early_out');
+      final originalShortage = _shortageMinutesForRow(originalRow, roster,
+          dailyRequiredMinutes, isForeignEmployee, employeeId);
+      appliedExemptions['${row['attendance_date']}'.split('T').first] =
+          originalShortage - shortage;
+
       if (shortage > 0) {
         totalShortageMinutes += shortage;
         totalLateDeduction += (shortage / 60.0) * dailyShortageRate;
@@ -703,9 +786,13 @@ class AttendancePayrollService {
     totalLateDeduction =
         PayrollCalculationService.payableLateDeduction(totalLateDeduction);
 
-    final unpaidDeduction = _roundMoney(
-      unpaidDailySalary * unpaidDays,
-    );
+    final calculatedUnpaidDeduction =
+        _roundMoney(unpaidDailySalary * unpaidDays);
+    final preserveManualUnpaid =
+        EarlyOutCalculation.preserveManualUnpaid(existingPayroll);
+    final unpaidDeduction = preserveManualUnpaid
+        ? _number(existingPayroll?['unpaid_deduction'])
+        : calculatedUnpaidDeduction;
 
     foreignWorkedOffDays = foreignWorkedOffDates.length;
     final lastDay = DateTime.utc(month.year, month.month + 1, 0);
@@ -727,6 +814,37 @@ class AttendancePayrollService {
     );
 
     cutiUmum = PayrollCalculationService.roundPayrollAmount(cutiUmum);
+    final calculatedLateDeduction = totalLateDeduction;
+    final preserveManualLate =
+        EarlyOutCalculation.preserveManual(existingPayroll);
+    if (preserveManualLate) {
+      totalLateDeduction = _number(existingPayroll?['late_deduction']);
+    }
+    final earlyOutSnapshot = <String, dynamic>{
+      'version': 1,
+      'cutoff': approvalContext['cutoff'],
+      'calculated_late_deduction': calculatedLateDeduction,
+      'manual_preserved': preserveManualLate,
+      'manual_unpaid_preserved': preserveManualUnpaid,
+      'calculated_unpaid_deduction': calculatedUnpaidDeduction,
+      'exempted_minutes':
+          appliedExemptions.values.fold<int>(0, (a, b) => a + b),
+      'entries': [
+        for (final row in attendance)
+          if (row['_early_out'] is Map)
+            {
+              'attendance_date': row['attendance_date'],
+              'exempted_minutes': appliedExemptions[
+                      '${row['attendance_date']}'.split('T').first] ??
+                  0,
+              'fingerprint': row['_early_out']['fingerprint'],
+              'decision_id': row['_early_out']['decision_id'],
+              'approved_minutes': row['_early_out']['approved_minutes'],
+              'required_minutes': row['_early_out']['required_minutes'],
+              'worked_minutes': row['_early_out']['worked_minutes']
+            }
+      ]
+    };
 
     // ------------------------------------------------------------------------
     // 3. STATUTORY WAGE
@@ -763,7 +881,7 @@ class AttendancePayrollService {
     // Foreign EPF and SOCSO retain their existing full-basic calculation.
     final epfWage = isForeignEmployee ? basicSalary : statutoryWage;
     final socsoWage = isForeignEmployee ? basicSalary : statutoryWage;
-    final _ContributionRow epf;
+    _ContributionRow epf;
 
     if (!contributionsApplicable || !epfEnabled) {
       epf = const _ContributionRow(0, 0, 0, 0);
@@ -801,7 +919,7 @@ class AttendancePayrollService {
                 : 'SOCSO First Category',
           )
         : const _ContributionRow(0, 0, 0, 0);
-    final socso = _withFixedSocsoEmployee(
+    var socso = _withFixedSocsoEmployee(
       employeeId: employeeId,
       calculated: calculatedSocso,
     );
@@ -810,7 +928,7 @@ class AttendancePayrollService {
     // 6. EIS
     // ------------------------------------------------------------------------
 
-    final _ContributionRow eis;
+    _ContributionRow eis;
 
     if (contributionsApplicable && eisApplicable && eisEnabled) {
       eis = _findContribution(
@@ -826,6 +944,32 @@ class AttendancePayrollService {
         0,
       );
     }
+
+    // Preserve verifiable manual statutory overrides during regeneration.
+    final calculatedStatutory = <String, double>{
+      'epf_employee': epf.employee,
+      'epf_employer': epf.employer,
+      'socso_employee': socso.employee,
+      'socso_employer': socso.employer,
+      'eis_employee': eis.employee,
+      'eis_employer': eis.employer,
+    };
+    final manualStatutory = [
+      for (final field in calculatedStatutory.keys)
+        if (EarlyOutCalculation.preserveManualStatutory(existingPayroll, field))
+          field
+    ];
+    double contribution(String field) => manualStatutory.contains(field)
+        ? _number(existingPayroll?[field])
+        : calculatedStatutory[field]!;
+    epf = _ContributionRow(epf.start, epf.end, contribution('epf_employer'),
+        contribution('epf_employee'));
+    socso = _ContributionRow(socso.start, socso.end,
+        contribution('socso_employer'), contribution('socso_employee'));
+    eis = _ContributionRow(eis.start, eis.end, contribution('eis_employer'),
+        contribution('eis_employee'));
+    earlyOutSnapshot['calculated_statutory_fields'] = calculatedStatutory;
+    earlyOutSnapshot['manual_statutory_fields'] = manualStatutory;
 
     // 8. PERIOD
     // ------------------------------------------------------------------------
@@ -855,6 +999,7 @@ class AttendancePayrollService {
       'other_earnings': 0,
       'cuti_umum': cutiUmum,
       'late_deduction': totalLateDeduction,
+      'early_out_snapshot': earlyOutSnapshot,
       'unpaid_deduction': unpaidDeduction,
 
       // Statutory contributions
@@ -870,7 +1015,7 @@ class AttendancePayrollService {
       // Future deductions
       'pcb': pcb,
       'zakat': zakat,
-      'advance': 0,
+      'advance': advance,
 
       // Employee information
       'new_ic_no': _text(employee['new_ic_no']),
@@ -911,6 +1056,8 @@ class AttendancePayrollService {
                   'Fallback daily net hours: ${requiredWorkHours.toStringAsFixed(2)}. '
                   'Roster weeks used: ${rosterByWeek.length}. '
                   'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
+                  'Early Out approved exemption: ${appliedExemptions.values.fold<int>(0, (a, b) => a + b)} minutes. '
+                  'Manual attendance deductions preserved: ${preserveManualLate || preserveManualUnpaid}. '
                   'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
                   'Unpaid days: $unpaidDays. '
                   'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
@@ -923,12 +1070,7 @@ class AttendancePayrollService {
     // ------------------------------------------------------------------------
 
     if (!previewOnly) {
-      final existing = usePreloadedData
-          ? preloadedExistingPayroll
-          : await _getPayrollForPeriod(
-              employeeId,
-              period,
-            );
+      final existing = existingPayroll;
 
       if (existing != null) {
         if (!overwriteExisting) {
@@ -959,7 +1101,7 @@ class AttendancePayrollService {
             eisEmployee: eis.employee,
             eisEmployer: eis.employer,
             zakat: zakat,
-            advance: 0,
+            advance: advance,
             statutoryWage: statutoryWage,
           );
         }
@@ -992,10 +1134,13 @@ class AttendancePayrollService {
       employeeId: employeeId,
       employeeName: employeeName,
       calculated: true,
+      earlyOutSnapshot: earlyOutSnapshot,
       generated: !previewOnly,
       message: previewOnly
           ? 'Attendance print estimate; payroll has not been saved.'
-          : 'Payroll generated successfully.',
+          : preserveManualLate || preserveManualUnpaid
+              ? 'Payroll generated; manual/legacy attendance deductions preserved. Review Early Out in Edit Payroll to apply a reviewed amount.'
+              : 'Payroll generated successfully.',
       basicSalary: basicSalary,
       fwSalary: fwSalary,
       elaunKedatangan: elaunKedatangan,
@@ -1018,7 +1163,7 @@ class AttendancePayrollService {
       eisEmployee: eis.employee,
       eisEmployer: eis.employer,
       zakat: zakat,
-      advance: 0,
+      advance: advance,
       statutoryWage: statutoryWage,
     );
   }
@@ -1136,7 +1281,7 @@ class AttendancePayrollService {
       final response = await SupabaseService.database
           .from('attendance')
           .select(
-            'employee_id,attendance_date,work_minutes,break_minutes,'
+            'employee_id,branch_id,attendance_date,check_in,check_out,work_minutes,break_minutes,'
             'net_working_minutes,net_working_duration,overtime_minutes,'
             'overtime_duration,approved_ot_minutes,ot_authorized,is_submitted,'
             'is_public_holiday,is_unpaid,status',
@@ -1179,7 +1324,7 @@ class AttendancePayrollService {
     final response = await SupabaseService.database
         .from('attendance')
         .select(
-          'employee_id,attendance_date,work_minutes,break_minutes,'
+          'employee_id,branch_id,attendance_date,check_in,check_out,work_minutes,break_minutes,'
           'net_working_minutes,net_working_duration,overtime_minutes,'
           'overtime_duration,approved_ot_minutes,ot_authorized,is_submitted,'
           'is_public_holiday,is_unpaid,status',
@@ -1206,7 +1351,7 @@ class AttendancePayrollService {
   ) async {
     final response = await SupabaseService.database
         .from('payroll')
-        .select('id,employee_id,period')
+        .select()
         .inFilter('employee_id', employeeIds)
         .eq('period', period);
 
@@ -1244,7 +1389,7 @@ class AttendancePayrollService {
   ) async {
     final response = await SupabaseService.database
         .from('payroll')
-        .select('id,employee_id,period')
+        .select()
         .eq('employee_id', employeeId)
         .eq('period', period)
         .maybeSingle();
@@ -1446,7 +1591,8 @@ class AttendancePayrollService {
   }
 
   static int? _clockMinutes(dynamic value) {
-    final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(_text(value).trim());
+    final match = RegExp(r'^(\d{1,2}):(\d{2})')
+        .firstMatch(EarlyOutCalculation.clock(value));
     if (match == null) return null;
     final hour = int.tryParse(match.group(1)!);
     final minute = int.tryParse(match.group(2)!);
@@ -2214,6 +2360,7 @@ class PayrollGenerationItem {
   final bool calculated;
   final String message;
 
+  final Map<String, dynamic>? earlyOutSnapshot;
   final double basicSalary;
   final double fwSalary;
   final double elaunKedatangan;
@@ -2248,6 +2395,7 @@ class PayrollGenerationItem {
     required this.employeeName,
     required this.generated,
     this.calculated = false,
+    this.earlyOutSnapshot,
     required this.message,
     this.basicSalary = 0.0,
     this.fwSalary = 0.0,

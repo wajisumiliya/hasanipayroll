@@ -80,3 +80,6 @@ backup/windows/HasaniPayroll_Backups/
 
 # Android release bundles
 *.aab
+
+# Reviewable Early Out migration; execution requires approval.
+!backend/migrations/20261102_early_out_approvals.sql

@@ -1064,7 +1064,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         );
       });
 
-      final attendance = <Map<String, dynamic>>[
+      final earlyContext = await AppService.instance
+          .loadEarlyOutContext(widget.month, [_employeeId()]);
+      final attendance =
+          AttendancePayrollService.withEarlyOutContext(<Map<String, dynamic>>[
         for (final day in days)
           {
             'employee_id': _employeeId(),
@@ -1085,7 +1088,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             'is_unpaid': controllers[day.day - 1].isUnpaid,
             'is_public_holiday': controllers[day.day - 1].isPublicHoliday,
           },
-      ];
+      ], earlyContext, _employeeId());
       final deductionMinutes =
           AttendancePayrollService.attendanceShortageMinutes(
         employee: {
@@ -1117,6 +1120,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             'branch_id': widget.branchId,
           },
           month: widget.month,
+          earlyOutContext: earlyContext,
           attendance: attendance,
           salaryDefault: printSalary,
           rosterRows: printRosters,

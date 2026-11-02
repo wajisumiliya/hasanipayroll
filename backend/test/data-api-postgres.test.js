@@ -69,7 +69,10 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
       const save=await fetch(endpoint+'/reviews',{method:'POST',headers:{Authorization:'Bearer admin','Content-Type':'application/json'},body:JSON.stringify(body)});
       assert.equal(save.status,200);
       const refreshed=await (await fetch(endpoint+'?year=2026&month=10',{headers:{Authorization:'Bearer admin'}})).json();
-      assert.equal(refreshed.reports[0].count,4);assert.equal(refreshed.reports[0].events[0].review.reviewed_by,'FIX_ADMIN');
+      assert.equal(refreshed.reports[0].count,3);
+      assert.ok(!refreshed.reports[0].events.some(e=>e.date===event.date&&e.type==='arrival'));
+      const raw=await (await fetch(endpoint+'?year=2026&month=10&include_approved_arrivals=true',{headers:{Authorization:'Bearer admin'}})).json();
+      assert.equal(raw.reports[0].count,4);assert.equal(raw.reports[0].events[0].review.reviewed_by,'FIX_ADMIN');
       assert.equal('missing_records' in refreshed,false);
       for(const format of ['pdf','xlsx']) {
         const exported=await fetch(endpoint+`/export?year=2026&month=10&format=${format}&branch_id=FIX_A`,{headers:{Authorization:'Bearer admin'}});

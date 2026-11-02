@@ -1,3 +1,4 @@
+import {dropFixtureDatabase} from './fixtures/database-cleanup.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -73,5 +74,5 @@ test('saved payroll maintains inc_details atomically and preserves eligibility',
       assert.equal(await details('ROLLBACK'),'APR-26/50');
       assert.equal((await pool.query("SELECT count(*)::int AS n FROM app_private.payroll_increment_state WHERE employee_id='ROLLBACK' AND period='2026-10-01'")).rows[0].n,0);
     });
-  } finally {await pool.end();await bootstrap.query('DROP DATABASE hasani_payroll_increment_test WITH (FORCE)');await bootstrap.end();}
+  } finally {await pool.end();await dropFixtureDatabase(bootstrap, 'hasani_payroll_increment_test');await bootstrap.end();}
 });

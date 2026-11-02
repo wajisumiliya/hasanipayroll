@@ -1,3 +1,5 @@
+import 'early_out_page.dart';
+import '../services/early_out_calculation.dart';
 import '../widgets/employee_payslip_directory.dart';
 import '../services/payroll_readiness_selection.dart';
 import '../widgets/payroll_generation_dialog.dart';
@@ -400,7 +402,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   // ===========================================================================
 
   void changePage(int page) {
-    if (_attendanceOnly && !const {3, 16, 19}.contains(page)) return;
+    if (_attendanceOnly && !const {3, 16, 19, 20}.contains(page)) return;
 
     // RHB Layout is an export action, not a normal page.
     if (page == 8) {
@@ -543,6 +545,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Branch Passwords';
       case 18:
         return 'Late Report';
+      case 20:
+        return 'Early Out Approvals';
       case 19:
         return 'Attendance Late';
       default:
@@ -607,11 +611,14 @@ class _AdminDashboardState extends State<AdminDashboard>
       return switch (selectedPage) {
         16 => _attendanceStatusPage(),
         19 => _accountAttendanceLatePage(),
+        20 => const EarlyOutPage(),
         _ => _attendancePage(),
       };
     }
 
     switch (selectedPage) {
+      case 20:
+        return const EarlyOutPage();
       case 0:
         return _dashboardPage();
 
@@ -977,12 +984,14 @@ class _AdminDashboardState extends State<AdminDashboard>
               item('Attendance', Icons.event_available_rounded, 3),
               item('Status View', Icons.view_sidebar_rounded, 16),
               item('Attendance Late', Icons.alarm, 19),
+              item('Early Out', Icons.logout_rounded, 20),
             ]
           : [
               item('Overview', Icons.grid_view_rounded, 0),
               item('Employees', Icons.groups_rounded, 1),
               item('Attendance', Icons.event_available_rounded, 3),
               item('Late Report', Icons.schedule_outlined, 18),
+              item('Early Out', Icons.logout_rounded, 20),
               item('Payroll', Icons.account_balance_wallet_rounded, 2),
               item('Employee Payslips', Icons.badge_rounded, 12),
               item('EA Forms', Icons.description_rounded, 15),
@@ -10081,7 +10090,11 @@ class _AdminDashboardState extends State<AdminDashboard>
       final data = await service.loadAttendanceBatchPrint(
           employeeIds: ids, branchId: branchId, month: month);
       final bytes = await AttendanceBatchPrintService.build(
-          data: data, employeeIds: ids, month: month, branchName: branchName);
+          data: data,
+          employeeIds: ids,
+          month: month,
+          branchName: branchName,
+          earlyOutContext: await service.loadEarlyOutContext(month, ids));
       if (!mounted) return;
       await Printing.layoutPdf(
           name:
@@ -12852,7 +12865,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'Zakat RM ${item.zakat.toStringAsFixed(2)} • '
                             'Advance RM ${item.advance.toStringAsFixed(2)} • '
                             'Unpaid ${item.unpaidDays} day(s) / '
-                            'RM ${item.unpaidDeduction.toStringAsFixed(2)}',
+                            'RM ${item.unpaidDeduction.toStringAsFixed(2)}'
+                            '${item.message.contains('preserved') ? ' • ${item.message}' : ''}',
                           ),
                         ),
                       ),
@@ -13075,6 +13089,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     String? branchId;
     String? employeeId;
     Map<String, dynamic>? storedRecord;
+    Map<String, dynamic>? reviewedEarlyOutSnapshot;
     bool loading = false;
     bool saving = false;
     String? error;
@@ -13089,6 +13104,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         double.tryParse(controllers[key]!.text.trim().replaceAll(',', '')) ?? 0;
 
     void fillControllers(Map<String, dynamic>? record) {
+      reviewedEarlyOutSnapshot = null;
       for (final field in fields) {
         final value = _payrollNumber(record?[field.$1]);
         controllers[field.$1]!.text = value.toStringAsFixed(2);
@@ -13193,6 +13209,12 @@ class _AdminDashboardState extends State<AdminDashboard>
             }
 
             Future<void> savePayroll() async {
+              if (storedRecord != null &&
+                  EarlyOutCalculation.locked(storedRecord!)) {
+                setDialogState(() => error =
+                    'Published/finalized/paid payroll requires an authorized adjustment.');
+                return;
+              }
               if (employeeId == null ||
                   loading ||
                   saving ||
@@ -13230,6 +13252,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                       'PAY-$employeeId-${month.year}-${month.month.toString().padLeft(2, '0')}',
                   'employee_id': employeeId,
                   'period': period,
+                  if (reviewedEarlyOutSnapshot != null)
+                    'early_out_snapshot': reviewedEarlyOutSnapshot,
                   for (final field in fields) field.$1: number(field.$1),
                   'new_ic_no':
                       storedRecord?['new_ic_no'] ?? employee['new_ic_no'],
@@ -13261,6 +13285,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 if (!dialogContext.mounted) return;
                 setDialogState(() {
                   storedRecord = Map<String, dynamic>.from(record);
+                  reviewedEarlyOutSnapshot = null;
                   saving = false;
                   hasUnsavedChanges = false;
                   lastSavedAt = DateTime.now();
@@ -13315,7 +13340,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               await loadPayroll();
             }
 
-            Future<void> recalculateStatutoryContributions() async {
+            Future<void> recalculateStatutoryContributions(
+                {bool preserveManualOverrides = false}) async {
               final selectedId = employeeId;
               if (selectedId == null) return;
               final revision = ++statutoryRevision;
@@ -13342,8 +13368,27 @@ class _AdminDashboardState extends State<AdminDashboard>
                 if (revision != statutoryRevision || !dialogContext.mounted) {
                   return;
                 }
+                final manualFields = <String>[];
                 for (final key in automaticContributionFields) {
+                  if (preserveManualOverrides &&
+                      EarlyOutCalculation.preserveManualStatutory(
+                          storedRecord == null
+                              ? null
+                              : {...storedRecord!, key: number(key)},
+                          key)) {
+                    manualFields.add(key);
+                    continue;
+                  }
                   controllers[key]!.text = result[key]!.toStringAsFixed(2);
+                }
+                if (preserveManualOverrides &&
+                    reviewedEarlyOutSnapshot != null) {
+                  reviewedEarlyOutSnapshot!['manual_statutory_fields'] =
+                      manualFields;
+                  reviewedEarlyOutSnapshot!['calculated_statutory_fields'] = {
+                    for (final key in automaticContributionFields)
+                      key: result[key]
+                  };
                 }
                 setDialogState(() {
                   calculatingStatutory = false;
@@ -13361,6 +13406,81 @@ class _AdminDashboardState extends State<AdminDashboard>
                     calculatingStatutory = false;
                     error = 'Unable to calculate statutory contributions: $e';
                   });
+                }
+              }
+            }
+
+            Future<void> reviewEarlyOut() async {
+              if (employeeId == null || loading || saving) return;
+              if (storedRecord != null &&
+                  EarlyOutCalculation.locked(storedRecord!)) {
+                setDialogState(() => error =
+                    'Locked payroll cannot be recalculated. Arrange an authorized adjustment.');
+                return;
+              }
+              try {
+                final employee =
+                    employees.firstWhere((e) => e['employee_id'] == employeeId);
+                final attendance =
+                    await SupabaseService.getAttendanceByEmployeeMonth(
+                        employeeId!, month.year, month.month);
+                final salaryRows = await SupabaseService.database
+                    .from('employee_salary_defaults')
+                    .select()
+                    .eq('employee_id', employeeId!)
+                    .limit(1);
+                if ((salaryRows as List).isEmpty) {
+                  throw StateError('Salary defaults are missing.');
+                }
+                final preview =
+                    await AttendancePayrollService.previewEmployeePayroll(
+                        employee: employee,
+                        month: month,
+                        attendance: attendance
+                            .where((r) => r['is_submitted'] == true)
+                            .toList(),
+                        salaryDefault: {
+                          ...Map<String, dynamic>.from(
+                              (salaryRows as List).first),
+                          'basic_salary': number('basic_salary')
+                        },
+                        loadEarlyOutApprovals: true);
+                if (!dialogContext.mounted) return;
+                final apply = await showDialog<bool>(
+                    context: dialogContext,
+                    builder: (c) => AlertDialog(
+                            title: const Text('Review Early Out recalculation'),
+                            content: Text(
+                                'Current late/short-hours deduction: ${_money(number('late_deduction'))}\nRecalculated with approved Early Out: ${_money(preview.lateDeduction)}\nThis replaces the current amount, including any manual override. Other manual deduction fields stay unchanged. Save Payroll is still required.'),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(c, false),
+                                  child: const Text('Keep current')),
+                              FilledButton(
+                                  onPressed: () => Navigator.pop(c, true),
+                                  child: const Text('Apply reviewed amount'))
+                            ]));
+                if (apply == true && dialogContext.mounted) {
+                  setDialogState(() {
+                    controllers['late_deduction']!.text =
+                        preview.lateDeduction.toStringAsFixed(2);
+                    reviewedEarlyOutSnapshot = {
+                      ...?preview.earlyOutSnapshot,
+                      'manual_preserved': false,
+                      'manual_unpaid_preserved': EarlyOutCalculation
+                              .preserveManualUnpaid(storedRecord) ||
+                          (number('unpaid_deduction') - preview.unpaidDeduction)
+                                  .abs() >
+                              .005,
+                    };
+                    hasUnsavedChanges = true;
+                  });
+                  await recalculateStatutoryContributions(
+                      preserveManualOverrides: true);
+                }
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  setDialogState(() => error = 'Early Out review failed: $e');
                 }
               }
             }
@@ -13895,6 +14015,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                           : const Icon(Icons.save_outlined),
                       label: Text(saving ? 'Saving...' : 'Save Payroll'),
                     ),
+                    OutlinedButton.icon(
+                        onPressed: employeeId == null || loading || saving
+                            ? null
+                            : reviewEarlyOut,
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Review Early Out')),
                   ]),
                 ],
               ),

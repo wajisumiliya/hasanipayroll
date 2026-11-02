@@ -1,3 +1,4 @@
+import {dropFixtureDatabase} from './fixtures/database-cleanup.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {installAttendanceBatchPrintApi} from '../src/attendance-batch-print.js';
@@ -46,5 +47,5 @@ test('actual batch SQL reads selected employees and only their selected month', 
     const a=api({pool});const res=await a.run({role:'ADMIN'},{employees:'["E1","E2"]',branch_id:'A',year:2026,month:10});
     assert.equal(res.code,200);assert.equal(res.body.employees.length,2);assert.equal(res.body.attendance.length,2);assert.equal(res.body.payroll[0].overtime,'20.00');
     assert.equal((await a.run({role:'ADMIN'},{employees:'["E1","E3"]',branch_id:'A',year:2026,month:10})).code,403);
-  }finally{await pool.end();await bootstrap.query('DROP DATABASE hasani_batch_print_test WITH (FORCE)');await bootstrap.end();}
+  }finally{await pool.end();await dropFixtureDatabase(bootstrap, 'hasani_batch_print_test');await bootstrap.end();}
 });

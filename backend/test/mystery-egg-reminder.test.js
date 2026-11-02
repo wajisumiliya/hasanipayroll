@@ -1,3 +1,4 @@
+import {dropFixtureDatabase} from './fixtures/database-cleanup.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
@@ -72,7 +73,7 @@ test('rescheduled public hatch and reminder share one persisted deadline', {
   } finally {
     if (server) await new Promise(resolve => server.close(resolve));
     await pool.end();
-    await bootstrap.query('DROP DATABASE hasani_reveal_reminder_test WITH (FORCE)');
+    await dropFixtureDatabase(bootstrap, 'hasani_reveal_reminder_test');
     await bootstrap.end();
   }
 });
