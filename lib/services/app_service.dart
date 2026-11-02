@@ -441,8 +441,9 @@ class AppService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> loadLateReport(DateTime month,
-      {bool forceRefresh = false}) async {
-    final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      {bool forceRefresh = false, bool includeApprovedArrivals = false}) async {
+    final key =
+        '${month.year}-${month.month.toString().padLeft(2, '0')}-${includeApprovedArrivals ? 'raw' : 'report'}';
     final cachedAt = _lateReportCacheTime[key];
     final cached = _lateReportCache[key];
     if (!forceRefresh &&
@@ -454,7 +455,7 @@ class AppService extends ChangeNotifier {
     final existing = _lateReportInFlight[key];
     if (!forceRefresh && existing != null) return existing;
 
-    final request = _fetchLateReport(month, key);
+    final request = _fetchLateReport(month, key, includeApprovedArrivals);
     _lateReportInFlight[key] = request;
     return request.whenComplete(() {
       if (identical(_lateReportInFlight[key], request)) {
@@ -464,11 +465,12 @@ class AppService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> _fetchLateReport(
-      DateTime month, String cacheKey) async {
+      DateTime month, String cacheKey, bool includeApprovedArrivals) async {
     final data = await _getAuth(
         Uri(path: '/api/attendance/late-report', queryParameters: {
       'year': '${month.year}',
       'month': '${month.month}',
+      if (includeApprovedArrivals) 'include_approved_arrivals': 'true',
       '_fresh': '${DateTime.now().microsecondsSinceEpoch}'
     }).toString());
     if (data['ok'] != true) {
@@ -486,7 +488,9 @@ class AppService extends ChangeNotifier {
       DateTime month, List<String> employeeIds) async {
     return AttendanceAllowanceService.disqualifiedEmployees(
       employeeIds: employeeIds,
-      loadLate: () => loadLateReport(month, forceRefresh: true),
+      // Approval changes report visibility only; preserve the established allowance rule.
+      loadLate: () => loadLateReport(month,
+          forceRefresh: true, includeApprovedArrivals: true),
       loadStatus: (status, ids) => loadAttendanceStatusReport(
           month: month, status: status, employeeIds: ids),
     );

@@ -32,8 +32,8 @@ function fingerprint(event) {
   return createHash('sha256').update(JSON.stringify(event)).digest('hex');
 }
 
-// Threshold applies per employee/recorded branch. Reviews never change raw totals.
-export function buildLateReport({ attendance, daily, monthly, employees, year, month, reviews = [], minimum = 3 }) {
+// Threshold applies per employee/recorded branch after exact approved arrivals are excluded.
+export function buildLateReport({ attendance, daily, monthly, employees, year, month, reviews = [], minimum = 3, includeApprovedArrivals = false }) {
   const prefix = `${year}-${String(month).padStart(2, '0')}-`;
   const dailyByKey = new Map(daily.map(r => [key(r.branch_id, r.employee_id, dateOnly(r.roster_date)), r]));
   const weeklyByKey = new Map(monthly.filter(r => +r.roster_year === year && +r.roster_month === month)
@@ -117,7 +117,9 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     const groupKey = key(row.branch_id, row.employee_id);
     if (!grouped.has(groupKey)) grouped.set(groupKey, { branch_id: row.branch_id, employee_id: row.employee_id,
       name: names.get(key(row.employee_id)) ?? row.employee_id, ...profiles.get(key(row.employee_id)), events: [] });
-    grouped.get(groupKey).events.push(...events);
+    grouped.get(groupKey).events.push(...events.filter(event =>
+      includeApprovedArrivals || event.type !== 'arrival' || event.review?.status !== 'approved'));
+
   }
   const reports = [...grouped.values()].map(r => ({ ...r,
     events: r.events.sort((a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type)),
@@ -131,7 +133,7 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     missing_schedules_by_branch: missingByBranch, threshold: 3 };
 }
 
-async function loadPeriod(pool, year, month) {
+async function loadPeriod(pool, year, month, includeApprovedArrivals = false) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`;
   const [attendance, daily, monthly, employees, reviews] = await Promise.all([
     pool.query("SELECT to_jsonb(a) AS data FROM public.attendance a WHERE attendance_date >= $1::date AND attendance_date < ($1::date + INTERVAL '1 month') ORDER BY attendance_date, id", [start]),
@@ -141,16 +143,16 @@ async function loadPeriod(pool, year, month) {
     pool.query("SELECT id,branch_id,employee_id,event_date::text,event_type,event_fingerprint,event_snapshot,status,reason_code,reason,reviewed_by,reviewed_at FROM app_private.late_report_reviews WHERE event_date >= $1::date AND event_date < ($1::date + INTERVAL '1 month') ORDER BY id DESC", [start]),
   ]);
   return buildLateReport({ attendance: attendance.rows.map(r => r.data), daily: daily.rows.map(r => r.data),
-    monthly: monthly.rows.map(r => r.data), employees: employees.rows, reviews: reviews.rows, year, month, minimum: 0 });
+    monthly: monthly.rows.map(r => r.data), employees: employees.rows, reviews: reviews.rows, year, month, minimum: 0, includeApprovedArrivals });
 }
 const admin = req => String(req.user?.role ?? '').toUpperCase() === 'ADMIN' &&
   !req.auth?.app_metadata?.is_reviewer && req.auth?.app_metadata?.staff_scope !== 'requests';
 const validPeriod = (year, month) => Number.isInteger(year) && year >= 2000 && year <= 2100 && Number.isInteger(month) && month >= 1 && month <= 12;
 
-async function reportForMonth(pool, year, month) {
+async function reportForMonth(pool, year, month, includeApprovedArrivals = false) {
   const previousDate = new Date(Date.UTC(year, month - 2, 1));
   const [current, previous] = await Promise.all([
-    loadPeriod(pool, year, month), loadPeriod(pool, previousDate.getUTCFullYear(), previousDate.getUTCMonth() + 1),
+    loadPeriod(pool, year, month, includeApprovedArrivals), loadPeriod(pool, previousDate.getUTCFullYear(), previousDate.getUTCMonth() + 1, includeApprovedArrivals),
   ]);
   const oldCounts = new Map(previous.reports.map(r => [key(r.branch_id, r.employee_id), r.count]));
   const reports = current.reports.filter(r => r.count >= 3).map(r => ({ ...r,
@@ -168,7 +170,7 @@ export function installLateReportApi(app, { authenticate, pool, renderExport = r
     const year = Number(req.query.year), month = Number(req.query.month);
     if (!validPeriod(year, month)) return res.status(400).json({ ok: false, message: 'Invalid report month.' });
     try {
-      return res.json({ok: true, ...await reportForMonth(pool, year, month)});
+      return res.json({ok: true, ...await reportForMonth(pool, year, month, req.query.include_approved_arrivals === 'true')});
     } catch (error) {
       console.error('LATE REPORT ERROR:', error.message);
       return res.status(503).json({ ok: false, message: 'Unable to load late report. Please retry.' });
@@ -229,7 +231,7 @@ export function installLateReportApi(app, { authenticate, pool, renderExport = r
     }
     if (!reviewer) return res.status(403).json({ ok: false, message: 'Reviewer identity is missing. Sign in again.' });
     try {
-      const report = await loadPeriod(pool, parsed.getUTCFullYear(), parsed.getUTCMonth() + 1);
+      const report = await loadPeriod(pool, parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, true);
       const person = report.reports.find(r => key(r.branch_id, r.employee_id) === key(body.branch_id, body.employee_id));
       const event = person?.events.find(e => e.date === date && e.type === body.type);
       if (!event || event.fingerprint !== body.fingerprint) return res.status(409).json({ ok: false, message: 'Attendance has changed. Refresh the report before reviewing this event.' });

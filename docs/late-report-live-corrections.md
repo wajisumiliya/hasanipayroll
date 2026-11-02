@@ -27,3 +27,17 @@ Validation: 42 related Node tests and 15 Flutter tests passed. Backend syntax,
 Dart formatting and analysis passed with existing unrelated diagnostics. Flutter
 checks used the available 3.44 SDK and its local package resolution; the repository
 lockfile is unchanged.
+
+## Approved late arrivals
+
+Late-arrival events with a current matching Approved review are excluded from
+report counts, hours, severity, month comparisons, detailed exports and summary
+PDFs. Exclusion is per event, not per employee or whole day: break overruns and
+other unapproved dates still count. The three-event threshold is applied after
+exclusion. A changed timing/fingerprint or a newer pending review restores the
+event to the report. Approval audit records and attendance are retained.
+
+The raw-evidence option is used by the existing attendance-allowance calculation
+so this report-only change does not silently change payroll allowance rules.
+Raw and filtered report caches have separate keys. Review writes load raw events
+so existing approvals remain reviewable by the authenticated backend.

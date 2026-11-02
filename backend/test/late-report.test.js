@@ -90,7 +90,7 @@ test('missing check-in and missing allowance are flagged without inventing zero 
  assert.ok(result.missing_records[0].issues.includes('Missing or invalid check-in'));
  assert.ok(result.missing_records[0].issues.includes('Missing or invalid break allowance'));
 });
-test('severity boundaries are 3/5/7; approvals preserve counts and changed timing invalidates review',()=>{
+test('severity boundaries are 3/5/7; approved arrivals are excluded until reviewed timing changes',()=>{
  for(const count of [3,4,5,6,7,8]) {
    const rows=Array.from({length:count},(_,i)=>({...day(1,'09:01'),attendance_date:`2026-10-${String(i+1).padStart(2,'0')}`}));
    const daily=rows.map(r=>({...roster,roster_date:r.attendance_date}));
@@ -100,8 +100,11 @@ test('severity boundaries are 3/5/7; approvals preserve counts and changed timin
  const rows=[1,2,3].map(d=>day(d,'09:05'));
  const original=report(rows).reports[0].events[0];
  const review={id:1,branch_id:'A',employee_id:'E1',event_date:'2026-10-01',event_type:'arrival',event_fingerprint:original.fingerprint,status:'approved',reason:'Approved by manager'};
- const reviewed=report(rows,{reviews:[review]}).reports[0];
- assert.equal(reviewed.count,3);assert.equal(reviewed.events[0].review.status,'approved');
+ const reviewed=report(rows,{reviews:[review],minimum:0}).reports[0];
+ assert.equal(reviewed.count,2);assert.equal(reviewed.arrival_count,2);assert.equal(reviewed.total_minutes,10);
+ assert.equal(report(rows,{reviews:[review]}).reports.length,0);
+ const raw=report(rows,{reviews:[review],includeApprovedArrivals:true}).reports[0];
+ assert.equal(raw.count,3);assert.equal(raw.events[0].review.status,'approved');
  const changed=report([day(1,'09:10'),...rows.slice(1)],{reviews:[review]}).reports[0].events[0];
  assert.equal(changed.review,null);assert.equal(changed.review_outdated,true);assert.equal(changed.review_history.length,1);
 });
@@ -250,4 +253,27 @@ test('fresh report and PDF exports read corrected attendance rather than prior t
  assert.equal(fresh.body.reports.length,0);
  await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',view:'attendance-summary'}},response());
  assert.equal(exported.reports.length,0);
+});
+
+test('approved October 1 arrival is excluded while other dates and break overruns remain',()=>{
+ const rows=[day(1,'10:02',75),day(2,'09:05'),day(3,'09:05'),day(4,'09:05')];
+ const original=report(rows).reports[0].events.find(e=>e.date==='2026-10-01'&&e.type==='arrival');
+ const reviews=[{id:1,branch_id:'A',employee_id:'E1',event_date:'2026-10-01',event_type:'arrival',event_fingerprint:original.fingerprint,status:'approved'}];
+ const result=report(rows,{reviews}).reports[0];
+ assert.equal(result.arrival_count,3);assert.equal(result.break_count,1);assert.equal(result.count,4);
+ assert.equal(result.total_minutes,30);assert.ok(!result.events.some(e=>e.type==='arrival'&&e.date==='2026-10-01'));
+ const pending=report(rows,{reviews:[...reviews,{...reviews[0],id:2,status:'pending'}]}).reports[0];
+ assert.equal(pending.arrival_count,4);assert.equal(pending.total_minutes,92);
+});
+test('approved arrival exclusion is shared by JSON, detailed export and summary export; allowance can request raw evidence',async()=>{
+ const rows=[1,2,3].map(d=>day(d,'09:05'));
+ const event=report(rows).reports[0].events[0];
+ const reviews=[{id:1,branch_id:'A',employee_id:'E1',event_date:'2026-10-01',event_type:'arrival',event_fingerprint:event.fingerprint,status:'approved'}];
+ const pool=fakePool(rows,[],reviews);const exports=[];const routes=api(pool,async data=>{exports.push(data);return Buffer.from('pdf');});
+ const filtered=response();await routes.get({user:{role:'ADMIN'},query:{year:2026,month:10}},filtered);
+ assert.equal(filtered.body.reports.length,0);
+ const raw=response();await routes.get({user:{role:'ADMIN'},query:{year:2026,month:10,include_approved_arrivals:'true'}},raw);
+ assert.equal(raw.body.reports[0].count,3);
+ for(const view of ['', 'attendance-summary'])await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',view}},response());
+ assert.equal(exports.length,2);assert.ok(exports.every(data=>data.reports.length===0));
 });
