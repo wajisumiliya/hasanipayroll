@@ -26,8 +26,7 @@ class AttendanceBatchPrintService {
       {required Map<String, dynamic> data,
       required List<String> employeeIds,
       required DateTime month,
-      required String branchName,
-      Map<String, dynamic>? earlyOutContext}) async {
+      required String branchName}) async {
     final employees = rows(data['employees']),
         attendance = rows(data['attendance']),
         salaries = rows(data['salaries']),
@@ -44,10 +43,8 @@ class AttendanceBatchPrintService {
       final saved = payroll.where((r) => text(r['employee_id']) == id).toList();
       if (saved.length > 1)
         throw StateError('Duplicate payroll records for $id.');
-      final records = AttendancePayrollService.withEarlyOutContext(
-          attendance.where((r) => text(r['employee_id']) == id).toList(),
-          earlyOutContext ?? const {'events': []},
-          id);
+      final records =
+          attendance.where((r) => text(r['employee_id']) == id).toList();
       final rosterRows = monthly
           .where((r) =>
               text(r['employee_id']) == id &&
@@ -165,8 +162,7 @@ class AttendanceBatchPrintService {
               'socso_enabled': false,
               'eis_enabled': false
             },
-            rosterRows: rosterRows,
-            earlyOutContext: earlyOutContext);
+            rosterRows: rosterRows);
         if (!preview.calculated) throw StateError('$id: ${preview.message}');
         overtime = preview.overtimeAmount;
         lateAmount = preview.lateDeduction;

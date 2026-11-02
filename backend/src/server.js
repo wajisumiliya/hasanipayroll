@@ -1,4 +1,3 @@
-import { installEarlyOutApi } from './early-out-api.js';
 import { installAttendanceRosterApi } from './attendance-roster-api.js';
 import { installEmployeeAttendanceMonthApi } from './employee-attendance-month.js';
 import { installAttendanceBatchPrintApi } from './attendance-batch-print.js';
@@ -1871,7 +1870,6 @@ app.get("/api/branches", authenticate, async (req, res) => {
 });
 
 installLateReportApi(app, { authenticate, pool });
-installEarlyOutApi(app, { authenticate, pool });
 installAttendanceStatusReportApi(app, { authenticate, pool });
 installApprovedOtReportApi(app, { authenticate, pool });
 installIncrementReportApi(app, { authenticate, pool });

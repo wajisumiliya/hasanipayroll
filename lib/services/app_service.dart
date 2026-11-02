@@ -440,57 +440,6 @@ class AppService extends ChangeNotifier {
           data['message']?.toString() ?? 'Unable to submit attendance.');
   }
 
-  Future<Map<String, dynamic>> loadEarlyOutContext(
-      DateTime month, List<String> employeeIds) async {
-    final data = await _getAuth(Uri(
-        path: '/api/attendance/early-out/payroll-context',
-        queryParameters: {
-          'year': '${month.year}',
-          'month': '${month.month}',
-          'employees': jsonEncode(employeeIds),
-          '_fresh': '${DateTime.now().microsecondsSinceEpoch}'
-        }).toString());
-    if (data['ok'] != true) {
-      throw StateError(
-          data['message']?.toString() ?? 'Cannot verify Early Out approvals.');
-    }
-    return data;
-  }
-
-  Future<Map<String, dynamic>> loadEarlyOutList(
-      {required DateTime month,
-      String branch = '',
-      String employee = '',
-      String status = 'ALL',
-      String search = '',
-      int page = 1}) async {
-    final data =
-        await _getAuth(Uri(path: '/api/attendance/early-out', queryParameters: {
-      'year': '${month.year}',
-      'month': '${month.month}',
-      'branch_id': branch,
-      'employee_id': employee,
-      'status': status,
-      'search': search,
-      'page': '$page',
-      'limit': '20',
-      '_fresh': '${DateTime.now().microsecondsSinceEpoch}'
-    }).toString());
-    if (data['ok'] != true) {
-      throw StateError(data['message']?.toString() ?? 'Cannot load Early Out.');
-    }
-    return data;
-  }
-
-  Future<void> saveEarlyOutDecision(Map<String, dynamic> decision) async {
-    final data = await _postAuth('/api/attendance/early-out/decision', decision,
-        authenticated: true);
-    if (data['ok'] != true) {
-      throw StateError(
-          data['message']?.toString() ?? 'Unable to save decision.');
-    }
-  }
-
   Future<Map<String, dynamic>> loadLateReport(DateTime month,
       {bool forceRefresh = false, bool includeApprovedArrivals = false}) async {
     final key =
