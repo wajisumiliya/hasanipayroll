@@ -50,7 +50,9 @@ class _LateReportPageState extends State<LateReportPage> {
   }
 
   void _load() {
-    _report = (widget.loader ?? AppService.instance.loadLateReport)(_month);
+    _report = widget.loader != null
+        ? widget.loader!(_month)
+        : AppService.instance.loadLateReport(_month, forceRefresh: true);
   }
 
   String _branchName(dynamic id) {
@@ -448,12 +450,14 @@ class _LateReportPageState extends State<LateReportPage> {
   }
 
   Future<void> _openAttendance(Map<String, dynamic> person) => showDialog<void>(
-      context: context,
-      builder: (_) => AttendanceDialog(
-          employee: person,
-          month: _month,
-          branchId: '${person['branch_id']}',
-          editable: false));
+          context: context,
+          builder: (_) => AttendanceDialog(
+              employee: person,
+              month: _month,
+              branchId: '${person['branch_id']}',
+              editable: false)).then((_) {
+        if (mounted) setState(_load);
+      });
 
   Widget _results(Map<String, dynamic> data) {
     final all = _filtered(data['reports']);

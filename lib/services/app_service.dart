@@ -452,21 +452,25 @@ class AppService extends ChangeNotifier {
       return cached;
     }
     final existing = _lateReportInFlight[key];
-    if (existing != null) return existing;
+    if (!forceRefresh && existing != null) return existing;
 
     final request = _fetchLateReport(month, key);
     _lateReportInFlight[key] = request;
-    return request.whenComplete(() => _lateReportInFlight.remove(key));
+    return request.whenComplete(() {
+      if (identical(_lateReportInFlight[key], request)) {
+        _lateReportInFlight.remove(key);
+      }
+    });
   }
 
   Future<Map<String, dynamic>> _fetchLateReport(
       DateTime month, String cacheKey) async {
-    final data = await _getAuth(Uri(
-        path: '/api/attendance/late-report',
-        queryParameters: {
-          'year': '${month.year}',
-          'month': '${month.month}'
-        }).toString());
+    final data = await _getAuth(
+        Uri(path: '/api/attendance/late-report', queryParameters: {
+      'year': '${month.year}',
+      'month': '${month.month}',
+      '_fresh': '${DateTime.now().microsecondsSinceEpoch}'
+    }).toString());
     if (data['ok'] != true) {
       throw StateError(
           data['message']?.toString() ?? 'Unable to load late report.');
@@ -496,6 +500,7 @@ class AppService extends ChangeNotifier {
       List<String>? employeeIds}) async {
     final data = await _getAuth(
         Uri(path: '/api/attendance/late-report/export', queryParameters: {
+      '_fresh': '${DateTime.now().microsecondsSinceEpoch}',
       'year': '${month.year}',
       'month': '${month.month}',
       'format': format,

@@ -592,6 +592,21 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                     child: const Text('Close'),
                   ),
                   const Spacer(),
+                  if (AppService.instance.isAdmin && submitted)
+                    OutlinedButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              final changed = await _reviewDailyRoster(
+                                  daysInMonth,
+                                  editingSubmitted: true);
+                              if (changed && mounted)
+                                await _loadAttendance(silent: true);
+                            },
+                      icon: const Icon(Icons.edit_calendar_outlined),
+                      label: const Text('Edit shift roster'),
+                    ),
+                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: printingAttendance ? null : _printAttendance,
                     icon: printingAttendance
@@ -668,12 +683,17 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     );
   }
 
-  Future<bool> _reviewDailyRoster(int submissionEnd) async {
-    final firstDay = List<int>.generate(submissionEnd, (index) => index + 1)
-        .firstWhere((day) => !_submittedDays.contains(day), orElse: () => 0);
+  Future<bool> _reviewDailyRoster(int submissionEnd,
+      {bool editingSubmitted = false}) async {
+    if (editingSubmitted && !AppService.instance.isAdmin) return false;
+    final firstDay = editingSubmitted
+        ? 1
+        : List<int>.generate(submissionEnd, (index) => index + 1).firstWhere(
+            (day) => !_submittedDays.contains(day),
+            orElse: () => 0);
     if (firstDay == 0) return true;
 
-    const shifts = <String, List<dynamic>>{
+    final shifts = <String, List<dynamic>>{
       '09:00 - 17:30 (60 min break)': ['09:00', '17:30', 60],
       '09:00 - 18:00 (90 min break)': ['09:00', '18:00', 90],
       '09:00 - 20:00 (60 min break)': ['09:00', '20:00', 60],
@@ -698,8 +718,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     final choices = <int, String?>{};
 
     for (var day = firstDay; day <= submissionEnd; day++) {
-      final existing = _dailyRoster[day];
-      final type = existing?['assignment_type']?.toString() ?? '';
+      final existing = _dailyRoster[day] ??
+          (editingSubmitted ? _weeklyRoster[((day - 1) ~/ 7) + 1] : null);
+      final type = existing?['assignment_type']?.toString() ??
+          (existing == null ? '' : 'SHIFT');
       if (type == 'SHIFT') {
         final start = _shortRosterTime(existing?['shift_start']);
         final end = _shortRosterTime(existing?['shift_end']);
@@ -712,6 +734,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             break;
           }
         }
+        if (choices[day] == null && start.isNotEmpty && end.isNotEmpty) {
+          final label = '$start - $end ($breaks min break)';
+          shifts[label] = [start, end, breaks];
+          choices[day] = label;
+        }
       } else if (nonWorking.contains(type)) {
         choices[day] = type;
       } else if (nonWorking.contains(controllers[day - 1].status)) {
@@ -719,6 +746,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       }
     }
 
+    final originalChoices = Map<int, String?>.of(choices);
     bool savingRoster = false;
     String? rosterError;
     final result = await showDialog<bool>(
@@ -730,7 +758,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             const Icon(Icons.calendar_month, color: Color(0xFF3155D9)),
             const SizedBox(width: 10),
             Expanded(
-                child: Text('Assign roster: days $firstDay-$submissionEnd')),
+                child: Text(
+                    '${editingSubmitted ? 'Correct shift roster' : 'Assign roster'}: days $firstDay-$submissionEnd')),
           ]),
           content: SizedBox(
             width: 560,
@@ -827,7 +856,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                   : () async {
                       final missing = <int>[
                         for (var day = firstDay; day <= submissionEnd; day++)
-                          if (choices[day] == null) day
+                          if (!editingSubmitted && choices[day] == null) day
                       ];
                       if (missing.isNotEmpty) {
                         setDialogState(() => rosterError =
@@ -854,6 +883,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                                 .trim();
                         final rows = <Map<String, dynamic>>[];
                         for (var day = firstDay; day <= submissionEnd; day++) {
+                          if (editingSubmitted &&
+                              (choices[day] == null ||
+                                  choices[day] == originalChoices[day])) {
+                            continue;
+                          }
                           final choice = choices[day]!;
                           final shift = shifts[choice];
                           final type = shift == null ? choice : 'SHIFT';
@@ -870,7 +904,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                             'updated_at': updatedAt,
                           };
                           rows.add(row);
-                          _dailyRoster[day] = row;
+                          if (editingSubmitted) {
+                            continue;
+                          }
                           final attendance = controllers[day - 1];
                           if (shift == null) {
                             attendance.status = type;
@@ -883,7 +919,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                             attendance.isUnpaid = false;
                           }
                         }
-                        await AppService.instance.saveNeonDailyRosters(rows);
+                        if (rows.isNotEmpty) {
+                          await AppService.instance.saveNeonDailyRosters(rows);
+                          for (final row in rows) {
+                            _dailyRoster[
+                                DateTime.parse(row['roster_date'] as String)
+                                    .day] = row;
+                          }
+                        }
                         if (dialogContext.mounted) {
                           Navigator.pop(dialogContext, true);
                         }
@@ -901,7 +944,11 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.check_circle_outline),
-              label: Text(savingRoster ? 'Saving...' : 'Continue to Submit'),
+              label: Text(savingRoster
+                  ? 'Saving...'
+                  : editingSubmitted
+                      ? 'Save roster corrections'
+                      : 'Continue to Submit'),
             ),
           ],
         ),

@@ -58,8 +58,8 @@ export function buildLateReport({ attendance, daily, monthly, employees, year, m
     const dailyRoster = dailyByKey.get(identity);
     const weeklyRoster = weeklyByKey.get(key(row.branch_id, row.employee_id, Math.floor((+date.slice(8) - 1) / 7) + 1));
     const roster = dailyRoster ?? weeklyRoster;
-    const scheduledStart = firstClock(dailyRoster?.shift_start, row.scheduled_shift_start, weeklyRoster?.shift_start);
-    const scheduledEnd = firstClock(dailyRoster?.shift_end, row.scheduled_shift_end, weeklyRoster?.shift_end);
+    const scheduledStart = firstClock(dailyRoster?.shift_start, weeklyRoster?.shift_start, row.scheduled_shift_start);
+    const scheduledEnd = firstClock(dailyRoster?.shift_end, weeklyRoster?.shift_end, row.scheduled_shift_end);
     const actualValue = firstClock(row.check_in, row.working_in);
     if (nonWorking.has(key(row.status)) || nonWorking.has(key(roster?.assignment_type))) continue;
     const actual = clock(actualValue);
@@ -163,6 +163,7 @@ async function reportForMonth(pool, year, month) {
 
 export function installLateReportApi(app, { authenticate, pool, renderExport = renderLateReport }) {
   app.get('/api/attendance/late-report', authenticate, async (req, res) => {
+    res.set?.('Cache-Control', 'no-store');
     if (!admin(req)) return res.status(403).json({ ok: false, message: 'Administrator access required.' });
     const year = Number(req.query.year), month = Number(req.query.month);
     if (!validPeriod(year, month)) return res.status(400).json({ ok: false, message: 'Invalid report month.' });
@@ -175,6 +176,7 @@ export function installLateReportApi(app, { authenticate, pool, renderExport = r
   });
 
   app.get('/api/attendance/late-report/export', authenticate, async (req, res) => {
+    res.set?.('Cache-Control', 'no-store');
     if (!admin(req)) return res.status(403).json({ok: false, message: 'Administrator access required.'});
     const year = Number(req.query.year), month = Number(req.query.month);
     const format = String(req.query.format ?? '');

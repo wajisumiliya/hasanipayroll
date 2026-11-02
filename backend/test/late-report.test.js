@@ -221,3 +221,33 @@ test('explicit saved late minutes are retained when a legacy roster is gone',()=
  const result=report([1,2,3].map(d=>({...day(d,'09:35'),status:'Late',late_minutes:35})),{monthly:[]}).reports[0];
  assert.equal(result.total_minutes,105);assert.equal(result.events[0].source,'saved_late_minutes');
 });
+
+test('corrected weekly roster overrides old attendance shift snapshots',()=>{
+ const rows=[1,2,3].map(d=>({...day(d,'10:02'),scheduled_shift_start:'09:00',scheduled_shift_end:'18:00',status:'Late'}));
+ const stale=report(rows).reports[0]; assert.equal(stale.total_minutes,186);
+ const corrected=report(rows,{monthly:[{...roster,shift_start:'10:00',shift_end:'19:00'}]}).reports[0];
+ assert.equal(corrected.total_minutes,6); assert.equal(corrected.events[0].scheduled,'10:00');
+ const fixedTimes=report(rows.map(row=>({...row,check_in:'10:00'})),{monthly:[{...roster,shift_start:'10:00',shift_end:'19:00'}]});
+ assert.equal(fixedTimes.reports.length,0);
+});
+test('submitted daily roster corrections change exact totals and obsolete prior reviews',()=>{
+ const rows=[1,2,3].map(d=>({...day(d,'10:02'),is_submitted:true}));
+ const daily=rows.map(row=>({...roster,roster_date:row.attendance_date,shift_start:'09:00'}));
+ const original=report(rows,{daily}).reports[0];
+ const review={id:1,branch_id:'A',employee_id:'E1',event_date:'2026-10-01',event_type:'arrival',event_fingerprint:original.events[0].fingerprint};
+ const corrected=report(rows,{daily:daily.map(r=>({...r,shift_start:'10:00'})),reviews:[review]}).reports[0];
+ assert.equal(corrected.total_minutes,6);assert.equal(corrected.events[0].review,null);assert.equal(corrected.events[0].review_outdated,true);
+});
+test('fresh report and PDF exports read corrected attendance rather than prior totals',async()=>{
+ const rows=[1,2,3].map(d=>day(d,'10:02'));
+ const pool=fakePool(rows);let exported;
+ const routes=api(pool,async data=>{exported=data;return Buffer.from('pdf');});
+ const headers={};const first=response();first.set=(k,v)=>{headers[k]=v;return first;};
+ await routes.get({user:{role:'ADMIN'},query:{year:2026,month:10}},first);
+ assert.equal(first.body.reports[0].total_minutes,186);assert.equal(headers['Cache-Control'],'no-store');
+ rows.forEach(row=>row.check_in='09:00');
+ const fresh=response();await routes.get({user:{role:'ADMIN'},query:{year:2026,month:10}},fresh);
+ assert.equal(fresh.body.reports.length,0);
+ await routes.export({user:{role:'ADMIN'},query:{year:2026,month:10,format:'pdf',view:'attendance-summary'}},response());
+ assert.equal(exported.reports.length,0);
+});
