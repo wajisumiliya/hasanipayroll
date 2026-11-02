@@ -177,6 +177,7 @@ class AttendanceBatchPrintService {
           isForeignEmployee: !local,
           month: month,
           days: days,
+          basicSalary: double.tryParse('${salary?['basic_salary']}') ?? 0,
           approvedOtAmount: overtime,
           lateDeductionAmount: lateAmount,
           unpaidDeductionAmount: unpaid,

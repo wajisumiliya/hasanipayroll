@@ -46,6 +46,62 @@ class PayrollCalculationService {
     return explicitDays > unused ? explicitDays : unused;
   }
 
+  /// One normal-rate day for the unused fifth OFF in a completed 31-day month.
+  /// Every calendar day must have a recognised attendance outcome; missing,
+  /// duplicate or absent days must not create an inferred bonus.
+  static int localUnusedOffBonusDays({
+    required DateTime month,
+    required bool isLocalEmployee,
+    required List<Map<String, dynamic>> attendance,
+    DateTime? now,
+  }) {
+    final last = DateTime.utc(month.year, month.month + 1, 0);
+    final malaysia =
+        (now ?? DateTime.now()).toUtc().add(const Duration(hours: 8));
+    final today = DateTime.utc(malaysia.year, malaysia.month, malaysia.day);
+    if (!isLocalEmployee || last.day != 31 || last.isAfter(today)) return 0;
+    final dates = <int>{};
+    var off = 0;
+    for (final row in attendance) {
+      final date = DateTime.tryParse('${row['attendance_date'] ?? ''}');
+      if (date == null ||
+          date.year != month.year ||
+          date.month != month.month) {
+        continue;
+      }
+      if (!dates.add(date.day)) return 0;
+      final status = '${row['status'] ?? ''}'.trim().toUpperCase();
+      final net = num.tryParse('${row['net_working_minutes'] ?? 0}') ?? 0;
+      if (status == 'OFF' && net <= 0) {
+        off++;
+      } else if (net <= 0 &&
+          !const {
+            'MC',
+            'MEDICAL LEAVE',
+            'PL',
+            'AL',
+            'EL',
+            'PH',
+            'PH-OFF',
+            'PH-SPL',
+            'PH-GANTI',
+            'PH-GUNTI'
+          }.contains(status) &&
+          !isUnpaidAttendanceStatus(status)) {
+        return 0;
+      }
+    }
+    return dates.length == 31 && off == 4 ? 1 : 0;
+  }
+
+  static double localUnusedOffBonusAmount({
+    required double basicSalary,
+    required int bonusDays,
+  }) =>
+      basicSalary > 0 && bonusDays > 0
+          ? roundPayrollAmount(basicSalary / 26 * bonusDays)
+          : 0;
+
   /// Daily rate used only for explicit UNPAID attendance days.
   /// The divisor is the actual number of calendar days in the payroll month.
   static double unpaidDailyRate({

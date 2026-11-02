@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'payroll_calculation_service.dart';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
@@ -54,6 +55,7 @@ class AttendancePrintSheet {
       required this.isForeignEmployee,
       required this.month,
       required this.days,
+      this.basicSalary = 0,
       this.approvedOtAmount,
       this.lateDeductionAmount,
       this.unpaidDeductionAmount,
@@ -63,6 +65,7 @@ class AttendancePrintSheet {
   final bool isForeignEmployee, estimatedAmounts;
   final DateTime month;
   final List<AttendancePrintDay> days;
+  final double basicSalary;
   final int? deductionMinutes;
   final double? approvedOtAmount, lateDeductionAmount, unpaidDeductionAmount;
 }
@@ -85,6 +88,7 @@ class AttendancePdfService {
     required List<AttendancePrintDay> days,
     bool estimatedAmounts = false,
     int? deductionMinutes,
+    double basicSalary = 0,
     double? approvedOtAmount,
     double? lateDeductionAmount,
     double? unpaidDeductionAmount,
@@ -99,6 +103,7 @@ class AttendancePdfService {
         isForeignEmployee: isForeignEmployee,
         month: month,
         days: days,
+        basicSalary: basicSalary,
         approvedOtAmount: approvedOtAmount,
         lateDeductionAmount: lateDeductionAmount,
         unpaidDeductionAmount: unpaidDeductionAmount,
@@ -148,8 +153,25 @@ class AttendancePdfService {
     final breakTotal = days.fold<int>(0, (sum, day) => sum + day.breakMinutes);
     final netTotal = days.fold<int>(0, (sum, day) => sum + day.netMinutes);
     final otTotal = days.fold<int>(0, (sum, day) => sum + day.overtimeMinutes);
-    final lateTotal = sheet.deductionMinutes ??
-        days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
+    final bonusDays = PayrollCalculationService.localUnusedOffBonusDays(
+        month: month,
+        isLocalEmployee: !isForeignEmployee,
+        attendance: [
+          for (final day in days)
+            {
+              'attendance_date':
+                  DateTime(month.year, month.month, day.day).toIso8601String(),
+              'status': day.status,
+              'net_working_minutes': day.netMinutes,
+            }
+        ]);
+    final bonusMinutes = bonusDays * 450;
+    final bonusAmount = PayrollCalculationService.localUnusedOffBonusAmount(
+        basicSalary: sheet.basicSalary, bonusDays: bonusDays);
+    final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
+    // Arrival lateness and net-work shortfall are different measurements.
+    // Never infer a deductible shortage from arrival minutes alone.
+    final shortfallTotal = sheet.deductionMinutes;
     final unpaidTotal = days.where((day) {
           final status = day.status.trim().toUpperCase();
           return status == 'UL' ||
@@ -192,12 +214,17 @@ class AttendancePdfService {
                   _summary(
                       'BREAK HOURS', 'All recorded breaks', breakTotal, _red),
                   pw.SizedBox(width: 5),
+                  _summary('LATE HOURS', 'Arrival after shift', lateTotal,
+                      PdfColors.black),
+                  pw.SizedBox(width: 5),
                   _summary(
-                    'LATE HOURS',
+                    'SHORT HOURS',
                     isForeignEmployee
                         ? 'Exempt from deduction'
-                        : 'Deductible shortfall',
-                    lateTotal,
+                        : shortfallTotal == null
+                            ? 'Not calculated'
+                            : 'Deductible shortfall',
+                    shortfallTotal,
                     PdfColors.black,
                     lateDeductionAmount,
                   ),
@@ -213,19 +240,35 @@ class AttendancePdfService {
                   _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
                   pw.SizedBox(width: 5),
                   _summary(
-                    'APPROVED OT',
-                    'Authorized overtime',
-                    otTotal,
+                    bonusDays > 0 ? 'OT / BONUS HOURS' : 'APPROVED OT',
+                    bonusDays > 0
+                        ? 'Includes normal-rate day'
+                        : 'Authorized overtime',
+                    otTotal + bonusMinutes,
                     PdfColors.black,
                     approvedOtAmount,
                   ),
                 ],
               ),
-              if (lateTotal == 0 && (lateDeductionAmount ?? 0) > 0)
+              if (bonusDays > 0)
+                pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 5),
+                    child: pw.Text(
+                        'Unused fifth OFF: 07:30 bonus hours at normal basic salary / 26'
+                        '${sheet.basicSalary > 0 ? " = RM ${bonusAmount.toStringAsFixed(2)}" : ""}. '
+                        'Paid through Bonus, separately from the OT amount above. Current attendance entitlement.',
+                        style: const pw.TextStyle(fontSize: 6))),
+              if (shortfallTotal == 0 && (lateDeductionAmount ?? 0) > 0)
                 pw.Padding(
                     padding: const pw.EdgeInsets.only(top: 5),
                     child: pw.Text(
                         'Review saved payroll: the late deduction has no matching deductible shortfall in current attendance.',
+                        style: const pw.TextStyle(fontSize: 6))),
+              if (lateTotal == 0 && (shortfallTotal ?? 0) > 0)
+                pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 5),
+                    child: pw.Text(
+                        'No late arrivals. Short hours are net-work shortfall, including eligible excess breaks or early checkout.',
                         style: const pw.TextStyle(fontSize: 6))),
               if (estimatedAmounts)
                 pw.Padding(
@@ -417,11 +460,11 @@ class AttendancePdfService {
       );
 
   static pw.Widget _summary(
-          String label, String description, int minutes, PdfColor color,
+          String label, String description, int? minutes, PdfColor color,
           [double? amount]) =>
       pw.Expanded(
         child: pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 6),
           decoration: pw.BoxDecoration(
               color: PdfColors.white,
               border: pw.Border.all(color: color, width: .7)),
@@ -439,7 +482,7 @@ class AttendancePdfService {
                     style: const pw.TextStyle(
                         fontSize: 4.5, color: PdfColors.black)),
                 pw.SizedBox(height: 2),
-                pw.Text(_duration(minutes),
+                pw.Text(minutes == null ? '--:--' : _duration(minutes),
                     maxLines: 1,
                     style: pw.TextStyle(
                         fontSize: 10,

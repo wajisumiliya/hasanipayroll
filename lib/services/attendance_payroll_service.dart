@@ -722,6 +722,20 @@ class AttendancePayrollService {
     if (foreignRestDayOtDays > 0) {
       totalOvertimeAmount += (basicSalary / 28.0) * foreignRestDayOtDays;
     }
+    final restDayBonusDays = PayrollCalculationService.localUnusedOffBonusDays(
+      month: month,
+      isLocalEmployee: !isForeignEmployee && !isPayrollOnlyStaff,
+      attendance: [
+        for (final row in attendance)
+          {
+            ...row,
+            'net_working_minutes': _attendanceNetMinutes(row),
+          }
+      ],
+    );
+    final restDayBonusAmount =
+        PayrollCalculationService.localUnusedOffBonusAmount(
+            basicSalary: basicSalary, bonusDays: restDayBonusDays);
     final overtimeAmount = PayrollCalculationService.roundPayrollAmount(
       totalOvertimeAmount,
     );
@@ -850,7 +864,7 @@ class AttendancePayrollService {
 
       // Attendance / earnings
       'overtime': overtimeAmount,
-      'bonus': 0,
+      'bonus': restDayBonusAmount,
       'commission': 0,
       'other_earnings': 0,
       'cuti_umum': cutiUmum,
@@ -903,6 +917,7 @@ class AttendancePayrollService {
                   'Foreign worked OFF days: $foreignWorkedOffDays. '
                   'Foreign OFF days taken: ${foreignTakenOffDates.length}. '
                   'Foreign rest-day OT paid days: $foreignRestDayOtDays. '
+                  'Local unused OFF bonus days: $restDayBonusDays; amount: $restDayBonusAmount (basic/26, normal rate). '
                   'OT amount: ${overtimeAmount.toStringAsFixed(2)}. '
                   'Public holidays worked: $publicHolidayWorkedDays. '
                   'Public holiday off days: $publicHolidayOffDays. '
@@ -945,6 +960,8 @@ class AttendancePayrollService {
             elaunMakanan: elaunMakanan,
             overtimeDuration: totalOvertimeHours,
             overtimeAmount: overtimeAmount,
+            restDayBonusAmount: restDayBonusAmount,
+            restDayBonusMinutes: restDayBonusDays * 450,
             cutiUmum: cutiUmum,
             lateDeduction: totalLateDeduction,
             unpaidDeduction: unpaidDeduction,
@@ -1004,6 +1021,8 @@ class AttendancePayrollService {
       elaunMakanan: elaunMakanan,
       overtimeDuration: totalOvertimeHours,
       overtimeAmount: overtimeAmount,
+      restDayBonusAmount: restDayBonusAmount,
+      restDayBonusMinutes: restDayBonusDays * 450,
       cutiUmum: cutiUmum,
       lateDeduction: totalLateDeduction,
       unpaidDeduction: unpaidDeduction,
@@ -2222,6 +2241,8 @@ class PayrollGenerationItem {
   final double elaunMakanan;
   final double overtimeDuration;
   final double overtimeAmount;
+  final double restDayBonusAmount;
+  final int restDayBonusMinutes;
   final double cutiUmum;
   final double lateDeduction;
   final double unpaidDeduction;
@@ -2257,6 +2278,8 @@ class PayrollGenerationItem {
     this.elaunMakanan = 0.0,
     this.overtimeDuration = 0.0,
     this.overtimeAmount = 0.0,
+    this.restDayBonusAmount = 0.0,
+    this.restDayBonusMinutes = 0,
     this.cutiUmum = 0.0,
     this.lateDeduction = 0.0,
     this.unpaidDeduction = 0.0,

@@ -1141,6 +1141,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         days: days,
         estimatedAmounts: estimatedAmounts,
         deductionMinutes: deductionMinutes,
+        basicSalary: double.tryParse('${printSalary?['basic_salary']}') ?? 0,
         approvedOtAmount: approvedOtAmount,
         lateDeductionAmount: lateDeductionAmount,
         unpaidDeductionAmount: unpaidDeductionAmount,
