@@ -169,6 +169,20 @@ See `backend/.env.example` for available settings. At minimum, a production depl
 
 **Do not commit `.env` files or real secrets.** Do not run `prisma db push` against the imported production database as a substitute for reviewed migrations.
 
+### Salary transfer method
+
+Employee information includes **Salary transfer via**: RHB, Instant or Cash.
+Existing and newly entered bank accounts default to RHB; employees without an
+account stay unselected until Instant or Cash is chosen. Explicit choices are
+preserved when other employee details change.
+
+Branch and all-branch payroll Excel footers sum net salaries into Payroll (RHB),
+Instant and Cash using formulas with cached totals. Exports flag employees whose
+method is still unselected. RHB bank files exclude employees assigned Instant or
+Cash. Deploy the backend first: startup applies the
+`20261103_employee_salary_transfer.sql` migration before the frontend uses the new
+field. This changes payment routing, not payroll calculation rules.
+
 ## API and authorization
 
 - Flutter authenticates with the Node backend and sends its bearer JWT on protected requests.

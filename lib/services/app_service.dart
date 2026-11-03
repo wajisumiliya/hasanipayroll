@@ -1252,6 +1252,9 @@ class AppService extends ChangeNotifier {
       bankAccount: data['bank_account']?.toString() ??
           data['bankAccount']?.toString() ??
           '',
+      salaryTransferMethod: data['salary_transfer_method']?.toString() ??
+          data['salaryTransferMethod']?.toString() ??
+          '',
       epfNo: data['epf_no']?.toString() ?? data['epfNo']?.toString() ?? '',
       socsoNo:
           data['socso_no']?.toString() ?? data['socsoNo']?.toString() ?? '',
@@ -4455,6 +4458,9 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
       'new_ic_no': employee.newIcNo,
       'bank_code': employee.bankCode,
       'bank_account': employee.bankAccount,
+      'salary_transfer_method': employee.salaryTransferMethod.isEmpty
+          ? null
+          : employee.salaryTransferMethod,
       'epf_no': employee.epfNo,
       'socso_no': employee.socsoNo,
       'phone': employee.phone,

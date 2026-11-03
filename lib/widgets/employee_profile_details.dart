@@ -1,3 +1,4 @@
+import '../services/salary_transfer.dart';
 import 'package:flutter/material.dart';
 
 import 'employee_photo.dart';
@@ -46,7 +47,7 @@ class _EmployeeProfileDetailsState extends State<EmployeeProfileDetails> {
           : employee['is_support_staff'] == true
               ? 'Support Staff'
               : employee['is_other_staff'] == true
-                  ? 'Other Staff'
+                  ? 'Intern/Practical'
                   : 'Regular Staff';
 
   @override
@@ -104,6 +105,13 @@ class _EmployeeProfileDetailsState extends State<EmployeeProfileDetails> {
                       [
                         ('Bank Code', value('bank_code')),
                         ('Bank Account', value('bank_account')),
+                        (
+                          'Salary transfer via',
+                          SalaryTransfer.label(SalaryTransfer.resolve(
+                            employee['salary_transfer_method'],
+                            employee['bank_account'],
+                          )),
+                        ),
                         ('EPF No.', value('epf_no')),
                         ('SOCSO No.', value('socso_no')),
                       ],

@@ -1,3 +1,5 @@
+import '../services/salary_transfer.dart';
+import '../widgets/salary_transfer_field.dart';
 import '../widgets/employee_payslip_directory.dart';
 import '../services/payroll_readiness_selection.dart';
 import '../widgets/payroll_generation_dialog.dart';
@@ -5730,6 +5732,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
         );
 
+    String salaryTransferMethod = '';
+
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -5761,6 +5765,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                         _dialogField(ic, 'New IC No'),
                         _dialogField(bank, 'Bank Code'),
                         _dialogField(account, 'Bank Account'),
+                        SalaryTransferField(
+                          account: account,
+                          method: salaryTransferMethod,
+                          onChanged: (value) => setDialogState(
+                              () => salaryTransferMethod = value),
+                        ),
                         _dialogField(epfNo, 'EPF No.'),
                         _dialogField(socsoNo, 'SOCSO No.'),
                         _dialogField(phone, 'Phone'),
@@ -6091,7 +6101,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Other Staff'),
+                        title: const Text('Intern/Practical'),
                         subtitle: const Text(
                           'Regular attendance and payroll; included in HRDF when eligible.',
                         ),
@@ -6192,6 +6202,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                               newIcNo: ic.text.trim(),
                               bankCode: bank.text.trim(),
                               bankAccount: account.text.trim(),
+                              salaryTransferMethod: SalaryTransfer.resolve(
+                                  salaryTransferMethod, account.text),
                               epfNo: epfNo.text.trim(),
                               socsoNo: socsoNo.text.trim(),
                               phone: phone.text.trim(),
@@ -6295,6 +6307,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     bool supportStaff = employee.isSupportStaff;
     bool otherStaff = employee.isOtherStaff;
 
+    String salaryTransferMethod = employee.salaryTransferMethod;
+
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -6346,6 +6360,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                       _dialogField(
                         account,
                         'Bank Account',
+                      ),
+                      SalaryTransferField(
+                        account: account,
+                        method: salaryTransferMethod,
+                        onChanged: (value) => setDialogState(
+                            () => salaryTransferMethod = value),
                       ),
                       _dialogField(
                         phone,
@@ -6488,7 +6508,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Other Staff'),
+                        title: const Text('Intern/Practical'),
                         subtitle: const Text(
                           'Regular attendance and payroll; included in HRDF when eligible.',
                         ),
@@ -6523,6 +6543,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       newIcNo: ic.text.trim(),
                       bankCode: bank.text.trim(),
                       bankAccount: account.text.trim(),
+                      salaryTransferMethod: SalaryTransfer.resolve(salaryTransferMethod, account.text),
                       phone: phone.text.trim(),
                       address: address.text.trim(),
                       joiningDate: joiningDate,
@@ -7030,7 +7051,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                               : employee['is_support_staff'] == true
                                   ? 'Support Staff'
                                   : employee['is_other_staff'] == true
-                                      ? 'Other Staff'
+                                      ? 'Intern/Practical'
                                       : 'Regular Staff',
                     ),
                     _employeeDetail(
@@ -7342,6 +7363,9 @@ class _AdminDashboardState extends State<AdminDashboard>
       'Phone': make('phone'),
       'Address': make('address'),
     };
+    String salaryTransferMethod = SalaryTransfer.resolve(
+      employee['salary_transfer_method'], fields['Bank Account']!.text,
+    );
     final salaryFields = <String, TextEditingController>{
       'Basic Salary (RM)': makeSalary('basic_salary'),
       'FW Salary (RM)': makeSalary('fw_salary'),
@@ -7496,6 +7520,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                         ),
                       ),
                     ],
+                    SalaryTransferField(
+                      account: fields['Bank Account']!,
+                      method: salaryTransferMethod,
+                      enabled: !saving,
+                      onChanged: (value) => setDialogState(
+                            () => salaryTransferMethod = value),
+                    ),
                     ...fields.entries.map((field) => TextField(
                         controller: field.value,
                         enabled: !saving,
@@ -7864,7 +7895,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     value: otherStaff,
-                    title: const Text('Other Staff'),
+                    title: const Text('Intern/Practical'),
                     subtitle: const Text(
                       'Regular attendance and payroll; included in HRDF when eligible.',
                     ),
@@ -7999,6 +8030,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                           }
                           final savedFirstName = firstName.text.trim();
                           final savedLastName = lastName.text.trim();
+                          final selectedTransfer = SalaryTransfer.resolve(
+                            salaryTransferMethod, fields['Bank Account']!.text,
+                          );
                           final employeePayload = <String, dynamic>{
                             ...leaveValues,
                             'medical_leave_opening_month':
@@ -8018,6 +8052,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'new_ic_no': fields['IC No.']!.text.trim(),
                             'bank_code': fields['Bank Code']!.text.trim(),
                             'bank_account': fields['Bank Account']!.text.trim(),
+                            'salary_transfer_method':
+                                selectedTransfer.isEmpty ? null : selectedTransfer,
                             'epf_no': fields['EPF No.']!.text.trim(),
                             'socso_no': fields['SOCSO No.']!.text.trim(),
                             'phone': fields['Phone']!.text.trim(),
@@ -12364,7 +12400,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                             employee['is_support_staff'],
                                           )
                                             ? 'Support Staff'
-                                            : 'Other Staff';
+                                            : 'Intern/Practical';
 
                                 final missingDatesExpanded =
                                     expandedMissingIds.contains(employeeId);
@@ -17600,6 +17636,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       final sortedRecords = List<Map<String, dynamic>>.from(records)
         ..sort((a, b) => _comparePayrollExportRecords(a, b, employeeMap));
 
+      final paymentSummary = SalaryTransferSummary();
+      final paymentTotals = paymentSummary.totals;
       final columnTotals = List<double>.filled(20, 0);
       final tableBorder = xls.Border(borderStyle: xls.BorderStyle.Thin);
       const exportBodyFontSize = 11;
@@ -17737,6 +17775,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           net,
         ];
 
+        paymentSummary.add(
+          method: employee['salary_transfer_method'],
+          bankAccount: employee['bank_account'],
+          net: net,
+          row: rowNumber,
+          employeeId: employeeId,
+        );
+
         for (var column = 0; column < values.length; column++) {
           final cell = sheet.cell(
             xls.CellIndex.indexByColumnRow(
@@ -17824,10 +17870,34 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
       }
 
-      // Keep the original footer area as a visual part of the template.
+      // Payment totals use the same net-salary rows as the statement.
+      const paymentLabels = [
+        ('payroll', 'Payroll'),
+        ('instant', 'Instant'),
+        ('cash', 'Cash'),
+      ];
+      for (final entry in paymentLabels.indexed) {
+        final row = totalRow + 2 + entry.$1;
+        final key = entry.$2.$1;
+        sheet.cell(xls.CellIndex.indexByString('Q$row')).value =
+            xls.TextCellValue(entry.$2.$2);
+        final formula = paymentSummary.formula(key, 'T');
+        final amountCell = sheet.cell(xls.CellIndex.indexByString('R$row'));
+        amountCell.cellStyle = (amountCell.cellStyle ?? xls.CellStyle())
+            .copyWith(numberFormat: moneyNumberFormat);
+        amountCell.value = formula == null
+            ? xls.DoubleCellValue(0)
+            : xls.FormulaCellValue(
+                formula, cachedValue: paymentTotals[key]!.toString());
+      }
       final footerTotalRow = totalRow + 5;
+      sheet.cell(xls.CellIndex.indexByString('Q$footerTotalRow')).value =
+          xls.TextCellValue('TOTAL');
       sheet.cell(xls.CellIndex.indexByString('R$footerTotalRow')).value =
-          xls.DoubleCellValue(columnTotals[19]);
+          xls.FormulaCellValue(
+        'SUM(R${totalRow + 2}:R${totalRow + 4})',
+        cachedValue: columnTotals[19].toString(),
+      );
 
       // --------------------------------------------------------------------------
       // 9. Filename: branch + selected month.
@@ -18046,6 +18116,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           'footerValueColumn': 19,
           'paymentRows': <String, int>{
             'payroll': 2,
+            'instant': 3,
             'cash': 4,
             'paid': 5,
           },
@@ -18060,7 +18131,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           'footerValueColumn': 18,
           'paymentRows': <String, int>{
             'payroll': 2,
-            'paid': 3,
+            'cash': 3,
             'instant': 4,
           },
           'footerTotalOffset': 5,
@@ -18075,8 +18146,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           'paymentRows': <String, int>{
             'payroll': 2,
             'instant': 3,
+            'cash': 4,
           },
-          'footerTotalOffset': 4,
+          'footerTotalOffset': 5,
         },
         {
           'sheet': 'Hasani Books Prai',
@@ -18103,7 +18175,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           'footerValueColumn': 18,
           'paymentRows': <String, int>{
             'payroll': 2,
-            'paid': 3,
+            'cash': 3,
             'instant': 4,
           },
           'footerTotalOffset': 5,
@@ -18131,7 +18203,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           'footerValueColumn': 19,
           'paymentRows': <String, int>{
             'payroll': 2,
-            'paid': 3,
+            'cash': 3,
             'instant': 4,
           },
           'footerTotalOffset': 5,
@@ -18376,18 +18448,9 @@ class _AdminDashboardState extends State<AdminDashboard>
         final moneyNumberFormat = xls.NumFormat.custom(
           formatCode: '#,##0.00;-#,##0.00;-',
         );
-        final paymentTotals = <String, double>{
-          'payroll': 0,
-          'cash': 0,
-          'instant': 0,
-          'paid': 0,
-        };
-        final paymentEmployeeRows = <String, List<int>>{
-          'payroll': <int>[],
-          'cash': <int>[],
-          'instant': <int>[],
-          'paid': <int>[],
-        };
+        final paymentSummary = SalaryTransferSummary();
+        final paymentTotals = paymentSummary.totals;
+        final paymentEmployeeRows = paymentSummary.rows;
 
         writeMonthHeader(sheet, layout == 'local20' ? 19 : 20);
         final branchHeaderRange = config['branchHeaderRange'] as String;
@@ -18827,28 +18890,13 @@ class _AdminDashboardState extends State<AdminDashboard>
             }
           }
 
-          final bankAccount = textValue(
-            firstValue(payroll, const ['bank_account', 'bankAccount']) ??
-                firstValue(employee, const ['bank_account', 'bankAccount']),
+          paymentSummary.add(
+            method: employee['salary_transfer_method'],
+            bankAccount: employee['bank_account'],
+            net: net,
+            row: rowNumber,
+            employeeId: payroll['employee_id'].toString(),
           );
-          final bankCode = textValue(
-            firstValue(payroll, const ['bank_code', 'bankCode']) ??
-                firstValue(employee, const ['bank_code', 'bankCode']),
-          ).toUpperCase();
-          final compactBankCode = bankCode.replaceAll(RegExp(r'[^A-Z0-9]'), '');
-          final paymentKey = isTrue(
-            firstValue(payroll, const ['is_paid', 'isPaid']),
-          )
-              ? 'paid'
-              : bankAccount.isEmpty
-                  ? 'cash'
-                  : compactBankCode.contains('RHB') ||
-                          compactBankCode == '18' ||
-                          compactBankCode == '018'
-                      ? 'payroll'
-                      : 'instant';
-          paymentTotals[paymentKey] = paymentTotals[paymentKey]! + net;
-          paymentEmployeeRows[paymentKey]!.add(rowNumber);
         }
 
         // Remove the template's old label and formulas before rebuilding the
@@ -19018,44 +19066,15 @@ class _AdminDashboardState extends State<AdminDashboard>
           columnIndex: netColumn,
           rowIndex: 0,
         ).cellId.replaceAll(RegExp(r'\d'), '');
-        final representedNonPayrollKeys =
-            paymentRows.keys.where((key) => key != 'payroll').toSet();
-
-        List<int> paymentContributorRows(String paymentKey) {
-          if (paymentKey != 'payroll') {
-            return List<int>.from(
-              paymentEmployeeRows[paymentKey] ?? const <int>[],
-            );
-          }
-
-          // PAYROLL is the remainder category in templates that do not show
-          // every payment type (for example, PAID). Preserve that behaviour
-          // while making the total traceable to the exact employee cells.
-          final rows = paymentEmployeeRows.entries
-              .where(
-                (entry) => !representedNonPayrollKeys.contains(entry.key),
-              )
-              .expand((entry) => entry.value)
-              .toList();
-          rows.sort();
-          return rows;
-        }
+        List<int> paymentContributorRows(String paymentKey) =>
+            List<int>.from(paymentEmployeeRows[paymentKey] ?? const <int>[]);
 
         String? formulaForNetRows(List<int> rows) {
           if (rows.isEmpty) return null;
           return 'SUM(${rows.map((row) => '$netColumnName$row').join(',')})';
         }
 
-        double cachedPaymentTotal(String paymentKey) {
-          if (paymentKey != 'payroll') {
-            return paymentTotals[paymentKey] ?? 0;
-          }
-          return paymentTotals.entries
-              .where(
-                (entry) => !representedNonPayrollKeys.contains(entry.key),
-              )
-              .fold<double>(0, (sum, entry) => sum + entry.value);
-        }
+        double cachedPaymentTotal(String paymentKey) => paymentTotals[paymentKey] ?? 0;
 
         final paymentLabelColumn = (config['footerLabelColumn'] as int?) ??
             (layout == 'local20'
@@ -22566,7 +22585,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         // JUMLAH = NET SALARY
         // ----------------------------------------------------------
 
-        if (bankAccount.isNotEmpty) {
+        final transferMethod = SalaryTransfer.resolve(
+          employee['salary_transfer_method'],
+          employee.isNotEmpty ? employeeBank : bankAccount,
+        );
+        if (bankAccount.isNotEmpty && transferMethod == 'rhb') {
           final rhbIc = icDigitCount < 12 ? '' : exportIc;
           final rhbShortIc =
               icDigitCount < 12 ? ic.replaceAll('-', '').trim() : '';

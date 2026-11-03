@@ -485,6 +485,7 @@ class Employee {
   final String newIcNo;
   final String bankCode;
   final String bankAccount;
+  final String salaryTransferMethod;
   final String epfNo;
   final String socsoNo;
 
@@ -512,6 +513,7 @@ class Employee {
     required this.newIcNo,
     required this.bankCode,
     required this.bankAccount,
+    this.salaryTransferMethod = '',
     this.epfNo = '',
     this.socsoNo = '',
     this.phone = '',
@@ -542,6 +544,7 @@ class Employee {
     String? newIcNo,
     String? bankCode,
     String? bankAccount,
+    String? salaryTransferMethod,
     String? epfNo,
     String? socsoNo,
     String? phone,
@@ -567,6 +570,7 @@ class Employee {
       newIcNo: newIcNo ?? this.newIcNo,
       bankCode: bankCode ?? this.bankCode,
       bankAccount: bankAccount ?? this.bankAccount,
+      salaryTransferMethod: salaryTransferMethod ?? this.salaryTransferMethod,
       epfNo: epfNo ?? this.epfNo,
       socsoNo: socsoNo ?? this.socsoNo,
       phone: phone ?? this.phone,
@@ -602,6 +606,7 @@ class Employee {
       'newIcNo': newIcNo,
       'bankCode': bankCode,
       'bankAccount': bankAccount,
+      'salaryTransferMethod': salaryTransferMethod,
       'epfNo': epfNo,
       'socsoNo': socsoNo,
       'phone': phone,
@@ -633,6 +638,9 @@ class Employee {
       newIcNo: _stringValue(json['newIcNo']),
       bankCode: _stringValue(json['bankCode']),
       bankAccount: _stringValue(json['bankAccount']),
+      salaryTransferMethod: _stringValue(
+        json['salaryTransferMethod'] ?? json['salary_transfer_method'],
+      ),
       epfNo: _stringValue(json['epfNo']),
       socsoNo: _stringValue(json['socsoNo']),
       phone: _stringValue(json['phone']),

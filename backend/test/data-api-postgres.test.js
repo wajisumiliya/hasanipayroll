@@ -186,6 +186,22 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
       assert.equal(inaccessible.failed,1);
       assert.equal((await pool.query("SELECT photo_url FROM employees WHERE employee_id='FIX_E1'")).rows[0].photo_url,'FIX_E1/profile');
     });
+    await t.test('admin employee information saves salary routing through authenticated database policies', async () => {
+      const changed = await request('/employees?employee_id=eq.FIX_E1', 'admin', {
+        method: 'PATCH', headers: {Prefer: 'return=representation'},
+        body: JSON.stringify({bank_account: '0012345', salary_transfer_method: null}),
+      });
+      assert.equal(changed.status, 200);
+      assert.equal((await changed.json())[0].salary_transfer_method, 'rhb');
+      const cash = await request('/employees?employee_id=eq.FIX_E1', 'admin', {
+        method: 'PATCH', headers: {Prefer: 'return=representation'},
+        body: JSON.stringify({salary_transfer_method: 'cash'}),
+      });
+      assert.equal(cash.status, 200);
+      assert.equal((await cash.json())[0].salary_transfer_method, 'cash');
+      const loaded = await request('/employees?employee_id=eq.FIX_E1&select=salary_transfer_method', 'admin');
+      assert.deepEqual(await loaded.json(), [{salary_transfer_method: 'cash'}]);
+    });
     await t.test('permitted RPC writes work and pooled sessions do not retain another identity',async()=>{
       const changed=await request('/rpc/set_employee_active_status','admin',{method:'POST',body:JSON.stringify({p_employee_id:'FIX_E2',p_is_active:false})});
       assert.equal(changed.status,200);

@@ -3096,7 +3096,7 @@ class _BranchPortalState extends State<BranchPortal>
             : employee['is_support_staff'] == true
                 ? 'Support Staff'
                 : employee['is_other_staff'] == true
-                    ? 'Other Staff'
+                    ? 'Intern/Practical'
                     : 'Regular Staff';
 
     await showDialog<void>(
