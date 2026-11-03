@@ -6364,8 +6364,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                       SalaryTransferField(
                         account: account,
                         method: salaryTransferMethod,
-                        onChanged: (value) => setDialogState(
-                            () => salaryTransferMethod = value),
+                        onChanged: (value) =>
+                            setDialogState(() => salaryTransferMethod = value),
                       ),
                       _dialogField(
                         phone,
@@ -6543,7 +6543,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                       newIcNo: ic.text.trim(),
                       bankCode: bank.text.trim(),
                       bankAccount: account.text.trim(),
-                      salaryTransferMethod: SalaryTransfer.resolve(salaryTransferMethod, account.text),
+                      salaryTransferMethod: SalaryTransfer.resolve(
+                          salaryTransferMethod, account.text),
                       phone: phone.text.trim(),
                       address: address.text.trim(),
                       joiningDate: joiningDate,
@@ -7364,7 +7365,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       'Address': make('address'),
     };
     String salaryTransferMethod = SalaryTransfer.resolve(
-      employee['salary_transfer_method'], fields['Bank Account']!.text,
+      employee['salary_transfer_method'],
+      fields['Bank Account']!.text,
     );
     final salaryFields = <String, TextEditingController>{
       'Basic Salary (RM)': makeSalary('basic_salary'),
@@ -7524,8 +7526,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                       account: fields['Bank Account']!,
                       method: salaryTransferMethod,
                       enabled: !saving,
-                      onChanged: (value) => setDialogState(
-                            () => salaryTransferMethod = value),
+                      onChanged: (value) =>
+                          setDialogState(() => salaryTransferMethod = value),
                     ),
                     ...fields.entries.map((field) => TextField(
                         controller: field.value,
@@ -8031,7 +8033,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                           final savedFirstName = firstName.text.trim();
                           final savedLastName = lastName.text.trim();
                           final selectedTransfer = SalaryTransfer.resolve(
-                            salaryTransferMethod, fields['Bank Account']!.text,
+                            salaryTransferMethod,
+                            fields['Bank Account']!.text,
                           );
                           final employeePayload = <String, dynamic>{
                             ...leaveValues,
@@ -8052,8 +8055,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                             'new_ic_no': fields['IC No.']!.text.trim(),
                             'bank_code': fields['Bank Code']!.text.trim(),
                             'bank_account': fields['Bank Account']!.text.trim(),
-                            'salary_transfer_method':
-                                selectedTransfer.isEmpty ? null : selectedTransfer,
+                            'salary_transfer_method': selectedTransfer.isEmpty
+                                ? null
+                                : selectedTransfer,
                             'epf_no': fields['EPF No.']!.text.trim(),
                             'socso_no': fields['SOCSO No.']!.text.trim(),
                             'phone': fields['Phone']!.text.trim(),
@@ -17887,8 +17891,8 @@ class _AdminDashboardState extends State<AdminDashboard>
             .copyWith(numberFormat: moneyNumberFormat);
         amountCell.value = formula == null
             ? xls.DoubleCellValue(0)
-            : xls.FormulaCellValue(
-                formula, cachedValue: paymentTotals[key]!.toString());
+            : xls.FormulaCellValue(formula,
+                cachedValue: paymentTotals[key]!.toString());
       }
       final footerTotalRow = totalRow + 5;
       sheet.cell(xls.CellIndex.indexByString('Q$footerTotalRow')).value =
@@ -19074,7 +19078,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           return 'SUM(${rows.map((row) => '$netColumnName$row').join(',')})';
         }
 
-        double cachedPaymentTotal(String paymentKey) => paymentTotals[paymentKey] ?? 0;
+        double cachedPaymentTotal(String paymentKey) =>
+            paymentTotals[paymentKey] ?? 0;
 
         final paymentLabelColumn = (config['footerLabelColumn'] as int?) ??
             (layout == 'local20'
