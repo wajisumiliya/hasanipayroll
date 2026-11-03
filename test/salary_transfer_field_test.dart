@@ -20,7 +20,12 @@ void main() {
     DropdownButtonFormField<String> field() =>
         tester.widget(find.byType(DropdownButtonFormField<String>));
     expect(field().initialValue, '');
-    expect(field().items!.map((item) => item.value), ['', 'instant', 'cash']);
+    expect(
+        tester
+            .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
+            .items!
+            .map((item) => item.value),
+        ['', 'instant', 'cash']);
     account.text = '0012345';
     await tester.pump();
     expect(field().initialValue, 'rhb');
