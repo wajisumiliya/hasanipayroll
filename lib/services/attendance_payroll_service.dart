@@ -1351,7 +1351,6 @@ class AttendancePayrollService {
   static const Map<String, double> _fixedSocsoEmployeeById = {
     'BAS028': 0.00,
     'BAS041': 0.00,
-    'BGR015': 0.00,
     'BJL023': 0.00,
     'BJT029': 0.00,
     'BLK011': 0.00,

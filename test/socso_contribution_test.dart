@@ -47,4 +47,58 @@ void main() {
       expect(AttendancePayrollService.fixedSocsoEmployeeFor('HED2073'), isNull);
     });
   });
+
+  group('BGR015 configured SOCSO contributions', () {
+    Future<PayrollGenerationItem> preview({
+      int month = 1,
+      bool enabled = true,
+      String category = 'type1',
+      double basicSalary = 1700,
+    }) =>
+        AttendancePayrollService.previewEmployeePayroll(
+          employee: {'employee_id': 'BGR015', 'name': 'Test employee'},
+          month: DateTime(2026, month),
+          attendance: [],
+          rosterRows: [],
+          salaryDefault: {
+            'basic_salary': basicSalary,
+            'epf_category': 'normal',
+            'eis_applicable': false,
+            'socso_enabled': enabled,
+            'socso_category': category,
+          },
+        );
+
+    test('has no fixed employee deduction override', () {
+      expect(AttendancePayrollService.fixedSocsoEmployeeFor('bgr015'), isNull);
+    });
+
+    test('uses the configured Type 1 schedule before and after August', () async {
+      for (final month in [1, 10]) {
+        final result = await preview(month: month);
+        expect(result.calculated, true);
+        expect(result.generated, false);
+        expect(result.socsoEmployee, 20.60);
+        expect(result.socsoEmployer, 28.85);
+      }
+    });
+
+    test('still respects disabled SOCSO and the eligibility threshold', () async {
+      for (final result in [
+        await preview(enabled: false),
+        await preview(basicSalary: 400),
+      ]) {
+        expect(result.calculated, true);
+        expect(result.socsoEmployee, 0);
+        expect(result.socsoEmployer, 0);
+      }
+    });
+
+    test('still respects employer-only Type 2', () async {
+      final result = await preview(category: 'type2');
+      expect(result.calculated, true);
+      expect(result.socsoEmployee, 0);
+      expect(result.socsoEmployer, 20.60);
+    });
+  });
 }
