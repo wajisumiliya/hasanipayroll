@@ -82,7 +82,7 @@ class PdfService {
     }
 
     final income = <String, double>{
-      'BASIC PAY': p.basicSalary,
+      'BASIC PAY': p.salaryBase,
       'ELAUN KEDATANGAN': p.elaunKedatangan,
       'ELAUN PERKHIDMATAN': p.elaunPerkhidmatan,
       'ELAUN KERAJINAN': p.elaunKerajinan,
@@ -90,6 +90,8 @@ class PdfService {
       'OVERTIME': p.overtime,
       'CUTI UMUM': p.cutiUmum,
       'BONUS': p.bonus,
+      if (p.commission + p.otherEarnings + p.housingAllowance + p.travelAllowance != 0)
+        'OTHER EARNINGS': p.commission + p.otherEarnings + p.housingAllowance + p.travelAllowance,
     };
     final deductions = <String, double>{
       'ADVANCE': p.advanceDeduction,
@@ -100,11 +102,11 @@ class PdfService {
       'EIS': p.eisEmployee,
       'PCB': p.pcb,
       'ZAKAT': p.zakat,
+      if (p.otherDeductionAmount != 0) 'OTHER DEDUCTIONS': p.otherDeductionAmount,
     };
-    final gross = income.values.fold<double>(0, (sum, value) => sum + value);
-    final totalDeductions =
-        deductions.values.fold<double>(0, (sum, value) => sum + value);
-    final net = gross - totalDeductions;
+    final gross = p.storedGrossSalary ?? p.totalEarnings;
+    final totalDeductions = p.storedTotalDeductions ?? p.totalDeductions;
+    final net = p.netPay;
 
     document.addPage(
       pw.Page(
@@ -411,11 +413,13 @@ class PdfService {
                   padding:
                       const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: pw.BoxDecoration(border: pw.Border.all(width: 1)),
-                  child: pw.Text(
-                    'RM ${net.toStringAsFixed(2)}',
-                    style: pw.TextStyle(
-                        fontSize: 9, fontWeight: pw.FontWeight.bold),
-                  ),
+                  child: pw.Column(mainAxisSize: pw.MainAxisSize.min, children: [
+                    pw.Text('RM ${net.toStringAsFixed(2)}', style: pw.TextStyle(
+                      fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                    if (payroll.roundingAdjustment != 0)
+                      pw.Text('Rounding RM ${payroll.roundingAdjustment > 0 ? '+' : ''}${payroll.roundingAdjustment.toStringAsFixed(2)}',
+                        style: const pw.TextStyle(fontSize: 5.5)),
+                  ]),
                 ),
               ],
             ),

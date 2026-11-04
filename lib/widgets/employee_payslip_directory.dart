@@ -467,8 +467,7 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
                                               0,
                                               (s, p) =>
                                                   s +
-                                                  (p.storedNetSalary ??
-                                                      p.netPay))
+                                                  p.netPay)
                                           .toStringAsFixed(2)))
                                     ] else
                                       DataCell(Text('${periodFor(e).length}',

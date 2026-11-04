@@ -1,3 +1,4 @@
+import '../services/saved_payroll_amounts.dart';
 import '../widgets/salary_report_page.dart';
 import '../widgets/bonus_report_dialog.dart';
 import '../widgets/attendance_allowance_report_dialog.dart';
@@ -2296,20 +2297,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           0,
           (sum, row) => sum + _payrollTotalEarnings(row),
         );
-        final totalDeductions = periodPayroll.fold<double>(
-          0,
-          (sum, row) =>
-              sum +
-              _number(row['late_deduction']) +
-              _number(row['unpaid_deduction']) +
-              _number(row['epf_employee']) +
-              _number(row['socso_employee']) +
-              _number(row['eis_employee']) +
-              _number(row['pcb']) +
-              _number(row['zakat']) +
-              _number(row['advance']),
-        );
-        final totalNet = totalGross - totalDeductions;
+        final totalDeductions = periodPayroll.fold<double>(0,
+            (sum, row) => sum + SavedPayrollAmounts.fromRow(row).deductions);
+        final totalNet = periodPayroll.fold<double>(0,
+            (sum, row) => sum + SavedPayrollAmounts.fromRow(row).net);
         final hrdfLevy = periodPayroll.fold<double>(0, (sum, row) {
           final employee = employees
               .where((e) =>
@@ -4726,7 +4717,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               .reduce((a, b) => a < b ? a : b);
           final monthsByYear = <int, Set<int>>{};
           for (final record in records) {
-            final netAmount = record.storedNetSalary ?? record.netPay;
+            final netAmount = record.netPay;
             if (netAmount <= 0) continue;
             monthsByYear
                 .putIfAbsent(record.period.year, () => <int>{})
@@ -13126,10 +13117,6 @@ class _AdminDashboardState extends State<AdminDashboard>
       remarksController.text = record?['remarks']?.toString() ?? '';
     }
 
-    double totalFor(String group) => fields
-        .where((field) => field.$3 == group)
-        .fold<double>(0, (sum, field) => sum + number(field.$1));
-
     try {
       await showDialog<void>(
         context: context,
@@ -13304,6 +13291,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 };
                 record.remove('branch_id');
                 record.remove('branch_name');
+                SavedPayrollAmounts.refreshExistingTotals(record);
 
                 await SupabaseService.database.from('payroll').upsert(
                       record,
@@ -13426,9 +13414,13 @@ class _AdminDashboardState extends State<AdminDashboard>
               }
             }
 
-            final earnings = totalFor('Earnings');
-            final deductions = totalFor('Deductions');
-            final net = earnings - deductions;
+            final draft = SavedPayrollAmounts.fromRow({
+              if (storedRecord != null) ...storedRecord!,
+              for (final field in fields) field.$1: number(field.$1),
+            }, preferStoredTotals: false);
+            final earnings = draft.gross;
+            final deductions = draft.deductions;
+            final net = draft.net;
             final dialogWidth = (MediaQuery.sizeOf(dialogContext).width - 80)
                 .clamp(280.0, 1180.0)
                 .toDouble();
@@ -14055,7 +14047,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       DateFormat('MMM yyyy').format(p.period),
                       p.totalEarnings,
                       p.totalDeductions,
-                      p.storedNetSalary ?? p.netPay
+                      p.netPay
                     ])
                 .toList();
       } else if (tab == 'summary') {
@@ -14081,7 +14073,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   DateFormat('MMM yyyy').format(period),
                   p.totalEarnings,
                   p.totalDeductions,
-                  p.storedNetSalary ?? p.netPay
+                  p.netPay
                 ]
         ];
       } else {
@@ -16327,38 +16319,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     return _payrollNumber(payroll['basic_salary']);
   }
 
-  double _payrollTotalEarnings(
-    Map<String, dynamic> payroll,
-  ) {
-    return _payrollSalaryBase(payroll) +
-        _payrollNumber(
-          payroll['elaun_kedatangan'],
-        ) +
-        _payrollNumber(
-          payroll['elaun_perkhidmatan'],
-        ) +
-        _payrollNumber(
-          payroll['elaun_kerajinan'],
-        ) +
-        _payrollNumber(
-          payroll['elaun_makanan'],
-        ) +
-        _payrollNumber(
-          payroll['overtime'],
-        ) +
-        _payrollNumber(
-          payroll['bonus'],
-        ) +
-        _payrollNumber(
-          payroll['commission'],
-        ) +
-        _payrollNumber(
-          payroll['other_earnings'],
-        ) +
-        _payrollNumber(
-          payroll['cuti_umum'],
-        );
-  }
+  double _payrollTotalEarnings(Map<String, dynamic> payroll) =>
+      SavedPayrollAmounts.fromRow(payroll).gross;
 
   double _epfReportSalary(Map<String, dynamic> payroll) {
     final basicSalary = _payrollNumber(
@@ -17823,20 +17785,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         final elaunKedatangan = money(payroll['elaun_kedatangan']);
         final elaunPerkhidmatan = money(payroll['elaun_perkhidmatan']);
         final elaunKerajinan = money(payroll['elaun_kerajinan']);
-        final overtime = PayrollCalculationService.roundPayrollAmount(
-          money(payroll['overtime']),
-        );
-        final cutiUmum = PayrollCalculationService.roundPayrollAmount(
-          money(payroll['cuti_umum']),
-        );
+        final overtime = money(payroll['overtime']);
+        final cutiUmum = money(payroll['cuti_umum']);
 
         // The template calls this column "JUMLAH". It is the earnings total.
-        final jumlah = totalSalary +
-            elaunKedatangan +
-            elaunPerkhidmatan +
-            elaunKerajinan +
-            overtime +
-            cutiUmum;
+        final jumlah = SavedPayrollAmounts.fromRow(payroll).gross;
 
         final unpaidDeduction = money(
           firstValue(
@@ -17855,17 +17808,14 @@ class _AdminDashboardState extends State<AdminDashboard>
 
         // M01 / CUTI TANPA GAJI contains BOTH unpaid and late deduction.
         final lateDeduction = money(payroll['late_deduction']);
-        final cutiTanpaGaji = PayrollCalculationService.roundPayrollAmount(
-          unpaidDeduction + lateDeduction,
-        );
+        final cutiTanpaGaji = unpaidDeduction + lateDeduction;
 
         // POTONGAN contains only PCB + Zakat. Late deduction is already in M01.
         final otherDeductions = money(payroll['pcb']) +
             money(payroll['zakat']) +
             money(payroll['advance']);
 
-        final net =
-            jumlah - cutiTanpaGaji - epf - socso - eis - otherDeductions;
+        final net = SavedPayrollAmounts.fromRow(payroll).net;
 
         final values = <dynamic>[
           index + 1,
@@ -18731,27 +18681,12 @@ class _AdminDashboardState extends State<AdminDashboard>
           final serviceAllowance = money(payroll['elaun_perkhidmatan']);
           final diligenceAllowance = money(payroll['elaun_kerajinan']);
           final foodAllowance = money(payroll['elaun_makanan']);
-          final overtime = PayrollCalculationService.roundPayrollAmount(
-            money(payroll['overtime']),
-          );
-          final publicHoliday = PayrollCalculationService.roundPayrollAmount(
-            money(payroll['cuti_umum']),
-          );
-          final gross = salaryBase +
-              attendanceAllowance +
-              serviceAllowance +
-              diligenceAllowance +
-              foodAllowance +
-              overtime +
-              publicHoliday;
-          final unpaid = PayrollCalculationService.roundPayrollAmount(
-            money(firstValue(payroll, const [
-                  'unpaid_deduction',
-                  'unpaid_leave',
-                  'cuti_tanpa_gaji',
-                ])) +
-                money(payroll['late_deduction']),
-          );
+          final overtime = money(payroll['overtime']);
+          final publicHoliday = money(payroll['cuti_umum']);
+          final gross = SavedPayrollAmounts.fromRow(payroll).gross;
+          final unpaid = money(firstValue(payroll, const [
+                  'unpaid_deduction', 'unpaid_leave', 'cuti_tanpa_gaji',
+                ])) + money(payroll['late_deduction']);
           final epf = money(payroll['epf_employee']);
           final socso = money(payroll['socso_employee']);
           final eis = money(payroll['eis_employee']);
@@ -18771,7 +18706,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 'other_deduction_amount',
                 'otherDeductionAmount',
               ]));
-          final net = gross - unpaid - epf - socso - eis - otherDeductions;
+          final net = SavedPayrollAmounts.fromRow(payroll).net;
 
           String lastIncrementText() {
             final previous = previousPayrollMap[employeeId];
@@ -18981,55 +18916,11 @@ class _AdminDashboardState extends State<AdminDashboard>
             if (value is num) columnTotals[column] += value.toDouble();
           }
 
-          if (layout == 'local20') {
-            writeFormula(
-              sheet,
-              rowNumber,
-              13,
-              'SUM(H$rowNumber:M$rowNumber)',
-              gross,
-            );
-            writeFormula(
-              sheet,
-              rowNumber,
-              19,
-              'N$rowNumber-SUM(O$rowNumber:S$rowNumber)',
-              net,
-            );
-          } else if (layout == 'foreign21') {
-            writeFormula(
-              sheet,
-              rowNumber,
-              15,
-              'SUM(I$rowNumber:O$rowNumber)',
-              gross,
-            );
-            writeFormula(
-              sheet,
-              rowNumber,
-              20,
-              'P$rowNumber-SUM(Q$rowNumber:T$rowNumber)',
-              net,
-            );
-          } else {
-            writeFormula(
-              sheet,
-              rowNumber,
-              14,
-              'SUM(H$rowNumber:N$rowNumber)',
-              gross,
-            );
-            writeFormula(
-              sheet,
-              rowNumber,
-              20,
-              'O$rowNumber-SUM(P$rowNumber:T$rowNumber)',
-              net,
-            );
-          }
+          // Employee gross/net cells are the saved payroll snapshot. Only
+          // footer totals recalculate in Excel; opening the workbook must not
+          // change a payment or discard final five-sen rounding.
 
-          // Formula writes can replace the JUMLAH/NET cell value after the
-          // normal row styling. Re-assert the complete table border so JUMLAH
+          // Re-assert the complete table border so JUMLAH
           // always remains visibly inside the employee table.
           for (var column = 0; column < columnCount; column++) {
             applyTableBorderAndAlignment(rowNumber, column);
@@ -19661,30 +19552,19 @@ class _AdminDashboardState extends State<AdminDashboard>
           final elaunKedatangan = money(payroll['elaun_kedatangan']);
           final elaunPerkhidmatan = money(payroll['elaun_perkhidmatan']);
           final elaunKerajinan = money(payroll['elaun_kerajinan']);
-          final overtime = PayrollCalculationService.roundPayrollAmount(
-            money(payroll['overtime']),
-          );
-          final cutiUmum = PayrollCalculationService.roundPayrollAmount(
-            money(payroll['cuti_umum']),
-          );
-          final jumlah = (fw != 0 ? fw : basic) +
-              elaunKedatangan +
-              elaunPerkhidmatan +
-              elaunKerajinan +
-              overtime +
-              cutiUmum;
+          final overtime = money(payroll['overtime']);
+          final cutiUmum = money(payroll['cuti_umum']);
+          final jumlah = SavedPayrollAmounts.fromRow(payroll).gross;
           final unpaid = money(payroll['unpaid_deduction']);
           final late = money(payroll['late_deduction']);
-          final cutiTanpaGaji = PayrollCalculationService.roundPayrollAmount(
-            unpaid + late,
-          );
+          final cutiTanpaGaji = unpaid + late;
           final epf = money(payroll['epf_employee']);
           final socso = money(payroll['socso_employee']);
           final eis = money(payroll['eis_employee']);
           final potongan = money(payroll['pcb']) +
               money(payroll['zakat']) +
               money(payroll['advance']);
-          final net = jumlah - cutiTanpaGaji - epf - socso - eis - potongan;
+          final net = SavedPayrollAmounts.fromRow(payroll).net;
 
           final values = <dynamic>[
             i + 1,
@@ -19710,7 +19590,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 '',
             employee['name'] ?? payroll['name'] ?? '',
             employee['new_ic_no'] ?? payroll['new_ic_no'] ?? '',
-            basic + fw,
+            fw != 0 ? fw : basic,
             elaunKedatangan,
             elaunPerkhidmatan,
             elaunKerajinan,
@@ -19984,18 +19864,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           final attendance = money(payroll['elaun_kedatangan']);
           final service = money(payroll['elaun_perkhidmatan']);
           final diligence = money(payroll['elaun_kerajinan']);
-          final overtime = PayrollCalculationService.roundPayrollAmount(
-            money(payroll['overtime']),
-          );
-          final publicHoliday = PayrollCalculationService.roundPayrollAmount(
-            money(payroll['cuti_umum']),
-          );
-          final gross = basic +
-              attendance +
-              service +
-              diligence +
-              overtime +
-              publicHoliday;
+          final overtime = money(payroll['overtime']);
+          final publicHoliday = money(payroll['cuti_umum']);
+          final gross = SavedPayrollAmounts.fromRow(payroll).gross;
           final unpaidLate = money(payroll['unpaid_deduction']) +
               money(payroll['late_deduction']);
           final epf = money(payroll['epf_employee']);
@@ -20004,7 +19875,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           final other = money(payroll['pcb']) +
               money(payroll['zakat']) +
               money(payroll['advance']);
-          final net = gross - unpaidLate - epf - socso - eis - other;
+          final net = SavedPayrollAmounts.fromRow(payroll).net;
           final numbers = <double>[
             basic,
             attendance,
@@ -20379,14 +20250,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         summary['excludedEis'] =
             _number(summary['excludedEis']) + eisEmployee + eisEmployer;
       }
-      final deductions = unpaid +
-          late +
-          epfEmployee +
-          socsoEmployee +
-          eisEmployee +
-          pcb +
-          zakat +
-          advance;
+      final deductions = SavedPayrollAmounts.fromRow(row).deductions;
       summary['basic'] = (summary['basic'] as double) + basic;
       summary['overtime'] = (summary['overtime'] as double) + overtime;
       summary['otherAllowances'] =
@@ -20406,7 +20270,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       summary['zakat'] = (summary['zakat'] as double) + zakat;
       summary['advance'] = (summary['advance'] as double) + advance;
       summary['deductions'] = (summary['deductions'] as double) + deductions;
-      summary['net'] = (summary['net'] as double) + gross - deductions;
+      summary['net'] = (summary['net'] as double) + SavedPayrollAmounts.fromRow(row).net;
 
       final foreign = employee['address']
               ?.toString()
@@ -22329,107 +22193,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         return '';
       }
 
-      // ============================================================
-      // JUMLAH / GROSS SALARY
-      //
-      // First use an existing gross field if available.
-      // Otherwise calculate gross from payroll components.
-      // ============================================================
-
-      double jumlah(
-        Map<String, dynamic> row,
-      ) {
-        // Existing calculated gross amount.
-        for (final key in const [
-          'gross_pay',
-          'gross_salary',
-          'total_gross',
-          'grossPay',
-          'jumlah',
-          'total_earnings',
-          'totalEarnings',
-        ]) {
-          if (row[key] != null) {
-            return money(row[key]);
-          }
-        }
-
-        // Calculate gross manually when the database
-        // does not contain a gross amount.
-
-        final snakeBasic = money(row['basic_salary']);
-        final camelBasic = money(row['basicSalary']);
-        final snakeFw = money(row['fw_salary']);
-        final camelFw = money(row['fwSalary']);
-        final salaryBase = snakeFw != 0
-            ? snakeFw
-            : (camelFw != 0
-                ? camelFw
-                : (snakeBasic != 0 ? snakeBasic : camelBasic));
-
-        final gross = salaryBase +
-            money(row['food_allowance']) +
-            money(row['foodAllowance']) +
-            money(row['other_allowance']) +
-            money(row['otherAllowance']) +
-            money(row['elaun_kedatangan']) +
-            money(row['elaun_perkhidmatan']) +
-            money(row['elaun_kerajinan']) +
-            money(row['elaun_makanan']) +
-            money(row['overtime']) +
-            money(row['bonus']) +
-            money(row['commission']) +
-            money(row['other_earnings']) +
-            money(row['otherEarnings']) +
-            money(row['cuti_umum']);
-
-        return gross;
-      }
-
-      // ============================================================
-      // NET SALARY
-      // ============================================================
-
-      double netSalary(
-        Map<String, dynamic> row,
-      ) {
-        // Prefer an existing calculated net amount.
-        for (final key in const [
-          'net_pay',
-          'net_salary',
-          'total_net',
-          'netPay',
-          'net',
-        ]) {
-          if (row[key] != null) {
-            return money(row[key]);
-          }
-        }
-
-        // Otherwise calculate:
-        //
-        // GROSS - EMPLOYEE DEDUCTIONS
-
-        final gross = jumlah(row);
-
-        final deductions = money(row['epf_employee']) +
-            money(row['epfEmployee']) +
-            money(row['socso_employee']) +
-            money(row['socsoEmployee']) +
-            money(row['eis_employee']) +
-            money(row['eisEmployee']) +
-            money(row['pcb']) +
-            money(row['zakat']) +
-            money(row['advance']) +
-            money(row['late_deduction']) +
-            money(row['lateDeduction']) +
-            money(row['unpaid_deduction']) +
-            money(row['unpaidDeduction']) +
-            money(row['other_deductions']) +
-            money(row['otherDeduction']);
-
-        return gross - deductions;
-      }
+      // Bank amounts come only from the selected saved payroll row.
+      // Never recalculate attendance, contributions or today's salary defaults.
+      double netSalary(Map<String, dynamic> row) =>
+          SavedPayrollAmounts.fromRow(row).net;
 
       // ============================================================
       // EXCEL ROW WRITER
@@ -22603,10 +22370,15 @@ class _AdminDashboardState extends State<AdminDashboard>
       // BUILD EXPORT DATA
       // ============================================================
 
+      final bankEmployeeIds = <String>{};
       for (final payroll in payrollRows) {
         final id = _normalizeBranchValue(
           payroll['employee_id'],
         );
+
+        if (!bankEmployeeIds.add(id)) {
+          throw StateError('Duplicate saved payroll for $id in $selectedMonth. Review payroll before exporting.');
+        }
 
         final employee = employeeMap[id] ?? <String, dynamic>{};
         final salaryDefault = salaryDefaultsMap[id] ?? <String, dynamic>{};

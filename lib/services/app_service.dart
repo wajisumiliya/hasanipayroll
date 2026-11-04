@@ -1,3 +1,4 @@
+import 'saved_payroll_amounts.dart';
 import 'bonus_report.dart';
 import 'attendance_allowance_report.dart';
 // ignore_for_file: camel_case_types
@@ -1601,6 +1602,7 @@ class AppService extends ChangeNotifier {
         ) ??
         DateTime.now();
 
+    final amounts = SavedPayrollAmounts.fromRow(data);
     return PayrollRecord(
       id: data['id']?.toString() ??
           'PAY-$employeeId-${period.year}-${period.month}',
@@ -1613,10 +1615,7 @@ class AppService extends ChangeNotifier {
         data['fw_salary'] ?? data['fwSalary'],
       ),
       elaunKedatangan: _doubleValue(
-        data['elaun_kedatangan'] ??
-            data['elaunKedatangan'] ??
-            data['food_allowance'] ??
-            data['foodAllowance'],
+        data['elaun_kedatangan'] ?? data['elaunKedatangan'],
       ),
       elaunPerkhidmatan: _doubleValue(
         data['elaun_perkhidmatan'] ??
@@ -1707,15 +1706,9 @@ class AppService extends ChangeNotifier {
           '',
       bankName:
           data['bank_name']?.toString() ?? data['bankName']?.toString() ?? '',
-      storedGrossSalary: _nullableDoubleValue(
-        data['gross_salary'] ?? data['grossSalary'],
-      ),
-      storedNetSalary: _nullableDoubleValue(
-        data['net_salary'] ?? data['netSalary'],
-      ),
-      storedTotalDeductions: _nullableDoubleValue(
-        data['total_deductions'] ?? data['totalDeductions'],
-      ),
+      storedGrossSalary: amounts.gross,
+      storedNetSalary: amounts.unroundedNet,
+      storedTotalDeductions: amounts.deductions,
       isPaid: _supabaseBool(data['is_paid'] ?? data['isPaid']),
       paidAt: _supabaseDate(data['paid_at'] ?? data['paidAt']),
       paymentReference: data['payment_reference']?.toString() ??
@@ -4585,11 +4578,6 @@ employeeId,period,basicSalary,ELAUN KEDATANGAN,ELAUN PERKHIDMATAN,ELAUN KERAJINA
           value.toString(),
         ) ??
         0;
-  }
-
-  double? _nullableDoubleValue(dynamic value) {
-    if (value == null || value.toString().trim().isEmpty) return null;
-    return _doubleValue(value);
   }
 
   // ==========================================================================

@@ -491,13 +491,13 @@ void main() {
       );
     });
 
-    test('net pay preserves cents for historical imported payroll', () {
+    test('historical imported net pay uses final five-sen rounding', () {
       expect(
         PayrollCalculationService.netPay(
           gross: 1980.77,
           deductions: 57.55,
         ),
-        closeTo(1923.22, 1e-9),
+        1923.20,
       );
     });
   });

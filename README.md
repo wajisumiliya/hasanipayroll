@@ -498,3 +498,21 @@ Never commit JWT secrets, `DATABASE_URL`, SMTP passwords, Firebase service-accou
 ## License
 
 Proprietary software. Refer to `LICENSE` for authoritative terms. Unauthorized copying, distribution, publication, resale or sublicensing is prohibited.
+
+### Saved payroll payments and five-sen net rounding
+
+RHB exports use the selected month's saved payroll, preferring its saved net
+amount (including an explicit zero). If totals are absent, only that row's
+saved earnings and employee deductions are used, including loan, unpaid and
+other deductions. Alternative field names are counted once; current salary
+defaults and attendance do not recalculate the bank payment. Duplicate payroll
+rows for one employee in a month stop export for review.
+
+Final net pay is rounded to the nearest RM0.05 for payroll displays, payslips,
+branch exports and RHB: .01/.02 → .00, .03/.04 → .05, .06/.07 → .05,
+.08/.09 → .10. Totals sum each employee's rounded payment. A payslip shows
+the rounding adjustment when nonzero. Excel employee gross/net cells retain
+the saved snapshot instead of formulas that change the payment on opening.
+This does not rewrite historical payroll rows. Existing component rounding
+and FRN daily unpaid rates are unchanged; the Salary Report's custom
+pre-statutory amount is not a final net payment.

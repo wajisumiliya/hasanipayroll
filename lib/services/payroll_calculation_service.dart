@@ -615,9 +615,19 @@ class PayrollCalculationService {
   static double _roundMoney(double value) =>
       (value * 100).roundToDouble() / 100;
 
+  /// Final payment only: round integer sen to the nearest five sen.
+  /// 01/02 -> 00, 03/04 -> 05, 06/07 -> 05, 08/09 -> 10.
+  static double roundNetPay(double amount) {
+    if (!amount.isFinite) throw ArgumentError.value(amount, 'amount', 'Net pay must be finite');
+    final cents = (amount * 100).round();
+    final rounded = ((cents.abs() + 2) ~/ 5) * 5;
+    if (rounded == 0) return 0;
+    return (cents < 0 ? -rounded : rounded) / 100.0;
+  }
+
   static double netPay({
     required double gross,
     required double deductions,
   }) =>
-      gross - deductions;
+      roundNetPay(gross - deductions);
 }

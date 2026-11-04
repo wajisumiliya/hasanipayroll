@@ -1,3 +1,4 @@
+import '../services/saved_payroll_amounts.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -25,16 +26,8 @@ class AdminAnalytics extends StatelessWidget {
   static String id(Map r) => canonical(r['employee_id'] ?? r['id']);
   static double number(dynamic v) =>
       double.tryParse('$v'.replaceAll(',', '')) ?? 0;
-  static double deductionsOf(Map r) => [
-        'late_deduction',
-        'unpaid_deduction',
-        'epf_employee',
-        'socso_employee',
-        'eis_employee',
-        'pcb',
-        'zakat',
-        'advance'
-      ].fold(0, (sum, field) => sum + number(r[field]));
+  static double deductionsOf(Map r) =>
+      SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(r)).deductions;
   String money(double n) =>
       NumberFormat.currency(locale: 'en_MY', symbol: 'RM ', decimalDigits: 2)
           .format(n);
@@ -182,7 +175,7 @@ class AdminAnalytics extends StatelessWidget {
     final current = rows(month);
     final gross = total(current, grossOf);
     final deduction = total(current, (r) => deductionsOf(r));
-    final net = gross - deduction;
+    final net = total(current, (row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net);
     final period = DateFormat('MMMM yyyy').format(month);
     final history =
         List.generate(8, (i) => DateTime(month.year, month.month - 7 + i));
@@ -205,7 +198,7 @@ class AdminAnalytics extends StatelessWidget {
                           name(r),
                           money(grossOf(r)),
                           money(deductionsOf(r)),
-                          money(grossOf(r) - deductionsOf(r))
+                          money(SavedPayrollAmounts.fromRow(r).net)
                         ])
                     .toList());
           },
@@ -263,7 +256,7 @@ class AdminAnalytics extends StatelessWidget {
                                       name(r),
                                       money(grossOf(r)),
                                       money(deductionsOf(r)),
-                                      money(grossOf(r) - deductionsOf(r))
+                                      money(SavedPayrollAmounts.fromRow(r).net)
                                     ])
                                 .toList()),
                         icon: const Icon(Icons.open_in_new, size: 16),

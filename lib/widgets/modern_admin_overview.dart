@@ -1,3 +1,4 @@
+import '../services/saved_payroll_amounts.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -1317,35 +1318,9 @@ class _ReferencePayrollDashboard extends StatelessWidget {
   String _key(dynamic value) => '${value ?? ''}'.trim().toUpperCase();
   String _employeeId(Map row) => _key(row['employee_id'] ?? row['id']);
   DateTime? _period(Map row) => DateTime.tryParse('${row['period'] ?? ''}');
-  double _gross(Map row) {
-    final salary = _number(row['fw_salary']) != 0
-        ? _number(row['fw_salary'])
-        : _number(row['basic_salary']);
-    return salary +
-        _number(row['elaun_kedatangan']) +
-        _number(row['elaun_perkhidmatan']) +
-        _number(row['elaun_kerajinan']) +
-        _number(row['elaun_makanan']) +
-        _number(row['overtime']) +
-        _number(row['bonus']) +
-        _number(row['commission']) +
-        _number(row['other_earnings']) +
-        _number(row['cuti_umum']);
-  }
-
-  double _deductions(Map row) =>
-      _number(row['late_deduction']) +
-      _number(row['unpaid_deduction']) +
-      _number(row['epf_employee']) +
-      _number(row['socso_employee']) +
-      _number(row['eis_employee']) +
-      _number(row['pcb']) +
-      _number(row['zakat']) +
-      _number(row['advance']);
-  double _net(Map row) {
-    final stored = _number(row['net_pay'] ?? row['net_salary']);
-    return stored != 0 ? stored : _gross(row) - _deductions(row);
-  }
+  double _gross(Map row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).gross;
+  double _deductions(Map row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).deductions;
+  double _net(Map row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net;
 
   Map<String, String> get _employeeBranches => {
         for (final employee in view.employees)

@@ -1,3 +1,4 @@
+import '../services/saved_payroll_amounts.dart';
 // lib/models/payroll.dart
 
 import '../services/payroll_calculation_service.dart';
@@ -229,10 +230,12 @@ class PayrollRecord {
   }
 
   double get netPay {
-    return PayrollCalculationService.netPay(
-      gross: totalEarnings,
-      deductions: totalDeductions,
-    );
+    return SavedPayrollAmounts.fromRow(toJson()).net;
+  }
+
+  double get roundingAdjustment {
+    final saved = SavedPayrollAmounts.fromRow(toJson());
+    return ((saved.net - saved.unroundedNet) * 100).round() / 100.0;
   }
 
   double get totalEmployerContribution {
@@ -261,6 +264,12 @@ class PayrollRecord {
     double? bonus,
     double? commission,
     double? otherEarnings,
+    double? housingAllowance,
+    double? travelAllowance,
+    double? advanceDeduction,
+    double? loanDeduction,
+    double? unpaidLeave,
+    double? otherDeductionAmount,
     double? cutiUmum,
     double? epfEmployee,
     double? socsoEmployee,
@@ -281,6 +290,11 @@ class PayrollRecord {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
+    final financialChanged = [basicSalary, fwSalary, elaunKedatangan,
+      elaunPerkhidmatan, elaunKerajinan, elaunMakanan, overtime, bonus,
+      commission, otherEarnings, housingAllowance, travelAllowance, advanceDeduction,
+      loanDeduction, unpaidLeave, otherDeductionAmount, cutiUmum, epfEmployee,
+      socsoEmployee, eisEmployee, pcb, zakat, lateDeduction].any((value) => value != null);
     return PayrollRecord(
       id: id ?? this.id,
       employeeId: employeeId ?? this.employeeId,
@@ -295,6 +309,17 @@ class PayrollRecord {
       bonus: bonus ?? this.bonus,
       commission: commission ?? this.commission,
       otherEarnings: otherEarnings ?? this.otherEarnings,
+      housingAllowance: housingAllowance ?? this.housingAllowance,
+      travelAllowance: travelAllowance ?? this.travelAllowance,
+      advanceDeduction: advanceDeduction ?? this.advanceDeduction,
+      loanDeduction: loanDeduction ?? this.loanDeduction,
+      unpaidLeave: unpaidLeave ?? this.unpaidLeave,
+      otherDeductionAmount: otherDeductionAmount ?? this.otherDeductionAmount,
+      bankName: this.bankName,
+      storedGrossSalary: financialChanged ? null : storedGrossSalary,
+      storedNetSalary: financialChanged ? null : storedNetSalary,
+      storedTotalDeductions: financialChanged ? null : storedTotalDeductions,
+      isPaid: isPaid, paidAt: paidAt, paymentReference: paymentReference,
       cutiUmum: cutiUmum ?? this.cutiUmum,
       epfEmployee: epfEmployee ?? this.epfEmployee,
       socsoEmployee: socsoEmployee ?? this.socsoEmployee,
@@ -336,6 +361,13 @@ class PayrollRecord {
       'bonus': bonus,
       'commission': commission,
       'otherEarnings': otherEarnings,
+      'housingAllowance': housingAllowance, 'travelAllowance': travelAllowance,
+      'loanDeduction': loanDeduction, 'unpaidLeave': unpaidLeave,
+      'otherDeduction': otherDeductionAmount,
+      'grossSalary': storedGrossSalary, 'netSalary': storedNetSalary,
+      'totalDeductions': storedTotalDeductions,
+      'bankName': bankName, 'isPaid': isPaid, 'paidAt': paidAt?.toIso8601String(),
+      'paymentReference': paymentReference,
       'cutiUmum': cutiUmum,
       'epfEmployee': epfEmployee,
       'socsoEmployee': socsoEmployee,
@@ -440,10 +472,10 @@ class PayrollRecord {
       bankAccount: _stringValue(json['bankAccount']),
       bankName: _stringValue(json['bankName'] ?? json['bank_name']),
       storedGrossSalary: _nullableDouble(
-        json['grossSalary'] ?? json['gross_salary'],
+        json['grossSalary'] ?? json['gross_salary'] ?? json['gross_pay'],
       ),
       storedNetSalary: _nullableDouble(
-        json['netSalary'] ?? json['net_salary'],
+        json['net_pay'] ?? json['net_salary'] ?? json['netSalary'],
       ),
       storedTotalDeductions: _nullableDouble(
         json['totalDeductions'] ?? json['total_deductions'],
