@@ -15991,39 +15991,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                     ),
                     if (visiblePayrollRecords.isNotEmpty) ...[
                       OutlinedButton.icon(
-                        onPressed: () => _exportPayrollBranchesPdf(
-                          visiblePayrollRecords,
-                          branchNames,
-                        ),
+                        onPressed: selectedPayrollBranchId == null
+                            ? () => _exportPayrollBranchesPdf(
+                                  visiblePayrollRecords,
+                                  branchNames,
+                                )
+                            : null,
                         icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: Text(
-                          selectedPayrollBranchId == null
-                              ? 'Save All Branches PDF'
-                              : 'Save Branch PDF',
-                        ),
+                        label: const Text('Save All Branches PDF'),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () {
-                          if (selectedPayrollBranchId == null) {
-                            _exportPayrollAllBranchesExcel(
-                              visiblePayrollRecords,
-                              branchNames,
-                            );
-                          } else {
-                            _exportPayrollBranchExcel(
-                              visiblePayrollRecords,
-                              selectedPayrollBranchId!,
-                              branchNames[selectedPayrollBranchId!] ??
-                                  selectedPayrollBranchId!,
-                            );
-                          }
-                        },
+                        onPressed: selectedPayrollBranchId == null
+                            ? () => _exportPayrollAllBranchesExcel(
+                                  visiblePayrollRecords,
+                                  branchNames,
+                                )
+                            : null,
                         icon: const Icon(Icons.table_view_outlined),
-                        label: Text(
-                          selectedPayrollBranchId == null
-                              ? 'Export All Branches Excel'
-                              : 'Export Branch Excel',
-                        ),
+                        label: const Text('Export All Branches Excel'),
                       ),
                     ],
                   ],
@@ -17514,6 +17499,8 @@ class _AdminDashboardState extends State<AdminDashboard>
 // PAYROLL EXCEL EXPORT
 // ============================================================================
 
+  // Retained for branch exports; the toolbar only exposes all-branches exports.
+  // ignore: unused_element
   Future<void> _exportPayrollBranchExcel(
     List<Map<String, dynamic>> records,
     String branchId,
