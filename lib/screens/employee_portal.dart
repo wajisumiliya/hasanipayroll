@@ -240,12 +240,14 @@ class _EmployeePortalState extends State<EmployeePortal>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.notifications_active_outlined),
                   label: const Text('Enable notifications on this device'),
                   onPressed: () async {
-                    final result = await NotificationService.enableDeviceNotifications();
+                    final result =
+                        await NotificationService.enableDeviceNotifications();
                     if (!mounted) return;
                     ScaffoldMessenger.of(this.context).showSnackBar(
                       SnackBar(content: Text(result)),

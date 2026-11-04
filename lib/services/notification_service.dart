@@ -91,7 +91,8 @@ class NotificationService {
     _installListeners();
     final user = AppService.instance.currentUser;
     if (user == null || user.isRequestAdmin) {
-      throw StateError('Sign in to an employee or branch account to enable notifications.');
+      throw StateError(
+          'Sign in to an employee or branch account to enable notifications.');
     }
     final settings = await _messaging.requestPermission(
       alert: true,
@@ -100,13 +101,15 @@ class NotificationService {
     );
     if (settings.authorizationStatus != AuthorizationStatus.authorized &&
         settings.authorizationStatus != AuthorizationStatus.provisional) {
-      throw StateError('Notifications are blocked. Allow notifications in your device or browser settings, then try again.');
+      throw StateError(
+          'Notifications are blocked. Allow notifications in your device or browser settings, then try again.');
     }
     final token = await _messaging.getToken(
       vapidKey: kIsWeb && _webVapidKey.isNotEmpty ? _webVapidKey : null,
     );
     if (token == null || token.isEmpty) {
-      throw StateError('A notification token is not available. Check your connection and try again.');
+      throw StateError(
+          'A notification token is not available. Check your connection and try again.');
     }
     await _registerToken(token, user.employeeId, user.branchId);
   }
@@ -132,8 +135,10 @@ class NotificationService {
     final devices = data['devices'] as Map? ?? {};
     final firebase = switch (config['status']) {
       'configured' => 'Firebase server configuration is present.',
-      'not_configured' => 'Firebase server credentials are missing on the backend.',
-      'project_mismatch' => 'Backend Firebase credentials belong to a different project.',
+      'not_configured' =>
+        'Firebase server credentials are missing on the backend.',
+      'project_mismatch' =>
+        'Backend Firebase credentials belong to a different project.',
       _ => 'Firebase server configuration is invalid.',
     };
     final lines = <String>[
@@ -147,20 +152,25 @@ class NotificationService {
       lines.add('Ask the employee to sign in and select Enable notifications.');
     }
     final payroll = data['payroll'] as List? ?? [];
-    if (payroll.isEmpty) lines.add('No saved payroll records for this employee.');
+    if (payroll.isEmpty)
+      lines.add('No saved payroll records for this employee.');
     for (final row in payroll) {
-      lines.add('${row['payroll_month']}: ${row['available'] == true ? 'released' : 'not released'}, '
+      lines.add(
+          '${row['payroll_month']}: ${row['available'] == true ? 'released' : 'not released'}, '
           'inbox: ${row['inbox_saved'] == true ? 'saved' : 'missing'}, '
           'push queue: ${row['push_queued'] == true ? 'present' : 'missing'}.');
     }
     final recent = data['recent'] as List? ?? [];
-    if (recent.isEmpty) lines.add('No payslip push delivery has been queued for this employee.');
+    if (recent.isEmpty)
+      lines.add('No payslip push delivery has been queued for this employee.');
     for (final row in recent) {
       final status = row['last_status'] ?? 'queued';
       final errors = (row['last_error_codes'] as List? ?? []).join(', ');
-      lines.add('${row['payroll_month']}: $status, attempts: ${row['attempts']}${errors.isEmpty ? '' : ' ($errors)'}.');
+      lines.add(
+          '${row['payroll_month']}: $status, attempts: ${row['attempts']}${errors.isEmpty ? '' : ' ($errors)'}.');
     }
-    lines.add('A sent status means Firebase accepted the push; it does not confirm display on the device.');
+    lines.add(
+        'A sent status means Firebase accepted the push; it does not confirm display on the device.');
     return lines.join('\n');
   }
 

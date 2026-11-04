@@ -3717,30 +3717,38 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 ),
                               ))
                           .toList(),
-                      onChanged: (value) =>
-                          setDialogState(() {
-                            employeeId = value;
-                            deliveryStatus = null;
-                          }),
+                      onChanged: (value) => setDialogState(() {
+                        employeeId = value;
+                        deliveryStatus = null;
+                      }),
                     ),
                   if (audience == 'employee') ...[
                     TextButton.icon(
                       icon: const Icon(Icons.info_outline),
-                      label: Text(checkingDelivery ? 'Checking delivery...' : 'Check notification delivery'),
-                      onPressed: employeeId == null || checkingDelivery || sending
+                      label: Text(checkingDelivery
+                          ? 'Checking delivery...'
+                          : 'Check notification delivery'),
+                      onPressed: employeeId == null ||
+                              checkingDelivery ||
+                              sending
                           ? null
                           : () async {
                               setDialogState(() => checkingDelivery = true);
                               final checkedEmployee = employeeId!;
                               String result;
                               try {
-                                result = await NotificationService.deliveryStatus(checkedEmployee);
+                                result =
+                                    await NotificationService.deliveryStatus(
+                                        checkedEmployee);
                               } catch (_) {
-                                result = 'Unable to check delivery. Confirm that the latest backend deployment succeeded, then retry.';
+                                result =
+                                    'Unable to check delivery. Confirm that the latest backend deployment succeeded, then retry.';
                               }
                               if (!dialogContext.mounted) return;
                               setDialogState(() {
-                                deliveryStatus = employeeId == checkedEmployee ? result : null;
+                                deliveryStatus = employeeId == checkedEmployee
+                                    ? result
+                                    : null;
                                 checkingDelivery = false;
                               });
                             },
