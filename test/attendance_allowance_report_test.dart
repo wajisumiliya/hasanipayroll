@@ -156,8 +156,13 @@ void main() {
     expect(text, isNot(contains('Baseline source')));
     expect(text, isNot(contains('Result')));
     expect(AttendanceAllowanceReportExport.pdfHeaders, [
-      'Employee ID', 'Name', 'Branch', 'Reason', 'Date / Evidence',
-      'Default RM', 'Deduct RM',
+      'Employee ID',
+      'Name',
+      'Branch',
+      'Reason',
+      'Date / Evidence',
+      'Default RM',
+      'Deduct RM',
     ]);
   });
 
@@ -181,14 +186,23 @@ void main() {
     expect(double.parse(mediaBox[2]!), closeTo(841.89, 1));
   });
 
-  test('dense PDF fits one A4 page without omitting employees or evidence', () async {
-    final rows = List.generate(120, (index) => AttendanceAllowanceDeduction(
-      employeeId: 'TEST$index', name: 'Employee number $index',
-      branch: 'Branch A', reasons: causes, baseline: 100, paid: 0,
-      deducted: 100, snapshot: true, status: 'Fully deducted',
-    ));
-    final data = AttendanceAllowanceReport(month: month, rows: rows,
-        branchName: 'All branches');
+  test('dense PDF fits one A4 page without omitting employees or evidence',
+      () async {
+    final rows = List.generate(
+        120,
+        (index) => AttendanceAllowanceDeduction(
+              employeeId: 'TEST$index',
+              name: 'Employee number $index',
+              branch: 'Branch A',
+              reasons: causes,
+              baseline: 100,
+              paid: 0,
+              deducted: 100,
+              snapshot: true,
+              status: 'Fully deducted',
+            ));
+    final data = AttendanceAllowanceReport(
+        month: month, rows: rows, branchName: 'All branches');
     final bytes = await AttendanceAllowanceReportExport.pdf(data, rows);
     final raw = latin1.decode(bytes), text = pdfContents(bytes);
     expect(RegExp(r'/Type\s*/Page\b').allMatches(raw), hasLength(1));
@@ -198,9 +212,11 @@ void main() {
     expect(text, contains('2026-10-03'));
   });
 
-  test('estimated amounts remain marked after removing the source column', () async {
+  test('estimated amounts remain marked after removing the source column',
+      () async {
     final data = report(snapshot: null);
-    final text = pdfContents(await AttendanceAllowanceReportExport.pdf(data, data.rows));
+    final text =
+        pdfContents(await AttendanceAllowanceReportExport.pdf(data, data.rows));
     expect(text, contains('150.00*'));
     expect(text, contains('Estimated from current salary default'));
   });

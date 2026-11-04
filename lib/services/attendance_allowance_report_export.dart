@@ -126,24 +126,39 @@ class AttendanceAllowanceReportExport {
   }
 
   static const pdfHeaders = [
-    'Employee ID', 'Name', 'Branch', 'Reason', 'Date / Evidence',
-    'Default RM', 'Deduct RM',
+    'Employee ID',
+    'Name',
+    'Branch',
+    'Reason',
+    'Date / Evidence',
+    'Default RM',
+    'Deduct RM',
   ];
 
   static List<String> pdfValues(AttendanceAllowanceDeduction row) {
-    String money(double? value) => value == null ? 'Not available'
+    String money(double? value) => value == null
+        ? 'Not available'
         : '${value.toStringAsFixed(2)}${row.snapshot ? '' : '*'}';
-    return [row.employeeId, row.name, row.branch, row.reasonText, row.dateText,
-      money(row.baseline), money(row.deducted)];
+    return [
+      row.employeeId,
+      row.name,
+      row.branch,
+      row.reasonText,
+      row.dateText,
+      money(row.baseline),
+      money(row.deducted)
+    ];
   }
 
   /// Choose the orientation retaining the largest readable text after fitting
   /// the fully measured report. If both fit, prefer portrait without upscaling.
   static PdfPageFormat choosePdfFormat({
-    required double portraitHeight, required double landscapeHeight,
+    required double portraitHeight,
+    required double landscapeHeight,
   }) {
     double score(PdfPageFormat format, double height) => height <= 0
-        ? 1 : ((format.height - 40) / height).clamp(0.0, 1.0).toDouble();
+        ? 1
+        : ((format.height - 40) / height).clamp(0.0, 1.0).toDouble();
     final portrait = score(PdfPageFormat.a4, portraitHeight);
     final landscape = score(PdfPageFormat.a4.landscape, landscapeHeight);
     return landscape > portrait ? PdfPageFormat.a4.landscape : PdfPageFormat.a4;
@@ -159,49 +174,68 @@ class AttendanceAllowanceReportExport {
       logo = pw.MemoryImage(asset.buffer.asUint8List());
     } catch (_) {}
     final data = rows.map(pdfValues).toList();
-    final hasEstimates = rows.any((row) => !row.snapshot &&
-        (row.baseline != null || row.deducted != null));
+    final hasEstimates = rows.any((row) =>
+        !row.snapshot && (row.baseline != null || row.deducted != null));
 
-    pw.Widget content(double width) => pw.SizedBox(width: width,
-      child: pw.Column(mainAxisSize: pw.MainAxisSize.min,
-        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        children: [
-          pw.Row(children: [
-            if (logo != null) ...[
-              pw.Image(logo!, width: 75, height: 26), pw.SizedBox(width: 10),
+    pw.Widget content(double width) => pw.SizedBox(
+        width: width,
+        child: pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Row(children: [
+              if (logo != null) ...[
+                pw.Image(logo!, width: 75, height: 26),
+                pw.SizedBox(width: 10),
+              ],
+              pw.Expanded(
+                  child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                    pw.Text('Elaun Kedatangan Deduction Report',
+                        style: pw.TextStyle(
+                            fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(
+                        '${DateFormat('MMMM yyyy').format(report.month)} - ${report.branchName}',
+                        style: const pw.TextStyle(fontSize: 9)),
+                  ])),
+            ]),
+            pw.SizedBox(height: 10),
+            pw.TableHelper.fromTextArray(
+              headers: pdfHeaders,
+              data: data,
+              headerStyle: pw.TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColor.fromInt(0xFF11345F)),
+              cellStyle: const pw.TextStyle(fontSize: 8.5),
+              cellPadding:
+                  const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+              cellAlignment: pw.Alignment.topLeft,
+              cellAlignments: {
+                5: pw.Alignment.topRight,
+                6: pw.Alignment.topRight
+              },
+              columnWidths: {
+                0: const pw.FlexColumnWidth(.09),
+                1: const pw.FlexColumnWidth(.21),
+                2: const pw.FlexColumnWidth(.10),
+                3: const pw.FlexColumnWidth(.14),
+                4: const pw.FlexColumnWidth(.28),
+                5: const pw.FlexColumnWidth(.09),
+                6: const pw.FlexColumnWidth(.09),
+              },
+            ),
+            if (hasEstimates) ...[
+              pw.SizedBox(height: 5),
+              pw.Text(
+                  '* Estimated from current salary default; no saved allowance baseline.',
+                  style: const pw.TextStyle(fontSize: 7)),
             ],
-            pw.Expanded(child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Text('Elaun Kedatangan Deduction Report',
-                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                pw.Text('${DateFormat('MMMM yyyy').format(report.month)} - ${report.branchName}',
-                  style: const pw.TextStyle(fontSize: 9)),
-              ])),
-          ]),
-          pw.SizedBox(height: 10),
-          pw.TableHelper.fromTextArray(
-            headers: pdfHeaders, data: data,
-            headerStyle: pw.TextStyle(fontSize: 8.5,
-              fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-            headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF11345F)),
-            cellStyle: const pw.TextStyle(fontSize: 8.5),
-            cellPadding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-            cellAlignment: pw.Alignment.topLeft,
-            cellAlignments: {5: pw.Alignment.topRight, 6: pw.Alignment.topRight},
-            columnWidths: {
-              0: const pw.FlexColumnWidth(.09), 1: const pw.FlexColumnWidth(.21),
-              2: const pw.FlexColumnWidth(.10), 3: const pw.FlexColumnWidth(.14),
-              4: const pw.FlexColumnWidth(.28), 5: const pw.FlexColumnWidth(.09),
-              6: const pw.FlexColumnWidth(.09),
-            },
-          ),
-          if (hasEstimates) ...[
-            pw.SizedBox(height: 5),
-            pw.Text('* Estimated from current salary default; no saved allowance baseline.',
-                style: const pw.TextStyle(fontSize: 7)),
           ],
-        ],
-      ));
+        ));
 
     // Measure every row at each A4 width before choosing the orientation.
     // The unconstrained height prevents a table from dropping or spanning rows.
@@ -211,17 +245,22 @@ class AttendanceAllowanceReportExport {
       body.layout(measure, const pw.BoxConstraints());
       return body.box!.height;
     }
+
     final format = choosePdfFormat(
       portraitHeight: height(PdfPageFormat.a4),
       landscapeHeight: height(PdfPageFormat.a4.landscape),
     );
     // A single Page plus scaleDown keeps all data on exactly one physical A4
     // page. No rows are omitted, clipped, or moved to a second page.
-    doc.addPage(pw.Page(pageFormat: format,
+    doc.addPage(pw.Page(
+      pageFormat: format,
       margin: const pw.EdgeInsets.all(20),
-      build: (_) => pw.Align(alignment: pw.Alignment.topCenter,
-        child: pw.FittedBox(fit: pw.BoxFit.scaleDown,
-          alignment: pw.Alignment.topLeft, child: content(format.width - 40))),
+      build: (_) => pw.Align(
+          alignment: pw.Alignment.topCenter,
+          child: pw.FittedBox(
+              fit: pw.BoxFit.scaleDown,
+              alignment: pw.Alignment.topLeft,
+              child: content(format.width - 40))),
     ));
     return doc.save();
   }
