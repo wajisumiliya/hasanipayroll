@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/services/attendance_pdf_service.dart';
 import 'package:hasani_payroll_portal/services/attendance_batch_print_service.dart';
+import 'attendance_pdf_summary_test.dart' show pdfContents;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -52,5 +53,39 @@ void main() {
   });
   test('empty selection cannot produce a misleading blank PDF', () async {
     await expectLater(AttendancePdfService.buildBatch([]), throwsArgumentError);
+  });
+
+  test('batch print respects an Admin zero override despite saved OT money',
+      () async {
+    final data = <String, dynamic>{
+      'employees': [
+        {'employee_id': 'BPR010', 'name': 'Test employee', 'branch_id': 'A'},
+      ],
+      'attendance': [
+        {
+          'employee_id': 'BPR010', 'attendance_date': '2026-10-28',
+          'check_in': '09:00', 'check_out': '20:00', 'status': 'Present',
+          'approved_ot_minutes': 0, 'ot_manual_override': true,
+        },
+      ],
+      'salaries': [
+        {'employee_id': 'BPR010', 'basic_salary': 2600,
+          'epf_category': 'normal1', 'eis_applicable': true},
+      ],
+      'payroll': [
+        {'employee_id': 'BPR010', 'overtime': 288.45},
+      ],
+      'monthly_rosters': [], 'daily_rosters': [],
+    };
+    final text = pdfContents(await AttendanceBatchPrintService.build(
+      data: data, employeeIds: ['BPR010'], month: DateTime(2026, 10),
+      branchName: 'Branch A',
+    ));
+    final start = text.indexOf('APPROVED OT');
+    final end = text.indexOf('Review saved payroll:', start);
+    final summary = text.substring(start, end);
+    expect(summary, contains('00:00'));
+    expect(summary, contains('RM 0.00'));
+    expect(text, isNot(contains('288.45')));
   });
 }

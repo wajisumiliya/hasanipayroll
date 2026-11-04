@@ -20,7 +20,7 @@ String pdfContents(Uint8List bytes) {
       .join(' ');
 }
 
-AttendancePrintDay day({int arrival = 0}) => AttendancePrintDay(
+AttendancePrintDay day({int arrival = 0, int overtime = 0}) => AttendancePrintDay(
     day: 23,
     workingIn: arrival == 0 ? '10:00' : '10:15',
     workingOut: '19:00',
@@ -34,7 +34,7 @@ AttendancePrintDay day({int arrival = 0}) => AttendancePrintDay(
     workMinutes: 540,
     breakMinutes: 92,
     netMinutes: 448,
-    overtimeMinutes: 0,
+    overtimeMinutes: overtime,
     lateMinutes: arrival);
 Future<Uint8List> build({int arrival = 0, int? shortfall, double amount = 0}) =>
     AttendancePdfService.build(
@@ -83,5 +83,32 @@ void main() {
     expect(block(text, 'LATE HOURS', 'SHORT HOURS'), contains('00:00'));
     expect(block(text, 'SHORT HOURS', 'UNPAID HOURS'), contains('RM 20.00'));
     expect(text, contains('Review saved payroll:'));
+  });
+
+  test('zero approved OT prints zero money instead of stale saved OT', () async {
+    final text = pdfContents(await AttendancePdfService.build(
+      employeeId: 'BPR010', employeeName: 'Test employee',
+      department: '', section: '', branchId: 'PRAI',
+      isForeignEmployee: false, month: DateTime(2026, 10),
+      days: [day()], approvedOtAmount: 288.45,
+    ));
+    final summary = block(text, 'APPROVED OT', 'Review saved payroll:');
+    expect(summary, contains('00:00'));
+    expect(summary, contains('RM 0.00'));
+    expect(text, isNot(contains('288.45')));
+    expect(text, contains('no matching approved OT'));
+  });
+
+  test('positive approved OT retains its hours and payable amount', () async {
+    final text = pdfContents(await AttendancePdfService.build(
+      employeeId: 'BPR010', employeeName: 'Test employee',
+      department: '', section: '', branchId: 'PRAI',
+      isForeignEmployee: false, month: DateTime(2026, 10),
+      days: [day(overtime: 60)], approvedOtAmount: 25,
+    ));
+    final summary = block(text, 'APPROVED OT', 'DAY');
+    expect(summary, contains('01:00'));
+    expect(summary, contains('RM 25.00'));
+    expect(text, isNot(contains('no matching approved OT')));
   });
 }

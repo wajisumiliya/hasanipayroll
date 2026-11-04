@@ -1078,8 +1078,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             'break_minutes': day.breakMinutes,
             'overtime_minutes': day.overtimeMinutes,
             'approved_ot_minutes': _isAdminView()
-                ? (day.overtimeMinutes > 0 ? day.overtimeMinutes : null)
-                : (controllers[day.day - 1].approvedOtMinutes > 0
+                ? (day.overtimeMinutes > 0 ||
+                        controllers[day.day - 1].hasManualOtOverride
+                    ? day.overtimeMinutes
+                    : null)
+                : (controllers[day.day - 1].approvedOtMinutes > 0 ||
+                        controllers[day.day - 1].hasManualOtOverride
                     ? controllers[day.day - 1].approvedOtMinutes
                     : null),
             'is_unpaid': controllers[day.day - 1].isUnpaid,

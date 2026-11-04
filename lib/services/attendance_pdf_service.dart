@@ -136,8 +136,7 @@ class AttendancePdfService {
     final isForeignEmployee = sheet.isForeignEmployee,
         month = sheet.month,
         days = sheet.days;
-    final approvedOtAmount = sheet.approvedOtAmount,
-        lateDeductionAmount = sheet.lateDeductionAmount,
+    final lateDeductionAmount = sheet.lateDeductionAmount,
         unpaidDeductionAmount = sheet.unpaidDeductionAmount,
         estimatedAmounts = sheet.estimatedAmounts;
     pw.MemoryImage? logo;
@@ -153,6 +152,9 @@ class AttendancePdfService {
     final breakTotal = days.fold<int>(0, (sum, day) => sum + day.breakMinutes);
     final netTotal = days.fold<int>(0, (sum, day) => sum + day.netMinutes);
     final otTotal = days.fold<int>(0, (sum, day) => sum + day.overtimeMinutes);
+    // Attendance approval controls this printout. A saved payroll amount may
+    // predate an Admin override and must not imply approved OT when hours are 0.
+    final approvedOtAmount = otTotal > 0 ? sheet.approvedOtAmount : 0.0;
     final bonusDays = PayrollCalculationService.localUnusedOffBonusDays(
         month: month,
         isLocalEmployee: !isForeignEmployee,
@@ -263,6 +265,12 @@ class AttendancePdfService {
                     padding: const pw.EdgeInsets.only(top: 5),
                     child: pw.Text(
                         'Review saved payroll: the late deduction has no matching deductible shortfall in current attendance.',
+                        style: const pw.TextStyle(fontSize: 6))),
+              if (otTotal == 0 && (sheet.approvedOtAmount ?? 0) > 0)
+                pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 5),
+                    child: pw.Text(
+                        'Review saved payroll: its OT amount has no matching approved OT in current attendance. Payroll has not been changed.',
                         style: const pw.TextStyle(fontSize: 6))),
               if (lateTotal == 0 && (shortfallTotal ?? 0) > 0)
                 pw.Padding(
