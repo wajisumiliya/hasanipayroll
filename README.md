@@ -220,10 +220,12 @@ invalid bonus amounts must be resolved before exporting.
 
 ### Working-hour targets and FRN breaks
 
-HED2016 has a monthly assigned target of 304:30 in a 31-day month and 294:00
-in a 30-day month. This overrides the ordinary monthly target, regardless of
-OFF-day count. Other month lengths and other employees retain their existing
-rules. The target appears on the attendance screen and single/batch A4 prints.
+All FRN employees, including HED2016, have a fixed monthly assigned target of
+298.70 decimal hours (298:42) in a 31-day month and 288.40 decimal hours (288:24)
+in a 30-day month, regardless of OFF-day count. HED2016's explicit override is
+also retained if its FRN marker is absent. February and local employees other
+than that explicit override retain their existing rules. The target appears
+in hours:minutes on the attendance screen and single/batch A4 prints.
 
 For FRN employees (marker in employee or legacy salary address), a worked day
 with less than 60 minutes of recorded break counts as 90 minutes of break.

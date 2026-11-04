@@ -20,16 +20,23 @@ void main() {
           actualMinutes: actual,
           status: status);
 
-  test('HED2016 monthly target overrides the ordinary FRN rule', () {
-    expect(target('HED2016', DateTime(2026, 10)), 304 * 60 + 30);
-    expect(target(' hed2016 ', DateTime(2026, 11)), 294 * 60);
-    expect(target('HED2016', DateTime(2026, 10), off: 4), 304 * 60 + 30);
-    expect(target('HED2016', DateTime(2026, 11), foreign: false), 294 * 60);
-    expect(target('OTHER', DateTime(2026, 10)), 288 * 60 + 40);
-    expect(
-        target('OTHER', DateTime(2026, 10), foreign: false, off: 4), 27 * 450);
-    // No new February override was specified.
+  test('all FRN monthly targets use confirmed decimal hours regardless of OFFs', () {
+    for (var month = 1; month <= 12; month++) {
+      final days = DateTime(2026, month + 1, 0).day;
+      if (days != 30 && days != 31) continue;
+      for (final id in ['HED2016', 'OTHER-FRN']) {
+        for (final off in [0, 1, 2, 4, 5]) {
+          expect(target(id, DateTime(2026, month), off: off),
+              days == 31 ? 17922 : 17304);
+        }
+      }
+    }
+    // Preserve the explicitly named employee's override even without a marker.
+    expect(target(' hed2016 ', DateTime(2026, 11), foreign: false), 17304);
+    expect(target('OTHER', DateTime(2026, 10), foreign: false, off: 4), 27 * 450);
+    // February targets were not changed by the 30/31-day request.
     expect(target('HED2016', DateTime(2026, 2)), 26 * 630);
+    expect(target('OTHER-FRN', DateTime(2024, 2)), 27 * 630);
   });
 
   test('FRN marker may come from employee or legacy salary address', () {
@@ -86,13 +93,13 @@ void main() {
       month: DateTime(2026, 10),
       days: [day()],
     ));
-    expect(block(text, 'ASSIGNED HOURS', 'GROSS WORK'), contains('304:30'));
+    expect(block(text, 'ASSIGNED HOURS', 'GROSS WORK'), contains('298:42'));
     expect(block(text, 'BREAK HOURS', 'LATE HOURS'), contains('01:30'));
     expect(block(text, 'NET HOURS', 'APPROVED OT'), contains('10:30'));
     expect(text, contains('13:30')); // Actual clock evidence is retained.
   });
 
-  test('30-day target prints 294 hours while local breaks stay actual',
+  test('30-day target prints 288:24 while local breaks stay actual',
       () async {
     final text = pdfContents(await AttendancePdfService.build(
       employeeId: 'HED2016',
@@ -104,7 +111,7 @@ void main() {
       month: DateTime(2026, 11),
       days: [day()],
     ));
-    expect(block(text, 'ASSIGNED HOURS', 'GROSS WORK'), contains('294:00'));
+    expect(block(text, 'ASSIGNED HOURS', 'GROSS WORK'), contains('288:24'));
     expect(block(text, 'BREAK HOURS', 'LATE HOURS'), contains('00:30'));
     expect(block(text, 'NET HOURS', 'APPROVED OT'), contains('11:30'));
   });
@@ -141,7 +148,7 @@ void main() {
       month: DateTime(2026, 10),
       branchName: 'A',
     ));
-    expect(block(text, 'ASSIGNED HOURS', 'GROSS WORK'), contains('304:30'));
+    expect(block(text, 'ASSIGNED HOURS', 'GROSS WORK'), contains('298:42'));
     expect(block(text, 'BREAK HOURS', 'LATE HOURS'), contains('01:30'));
     expect(block(text, 'NET HOURS', 'APPROVED OT'), contains('10:30'));
   });

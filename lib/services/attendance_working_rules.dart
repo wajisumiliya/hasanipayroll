@@ -28,12 +28,11 @@ class AttendanceWorkingRules {
       required int offDays,
       required bool isForeignEmployee}) {
     final days = DateTime(month.year, month.month + 1, 0).day;
-    if (employeeId.trim().toUpperCase() == 'HED2016') {
-      if (days == 31) return 304 * 60 + 30;
-      if (days == 30) return 294 * 60;
-    }
-    if (isForeignEmployee && offDays == 2 && (days == 30 || days == 31)) {
-      return 288 * 60 + 40;
+    if (isForeignEmployee || employeeId.trim().toUpperCase() == 'HED2016') {
+      // Decimal hours confirmed by payroll: 298.70h = 298:42 and
+      // 288.40h = 288:24. These are fixed monthly targets, independent of OFFs.
+      if (days == 31) return 298 * 60 + 42;
+      if (days == 30) return 288 * 60 + 24;
     }
     return (days - offDays).clamp(0, days) * (isForeignEmployee ? 630 : 450);
   }
