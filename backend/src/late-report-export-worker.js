@@ -1,3 +1,4 @@
+import {renderSalaryReport} from './salary-report-export.js';
 import {drawReportLogo} from './report-branding.js';
 import { parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
@@ -95,6 +96,6 @@ async function pdf(data) {
 }
 try {
   if(!['pdf','xlsx'].includes(workerData.format)) throw new Error('Invalid report format.');
-  const bytes=Uint8Array.from(await (workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):workerData.view==='status-summary'?renderStatusSummary(workerData):workerData.view==='increment-summary'?renderIncrementSummary(workerData):workerData.view==='ot-summary'?renderOtSummary(workerData):pdf(workerData)):excel(workerData)));
+  const bytes=Uint8Array.from(await (workerData.view==='salary-report'?renderSalaryReport(workerData.report,workerData.format):workerData.format==='pdf'?(workerData.view==='attendance-summary'?renderAttendanceSummary(workerData):workerData.view==='status-summary'?renderStatusSummary(workerData):workerData.view==='increment-summary'?renderIncrementSummary(workerData):workerData.view==='ot-summary'?renderOtSummary(workerData):pdf(workerData)):excel(workerData)));
   parentPort.postMessage({bytes},[bytes.buffer]);
 } catch(error) { parentPort.postMessage({error:error.message}); }

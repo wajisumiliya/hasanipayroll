@@ -1,3 +1,4 @@
+import '../widgets/salary_report_page.dart';
 import '../widgets/bonus_report_dialog.dart';
 import '../widgets/attendance_allowance_report_dialog.dart';
 import '../services/payroll_month_scope.dart';
@@ -550,6 +551,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return 'Late Report';
       case 19:
         return 'Attendance Late';
+      case 20:
+        return 'Salary Report';
       default:
         return 'Dashboard';
     }
@@ -670,6 +673,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         return _branchPasswordPage();
       case 18:
         return _modernLateReportPage();
+      case 20:
+        return SalaryReportPage(
+          load: service.loadSalaryReport,
+          export: service.exportSalaryReport,
+        );
 
       default:
         return _dashboardPage();
@@ -989,6 +997,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               item('Attendance', Icons.event_available_rounded, 3),
               item('Late Report', Icons.schedule_outlined, 18),
               item('Payroll', Icons.account_balance_wallet_rounded, 2),
+              if (service.currentUser?.isReviewer != true)
+                item('Salary Report', Icons.table_chart_outlined, 20),
               item('Employee Payslips', Icons.badge_rounded, 12),
               item('EA Forms', Icons.description_rounded, 15),
               PremiumPortalSidebarItem(

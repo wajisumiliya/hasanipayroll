@@ -498,6 +498,41 @@ class AppService extends ChangeNotifier {
     );
   }
 
+  Future<Map<String, dynamic>> loadSalaryReport(int startYear) async {
+    final user = currentUser;
+    if (user == null || !user.isAdmin || user.isReviewer ||
+        user.isAttendanceAdmin || user.isRequestAdmin) {
+      throw StateError('Payroll administrator access required.');
+    }
+    final session = NeonApi.sessionVersion;
+    final data = await _getAuth(Uri(path: '/api/reports/salary',
+      queryParameters: {'start_year': '$startYear'}).toString());
+    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true || data['report'] is! Map) {
+      throw StateError('Salary Report is unavailable.');
+    }
+    return Map<String, dynamic>.from(data['report'] as Map);
+  }
+
+  Future<Uint8List> exportSalaryReport(int startYear, String format,
+      String? branchId) async {
+    final user = currentUser;
+    if (user == null || !user.isAdmin || user.isReviewer ||
+        user.isAttendanceAdmin || user.isRequestAdmin) {
+      throw StateError('Payroll administrator access required.');
+    }
+    final session = NeonApi.sessionVersion;
+    final data = await _getAuth(Uri(path: '/api/reports/salary', queryParameters: {
+      'start_year': '$startYear', 'format': format,
+      if (branchId != null) 'branch_id': branchId,
+    }).toString());
+    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true || data['file_base64'] is! String) {
+      throw StateError('Unable to export Salary Report.');
+    }
+    return base64Decode(data['file_base64'] as String);
+  }
+
   Future<BonusReport> loadBonusReport(DateTime month,
       {String? branchId}) async {
     final user = currentUser;

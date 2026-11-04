@@ -206,6 +206,43 @@ default and are explicitly marked as estimates, with separate totals. Deploy the
 backend first to apply `20261104_attendance_allowance_baseline.sql`, then publish
 the frontend. The migration leaves historical payroll amounts unchanged.
 
+### Salary Report
+
+Open **Salary Report** in the admin sidebar. The default period is July 2025
+through June 2026; choose another July–June reporting year if needed. Separate
+**Export Excel** and **Print / Save PDF** actions export all branches or the
+selected branch. Each branch has its own worksheet and one landscape A4 page,
+with Sno, Employee ID, Employee Name and the twelve months in chronological
+order. PDF text scales down for dense branches without dropping employees.
+Monthly totals appear at the bottom. Missing payroll months remain blank;
+an eligible saved zero is shown as 0.00.
+
+Values use saved payroll components: salary base (the existing FW salary
+replacement rule), all allowances, OT, bonus, commission, other earnings and
+public-holiday pay, less PCB, Zakat, advance, loan, unpaid, late and other
+deductions. Employee EPF, EIS and SOCSO deductions are excluded entirely;
+employer contributions are not employee deductions. For example RM 2000 basic
+plus RM 250 allowance less RM 50 late deduction produces RM 2200 even when EPF,
+EIS or SOCSO deductions are saved. The report never regenerates payroll or
+changes any saved amount.
+
+An employee must have saved payroll and be employed in the individual month;
+resigning later does not remove earlier eligible months. Branch grouping uses a
+saved payroll branch when present, otherwise the employee's current payroll
+branch or attendance branch. A move can create separate branch rows with values
+only in the corresponding saved-branch months. Historical branch attribution
+cannot be reconstructed when no branch snapshot exists. Duplicate employee/month
+records and invalid monetary components stop the report for review.
+
+The authenticated `/api/reports/salary?start_year=2025` endpoint provides the
+preview. Add `format=xlsx` or `format=pdf` for exports and optional `branch_id`
+for one branch. Only payroll administrators may access it; reviewer,
+attendance-only, request-only, employee and branch roles are denied. Local/FRN
+admin staff scopes are enforced by the server. Exports run in the existing
+bounded report worker, and use the same monthly matrix as the preview. Deploy
+the backend before publishing the updated Flutter frontend; no new database
+migration is required for this report.
+
 ### Bonus recipients report
 
 Open **Payroll → Bonus Recipients** for the selected month and branch. The report
