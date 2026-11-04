@@ -1,3 +1,4 @@
+import '../widgets/bonus_report_dialog.dart';
 import '../widgets/attendance_allowance_report_dialog.dart';
 import '../services/payroll_month_scope.dart';
 import '../services/salary_transfer.dart';
@@ -15925,6 +15926,18 @@ class _AdminDashboardState extends State<AdminDashboard>
                       ),
                       icon: const Icon(Icons.receipt_long_outlined),
                       label: const Text('Attendance Allowance Deductions'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => BonusReportDialog(
+                          initialMonth: selectedPayrollMonth,
+                          load: (month) => service.loadBonusReport(
+                            month, branchId: selectedPayrollBranchId),
+                        ),
+                      ),
+                      icon: const Icon(Icons.card_giftcard_outlined),
+                      label: const Text('Bonus Recipients'),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {

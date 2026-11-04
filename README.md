@@ -206,6 +206,18 @@ default and are explicitly marked as estimates, with separate totals. Deploy the
 backend first to apply `20261104_attendance_allowance_baseline.sql`, then publish
 the frontend. The migration leaves historical payroll amounts unchanged.
 
+### Bonus recipients report
+
+Open **Payroll → Bonus Recipients** for the selected month and branch. The report
+lists eligible employees with a positive bonus in saved payroll, showing Employee
+ID, Name, Branch, Reason and Bonus RM, with a recipient count and total. PDF and
+Excel exports use those same saved amounts. The PDF fits all recipients onto one
+A4 page and chooses portrait or landscape based on the complete report layout.
+Unused-fifth-OFF reasons come from the saved payroll note; other bonuses without
+that note explicitly show that no reason was recorded. The report does not
+recalculate attendance entitlement or change payroll. Duplicate payroll and
+invalid bonus amounts must be resolved before exporting.
+
 ### Selected-month payroll visibility
 
 Edit Payroll, employee payslip lists, payroll reports and payroll/statutory
