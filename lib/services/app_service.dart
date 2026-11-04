@@ -1797,6 +1797,7 @@ class AppService extends ChangeNotifier {
       afternoonOut: data['afternoon_out']?.toString() ?? '',
       overtimeIn: data['overtime_in']?.toString() ?? '',
       overtimeOut: data['overtime_out']?.toString() ?? '',
+      isUnpaid: data['is_unpaid'] == true,
       otAuthorized: data['ot_authorized'] == true,
       approvedOtMinutes: data['approved_ot_minutes'] == null
           ? null

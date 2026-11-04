@@ -707,6 +707,7 @@ class AttendanceRecord {
   final String overtimeIn;
   final String overtimeOut;
 
+  final bool isUnpaid;
   final bool otAuthorized;
   final int? approvedOtMinutes;
   final int overtimeMinutes;
@@ -726,6 +727,7 @@ class AttendanceRecord {
     this.afternoonOut = '',
     this.overtimeIn = '',
     this.overtimeOut = '',
+    this.isUnpaid = false,
     this.otAuthorized = false,
     this.approvedOtMinutes,
     this.overtimeMinutes = 0,
@@ -777,6 +779,7 @@ class AttendanceRecord {
     String? afternoonOut,
     String? overtimeIn,
     String? overtimeOut,
+    bool? isUnpaid,
     bool? otAuthorized,
     int? approvedOtMinutes,
     int? overtimeMinutes,
@@ -795,6 +798,7 @@ class AttendanceRecord {
       afternoonOut: afternoonOut ?? this.afternoonOut,
       overtimeIn: overtimeIn ?? this.overtimeIn,
       overtimeOut: overtimeOut ?? this.overtimeOut,
+      isUnpaid: isUnpaid ?? this.isUnpaid,
       otAuthorized: otAuthorized ?? this.otAuthorized,
       approvedOtMinutes: approvedOtMinutes ?? this.approvedOtMinutes,
       overtimeMinutes: overtimeMinutes ?? this.overtimeMinutes,
@@ -824,6 +828,7 @@ class AttendanceRecord {
       'afternoonOut': afternoonOut,
       'overtimeIn': overtimeIn,
       'overtimeOut': overtimeOut,
+      'isUnpaid': isUnpaid,
       'otAuthorized': otAuthorized,
       'approvedOtMinutes': approvedOtMinutes,
       'overtimeMinutes': overtimeMinutes,
@@ -881,6 +886,7 @@ class AttendanceRecord {
       overtimeOut: _stringValue(
         json['overtimeOut'] ?? json['overtime_out'],
       ),
+      isUnpaid: _boolValue(json['isUnpaid'] ?? json['is_unpaid']),
       otAuthorized: _boolValue(
         json['otAuthorized'] ?? json['ot_authorized'],
         defaultValue: false,

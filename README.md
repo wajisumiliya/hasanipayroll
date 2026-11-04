@@ -266,6 +266,16 @@ saved deduction are flagged with the saved amount; an administrator must
 review and save payroll to apply any correction. Printing never rewrites
 saved payroll or net pay. Missing salary inputs are explicitly marked unverified.
 
+### Payslip unpaid-hours footer
+
+The payslip UNPAID footer counts explicit unpaid attendance and saved unpaid-leave
+payroll only. Ordinary work shortages, excess breaks and late-deduction minutes
+are not added to unpaid-leave hours. UL, UL-UNPAID, UNPAID and UNPAID LEAVE statuses
+or an explicit unpaid flag qualify; ambiguous Time Off and paid leave do not.
+Stale remarks cannot create unpaid days when the saved unpaid deduction is zero.
+The explicit unpaid flag is retained when attendance is loaded and cached. This
+changes the footer display, not saved payroll deductions or net pay.
+
 ### Selected-month payroll visibility
 
 Edit Payroll, employee payslip lists, payroll reports and payroll/statutory

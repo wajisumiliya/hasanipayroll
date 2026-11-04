@@ -49,37 +49,24 @@ class PdfService {
       isForeignEmployee: isForeignEmployee,
     );
     // Keep the exact count on historical payroll generated under older rates.
-    final savedUnpaidDays = int.tryParse(
-        RegExp(r'Unpaid days: (\d+)\.').firstMatch(p.remarks ?? '')?.group(1) ??
-            '');
-    final payrollUnpaidDays = savedUnpaidDays != null &&
-            (savedUnpaidDays > 0 || p.unpaidLeave <= 0)
-        ? savedUnpaidDays.clamp(0, calendarDays)
-        : unpaidDailyRate > 0
-            ? (p.unpaidLeave / unpaidDailyRate).round().clamp(0, calendarDays)
-            : 0;
+    final savedUnpaidDays = int.tryParse(RegExp(r'Unpaid days: (\d+)\.')
+        .firstMatch(p.remarks ?? '')?.group(1) ?? '');
+    final payrollUnpaidDays = p.unpaidLeave <= 0
+        ? 0
+        : savedUnpaidDays != null && savedUnpaidDays > 0
+            ? savedUnpaidDays.clamp(0, calendarDays)
+            : unpaidDailyRate > 0
+                ? (p.unpaidLeave / unpaidDailyRate).round().clamp(0, calendarDays)
+                : 0;
     final attendanceUnpaidDays =
         monthlyAttendance.where(_unpaid).length.clamp(0, calendarDays);
     final unpaidDays = payrollUnpaidDays > attendanceUnpaidDays
         ? payrollUnpaidDays
         : attendanceUnpaidDays;
 
-    final attendanceLateMinutes = monthlyAttendance.fold<int>(0, (sum, record) {
-      if (isForeignEmployee || _unpaid(record) || !_worked(record)) return sum;
-      final shortage = requiredWorkMinutes - _workMinutes(record);
-      return sum + (shortage > 0 ? shortage : 0);
-    });
-    final shortageHourlyRate = !isForeignEmployee && p.basicSalary > 0
-        ? (p.basicSalary / 26.0) / (requiredWorkMinutes / 60.0)
-        : 0.0;
-    final payrollLateMinutes = shortageHourlyRate > 0
-        ? ((p.lateDeduction / shortageHourlyRate) * 60).round()
-        : 0;
-    final lateMinutes =
-        payrollLateMinutes > 0 ? payrollLateMinutes : attendanceLateMinutes;
-    final unpaidAndLateMinutes =
-        (unpaidDays * requiredWorkMinutes) + lateMinutes;
-    final unpaidHours = unpaidAndLateMinutes / 60.0;
+    // UNPAID reports leave time only. Normal-day shortages and late deductions
+    // must never turn into fictitious unpaid-leave hours on the payslip.
+    final unpaidHours = unpaidDays * requiredWorkMinutes / 60.0;
 
     // Older cached attendance could omit approval minutes. When payroll has
     // a local OT amount, retain a monetary fallback so the payslip never shows
@@ -467,45 +454,8 @@ class PdfService {
     );
   }
 
-  static bool _worked(AttendanceRecord record) {
-    final status = record.status.toLowerCase().trim();
-    return status != 'absent' &&
-        status != 'leave' &&
-        status != 'vacation' &&
-        record.effectiveCheckIn.trim().isNotEmpty;
-  }
-
-  static bool _unpaid(AttendanceRecord record) {
-    final status = record.status.toLowerCase().trim();
-    return status == 'time off' ||
-        status == 'unpaid' ||
-        status == 'unpaid leave';
-  }
-
-  static int _workMinutes(AttendanceRecord record) {
-    final fullDay = _timeRangeMinutes(record.checkIn, record.checkOut);
-    if (fullDay > 0) {
-      final recordedBreaks =
-          _timeRangeMinutes(record.morningIn, record.morningOut) +
-              _timeRangeMinutes(record.afternoonIn, record.afternoonOut) +
-              _timeRangeMinutes(record.overtimeIn, record.overtimeOut);
-      return (fullDay - recordedBreaks).clamp(0, 24 * 60);
-    }
-    final morning = _timeRangeMinutes(record.morningIn, record.morningOut);
-    final afternoon =
-        _timeRangeMinutes(record.afternoonIn, record.afternoonOut);
-    if (morning + afternoon > 0) return morning + afternoon;
-    return _timeRangeMinutes(
-      record.effectiveCheckIn,
-      record.effectiveCheckOut,
-    );
-  }
-
-  static int _timeRangeMinutes(String startValue, String endValue) {
-    final start = _minutes(startValue);
-    final end = _minutes(endValue);
-    return start == null || end == null || end <= start ? 0 : end - start;
-  }
+  static bool _unpaid(AttendanceRecord record) => record.isUnpaid ||
+      PayrollCalculationService.isUnpaidAttendanceStatus(record.status);
 
   static double _overtimeHours(AttendanceRecord record) {
     final approvedMinutes = record.approvedOtMinutes;
