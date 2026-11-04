@@ -53,7 +53,7 @@ void main() {
         savedSalary: 1700);
     final summary = block(text, 'UNPAID HOURS', 'NET HOURS');
     expect(summary, contains('21:00'));
-    expect(summary, contains('RM 109.68'));
+    expect(summary, contains('RM 121.40'));
     expect(text, contains('saved payroll deduction: RM 0.00'));
     expect(text, contains('Printing does not change payroll.'));
   });
@@ -61,8 +61,8 @@ void main() {
   test('historical payroll salary takes precedence over current default',
       () async {
     final text = await print([unpaid(1)],
-        salary: 3100, savedSalary: 1700, savedDeduction: 54.84);
-    expect(block(text, 'UNPAID HOURS', 'NET HOURS'), contains('RM 54.84'));
+        salary: 3100, savedSalary: 1700, savedDeduction: 60.70);
+    expect(block(text, 'UNPAID HOURS', 'NET HOURS'), contains('RM 60.70'));
     expect(text, contains('Saved payroll salary basis.'));
     expect(text, isNot(contains('Review and save payroll')));
   });
@@ -89,7 +89,7 @@ void main() {
     }
     final flagged =
         await print([unpaid(1, status: '', flag: true)], salary: 3100);
-    expect(block(flagged, 'UNPAID HOURS', 'NET HOURS'), contains('RM 100.00'));
+    expect(block(flagged, 'UNPAID HOURS', 'NET HOURS'), contains('RM 110.70'));
     final paid = await print([unpaid(1, status: 'MC')], savedDeduction: 10);
     expect(block(paid, 'UNPAID HOURS', 'NET HOURS'), contains('RM 0.00'));
     expect(paid, contains('saved payroll deduction: RM 10.00'));
@@ -143,7 +143,7 @@ void main() {
     ], month: DateTime(2026, 10), branchName: 'A'));
     final summary = block(text, 'UNPAID HOURS', 'NET HOURS');
     expect(summary, contains('21:00'));
-    expect(summary, contains('RM 109.68'));
+    expect(summary, contains('RM 121.40'));
     expect(text, contains('saved payroll deduction: RM 0.00'));
   });
 }

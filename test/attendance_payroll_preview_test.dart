@@ -66,7 +66,7 @@ void main() {
         'net_working_minutes': 300,
       },
     ], address: 'FRN');
-    expect(result.unpaidDeduction, 83.87);
+    expect(result.unpaidDeduction, 92.9);
     expect(result.lateDeduction, 0);
     expect(result.generated, isFalse);
   });

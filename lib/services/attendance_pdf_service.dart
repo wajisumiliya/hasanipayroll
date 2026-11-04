@@ -234,7 +234,8 @@ class AttendancePdfService {
         ? 0.0
         : unpaidSalary != null && unpaidSalary.isFinite && unpaidSalary >= 0
             ? (PayrollCalculationService.unpaidDailyRate(
-                            basicSalary: unpaidSalary, month: month) *
+                            basicSalary: unpaidSalary, month: month,
+                            isForeignEmployee: isForeignEmployee) *
                         unpaidDays.length *
                         100)
                     .round() /
@@ -323,7 +324,8 @@ class AttendancePdfService {
                   child: pw.Text(
                     calculatedUnpaid == null
                         ? 'Unpaid deduction cannot be verified: basic salary is unavailable. The displayed RM amount is from saved payroll.'
-                        : 'Unpaid RM: ${unpaidDays.length} unpaid day(s), basic salary / calendar days. '
+                        : 'Unpaid RM: ${unpaidDays.length} unpaid day(s), '
+                            '${isForeignEmployee ? "basic salary / 28, daily rate rounded to nearest RM 0.10. " : "basic salary / calendar days. "}'
                             '${sheet.payrollBasicSalary == null ? "Current salary default estimate. " : "Saved payroll salary basis. "}'
                             '${unpaidMismatch ? "Current attendance estimate: RM ${calculatedUnpaid.toStringAsFixed(2)}; saved payroll deduction: RM ${sheet.unpaidDeductionAmount!.toStringAsFixed(2)}. Review and save payroll to apply the correction. " : ""}'
                             'Printing does not change payroll.',

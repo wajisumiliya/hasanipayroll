@@ -239,9 +239,15 @@ Each FRN unpaid day contributes exactly 10:30 to the unpaid-hours total,
 independently of daily roster duration. Other employees use their assigned
 net working hours, falling back to 7:30. Explicit unpaid flags and legacy
 UL/UL-UNPAID/UNPAID/UNPAID LEAVE statuses match payroll's unpaid-day membership.
-The A4 unpaid RM value uses basic salary divided by calendar days, multiplied
-by the unpaid-day count, rounded to two decimal places. The selected month's
-saved payroll basic salary takes precedence over the current salary default.
+FRN unpaid deduction uses a fixed 28-day divisor in every calendar month.
+The daily rate is basic salary / 28, rounded to the nearest RM 0.10, then
+multiplied by unpaid days (RM 1700 -> RM 60.70/day; RM 2000 -> RM 71.40/day).
+Local employees retain the actual calendar-day divisor and final two-decimal
+rounding. Payroll generation, attendance previews, A4 estimates and payslip
+unpaid-day inference share this rate rule. Payslips preserve explicit saved
+unpaid-day counts for historical payroll generated under older rates.
+The selected month's saved payroll basic salary takes precedence over the
+current salary default for the attendance print calculation.
 A current-default fallback is labelled as an estimate. Differences from the
 saved deduction are flagged with the saved amount; an administrator must
 review and save payroll to apply any correction. Printing never rewrites

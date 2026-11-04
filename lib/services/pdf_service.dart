@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/payroll.dart';
+import 'payroll_calculation_service.dart';
 
 class PdfService {
   static const payslipPageFormat = PdfPageFormat(
@@ -42,11 +43,19 @@ class PdfService {
     final isForeignEmployee = _isForeignAddress(employee.address);
     final requiredWorkMinutes = isForeignEmployee ? 630 : 450;
     final calendarDays = DateTime(p.period.year, p.period.month + 1, 0).day;
-    final unpaidDailyRate =
-        p.basicSalary > 0 ? p.basicSalary / calendarDays : 0.0;
-    final payrollUnpaidDays = unpaidDailyRate > 0
-        ? (p.unpaidLeave / unpaidDailyRate).round().clamp(0, calendarDays)
-        : 0;
+    final unpaidDailyRate = PayrollCalculationService.unpaidDailyRate(
+      basicSalary: p.basicSalary, month: p.period,
+      isForeignEmployee: isForeignEmployee,
+    );
+    // Keep the exact count on historical payroll generated under older rates.
+    final savedUnpaidDays = int.tryParse(RegExp(r'Unpaid days: (\d+)\.')
+        .firstMatch(p.remarks ?? '')?.group(1) ?? '');
+    final payrollUnpaidDays = savedUnpaidDays != null &&
+        (savedUnpaidDays > 0 || p.unpaidLeave <= 0)
+        ? savedUnpaidDays.clamp(0, calendarDays)
+        : unpaidDailyRate > 0
+            ? (p.unpaidLeave / unpaidDailyRate).round().clamp(0, calendarDays)
+            : 0;
     final attendanceUnpaidDays =
         monthlyAttendance.where(_unpaid).length.clamp(0, calendarDays);
     final unpaidDays = payrollUnpaidDays > attendanceUnpaidDays

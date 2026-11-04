@@ -103,12 +103,15 @@ class PayrollCalculationService {
           : 0;
 
   /// Daily rate used only for explicit UNPAID attendance days.
-  /// The divisor is the actual number of calendar days in the payroll month.
+  /// FRN: fixed 28-day divisor, daily rate rounded to the nearest ten sen.
+  /// Local employees retain the actual calendar-day divisor.
   static double unpaidDailyRate({
     required double basicSalary,
     required DateTime month,
+    bool isForeignEmployee = false,
   }) {
     if (basicSalary <= 0) return 0;
+    if (isForeignEmployee) return roundPayrollAmount(basicSalary / 28);
     final calendarDays = DateTime(month.year, month.month + 1, 0).day;
     return basicSalary / calendarDays;
   }

@@ -567,6 +567,7 @@ class AttendancePayrollService {
     final unpaidDailySalary = PayrollCalculationService.unpaidDailyRate(
       basicSalary: basicSalary,
       month: month,
+      isForeignEmployee: isForeignEmployee,
     );
     final shortageDailySalary = PayrollCalculationService.shortageDailyRate(
       basicSalary: basicSalary,
@@ -932,6 +933,8 @@ class AttendancePayrollService {
                   'Shortage minutes: ${totalShortageMinutes.toStringAsFixed(0)}. '
                   'Late deduction: ${totalLateDeduction.toStringAsFixed(2)}. '
                   'Unpaid days: $unpaidDays. '
+                  'Unpaid daily rate: ${unpaidDailySalary.toStringAsFixed(2)}. '
+                  'Unpaid divisor: ${isForeignEmployee ? 28 : DateTime(month.year, month.month + 1, 0).day}. '
                   'Unpaid deduction: ${unpaidDeduction.toStringAsFixed(2)}. '
                   //'Public holiday worked days: $publicHolidayWorkedDays. '
                   'Cuti Umum: ${cutiUmum.toStringAsFixed(2)}.'),
