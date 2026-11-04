@@ -195,7 +195,8 @@ class AttendanceBatchPrintService {
           month: month,
           days: days,
           basicSalary: double.tryParse('${salary?['basic_salary']}') ?? 0,
-          payrollBasicSalary: saved.isEmpty ? null
+          payrollBasicSalary: saved.isEmpty
+              ? null
               : double.tryParse('${saved.first['basic_salary']}'),
           approvedOtAmount: overtime,
           lateDeductionAmount: lateAmount,
