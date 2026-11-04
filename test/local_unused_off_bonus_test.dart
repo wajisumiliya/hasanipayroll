@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/services/attendance_pdf_service.dart';
 import 'attendance_pdf_summary_test.dart' show pdfContents, block;
-import 'package:hasani_payroll_portal/services/payroll_calculation_service.dart';
 import 'package:hasani_payroll_portal/services/attendance_payroll_service.dart';
 
 void main() {
@@ -14,51 +13,8 @@ void main() {
                 'status': i < off ? 'OFF' : 'Present',
                 'net_working_minutes': i < off ? 0 : 450,
               });
-  int days(List<Map<String, dynamic>> attendance,
-          {bool local = true, DateTime? now}) =>
-      PayrollCalculationService.localUnusedOffBonusDays(
-          month: month,
-          isLocalEmployee: local,
-          attendance: attendance,
-          now: now ?? DateTime.utc(2026, 11, 1));
-
-  test('only four OFF days in complete local 31-day month earn one day', () {
-    expect(days(rows()), 1);
-    expect(days(rows(off: 5)), 0);
-    expect(days(rows(off: 3)), 0);
-    expect(days(rows(), local: false), 0);
-    expect(days(rows(length: 30)), 0);
-    expect(days([...rows(), rows().last]), 0);
-    expect(days(rows(), now: DateTime.utc(2026, 10, 15)), 0);
-    final absent = rows();
-    absent.last = {
-      ...absent.last,
-      'status': 'Absent',
-      'net_working_minutes': 0
-    };
-    expect(days(absent), 0);
-    expect(
-        PayrollCalculationService.localUnusedOffBonusDays(
-            month: DateTime(2026, 11),
-            isLocalEmployee: true,
-            attendance: rows(),
-            now: DateTime.utc(2026, 12, 1)),
-        0);
-  });
-
-  test('normal daily rate follows existing ten-sen payroll rounding', () {
-    expect(
-        PayrollCalculationService.localUnusedOffBonusAmount(
-            basicSalary: 1700, bonusDays: 1),
-        65.4);
-    expect(
-        PayrollCalculationService.localUnusedOffBonusAmount(
-            basicSalary: 1700, bonusDays: 0),
-        0);
-  });
-
   test(
-      'payroll preview separates bonus from approved OT, even OT-excluded staff',
+      'payroll preview creates no unused-OFF bonus, even for a complete month',
       () async {
     for (final id in ['TEST001', 'HED1016']) {
       final result = await AttendancePayrollService.previewEmployeePayroll(
@@ -75,13 +31,13 @@ void main() {
             'eis_enabled': false,
           });
       expect(result.calculated, true);
-      expect(result.restDayBonusAmount, 65.4);
-      expect(result.restDayBonusMinutes, 450);
+      expect(result.restDayBonusAmount, 0);
+      expect(result.restDayBonusMinutes, 0);
       expect(result.overtimeAmount, 0);
       expect(result.overtimeDuration, 0);
     }
   });
-  test('attendance sheet credits bonus hours separately from OT money',
+  test('attendance sheet does not infer unused-OFF bonus hours or money',
       () async {
     final bytes = await AttendancePdfService.build(
         employeeId: 'TEST001',
@@ -113,9 +69,10 @@ void main() {
                 lateMinutes: 0)));
     final text = pdfContents(bytes);
     expect(text, isNot(contains('OT / BONUS HOURS')));
-    expect(block(text, 'APPROVED OT', 'Unused fifth OFF'), contains('00:00'));
+    expect(block(text, 'APPROVED OT', 'DAY'), contains('00:00'));
     expect(block(text, 'NET HOURS', 'APPROVED OT'), contains('202:30'));
-    expect(text, contains('RM 65.40'));
-    expect(text, contains('Paid through Bonus,'));
+    expect(text, isNot(contains('RM 65.40')));
+    expect(text, isNot(contains('Paid through Bonus,')));
+    expect(text, isNot(contains('Unused fifth OFF')));
   });
 }

@@ -218,6 +218,17 @@ that note explicitly show that no reason was recorded. The report does not
 recalculate attendance entitlement or change payroll. Duplicate payroll and
 invalid bonus amounts must be resolved before exporting.
 
+### Automatic bonus rules
+
+The local unused-fifth-OFF bonus is disabled. Payroll generation writes zero
+for the automatic bonus, and attendance PDFs do not infer or display its bonus
+hours or entitlement. The FRN rest-day extra-pay rule remains in place: eligible
+FRN staff receive basic/28 per payable unused/worked OFF day through OT using
+the existing attendance-completeness checks. Genuine approved OT is unchanged.
+Existing saved payroll is not rewritten automatically; review and regenerate
+payroll to remove an old automatic local bonus. The bonus-recipient report still
+shows actual saved bonus amounts and their recorded historical reasons.
+
 ### Working-hour targets and FRN breaks
 
 All FRN employees, including HED2016, have a fixed monthly assigned target of

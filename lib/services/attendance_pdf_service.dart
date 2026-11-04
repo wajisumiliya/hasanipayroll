@@ -203,20 +203,6 @@ class AttendancePdfService {
     // Attendance approval controls this printout. A saved payroll amount may
     // predate an Admin override and must not imply approved OT when hours are 0.
     final approvedOtAmount = otTotal > 0 ? sheet.approvedOtAmount : 0.0;
-    final bonusDays = PayrollCalculationService.localUnusedOffBonusDays(
-        month: month,
-        isLocalEmployee: !isForeignEmployee,
-        attendance: [
-          for (final day in days)
-            {
-              'attendance_date':
-                  DateTime(month.year, month.month, day.day).toIso8601String(),
-              'status': day.status,
-              'net_working_minutes': day.netMinutes,
-            }
-        ]);
-    final bonusAmount = PayrollCalculationService.localUnusedOffBonusAmount(
-        basicSalary: sheet.basicSalary, bonusDays: bonusDays);
     final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
     // Arrival lateness and net-work shortfall are different measurements.
     // Never infer a deductible shortage from arrival minutes alone.
@@ -340,14 +326,6 @@ class AttendancePdfService {
                     style: const pw.TextStyle(fontSize: 6),
                   ),
                 ),
-              if (bonusDays > 0)
-                pw.Padding(
-                    padding: const pw.EdgeInsets.only(top: 5),
-                    child: pw.Text(
-                        'Unused fifth OFF bonus at normal basic salary / 26'
-                        '${sheet.basicSalary > 0 ? " = RM ${bonusAmount.toStringAsFixed(2)}" : ""}. '
-                        'Paid through Bonus, separately from the OT amount above. Current attendance entitlement.',
-                        style: const pw.TextStyle(fontSize: 6))),
               if (shortfallTotal == 0 && (lateDeductionAmount ?? 0) > 0)
                 pw.Padding(
                     padding: const pw.EdgeInsets.only(top: 5),
