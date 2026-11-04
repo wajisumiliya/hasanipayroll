@@ -11,12 +11,10 @@ class BonusReportDialog extends StatefulWidget {
   final DateTime initialMonth;
   final Future<BonusReport> Function(DateTime month) load;
   @override
-  State<BonusReportDialog> createState() =>
-      _BonusReportDialogState();
+  State<BonusReportDialog> createState() => _BonusReportDialogState();
 }
 
-class _BonusReportDialogState
-    extends State<BonusReportDialog> {
+class _BonusReportDialogState extends State<BonusReportDialog> {
   late DateTime month = widget.initialMonth;
   BonusReport? report;
   bool loading = true, exporting = false;
@@ -57,11 +55,9 @@ class _BonusReportDialogState
       error = null;
     });
     try {
-      final name =
-          'Bonus_Recipients_${DateFormat('yyyy_MM').format(month)}';
+      final name = 'Bonus_Recipients_${DateFormat('yyyy_MM').format(month)}';
       if (pdf) {
-        final bytes =
-            await BonusReportExport.pdf(data, visibleRows);
+        final bytes = await BonusReportExport.pdf(data, visibleRows);
         await Printing.layoutPdf(
             name: '$name.pdf',
             dynamicLayout: false,
@@ -148,8 +144,7 @@ class _BonusReportDialogState
                                   child: SingleChildScrollView(
                                       scrollDirection: Axis.horizontal,
                                       child: DataTable(
-                                        columns: BonusReportExport
-                                            .headers
+                                        columns: BonusReportExport.headers
                                             .map((label) =>
                                                 DataColumn(label: Text(label)))
                                             .toList(),
@@ -158,13 +153,13 @@ class _BonusReportDialogState
                                         rows: visibleRows
                                             .map((row) => DataRow(cells: [
                                                   for (final value
-                                                      in BonusReportExport
-                                                          .values(row, month))
+                                                      in BonusReportExport.values(
+                                                          row, month))
                                                     DataCell(SizedBox(
-                                                        width: value ==
-                                                                row.reason
-                                                            ? 260
-                                                            : 150,
+                                                        width:
+                                                            value == row.reason
+                                                                ? 260
+                                                                : 150,
                                                         child: SingleChildScrollView(
                                                             child: Text(value
                                                                     is num

@@ -498,10 +498,14 @@ class AppService extends ChangeNotifier {
     );
   }
 
-  Future<BonusReport> loadBonusReport(DateTime month, {String? branchId}) async {
+  Future<BonusReport> loadBonusReport(DateTime month,
+      {String? branchId}) async {
     final user = currentUser;
-    if (user == null || !user.isAdmin || user.isReviewer ||
-        user.isAttendanceAdmin || user.isRequestAdmin) {
+    if (user == null ||
+        !user.isAdmin ||
+        user.isReviewer ||
+        user.isAttendanceAdmin ||
+        user.isRequestAdmin) {
       throw StateError('Payroll administrator access required.');
     }
     final session = NeonApi.sessionVersion;
@@ -511,30 +515,41 @@ class AppService extends ChangeNotifier {
     final end = '${next.year}-${next.month.toString().padLeft(2, '0')}-01';
     for (var offset = 0;; offset += 1000) {
       final page = List<Map<String, dynamic>>.from(await _database
-          .from('payroll').select('employee_id,period,bonus,remarks')
-          .gte('period', start).lt('period', end)
-          .order('employee_id').range(offset, offset + 999));
+          .from('payroll')
+          .select('employee_id,period,bonus,remarks')
+          .gte('period', start)
+          .lt('period', end)
+          .order('employee_id')
+          .range(offset, offset + 999));
       payroll.addAll(page);
       if (page.length < 1000) break;
     }
-    final ids = payroll.map((row) => '${row['employee_id']}'.trim().toUpperCase())
-        .toSet().toList();
+    final ids = payroll
+        .map((row) => '${row['employee_id']}'.trim().toUpperCase())
+        .toSet()
+        .toList();
     final employees = <Map<String, dynamic>>[];
     for (var offset = 0; offset < ids.length; offset += 500) {
       final batch = ids.sublist(offset, (offset + 500).clamp(0, ids.length));
       employees.addAll(List<Map<String, dynamic>>.from(await _database
           .from('employees')
-          .select('employee_id,name,branch_id,payroll_branch_id,joining_date,resigned_at,is_active')
+          .select(
+              'employee_id,name,branch_id,payroll_branch_id,joining_date,resigned_at,is_active')
           .inFilter('employee_id', batch)));
     }
     final branches = await loadNeonBranches();
     if (session != NeonApi.sessionVersion) {
       throw StateError('Session changed. Reload the report.');
     }
-    return BonusReport.build(month: month, payroll: payroll, employees: employees,
-      branches: {for (final branch in branches)
-        '${branch['id']}'.trim().toUpperCase(): '${branch['name']}'},
-      branchId: branchId);
+    return BonusReport.build(
+        month: month,
+        payroll: payroll,
+        employees: employees,
+        branches: {
+          for (final branch in branches)
+            '${branch['id']}'.trim().toUpperCase(): '${branch['name']}'
+        },
+        branchId: branchId);
   }
 
   Future<AttendanceAllowanceReport> loadAttendanceAllowanceReport(

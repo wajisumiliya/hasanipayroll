@@ -731,8 +731,8 @@ class AttendancePayrollService {
         for (final row in attendance)
           {
             ...row,
-            'net_working_minutes':
-                _attendanceNetMinutes(row, isForeignEmployee: isForeignEmployee),
+            'net_working_minutes': _attendanceNetMinutes(row,
+                isForeignEmployee: isForeignEmployee),
           }
       ],
     );
@@ -1437,8 +1437,10 @@ class AttendancePayrollService {
     var gross = _attendanceWorkMinutes(row);
     if (gross <= 0 && savedNet > 0) gross = savedNet + actualBreaks;
     final breaks = AttendanceWorkingRules.breakMinutes(
-      isForeignEmployee: isForeignEmployee, workMinutes: gross,
-      actualMinutes: actualBreaks, status: _text(row['status']),
+      isForeignEmployee: isForeignEmployee,
+      workMinutes: gross,
+      actualMinutes: actualBreaks,
+      status: _text(row['status']),
     );
     if (breaks == actualBreaks && savedNet > 0) return savedNet;
     return (gross - breaks).clamp(0, 24 * 60).toInt();

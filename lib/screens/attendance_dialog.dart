@@ -1823,7 +1823,8 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         calculateMinutes(c.overtimeIn.text, c.overtimeOut.text);
     return AttendanceWorkingRules.breakMinutes(
       isForeignEmployee: _isForeignEmployee,
-      workMinutes: calculateWorkMinutes(c), actualMinutes: actual,
+      workMinutes: calculateWorkMinutes(c),
+      actualMinutes: actual,
       status: c.status,
     );
   }
@@ -3037,11 +3038,17 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         child: Row(
           children: [
             const SizedBox(width: 20),
-            _summaryChip('ASSIGNED', formatMinutes(AttendanceWorkingRules.monthlyTarget(
-              employeeId: _employeeId(), month: widget.month,
-              offDays: controllers.where((c) => c.status.trim().toUpperCase() == 'OFF').length,
-              isForeignEmployee: _isForeignEmployee,
-            )), const Color(0xFF315AD9)),
+            _summaryChip(
+                'ASSIGNED',
+                formatMinutes(AttendanceWorkingRules.monthlyTarget(
+                  employeeId: _employeeId(),
+                  month: widget.month,
+                  offDays: controllers
+                      .where((c) => c.status.trim().toUpperCase() == 'OFF')
+                      .length,
+                  isForeignEmployee: _isForeignEmployee,
+                )),
+                const Color(0xFF315AD9)),
             const SizedBox(width: 10),
             _summaryChip(
                 'WORK', formatMinutes(workTotal), const Color(0xFF315AD9)),

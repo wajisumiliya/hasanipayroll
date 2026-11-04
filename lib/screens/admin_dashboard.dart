@@ -15932,8 +15932,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                         context: context,
                         builder: (_) => BonusReportDialog(
                           initialMonth: selectedPayrollMonth,
-                          load: (month) => service.loadBonusReport(
-                            month, branchId: selectedPayrollBranchId),
+                          load: (month) => service.loadBonusReport(month,
+                              branchId: selectedPayrollBranchId),
                         ),
                       ),
                       icon: const Icon(Icons.card_giftcard_outlined),

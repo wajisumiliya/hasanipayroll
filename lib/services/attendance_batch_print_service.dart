@@ -100,8 +100,10 @@ class AttendanceBatchPrintService {
                 duration(r['overtime_in'], r['overtime_out'])
             : number(r['break_minutes']);
         final breaks = AttendanceWorkingRules.breakMinutes(
-          isForeignEmployee: foreign, workMinutes: gross,
-          actualMinutes: actualBreaks, status: text(r['status']),
+          isForeignEmployee: foreign,
+          workMinutes: gross,
+          actualMinutes: actualBreaks,
+          status: text(r['status']),
         );
         final net = (hasWorkingTimes || breaks != actualBreaks
                 ? gross - breaks

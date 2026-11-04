@@ -141,42 +141,41 @@ class AttendancePdfService {
     final month = sheet.month;
     // Keep the source's actual worked minutes intact for payroll calculations.
     // Only the attendance display includes paid absence credits.
-    final days = sheet.days
-        .map((day) {
-          final breaks = AttendanceWorkingRules.breakMinutes(
-            isForeignEmployee: isForeignEmployee,
-            workMinutes: day.workMinutes, actualMinutes: day.breakMinutes,
-            status: day.status,
-          );
-          return AttendancePrintDay(
-              day: day.day,
-              workingIn: day.workingIn,
-              workingOut: day.workingOut,
-              morningIn: day.morningIn,
-              morningOut: day.morningOut,
-              afternoonIn: day.afternoonIn,
-              afternoonOut: day.afternoonOut,
-              eveningIn: day.eveningIn,
-              eveningOut: day.eveningOut,
-              status: day.status,
-              workMinutes: day.workMinutes,
-              breakMinutes: breaks,
-              netMinutes: AttendanceNetHours.displayMinutes(
-                status: day.status,
-                actualMinutes: breaks != day.breakMinutes
-                    ? (day.workMinutes - breaks).clamp(0, 1440).toInt()
-                    : day.netMinutes,
-                assignedMinutes:
-                    day.assignedNetMinutes ?? (isForeignEmployee ? 630 : 450),
-              ),
-              overtimeMinutes: AttendanceNetHours.isPaidAbsence(day.status)
-                  ? 0
-                  : day.overtimeMinutes,
-              lateMinutes: day.lateMinutes,
-              assignedNetMinutes: day.assignedNetMinutes,
-            );
-        })
-        .toList();
+    final days = sheet.days.map((day) {
+      final breaks = AttendanceWorkingRules.breakMinutes(
+        isForeignEmployee: isForeignEmployee,
+        workMinutes: day.workMinutes,
+        actualMinutes: day.breakMinutes,
+        status: day.status,
+      );
+      return AttendancePrintDay(
+        day: day.day,
+        workingIn: day.workingIn,
+        workingOut: day.workingOut,
+        morningIn: day.morningIn,
+        morningOut: day.morningOut,
+        afternoonIn: day.afternoonIn,
+        afternoonOut: day.afternoonOut,
+        eveningIn: day.eveningIn,
+        eveningOut: day.eveningOut,
+        status: day.status,
+        workMinutes: day.workMinutes,
+        breakMinutes: breaks,
+        netMinutes: AttendanceNetHours.displayMinutes(
+          status: day.status,
+          actualMinutes: breaks != day.breakMinutes
+              ? (day.workMinutes - breaks).clamp(0, 1440).toInt()
+              : day.netMinutes,
+          assignedMinutes:
+              day.assignedNetMinutes ?? (isForeignEmployee ? 630 : 450),
+        ),
+        overtimeMinutes: AttendanceNetHours.isPaidAbsence(day.status)
+            ? 0
+            : day.overtimeMinutes,
+        lateMinutes: day.lateMinutes,
+        assignedNetMinutes: day.assignedNetMinutes,
+      );
+    }).toList();
     final lateDeductionAmount = sheet.lateDeductionAmount,
         unpaidDeductionAmount = sheet.unpaidDeductionAmount,
         estimatedAmounts = sheet.estimatedAmounts;
@@ -687,5 +686,4 @@ class AttendancePdfService {
       value.trim().isEmpty ? '-' : value.trim();
   static String _duration(int minutes) =>
       '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
-
 }
