@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
 import '../services/attendance_net_hours.dart';
+import '../services/attendance_working_rules.dart';
 import '../services/attendance_payroll_service.dart';
 import '../services/app_service.dart';
 import '../services/payroll_calculation_service.dart';
@@ -77,6 +78,9 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   double _requiredWorkHours = 7.5;
   bool _isLocalStaff = true;
   bool _salaryRuleLoaded = false;
+  String _salaryAddress = '';
+  bool get _isForeignEmployee => AttendanceWorkingRules.isForeign(
+      widget.employee['address'], _salaryAddress);
   final Map<int, Map<String, dynamic>> _weeklyRoster = {};
   final Map<int, Map<String, dynamic>> _dailyRoster = {};
 
@@ -164,7 +168,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       // Production schema uses epf_category. Avoid a failing query on every load.
       final rows = await SupabaseService.database
           .from('employee_salary_defaults')
-          .select('eis_applicable,epf_category')
+          .select('eis_applicable,epf_category,address')
           .eq('employee_id', employeeId)
           .limit(1);
       if (rows.isNotEmpty) {
@@ -172,6 +176,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       }
 
       if (salary != null) {
+        _salaryAddress = '${salary['address'] ?? ''}';
         final epfCategory =
             (salary['epf_catagory'] ?? salary['epf_category'] ?? '')
                 .toString()
@@ -227,6 +232,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       final dependencies = results[1] as Map<String, dynamic>;
       final salary = dependencies['salary'];
       if (salary is Map) {
+        _salaryAddress = '${salary['address'] ?? ''}';
         final epfCategory =
             (salary['epf_category'] ?? '').toString().trim().toLowerCase();
         final eisApplicable = _toBool(salary['eis_applicable']);
@@ -1142,7 +1148,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         department: _department(),
         section: _section(),
         branchId: widget.branchId,
-        isForeignEmployee: !_isLocalStaff,
+        isForeignEmployee: _isForeignEmployee,
         month: widget.month,
         days: days,
         estimatedAmounts: estimatedAmounts,
@@ -1329,26 +1335,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         // CALCULATE BREAKS
         // ================================================================
 
-        final morningMinutes = calculateMinutes(
-          row.morningIn.text,
-          row.morningOut.text,
-        );
-
-        final afternoonMinutes = calculateMinutes(
-          row.afternoonIn.text,
-          row.afternoonOut.text,
-        );
-
-        // IMPORTANT:
-        // EVENING / OT COLUMN IS A BREAK.
-        // It is NOT overtime.
-        final eveningBreakMinutes = calculateMinutes(
-          row.overtimeIn.text,
-          row.overtimeOut.text,
-        );
-
-        final breakMinutes =
-            morningMinutes + afternoonMinutes + eveningBreakMinutes;
+        final breakMinutes = _calculateBreakMinutes(row);
 
         // NET WORKING = WORKING PERIOD - ALL BREAKS.
         final netWorkingMinutes =
@@ -1831,9 +1818,14 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   }
 
   int _calculateBreakMinutes(AttendanceDayControllers c) {
-    return calculateMinutes(c.morningIn.text, c.morningOut.text) +
+    final actual = calculateMinutes(c.morningIn.text, c.morningOut.text) +
         calculateMinutes(c.afternoonIn.text, c.afternoonOut.text) +
         calculateMinutes(c.overtimeIn.text, c.overtimeOut.text);
+    return AttendanceWorkingRules.breakMinutes(
+      isForeignEmployee: _isForeignEmployee,
+      workMinutes: calculateWorkMinutes(c), actualMinutes: actual,
+      status: c.status,
+    );
   }
 
   int _calculateDailyOtMinutes({
@@ -2440,7 +2432,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       c.overtimeOut.text,
     );
 
-    final breakTotal = morning + afternoon + evening;
+    final breakTotal = AttendanceWorkingRules.breakMinutes(
+      isForeignEmployee: _isForeignEmployee,
+      workMinutes: calculateWorkMinutes(c),
+      actualMinutes: morning + afternoon + evening,
+      status: c.status,
+    );
 
     return SizedBox(
       height: 42,
@@ -3040,6 +3037,12 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         child: Row(
           children: [
             const SizedBox(width: 20),
+            _summaryChip('ASSIGNED', formatMinutes(AttendanceWorkingRules.monthlyTarget(
+              employeeId: _employeeId(), month: widget.month,
+              offDays: controllers.where((c) => c.status.trim().toUpperCase() == 'OFF').length,
+              isForeignEmployee: _isForeignEmployee,
+            )), const Color(0xFF315AD9)),
+            const SizedBox(width: 10),
             _summaryChip(
                 'WORK', formatMinutes(workTotal), const Color(0xFF315AD9)),
             const SizedBox(width: 10),

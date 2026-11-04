@@ -1905,7 +1905,7 @@ app.get("/api/attendance-sheet/dependencies", authenticate, async (req, res) => 
     }
     const start = `${year}-${String(month).padStart(2,"0")}-01`;
     const [salary, monthly, daily] = await Promise.all([
-      pool.query("SELECT eis_applicable, epf_category FROM public.employee_salary_defaults WHERE employee_id = $1 LIMIT 1", [employeeId]),
+      pool.query("SELECT eis_applicable, epf_category, address FROM public.employee_salary_defaults WHERE employee_id = $1 LIMIT 1", [employeeId]),
       pool.query("SELECT to_jsonb(r) AS data FROM public.monthly_rosters r WHERE r.employee_id = $1 AND LOWER(TRIM(r.branch_id)) = LOWER(TRIM($2)) AND r.roster_year = $3 AND r.roster_month = $4 ORDER BY r.week_number", [employeeId,employeeBranch,year,month]),
       pool.query("SELECT to_jsonb(r) AS data FROM public.daily_rosters r WHERE r.employee_id = $1 AND LOWER(TRIM(r.branch_id)) = LOWER(TRIM($2)) AND r.roster_date >= $3::date AND r.roster_date < ($3::date + INTERVAL '1 month') ORDER BY r.roster_date", [employeeId,employeeBranch,start])
     ]);

@@ -218,6 +218,21 @@ that note explicitly show that no reason was recorded. The report does not
 recalculate attendance entitlement or change payroll. Duplicate payroll and
 invalid bonus amounts must be resolved before exporting.
 
+### Working-hour targets and FRN breaks
+
+HED2016 has a monthly assigned target of 304:30 in a 31-day month and 294:00
+in a 30-day month. This overrides the ordinary monthly target, regardless of
+OFF-day count. Other month lengths and other employees retain their existing
+rules. The target appears on the attendance screen and single/batch A4 prints.
+
+For FRN employees (marker in employee or legacy salary address), a worked day
+with less than 60 minutes of recorded break counts as 90 minutes of break.
+Exactly 60 minutes and longer breaks remain unchanged. Non-worked days and
+MC/AL/PH-OFF credits do not receive an artificial break. The effective break is
+used in attendance totals, saves, payroll time calculations and single/batch
+A4 prints. Original clock entries stay available as evidence. Existing saved
+payroll amounts are not rewritten by this change.
+
 ### Selected-month payroll visibility
 
 Edit Payroll, employee payslip lists, payroll reports and payroll/statutory

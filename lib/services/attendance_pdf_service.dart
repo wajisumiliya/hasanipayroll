@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'payroll_calculation_service.dart';
 import 'attendance_net_hours.dart';
+import 'attendance_working_rules.dart';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
@@ -141,7 +142,13 @@ class AttendancePdfService {
     // Keep the source's actual worked minutes intact for payroll calculations.
     // Only the attendance display includes paid absence credits.
     final days = sheet.days
-        .map((day) => AttendancePrintDay(
+        .map((day) {
+          final breaks = AttendanceWorkingRules.breakMinutes(
+            isForeignEmployee: isForeignEmployee,
+            workMinutes: day.workMinutes, actualMinutes: day.breakMinutes,
+            status: day.status,
+          );
+          return AttendancePrintDay(
               day: day.day,
               workingIn: day.workingIn,
               workingOut: day.workingOut,
@@ -153,10 +160,12 @@ class AttendancePdfService {
               eveningOut: day.eveningOut,
               status: day.status,
               workMinutes: day.workMinutes,
-              breakMinutes: day.breakMinutes,
+              breakMinutes: breaks,
               netMinutes: AttendanceNetHours.displayMinutes(
                 status: day.status,
-                actualMinutes: day.netMinutes,
+                actualMinutes: breaks != day.breakMinutes
+                    ? (day.workMinutes - breaks).clamp(0, 1440).toInt()
+                    : day.netMinutes,
                 assignedMinutes:
                     day.assignedNetMinutes ?? (isForeignEmployee ? 630 : 450),
               ),
@@ -165,7 +174,8 @@ class AttendancePdfService {
                   : day.overtimeMinutes,
               lateMinutes: day.lateMinutes,
               assignedNetMinutes: day.assignedNetMinutes,
-            ))
+            );
+        })
         .toList();
     final lateDeductionAmount = sheet.lateDeductionAmount,
         unpaidDeductionAmount = sheet.unpaidDeductionAmount,
@@ -214,8 +224,9 @@ class AttendancePdfService {
         450;
     final offDays =
         days.where((day) => day.status.trim().toUpperCase() == 'OFF').length;
-    final assignedTotal = _assignedMinutes(
-      daysInMonth: days.length,
+    final assignedTotal = AttendanceWorkingRules.monthlyTarget(
+      employeeId: employeeId,
+      month: month,
       offDays: offDays,
       isForeignEmployee: isForeignEmployee,
     );
@@ -281,6 +292,14 @@ class AttendancePdfService {
                   ),
                 ],
               ),
+              if (isForeignEmployee)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(top: 5),
+                  child: pw.Text(
+                    'FRN worked days: recorded breaks below 01:00 count as 01:30 for net hours.',
+                    style: const pw.TextStyle(fontSize: 6),
+                  ),
+                ),
               if (bonusDays > 0)
                 pw.Padding(
                     padding: const pw.EdgeInsets.only(top: 5),
@@ -669,17 +688,4 @@ class AttendancePdfService {
   static String _duration(int minutes) =>
       '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
 
-  static int _assignedMinutes({
-    required int daysInMonth,
-    required int offDays,
-    required bool isForeignEmployee,
-  }) {
-    if (isForeignEmployee &&
-        offDays == 2 &&
-        (daysInMonth == 30 || daysInMonth == 31)) {
-      return (288 * 60) + 40;
-    }
-    final dailyMinutes = isForeignEmployee ? 630 : 450;
-    return (daysInMonth - offDays).clamp(0, daysInMonth) * dailyMinutes;
-  }
 }

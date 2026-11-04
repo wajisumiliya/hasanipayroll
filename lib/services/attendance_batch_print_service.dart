@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'attendance_net_hours.dart';
+import 'attendance_working_rules.dart';
 import 'attendance_pdf_service.dart';
 import 'attendance_payroll_service.dart';
 import 'payroll_calculation_service.dart';
@@ -63,6 +64,8 @@ class AttendanceBatchPrintService {
           : text(salary['epf_category']).toLowerCase() == 'normal1' ||
               const ['true', '1', 'yes']
                   .contains(text(salary['eis_applicable']).toLowerCase());
+      final foreign = AttendanceWorkingRules.isForeign(
+          employee['address'], salary?['address']);
       final days = List<AttendancePrintDay>.generate(
           DateTime(month.year, month.month + 1, 0).day, (index) {
         final day = index + 1;
@@ -91,12 +94,16 @@ class AttendanceBatchPrintService {
             : number(r['work_minutes']);
         final hasBreakTimes = ['morning_in', 'afternoon_in', 'overtime_in']
             .any((key) => clock(r[key]) != null);
-        final breaks = hasBreakTimes
+        final actualBreaks = hasBreakTimes
             ? duration(r['morning_in'], r['morning_out']) +
                 duration(r['afternoon_in'], r['afternoon_out']) +
                 duration(r['overtime_in'], r['overtime_out'])
             : number(r['break_minutes']);
-        final net = (hasWorkingTimes
+        final breaks = AttendanceWorkingRules.breakMinutes(
+          isForeignEmployee: foreign, workMinutes: gross,
+          actualMinutes: actualBreaks, status: text(r['status']),
+        );
+        final net = (hasWorkingTimes || breaks != actualBreaks
                 ? gross - breaks
                 : r['net_working_minutes'] != null
                     ? number(r['net_working_minutes'])
@@ -180,7 +187,7 @@ class AttendanceBatchPrintService {
           department: text(employee['department']),
           section: text(employee['section']),
           branchId: branchName,
-          isForeignEmployee: !local,
+          isForeignEmployee: foreign,
           month: month,
           days: days,
           basicSalary: double.tryParse('${salary?['basic_salary']}') ?? 0,

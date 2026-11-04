@@ -1,3 +1,4 @@
+import 'attendance_working_rules.dart';
 import '../screens/supabase_service.dart';
 import 'payroll_calculation_service.dart';
 import 'app_service.dart';
@@ -386,7 +387,7 @@ class AttendancePayrollService {
   static int _shortageMinutesForRow(Map<String, dynamic> row,
       Map<String, dynamic>? roster, int target, bool foreign, String id) {
     final status = _text(row['status']).trim().toUpperCase();
-    final work = _attendanceNetMinutes(row);
+    final work = _attendanceNetMinutes(row, isForeignEmployee: foreign);
     if (!PayrollCalculationService.shouldApplyShortageDeduction(
         isUnpaid: _toBool(row['is_unpaid']) ||
             PayrollCalculationService.isUnpaidAttendanceStatus(status),
@@ -588,7 +589,8 @@ class AttendancePayrollService {
     final foreignRecordedDates = <int>{};
 
     for (final row in attendance) {
-      final workMinutes = _attendanceNetMinutes(row);
+      final workMinutes =
+          _attendanceNetMinutes(row, isForeignEmployee: isForeignEmployee);
       final attendanceDate = DateTime.tryParse(_text(row['attendance_date']));
       final weekNumber =
           attendanceDate == null ? 0 : ((attendanceDate.day - 1) ~/ 7) + 1;
@@ -729,7 +731,8 @@ class AttendancePayrollService {
         for (final row in attendance)
           {
             ...row,
-            'net_working_minutes': _attendanceNetMinutes(row),
+            'net_working_minutes':
+                _attendanceNetMinutes(row, isForeignEmployee: isForeignEmployee),
           }
       ],
     );
@@ -1427,12 +1430,18 @@ class AttendancePayrollService {
     return approvedMinutes > 0 ? approvedMinutes / 60.0 : 0.0;
   }
 
-  static int _attendanceNetMinutes(Map<String, dynamic> row) {
+  static int _attendanceNetMinutes(Map<String, dynamic> row,
+      {bool isForeignEmployee = false}) {
     final savedNet = _intNumber(row['net_working_minutes']);
-    if (savedNet > 0) return savedNet;
-    final gross = _attendanceWorkMinutes(row);
-    final breaks = _intNumber(row['break_minutes']);
-    return (gross - breaks).clamp(0, 24 * 60);
+    final actualBreaks = _intNumber(row['break_minutes']);
+    var gross = _attendanceWorkMinutes(row);
+    if (gross <= 0 && savedNet > 0) gross = savedNet + actualBreaks;
+    final breaks = AttendanceWorkingRules.breakMinutes(
+      isForeignEmployee: isForeignEmployee, workMinutes: gross,
+      actualMinutes: actualBreaks, status: _text(row['status']),
+    );
+    if (breaks == actualBreaks && savedNet > 0) return savedNet;
+    return (gross - breaks).clamp(0, 24 * 60).toInt();
   }
 
   static int? _rosterRequiredMinutes(Map<String, dynamic>? roster) {
