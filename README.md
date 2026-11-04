@@ -191,6 +191,11 @@ and branch. The separate report and its PDF/Excel exports list each affected
 employee once, with Late/MC/UL-Unpaid reasons and dates, the default allowance,
 allowance paid in saved payroll and the deducted difference. Uncheck **Show
 deductions only** to inspect qualifying employees whose payroll needs review.
+The PDF contains only Employee ID, Name, Branch, Reason, Date / Evidence,
+Default RM and Deduct RM. It measures the complete report at both A4 widths,
+chooses portrait or landscape to retain the largest text, and scales all rows
+onto exactly one page. Estimated amounts are marked with an asterisk. Excel
+and the on-screen report retain their additional audit columns.
 The report uses the same eligibility sources as payroll, including the existing
 Late Report threshold of three events and approved-arrival handling; it does not
 change that deduction rule or alter saved payroll.

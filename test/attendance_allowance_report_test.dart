@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'attendance_pdf_summary_test.dart' show pdfContents;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/services/attendance_allowance_report.dart';
@@ -142,13 +143,65 @@ void main() {
     expect(deduction, isA<xls.DoubleCellValue>());
     expect((deduction as xls.DoubleCellValue).value, 100.25);
   });
-  test('PDF shows the same reasons and source distinction as Excel', () async {
+  test('PDF contains only the seven requested columns', () async {
     final data = report();
     final text =
         pdfContents(await AttendanceAllowanceReportExport.pdf(data, data.rows));
     expect(text, contains('Elaun Kedatangan Deduction Report'));
     expect(text, contains('Employee One'));
     expect(text, contains('Late, MC, UL-Unpaid'));
-    expect(text, contains('Saved payroll baseline'));
+    expect(text, contains('Default RM'));
+    expect(text, contains('Deduct RM'));
+    expect(text, isNot(contains('Paid RM')));
+    expect(text, isNot(contains('Baseline source')));
+    expect(text, isNot(contains('Result')));
+    expect(AttendanceAllowanceReportExport.pdfHeaders, [
+      'Employee ID', 'Name', 'Branch', 'Reason', 'Date / Evidence',
+      'Default RM', 'Deduct RM',
+    ]);
+  });
+
+  test('orientation chooses the layout with the largest fitted text', () {
+    final portrait = AttendanceAllowanceReportExport.choosePdfFormat(
+        portraitHeight: 200, landscapeHeight: 180);
+    expect(portrait.width, lessThan(portrait.height));
+    final landscape = AttendanceAllowanceReportExport.choosePdfFormat(
+        portraitHeight: 1200, landscapeHeight: 450);
+    expect(landscape.width, greaterThan(landscape.height));
+  });
+
+  test('compact PDF uses one portrait A4 page', () async {
+    final data = report();
+    final bytes = await AttendanceAllowanceReportExport.pdf(data, data.rows);
+    final raw = latin1.decode(bytes);
+    expect(RegExp(r'/Type\s*/Page\b').allMatches(raw), hasLength(1));
+    final mediaBox = RegExp(r'/MediaBox\s*\[0\s+0\s+([0-9.]+)\s+([0-9.]+)\]')
+        .firstMatch(raw)!;
+    expect(double.parse(mediaBox[1]!), closeTo(595.28, 1));
+    expect(double.parse(mediaBox[2]!), closeTo(841.89, 1));
+  });
+
+  test('dense PDF fits one A4 page without omitting employees or evidence', () async {
+    final rows = List.generate(120, (index) => AttendanceAllowanceDeduction(
+      employeeId: 'TEST$index', name: 'Employee number $index',
+      branch: 'Branch A', reasons: causes, baseline: 100, paid: 0,
+      deducted: 100, snapshot: true, status: 'Fully deducted',
+    ));
+    final data = AttendanceAllowanceReport(month: month, rows: rows,
+        branchName: 'All branches');
+    final bytes = await AttendanceAllowanceReportExport.pdf(data, rows);
+    final raw = latin1.decode(bytes), text = pdfContents(bytes);
+    expect(RegExp(r'/Type\s*/Page\b').allMatches(raw), hasLength(1));
+    for (var index = 0; index < rows.length; index++) {
+      expect(text, contains('TEST$index'));
+    }
+    expect(text, contains('2026-10-03'));
+  });
+
+  test('estimated amounts remain marked after removing the source column', () async {
+    final data = report(snapshot: null);
+    final text = pdfContents(await AttendanceAllowanceReportExport.pdf(data, data.rows));
+    expect(text, contains('150.00*'));
+    expect(text, contains('Estimated from current salary default'));
   });
 }
