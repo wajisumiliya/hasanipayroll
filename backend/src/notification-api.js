@@ -17,13 +17,30 @@ export function installNotificationApi(app,{pool,authenticate}) {
       const branchId=String(input.branch_id||'').trim()||null;
       if (!title||title.length>160||!body||body.length>2000||!['all','branch','employee'].includes(audience)||employeeIds.length>500||(audience==='employee'&&!employeeIds.length)||(audience==='branch'&&!branchId)) throw new DataApiError('Invalid notification');
       const notifications=(audience==='employee'?employeeIds:[null]).map(employee_id=>({title,body,notification_type:type,audience,branch_id:branchId,employee_id}));
-      await pool.query(`INSERT INTO public.app_notifications(title,body,notification_type,audience,branch_id,employee_id)
-        SELECT title,body,notification_type,audience,branch_id,employee_id FROM jsonb_to_recordset($1::jsonb) AS n(title text,body text,notification_type text,audience text,branch_id text,employee_id text)`,[JSON.stringify(notifications)]);
+      let newNotifications = notifications;
+      if (type === 'payslip' && audience === 'employee') {
+        // Older web builds still send a second request after publishing. The DB
+        // already saved and queued that notice atomically; do not duplicate it.
+        const inserted = await pool.query(`INSERT INTO public.app_notifications(title,body,notification_type,audience,branch_id,employee_id)
+          SELECT title,body,notification_type,audience,branch_id,employee_id
+          FROM jsonb_to_recordset($1::jsonb) AS n(title text,body text,notification_type text,audience text,branch_id text,employee_id text)
+          WHERE NOT EXISTS (SELECT 1 FROM public.app_notifications prior
+            WHERE prior.notification_type='payslip' AND prior.audience='employee'
+              AND prior.employee_id=n.employee_id AND prior.body=n.body)
+          RETURNING employee_id`,[JSON.stringify(notifications)]);
+        newNotifications = inserted.rows;
+        if (!newNotifications.length) {
+          return res.json({ok:true,inbox:0,sent:0,pushStatus:'already_saved',pushErrors:[]});
+        }
+      } else {
+        await pool.query(`INSERT INTO public.app_notifications(title,body,notification_type,audience,branch_id,employee_id)
+          SELECT title,body,notification_type,audience,branch_id,employee_id FROM jsonb_to_recordset($1::jsonb) AS n(title text,body text,notification_type text,audience text,branch_id text,employee_id text)`,[JSON.stringify(notifications)]);
+      }
       let push={sent:0,pushConfigured:false,pushStatus:'unavailable',pushErrors:[]};
-      try { push=await pushNotifications(pool,{title,body,audience,type,branchId,employeeIds,taxYear:String(input.tax_year||'')}); }
+      try { push=await pushNotifications(pool,{title,body,audience,type,branchId,employeeIds:audience==='employee'?newNotifications.map(n=>n.employee_id):employeeIds,taxYear:String(input.tax_year||'')}); }
       catch { console.error('Push delivery unavailable; notification saved to inbox.'); }
       if (push.pushStatus !== 'sent') console.warn('Notification push status:', push.pushStatus, push.pushErrors?.join(',') || '');
-      res.json({ok:true,inbox:notifications.length,...push});
+      res.json({ok:true,inbox:newNotifications.length,...push});
     } catch(error) {fail(res,error);}
   });
 }

@@ -326,6 +326,34 @@ Firebase Cloud Messaging push delivery requires `FIREBASE_SERVICE_ACCOUNT_JSON` 
 
 Never put Firebase service-account private keys in Flutter or GitHub.
 
+### Payslip publication notifications
+
+Publishing an individual payslip now saves a **New Payslip Available** employee
+inbox message in the same database transaction. Scheduled monthly publication
+creates the message only at release time. Each employee/month has one delivery
+record, so repeated publishing and older browser callbacks do not duplicate the
+notice. Clicking the employee's inbox message opens Payslips. The open employee
+portal refreshes its notification badge every 30 seconds.
+
+The existing backend release worker checks every minute and sends pending payslip
+pushes through Firebase. Total push/configuration failures retry with backoff;
+publication and the inbox remain available. Successful, partially successful and
+no-registered-device attempts complete without repeatedly notifying successful
+devices. Expired worker claims recover after five minutes. Pending notices are
+not pushed while their payslip is withdrawn or has a future release time. Push
+transport retries can still produce duplicates if a provider accepts a message
+but its response is lost; inbox records are deduplicated independently.
+
+Deploy the backend first: startup applies
+`20261104_payslip_publication_notifications.sql`, installs the publication trigger
+and creates the private delivery queue. Then publish the updated Flutter web
+build. Applying the migration does not backfill old publication notifications.
+Browser/device popups require the existing Firebase service-account configuration,
+a registered employee device, and notification permission. For Flutter web,
+configure `FIREBASE_WEB_VAPID_KEY` in the build and an HTTPS
+`FIREBASE_WEB_APP_URL` on the backend for notification click-through.
+The in-app inbox works without Firebase or notification permission.
+
 ## Attendance, payroll and Daily Report
 
 - **Attendance:** Confirm employee selection, branch scoping, submission, review and date/month filtering.

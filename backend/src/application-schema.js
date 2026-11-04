@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { drainPayslipNotifications } from './payslip-notifications.js';
 import { ensureMysteryEggCampaign } from './mystery-eggs.js';
 const VERSION = '20261020_neon_application_api_v1';
 export async function ensureApplicationSchema(pool) {
@@ -105,6 +106,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261104_attendance_allowance_baseline.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [allowanceVersion]);
     }
+    const noticeVersion = '20261104_payslip_publication_notifications_v1';
+    const noticeMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [noticeVersion]);
+    if (!noticeMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261104_payslip_publication_notifications.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [noticeVersion]);
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK'); throw error;
@@ -118,7 +125,10 @@ export function startPayslipReleaseWorker(pool) {
   const tick = async () => {
     if (running) return;
     running = true;
-    try { await pool.query('SELECT public.release_due_payslips()'); }
+    try {
+      await pool.query('SELECT public.release_due_payslips()');
+      await drainPayslipNotifications(pool);
+    }
     catch (error) { console.error('PAYSLIP RELEASE ERROR:', error.code || 'release_error'); }
     finally { running = false; }
   };

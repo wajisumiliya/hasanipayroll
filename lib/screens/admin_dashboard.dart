@@ -13943,20 +13943,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         'updated_at': now,
       }).eq('id', record.id);
       await service.loadPayrollMonthFromSupabase(record.period);
-      var notificationWarning = '';
-      try {
-        await NotificationService.sendPayslipAvailable(
-          employeeId: record.employeeId,
-          period: record.period,
-        );
-      } catch (_) {
-        notificationWarning = ' Notification delivery needs attention.';
-      }
       if (!mounted) return;
       setState(() {});
       _message(
         '${DateFormat('MMMM yyyy').format(record.period)} payslip published '
-        'and released to the employee.$notificationWarning',
+        'and released to the employee. Notification saved to their inbox.',
       );
     } catch (error) {
       if (mounted) _message('Unable to publish payslip: $error');

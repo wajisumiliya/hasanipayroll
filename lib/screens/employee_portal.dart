@@ -69,7 +69,7 @@ class _EmployeePortalState extends State<EmployeePortal>
     _subscribeToPayroll();
     unawaited(_refreshPayroll());
     _notificationRefreshTimer = Timer.periodic(
-      const Duration(minutes: 5),
+      const Duration(seconds: 30),
       (_) => _loadEmployeeNotifications(),
     );
   }
