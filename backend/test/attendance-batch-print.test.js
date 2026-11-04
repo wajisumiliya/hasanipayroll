@@ -43,9 +43,9 @@ test('actual batch SQL reads selected employees and only their selected month', 
       INSERT INTO employees(employee_id,name,branch_id) VALUES('E1','One','A'),('E2','Two','A'),('E3','Three','B');
       INSERT INTO attendance(id,employee_id,branch_id,attendance_date) VALUES('a1','E1','A','2026-10-01'),('a2','E2','A','2026-10-01'),('a3','E1','A','2026-09-01');
       INSERT INTO employee_salary_defaults(employee_id,basic_salary) VALUES('E1',2000),('E2',2500);
-      INSERT INTO payroll(id,employee_id,period,overtime) VALUES('p1','E1','2026-10-01',20);`);
+      INSERT INTO payroll(id,employee_id,period,basic_salary,overtime) VALUES('p1','E1','2026-10-01',1700,20);`);
     const a=api({pool});const res=await a.run({role:'ADMIN'},{employees:'["E1","E2"]',branch_id:'A',year:2026,month:10});
-    assert.equal(res.code,200);assert.equal(res.body.employees.length,2);assert.equal(res.body.attendance.length,2);assert.equal(res.body.payroll[0].overtime,'20.00');
+    assert.equal(res.code,200);assert.equal(res.body.employees.length,2);assert.equal(res.body.attendance.length,2);assert.equal(res.body.payroll[0].overtime,'20.00');assert.equal(res.body.payroll[0].basic_salary,'1700.00');
     assert.equal((await a.run({role:'ADMIN'},{employees:'["E1","E3"]',branch_id:'A',year:2026,month:10})).code,403);
   }finally{await pool.end();await dropFixtureDatabase(bootstrap, 'hasani_batch_print_test');await bootstrap.end();}
 });

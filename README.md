@@ -233,6 +233,20 @@ used in attendance totals, saves, payroll time calculations and single/batch
 A4 prints. Original clock entries stay available as evidence. Existing saved
 payroll amounts are not rewritten by this change.
 
+### Unpaid attendance print values
+
+Each FRN unpaid day contributes exactly 10:30 to the unpaid-hours total,
+independently of daily roster duration. Other employees use their assigned
+net working hours, falling back to 7:30. Explicit unpaid flags and legacy
+UL/UL-UNPAID/UNPAID/UNPAID LEAVE statuses match payroll's unpaid-day membership.
+The A4 unpaid RM value uses basic salary divided by calendar days, multiplied
+by the unpaid-day count, rounded to two decimal places. The selected month's
+saved payroll basic salary takes precedence over the current salary default.
+A current-default fallback is labelled as an estimate. Differences from the
+saved deduction are flagged with the saved amount; an administrator must
+review and save payroll to apply any correction. Printing never rewrites
+saved payroll or net pay. Missing salary inputs are explicitly marked unverified.
+
 ### Selected-month payroll visibility
 
 Edit Payroll, employee payslip lists, payroll reports and payroll/statutory

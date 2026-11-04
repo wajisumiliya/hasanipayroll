@@ -25,10 +25,11 @@ test('admin can print an employee from any branch without payroll',async()=>{
   assert.ok(api.calls.every(({sql})=>! /\b(insert|update|delete)\b/i.test(sql)));
 });
 test('branch can print own employee with saved monetary amounts',async()=>{
-  const saved={overtime:200,late_deduction:10,unpaid_deduction:83.87};
+  const saved={basic_salary:1700,overtime:200,late_deduction:10,unpaid_deduction:83.87};
   const api=setup({payroll:[saved]});const res=await api.run({role:'BRANCH',branchId:' a '});
   assert.equal(res.statusCode,200);assert.deepEqual(res.body.payroll,saved);
   assert.deepEqual(api.calls[2].values,['E1',2026,10]);
+  assert.match(api.calls[2].sql,/SELECT basic_salary,/);
 });
 test('cross-branch and missing branch identities cannot read print salaries',async()=>{
   for(const user of [{role:'BRANCH',branchId:'B'},{role:'BRANCH'}]){

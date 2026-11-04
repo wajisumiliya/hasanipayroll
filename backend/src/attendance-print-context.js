@@ -20,7 +20,7 @@ export function installAttendancePrintContextApi(app, {authenticate, pool}) {
         return res.status(403).json({ok:false,message:'Branch access denied.'});
       const [salary, payroll, rosters] = await Promise.all([
         pool.query('SELECT basic_salary, address, epf_category, eis_applicable FROM public.employee_salary_defaults WHERE employee_id=$1 LIMIT 1', [employeeId]),
-        pool.query(`SELECT overtime, late_deduction, unpaid_deduction FROM public.payroll
+        pool.query(`SELECT basic_salary, overtime, late_deduction, unpaid_deduction FROM public.payroll
           WHERE employee_id=$1 AND period >= make_date($2,$3,1)
             AND period < (make_date($2,$3,1) + INTERVAL '1 month')`, [employeeId,year,month]),
         pool.query(`SELECT to_jsonb(r) AS data FROM public.monthly_rosters r

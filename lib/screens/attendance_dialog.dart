@@ -981,6 +981,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       double? approvedOtAmount;
       double? lateDeductionAmount;
       double? unpaidDeductionAmount;
+      double? payrollBasicSalary;
       var estimatedAmounts = false;
       Map<String, dynamic>? printSalary;
       List<Map<String, dynamic>>? printRosters;
@@ -1009,6 +1010,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           approvedOtAmount = amount(payroll['overtime']);
           lateDeductionAmount = amount(payroll['late_deduction']);
           unpaidDeductionAmount = amount(payroll['unpaid_deduction']);
+          payrollBasicSalary = double.tryParse('${payroll['basic_salary']}');
         } else if (printSalary == null) {
           throw StateError(
               'No salary default found for attendance print values.');
@@ -1022,7 +1024,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               '${value.month.toString().padLeft(2, '0')}-01';
           final payroll = await SupabaseService.database
               .from('payroll')
-              .select('overtime,late_deduction,unpaid_deduction')
+              .select('basic_salary,overtime,late_deduction,unpaid_deduction')
               .eq('employee_id', _employeeId())
               .gte('period', dateText(periodStart))
               .lt('period', dateText(periodEnd))
@@ -1036,6 +1038,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             approvedOtAmount = amount(payroll['overtime']);
             lateDeductionAmount = amount(payroll['late_deduction']);
             unpaidDeductionAmount = amount(payroll['unpaid_deduction']);
+            payrollBasicSalary = double.tryParse('${payroll['basic_salary']}');
           }
         } catch (_) {
           // Fall back to a read-only calculation when saved payroll is unavailable.
@@ -1069,6 +1072,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           ),
           lateMinutes: _calculateLateMinutes(day, c),
           assignedNetMinutes: _assignedNetMinutes(day),
+          isUnpaid: c.isUnpaid,
         );
       });
 
@@ -1154,6 +1158,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         estimatedAmounts: estimatedAmounts,
         deductionMinutes: deductionMinutes,
         basicSalary: double.tryParse('${printSalary?['basic_salary']}') ?? 0,
+        payrollBasicSalary: payrollBasicSalary,
         approvedOtAmount: approvedOtAmount,
         lateDeductionAmount: lateDeductionAmount,
         unpaidDeductionAmount: unpaidDeductionAmount,

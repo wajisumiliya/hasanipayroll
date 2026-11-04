@@ -147,6 +147,8 @@ class AttendanceBatchPrintService {
             eveningIn: text(r['overtime_in']),
             eveningOut: text(r['overtime_out']),
             status: status,
+            isUnpaid: const ['true', '1', 'yes']
+                .contains(text(r['is_unpaid']).toLowerCase()),
             workMinutes: gross,
             breakMinutes: breaks,
             netMinutes: net,
@@ -193,6 +195,8 @@ class AttendanceBatchPrintService {
           month: month,
           days: days,
           basicSalary: double.tryParse('${salary?['basic_salary']}') ?? 0,
+          payrollBasicSalary: saved.isEmpty ? null
+              : double.tryParse('${saved.first['basic_salary']}'),
           approvedOtAmount: overtime,
           lateDeductionAmount: lateAmount,
           unpaidDeductionAmount: unpaid,

@@ -29,7 +29,7 @@ export function installAttendanceBatchPrintApi(app,{authenticate,pool}) {
         pool.query(`SELECT to_jsonb(a) AS data FROM public.attendance a WHERE employee_id=ANY($1::text[])
           AND attendance_date >= $2::date AND attendance_date < ($2::date+INTERVAL '1 month') ORDER BY employee_id,attendance_date`,[ids,start]),
         pool.query('SELECT employee_id,basic_salary,fw_salary,address,epf_category,eis_applicable FROM public.employee_salary_defaults WHERE employee_id=ANY($1::text[])',[ids]),
-        pool.query(`SELECT employee_id,overtime,late_deduction,unpaid_deduction FROM public.payroll WHERE employee_id=ANY($1::text[])
+        pool.query(`SELECT employee_id,basic_salary,overtime,late_deduction,unpaid_deduction FROM public.payroll WHERE employee_id=ANY($1::text[])
           AND period >= $2::date AND period < ($2::date+INTERVAL '1 month')`,[ids,start]),
         pool.query(`SELECT to_jsonb(r) AS data FROM public.monthly_rosters r WHERE employee_id=ANY($1::text[])
           AND roster_year=$2 AND roster_month=$3`,[ids,year,month]),

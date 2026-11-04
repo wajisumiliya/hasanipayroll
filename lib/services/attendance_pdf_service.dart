@@ -29,6 +29,7 @@ class AttendancePrintDay {
     required this.overtimeMinutes,
     required this.lateMinutes,
     this.assignedNetMinutes,
+    this.isUnpaid = false,
   });
 
   final int day;
@@ -47,6 +48,9 @@ class AttendancePrintDay {
   final int overtimeMinutes;
   final int lateMinutes;
   final int? assignedNetMinutes;
+  final bool isUnpaid;
+  bool get countsAsUnpaid => isUnpaid ||
+      PayrollCalculationService.isUnpaidAttendanceStatus(status);
 }
 
 class AttendancePrintSheet {
@@ -60,6 +64,7 @@ class AttendancePrintSheet {
       required this.month,
       required this.days,
       this.basicSalary = 0,
+      this.payrollBasicSalary,
       this.approvedOtAmount,
       this.lateDeductionAmount,
       this.unpaidDeductionAmount,
@@ -70,6 +75,7 @@ class AttendancePrintSheet {
   final DateTime month;
   final List<AttendancePrintDay> days;
   final double basicSalary;
+  final double? payrollBasicSalary;
   final int? deductionMinutes;
   final double? approvedOtAmount, lateDeductionAmount, unpaidDeductionAmount;
 }
@@ -93,6 +99,7 @@ class AttendancePdfService {
     bool estimatedAmounts = false,
     int? deductionMinutes,
     double basicSalary = 0,
+    double? payrollBasicSalary,
     double? approvedOtAmount,
     double? lateDeductionAmount,
     double? unpaidDeductionAmount,
@@ -108,6 +115,7 @@ class AttendancePdfService {
         month: month,
         days: days,
         basicSalary: basicSalary,
+        payrollBasicSalary: payrollBasicSalary,
         approvedOtAmount: approvedOtAmount,
         lateDeductionAmount: lateDeductionAmount,
         unpaidDeductionAmount: unpaidDeductionAmount,
@@ -174,10 +182,10 @@ class AttendancePdfService {
             : day.overtimeMinutes,
         lateMinutes: day.lateMinutes,
         assignedNetMinutes: day.assignedNetMinutes,
+        isUnpaid: day.isUnpaid,
       );
     }).toList();
     final lateDeductionAmount = sheet.lateDeductionAmount,
-        unpaidDeductionAmount = sheet.unpaidDeductionAmount,
         estimatedAmounts = sheet.estimatedAmounts;
     pw.MemoryImage? logo;
     try {
@@ -213,14 +221,22 @@ class AttendancePdfService {
     // Arrival lateness and net-work shortfall are different measurements.
     // Never infer a deductible shortage from arrival minutes alone.
     final shortfallTotal = sheet.deductionMinutes;
-    final unpaidTotal = days.where((day) {
-          final status = day.status.trim().toUpperCase();
-          return status == 'UL' ||
-              status == 'UL-UNPAID' ||
-              status == 'UNPAID' ||
-              status == 'UNPAID LEAVE';
-        }).length *
-        450;
+    final unpaidDays = days.where((day) => day.countsAsUnpaid).toList();
+    final unpaidTotal = unpaidDays.fold<int>(0, (sum, day) => sum +
+        (isForeignEmployee ? 630 : day.assignedNetMinutes ?? 450));
+    // Use the month-specific saved salary when available. Current defaults are
+    // only a fallback; saved payroll amounts are never rewritten by printing.
+    final unpaidSalary = sheet.payrollBasicSalary ??
+        (sheet.basicSalary > 0 ? sheet.basicSalary : null);
+    final calculatedUnpaid = unpaidDays.isEmpty ? 0.0
+        : unpaidSalary != null && unpaidSalary.isFinite && unpaidSalary >= 0
+            ? (PayrollCalculationService.unpaidDailyRate(
+                basicSalary: unpaidSalary, month: month) * unpaidDays.length * 100).round() / 100.0
+            : null;
+    final unpaidDeductionAmount = calculatedUnpaid ?? sheet.unpaidDeductionAmount;
+    final unpaidMismatch = calculatedUnpaid != null &&
+        sheet.unpaidDeductionAmount != null &&
+        (calculatedUnpaid - sheet.unpaidDeductionAmount!).abs() >= 0.005;
     final offDays =
         days.where((day) => day.status.trim().toUpperCase() == 'OFF').length;
     final assignedTotal = AttendanceWorkingRules.monthlyTarget(
@@ -273,7 +289,7 @@ class AttendancePdfService {
                   pw.SizedBox(width: 5),
                   _summary(
                     'UNPAID HOURS',
-                    '7:30 per unpaid day',
+                    isForeignEmployee ? '10:30 per unpaid day' : 'Assigned unpaid time',
                     unpaidTotal,
                     PdfColors.black,
                     unpaidDeductionAmount,
@@ -291,6 +307,19 @@ class AttendancePdfService {
                   ),
                 ],
               ),
+              if (unpaidDays.isNotEmpty || unpaidMismatch)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(top: 5),
+                  child: pw.Text(
+                    calculatedUnpaid == null
+                        ? 'Unpaid deduction cannot be verified: basic salary is unavailable. The displayed RM amount is from saved payroll.'
+                        : 'Unpaid RM: ${unpaidDays.length} unpaid day(s), basic salary / calendar days. '
+                          '${sheet.payrollBasicSalary == null ? "Current salary default estimate. " : "Saved payroll salary basis. "}'
+                          '${unpaidMismatch ? "Current attendance estimate: RM ${calculatedUnpaid.toStringAsFixed(2)}; saved payroll deduction: RM ${sheet.unpaidDeductionAmount!.toStringAsFixed(2)}. Review and save payroll to apply the correction. " : ""}'
+                          'Printing does not change payroll.',
+                    style: const pw.TextStyle(fontSize: 6),
+                  ),
+                ),
               if (isForeignEmployee)
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(top: 5),
