@@ -858,6 +858,7 @@ class AttendancePayrollService {
       'basic_salary': basicSalary,
       'fw_salary': fwSalary,
       'elaun_kedatangan': elaunKedatangan,
+      'attendance_allowance_default': configuredAttendanceAllowance,
       'elaun_perkhidmatan': elaunPerkhidmatan,
       'elaun_kerajinan': elaunKerajinan,
       'elaun_makanan': elaunMakanan,

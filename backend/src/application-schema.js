@@ -99,6 +99,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261103_employee_salary_transfer.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [transferVersion]);
     }
+    const allowanceVersion = '20261104_attendance_allowance_baseline_v1';
+    const allowanceMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [allowanceVersion]);
+    if (!allowanceMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261104_attendance_allowance_baseline.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [allowanceVersion]);
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK'); throw error;

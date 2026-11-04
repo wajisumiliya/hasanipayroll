@@ -184,6 +184,23 @@ Cash. Deploy the backend first: startup applies the
 `20261103_employee_salary_transfer.sql` migration before the frontend uses the new
 field. This changes payment routing, not payroll calculation rules.
 
+### Attendance allowance deduction report
+
+Open **Payroll → Attendance Allowance Deductions** for the selected payroll month
+and branch. The separate report and its PDF/Excel exports list each affected
+employee once, with Late/MC/UL-Unpaid reasons and dates, the default allowance,
+allowance paid in saved payroll and the deducted difference. Uncheck **Show
+deductions only** to inspect qualifying employees whose payroll needs review.
+The report uses the same eligibility sources as payroll, including the existing
+Late Report threshold of three events and approved-arrival handling; it does not
+change that deduction rule or alter saved payroll.
+
+Newly generated payroll saves `attendance_allowance_default` as its allowance
+baseline. Older records without that snapshot compare against the current salary
+default and are explicitly marked as estimates, with separate totals. Deploy the
+backend first to apply `20261104_attendance_allowance_baseline.sql`, then publish
+the frontend. The migration leaves historical payroll amounts unchanged.
+
 ### Selected-month payroll visibility
 
 Edit Payroll, employee payslip lists, payroll reports and payroll/statutory

@@ -186,6 +186,19 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
       assert.equal(inaccessible.failed,1);
       assert.equal((await pool.query("SELECT photo_url FROM employees WHERE employee_id='FIX_E1'")).rows[0].photo_url,'FIX_E1/profile');
     });
+    await t.test('allowance baseline snapshots are nullable, constrained and saved through the payroll API', async () => {
+      const legacy = await pool.query("SELECT attendance_allowance_default FROM payroll WHERE id='FIX_P1'");
+      assert.equal(legacy.rows[0].attendance_allowance_default, null);
+      const changed = await request('/payroll?id=eq.FIX_P1', 'admin', {
+        method: 'PATCH', headers: {Prefer: 'return=representation'},
+        body: JSON.stringify({attendance_allowance_default: 100, elaun_kedatangan: 0}),
+      });
+      assert.equal(changed.status, 200);
+      const row = (await changed.json())[0];
+      assert.equal(Number(row.attendance_allowance_default), 100);
+      assert.equal(Number(row.elaun_kedatangan), 0);
+      await assert.rejects(pool.query("UPDATE payroll SET attendance_allowance_default=-1 WHERE id='FIX_P1'"), {code:'23514'});
+    });
     await t.test('admin employee information saves salary routing through authenticated database policies', async () => {
       const changed = await request('/employees?employee_id=eq.FIX_E1', 'admin', {
         method: 'PATCH', headers: {Prefer: 'return=representation'},

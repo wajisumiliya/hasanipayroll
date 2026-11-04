@@ -1,3 +1,4 @@
+import '../widgets/attendance_allowance_report_dialog.dart';
 import '../services/payroll_month_scope.dart';
 import '../services/salary_transfer.dart';
 import '../widgets/salary_transfer_field.dart';
@@ -15909,6 +15910,19 @@ class _AdminDashboardState extends State<AdminDashboard>
                       onPressed: _showEditPayrollDialog,
                       icon: const Icon(Icons.edit_note_outlined),
                       label: const Text('Edit Payroll'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => AttendanceAllowanceReportDialog(
+                          initialMonth: selectedPayrollMonth,
+                          load: (month) => service.loadAttendanceAllowanceReport(
+                            month, branchId: selectedPayrollBranchId,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: const Text('Attendance Allowance Deductions'),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {

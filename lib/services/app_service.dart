@@ -1,3 +1,4 @@
+import 'attendance_allowance_report.dart';
 // ignore_for_file: camel_case_types
 
 import 'dart:convert';
@@ -493,6 +494,60 @@ class AppService extends ChangeNotifier {
           forceRefresh: true, includeApprovedArrivals: true),
       loadStatus: (status, ids) => loadAttendanceStatusReport(
           month: month, status: status, employeeIds: ids),
+    );
+  }
+
+  Future<AttendanceAllowanceReport> loadAttendanceAllowanceReport(
+      DateTime month, {String? branchId}) async {
+    final user = currentUser;
+    if (user == null || !user.isAdmin || user.isReviewer ||
+        user.isAttendanceAdmin || user.isRequestAdmin) {
+      throw StateError('Payroll administrator access required.');
+    }
+    final session = NeonApi.sessionVersion;
+    final payroll = <Map<String, dynamic>>[];
+    final start = '${month.year}-${month.month.toString().padLeft(2, '0')}-01';
+    final next = DateTime(month.year, month.month + 1);
+    final end = '${next.year}-${next.month.toString().padLeft(2, '0')}-01';
+    for (var offset = 0;; offset += 1000) {
+      final page = List<Map<String, dynamic>>.from(await _database.from('payroll')
+          .select().gte('period', start).lt('period', end)
+          .order('employee_id').range(offset, offset + 999));
+      payroll.addAll(page);
+      if (page.length < 1000) break;
+    }
+    final ids = payroll.map((row) => '${row['employee_id']}'.trim().toUpperCase())
+        .toSet().toList();
+    final employees = <Map<String, dynamic>>[];
+    final defaults = <Map<String, dynamic>>[];
+    for (var offset = 0; offset < ids.length; offset += 500) {
+      final batch = ids.sublist(offset, (offset + 500).clamp(0, ids.length));
+      final data = await Future.wait([
+        _database.from('employees')
+            .select('employee_id,name,branch_id,payroll_branch_id,address,joining_date,resigned_at,is_active')
+            .inFilter('employee_id', batch),
+        _database.from('employee_salary_defaults')
+            .select('employee_id,elaun_kedatangan').inFilter('employee_id', batch),
+      ]);
+      employees.addAll(List<Map<String, dynamic>>.from(data[0]));
+      defaults.addAll(List<Map<String, dynamic>>.from(data[1]));
+    }
+    final causes = await AttendanceAllowanceService.reasons(
+      employeeIds: ids,
+      loadLate: () => loadLateReport(month,
+          forceRefresh: true, includeApprovedArrivals: true),
+      loadStatus: (status, selected) => loadAttendanceStatusReport(
+          month: month, status: status, employeeIds: selected),
+    );
+    final branches = await loadNeonBranches();
+    if (session != NeonApi.sessionVersion) {
+      throw StateError('Session changed. Reload the report.');
+    }
+    return AttendanceAllowanceReport.build(month: month, payroll: payroll,
+      employees: employees, defaults: defaults, reasons: causes,
+      branches: {for (final branch in branches)
+        '${branch['id']}'.trim().toUpperCase(): '${branch['name']}'},
+      branchId: branchId,
     );
   }
 
