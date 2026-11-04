@@ -15916,8 +15916,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                         context: context,
                         builder: (_) => AttendanceAllowanceReportDialog(
                           initialMonth: selectedPayrollMonth,
-                          load: (month) => service.loadAttendanceAllowanceReport(
-                            month, branchId: selectedPayrollBranchId,
+                          load: (month) =>
+                              service.loadAttendanceAllowanceReport(
+                            month,
+                            branchId: selectedPayrollBranchId,
                           ),
                         ),
                       ),
