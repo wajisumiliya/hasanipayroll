@@ -1263,6 +1263,7 @@ class AppService extends ChangeNotifier {
       joiningDate: _supabaseDate(
         data['joining_date'] ?? data['joiningDate'],
       ),
+      resignedAt: _supabaseDate(data['resigned_at'] ?? data['resignedAt']),
       birthday: _supabaseDate(data['birthday'] ?? data['date_of_birth']),
       isActive: _supabaseBool(
         data['is_active'] ?? data['isActive'],

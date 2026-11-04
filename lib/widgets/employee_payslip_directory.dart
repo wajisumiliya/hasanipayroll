@@ -1,3 +1,4 @@
+import '../services/payroll_month_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/payroll.dart';
@@ -98,9 +99,10 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
   @override
   Widget build(BuildContext context) {
     final summary = widget.tab == 'summary';
-    final employees = summary
-        ? widget.employees.where((e) => periodFor(e).isNotEmpty).toList()
-        : widget.employees;
+    final employees = widget.employees.where((employee) =>
+        periodFor(employee).isNotEmpty &&
+        PayrollMonthScope.activeInMonth(employee.toJson(), widget.period))
+        .toList();
     final pages = (employees.length / 10).ceil();
     final current = page.clamp(0, pages > 0 ? pages - 1 : 0).toInt();
     final visible = employees.skip(current * 10).take(10).toList();
@@ -442,8 +444,11 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
                                             e.branchId,
                                         const Color(0xFF4165A2))),
                                     DataCell(pill(
-                                        e.isActive ? 'Active' : 'Inactive',
-                                        e.isActive
+                                        PayrollMonthScope.activeInMonth(
+                                                e.toJson(), widget.period)
+                                            ? 'Active' : 'Inactive',
+                                        PayrollMonthScope.activeInMonth(
+                                                e.toJson(), widget.period)
                                             ? const Color(0xFF229546)
                                             : const Color(0xFF7A8190))),
                                     if (summary) ...[
@@ -464,7 +469,7 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
                                                       p.netPay))
                                           .toStringAsFixed(2)))
                                     ] else
-                                      DataCell(Text('${recordsFor(e).length}',
+                                      DataCell(Text('${periodFor(e).length}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.w800))),
                                     DataCell(Row(

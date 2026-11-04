@@ -1,3 +1,4 @@
+import '../services/payroll_month_scope.dart';
 import '../services/salary_transfer.dart';
 import '../widgets/salary_transfer_field.dart';
 import '../widgets/employee_payslip_directory.dart';
@@ -12931,6 +12932,21 @@ class _AdminDashboardState extends State<AdminDashboard>
     return aId.compareTo(bId);
   }
 
+  List<Map<String, dynamic>> _visibleMonthPayroll(
+    List<Map<String, dynamic>> records,
+    Iterable<Map<String, dynamic>> employees,
+    DateTime month,
+  ) {
+    final eligible = {
+      for (final employee in employees)
+        if (PayrollMonthScope.activeInMonth(employee, month))
+          _normalizeBranchValue(employee['employee_id']),
+    };
+    return records.where((record) =>
+      eligible.contains(_normalizeBranchValue(record['employee_id'])) &&
+      _payrollPeriodMatchesMonth(record['period'], month)).toList();
+  }
+
   String _payrollBranchIdFromEmployee(Map<String, dynamic> employee) {
     final payrollBranch = _normalizeBranchValue(employee['payroll_branch_id']);
     return payrollBranch.isNotEmpty
@@ -12943,19 +12959,22 @@ class _AdminDashboardState extends State<AdminDashboard>
 // ============================================================================
 
   Future<void> _showEditPayrollDialog() async {
+    final initialMonth = DateTime(selectedPayrollMonth.year, selectedPayrollMonth.month);
     List<Map<String, dynamic>> branches;
     List<Map<String, dynamic>> employees;
+    List<Map<String, dynamic>> monthPayroll;
     try {
       final responses = await Future.wait([
         SupabaseService.getBranches(),
         SupabaseService.database
             .from('employees')
             .select()
-            .eq('is_active', true)
             .order('employee_id'),
+        SupabaseService.getPayrollForMonth(initialMonth),
       ]);
       branches = List<Map<String, dynamic>>.from(responses[0]);
       employees = List<Map<String, dynamic>>.from(responses[1]);
+      monthPayroll = List<Map<String, dynamic>>.from(responses[2]);
       employees.sort(
         (a, b) => _normalizeBranchValue(a['employee_id'])
             .compareTo(_normalizeBranchValue(b['employee_id'])),
@@ -12967,7 +12986,7 @@ class _AdminDashboardState extends State<AdminDashboard>
 
     if (!mounted) return;
     if (employees.isEmpty) {
-      _message('No active employees are available.');
+      _message('No employees are available.');
       return;
     }
 
@@ -13030,7 +13049,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             .compareTo((branchNames[b] ?? b).toLowerCase()),
       );
 
-    DateTime month = selectedPayrollMonth;
+    DateTime month = initialMonth;
     String? branchId;
     String? employeeId;
     Map<String, dynamic>? storedRecord;
@@ -13091,6 +13110,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                 final rows = List<Map<String, dynamic>>.from(response);
                 storedRecord =
                     rows.isEmpty ? null : Map<String, dynamic>.from(rows.first);
+                if (storedRecord == null) {
+                  error = 'No saved payroll for this employee in the selected month.';
+                }
                 fillControllers(storedRecord);
                 hasUnsavedChanges = false;
                 lastSavedAt = DateTime.tryParse(
@@ -13142,13 +13164,28 @@ class _AdminDashboardState extends State<AdminDashboard>
               if (picked == null || !dialogContext.mounted) return;
               setDialogState(() {
                 month = DateTime(picked.year, picked.month);
+                employeeId = null;
+                monthPayroll = [];
                 storedRecord = null;
+                loading = true;
                 hasUnsavedChanges = false;
                 error = null;
                 success = null;
+                statutoryInfo = null;
+                calculatingStatutory = false;
+                statutoryRevision++;
                 fillControllers(null);
               });
-              if (employeeId != null) await loadPayroll();
+              try {
+                final records = await SupabaseService.getPayrollForMonth(month);
+                if (!dialogContext.mounted) return;
+                setDialogState(() => monthPayroll = records);
+              } catch (e) {
+                if (!dialogContext.mounted) return;
+                setDialogState(() => error = 'Unable to load payroll employees: $e');
+              } finally {
+                if (dialogContext.mounted) setDialogState(() => loading = false);
+              }
             }
 
             Future<void> savePayroll() async {
@@ -13156,6 +13193,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                   loading ||
                   saving ||
                   calculatingStatutory) {
+                return;
+              }
+              if (storedRecord == null) {
+                setDialogState(() => error = 'Select an existing payroll for this month.');
                 return;
               }
               for (final field in fields) {
@@ -13237,9 +13278,12 @@ class _AdminDashboardState extends State<AdminDashboard>
               }
             }
 
+            final eligibleEmployees = PayrollMonthScope.employeesWithPayroll(
+              employees: employees, payroll: monthPayroll, month: month,
+            );
             final filteredEmployees = branchId == null
                 ? <Map<String, dynamic>>[]
-                : employees
+                : eligibleEmployees
                     .where(
                       (employee) =>
                           _payrollBranchIdFromEmployee(employee) == branchId,
@@ -13604,6 +13648,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   labelText: selectedEmployeeIndex < 0
                                       ? 'Employee (ID A-Z)'
                                       : 'Employee ${selectedEmployeeIndex + 1} of ${filteredEmployees.length}',
+                                  helperText: branchId != null &&
+                                          !loading && filteredEmployees.isEmpty
+                                      ? 'No eligible employees have payroll for this month.'
+                                      : null,
                                   border: OutlineInputBorder(),
                                 ),
                                 items: filteredEmployees.map((employee) {
@@ -13992,14 +14040,15 @@ class _AdminDashboardState extends State<AdminDashboard>
           'Employee Name',
           'Branch',
           'Status',
-          'Total Payslips (all periods)'
+          'Total Payslips (selected month)'
         ];
         rows = employees
             .map((e) => <dynamic>[
                   e.employeeId,
                   e.name,
                   e.branchId,
-                  e.isActive ? 'Active' : 'Inactive',
+                  PayrollMonthScope.activeInMonth(e.toJson(), period)
+                      ? 'Active' : 'Inactive',
                   byEmployee[e.employeeId.trim().toUpperCase()]?.length ?? 0
                 ])
             .toList();
@@ -14012,7 +14061,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           ? 'Payslip History - $activeYear - ${selectedEmployee!.name}'
           : tab == 'summary'
               ? 'Payslip Summary - ${DateFormat('MMM yyyy').format(period)}'
-              : 'Employee Payslips - All-period history counts';
+              : 'Employee Payslips - ${DateFormat('MMM yyyy').format(period)}';
       final name =
           'Employee_Payslips_${DateFormat('yyyy_MM').format(period)}_$tab';
       if (format == 'xlsx') {
@@ -14083,16 +14132,23 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _employeePayslipsPage() {
-    final employees = service.allEmployees.toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final period = _payslipDirectoryPeriod ?? selectedPayrollMonth;
+    final monthlyPayrollIds = service.payroll
+        .where((record) => record.period.year == period.year &&
+            record.period.month == period.month)
+        .map((record) => record.employeeId.trim().toUpperCase()).toSet();
+    final employees = service.allEmployees.where((employee) =>
+        monthlyPayrollIds.contains(employee.employeeId.trim().toUpperCase()) &&
+        PayrollMonthScope.activeInMonth(employee.toJson(), period)).toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final query = _payslipEmployeeSearch.trim().toLowerCase();
     final byEmployee = <String, List<PayrollRecord>>{};
     final allowedIds =
         employees.map((e) => e.employeeId.trim().toUpperCase()).toSet();
     for (final record in service.payroll) {
       final id = record.employeeId.trim().toUpperCase();
-      if (allowedIds.contains(id))
+      if (allowedIds.contains(id) && record.period.year == period.year &&
+          record.period.month == period.month)
         byEmployee.putIfAbsent(id, () => []).add(record);
     }
     for (final rows in byEmployee.values) {
@@ -14106,7 +14162,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     final filteredEmployees = employees
         .where((e) =>
             (_payslipShowActiveEmployees == null ||
-                e.isActive == _payslipShowActiveEmployees) &&
+                PayrollMonthScope.activeInMonth(e.toJson(), period) ==
+                    _payslipShowActiveEmployees) &&
             (_payslipDirectoryBranch == null ||
                 e.branchId == _payslipDirectoryBranch) &&
             (query.isEmpty ||
@@ -14116,7 +14173,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         .toList();
     final selectedEmployee = selectedPayslipEmployeeId == null
         ? null
-        : service.findEmployee(selectedPayslipEmployeeId!);
+        : filteredEmployees.where((employee) =>
+            employee.employeeId == selectedPayslipEmployeeId).firstOrNull;
     final employeePayroll = selectedEmployee == null
         ? <PayrollRecord>[]
         : service.employeePayroll(selectedEmployee.employeeId);
@@ -14165,6 +14223,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     onSelected: (_) => setState(() {
                       selectedEmployeePayslipYear = year;
                       _payslipDirectoryPeriod = DateTime(year, period.month);
+                      selectedPayslipEmployeeId = null;
                     }),
                   );
                 }).toList(),
@@ -14186,7 +14245,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               employees: filteredEmployees,
               records: byEmployee,
               totalEmployees: employees.length,
-              activeEmployees: employees.where((e) => e.isActive).length,
+              activeEmployees: employees.length,
               totalPayslips: byEmployee.values
                   .fold<int>(0, (sum, rows) => sum + rows.length),
               period: period,
@@ -14199,6 +14258,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               exporting: _payslipDirectoryExporting,
               onPeriod: (value) => setState(() {
                 _payslipDirectoryPeriod = value;
+                selectedPayslipEmployeeId = null;
                 selectedEmployeePayslipYear = value.year;
               }),
               onBranch: (value) => setState(() {
@@ -14229,7 +14289,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                   format,
                   filteredEmployees,
                   period,
-                  byEmployee,
+                  _payslipDirectoryTab == 'history'
+                      ? {if (selectedEmployee != null)
+                          selectedEmployee.employeeId.trim().toUpperCase(): employeePayroll}
+                      : byEmployee,
                   selectedEmployee,
                   activeYear),
             )));
@@ -15592,10 +15655,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         }
 
         for (final employee in employees) {
-          // Inactive employees are loaded so their existing historical payroll
-          // records can still resolve branch/name details. They must not appear
-          // in the employee picker used to generate new payroll.
-          if (!_isActive(employee)) continue;
+          // Generation can include eligible staff before their first payroll
+          // exists, using employment dates for the selected month.
+          if (!PayrollMonthScope.activeInMonth(employee, selectedPayrollMonth)) {
+            continue;
+          }
           final branchId = _payrollBranchIdFromEmployee(employee);
           if (branchId.isEmpty) continue;
           branchGroups.putIfAbsent(branchId, () => []).add(employee);
@@ -15653,7 +15717,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           payrollByEmployee.putIfAbsent(employeeId, () => []).add(record);
         }
 
-        final visiblePayrollRecords = payrollRecords.where((record) {
+        final eligibleMonthPayroll = _visibleMonthPayroll(
+          payrollRecords, employees, selectedPayrollMonth,
+        );
+        final visiblePayrollRecords = eligibleMonthPayroll.where((record) {
           final branchMatches = selectedPayrollBranchId == null ||
               _normalizeBranchValue(record['branch_id']) ==
                   selectedPayrollBranchId;
@@ -15673,12 +15740,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           for (final employee in employees)
             _normalizeBranchValue(employee['employee_id']): employee,
         };
-        final incrementPayrollRecords = payrollRecords.where((record) {
-          return _payrollPeriodMatchesMonth(
-            record['period'],
-            selectedPayrollMonth,
-          );
-        }).toList();
+        final incrementPayrollRecords = eligibleMonthPayroll;
         final allMonthlyIncrements = <Map<String, dynamic>>[];
         for (final current in incrementPayrollRecords) {
           final employeeId = _normalizeBranchValue(current['employee_id']);
@@ -17464,6 +17526,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         }
       }
 
+      records = _visibleMonthPayroll(
+        records, employeeMap.values, selectedPayrollMonth,
+      );
+      if (records.isEmpty) {
+        _message('No eligible employee payroll for the selected month.');
+        return;
+      }
+
       final salaryResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
@@ -17996,6 +18066,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) employeeMap[id] = Map<String, dynamic>.from(row);
       }
+      records = _visibleMonthPayroll(
+        records, employeeMap.values, selectedPayrollMonth,
+      );
+      if (records.isEmpty) {
+        _message('No eligible employee payroll for the selected month.');
+        return;
+      }
+
       final salaryMap = <String, Map<String, dynamic>>{};
       for (final row in List<Map<String, dynamic>>.from(salaryResponse)) {
         final id = _normalizeBranchValue(row['employee_id']);
@@ -19263,6 +19341,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) employeeMap[id] = Map<String, dynamic>.from(row);
       }
+      records = _visibleMonthPayroll(
+        records, employeeMap.values, selectedPayrollMonth,
+      );
+      if (records.isEmpty) {
+        _message('No eligible employee payroll for the selected month.');
+        return;
+      }
+
       final salaryResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
@@ -19652,6 +19738,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         final id = _normalizeBranchValue(row['employee_id']);
         if (id.isNotEmpty) employeeMap[id] = row;
       }
+      records = _visibleMonthPayroll(
+        records, employeeMap.values, selectedPayrollMonth,
+      );
+      if (records.isEmpty) {
+        _message('No eligible employee payroll for the selected month.');
+        return;
+      }
+
       final salaryResponse = await SupabaseService.database
           .from('employee_salary_defaults')
           .select()
@@ -20121,7 +20215,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     }
 
     final grouped = <String, Map<String, dynamic>>{};
-    for (final row in payroll) {
+    for (final row in _visibleMonthPayroll(payroll, employees.values, month)) {
       final employeeId = _normalizeBranchValue(row['employee_id']);
       final employee = employees[employeeId] ?? <String, dynamic>{};
       final payrollBranchId = _normalizeBranchValue(row['branch_id']);
@@ -20402,7 +20496,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     final foreign = <List<dynamic>>[];
     final missingLocal = <List<dynamic>>[];
     final missingForeign = <List<dynamic>>[];
-    for (final payroll in payrollRows) {
+    for (final payroll in _visibleMonthPayroll(payrollRows, employees.values, month)) {
       final id = _normalizeBranchValue(payroll['employee_id']);
       final employee = employees[id] ?? <String, dynamic>{};
       final salaryDefault = defaults[id] ?? <String, dynamic>{};
@@ -22005,6 +22099,15 @@ class _AdminDashboardState extends State<AdminDashboard>
           employeeMap[id] = employee;
         }
       }
+      payrollRows.removeWhere((row) {
+        final employee = employeeMap[_normalizeBranchValue(row['employee_id'])];
+        return employee == null ||
+            !PayrollMonthScope.activeInMonth(employee, selectedPayrollMonth);
+      });
+      if (payrollRows.isEmpty) {
+        _message('No eligible employee payroll for $selectedMonth.');
+        return false;
+      }
       payrollRows.sort(
         (a, b) => _comparePayrollExportRecords(a, b, employeeMap),
       );
@@ -22877,57 +22980,8 @@ class _AdminDashboardState extends State<AdminDashboard>
 // PAYROLL PERIOD MATCHER
 // ============================================================================
 
-  bool _payrollPeriodMatchesMonth(
-    dynamic value,
-    DateTime month,
-  ) {
-    if (value == null) return false;
-
-    final text = value.toString().trim();
-    if (text.isEmpty) return false;
-
-    final parsed = DateTime.tryParse(text);
-    if (parsed != null) {
-      return parsed.year == month.year && parsed.month == month.month;
-    }
-
-    final normalized = text.toLowerCase();
-    final monthNames = const [
-      'jan',
-      'feb',
-      'mar',
-      'apr',
-      'may',
-      'jun',
-      'jul',
-      'aug',
-      'sep',
-      'oct',
-      'nov',
-      'dec',
-    ];
-
-    for (var i = 0; i < monthNames.length; i++) {
-      if (normalized.contains(monthNames[i]) &&
-          normalized.contains(month.year.toString())) {
-        return i + 1 == month.month;
-      }
-    }
-
-    final yearMonth = RegExp(r'^(\d{4})[-/]([0-9]{1,2})$').firstMatch(text);
-    if (yearMonth != null) {
-      return int.tryParse(yearMonth.group(1) ?? '') == month.year &&
-          int.tryParse(yearMonth.group(2) ?? '') == month.month;
-    }
-
-    final monthYear = RegExp(r'^([0-9]{1,2})[-/](\d{4})$').firstMatch(text);
-    if (monthYear != null) {
-      return int.tryParse(monthYear.group(1) ?? '') == month.month &&
-          int.tryParse(monthYear.group(2) ?? '') == month.year;
-    }
-
-    return false;
-  }
+  bool _payrollPeriodMatchesMonth(dynamic value, DateTime month) =>
+      PayrollMonthScope.matchesMonth(value, month);
 
 // ============================================================================
 // PAYROLL PERIOD FORMATTER

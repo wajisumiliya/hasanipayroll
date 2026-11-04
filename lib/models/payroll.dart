@@ -492,6 +492,7 @@ class Employee {
   final String phone;
   final String address;
   final DateTime? joiningDate;
+  final DateTime? resignedAt;
   final DateTime? birthday;
   final bool isActive;
   final String employmentStatus;
@@ -519,6 +520,7 @@ class Employee {
     this.phone = '',
     this.address = '',
     this.joiningDate,
+    this.resignedAt,
     this.birthday,
     this.isActive = true,
     this.employmentStatus = 'active',
@@ -550,6 +552,7 @@ class Employee {
     String? phone,
     String? address,
     DateTime? joiningDate,
+    DateTime? resignedAt,
     DateTime? birthday,
     bool? isActive,
     String? employmentStatus,
@@ -576,6 +579,7 @@ class Employee {
       phone: phone ?? this.phone,
       address: address ?? this.address,
       joiningDate: joiningDate ?? this.joiningDate,
+      resignedAt: resignedAt ?? this.resignedAt,
       birthday: birthday ?? this.birthday,
       isActive: isActive ?? this.isActive,
       employmentStatus: employmentStatus ??
@@ -612,6 +616,7 @@ class Employee {
       'phone': phone,
       'address': address,
       'joiningDate': joiningDate?.toIso8601String(),
+      'resignedAt': resignedAt?.toIso8601String(),
       'birthday': birthday?.toIso8601String(),
       'isActive': isActive,
       'employmentStatus': employmentStatus,
@@ -648,6 +653,7 @@ class Employee {
       joiningDate: _parseNullableDate(
         json['joiningDate'],
       ),
+      resignedAt: _parseNullableDate(json['resignedAt'] ?? json['resigned_at']),
       birthday: _parseNullableDate(json['birthday'] ?? json['date_of_birth']),
       isActive: _boolValue(
         json['isActive'],

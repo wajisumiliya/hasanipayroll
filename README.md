@@ -184,6 +184,19 @@ Cash. Deploy the backend first: startup applies the
 `20261103_employee_salary_transfer.sql` migration before the frontend uses the new
 field. This changes payment routing, not payroll calculation rules.
 
+### Selected-month payroll visibility
+
+Edit Payroll, employee payslip lists, payroll reports and payroll/statutory
+exports show only employees with saved payroll in the selected month who were
+employed during that month. Joining dates and recorded resignation dates define
+the monthly employment window; someone who resigned later remains visible in
+an earlier month with payroll. An inactive employee without a recorded
+resignation date cannot be reliably treated as employed in a historical month
+and is excluded. No historical payroll is deleted or recalculated by this filter.
+
+The employee master directory remains complete. Payroll generation allows
+employees eligible for that month even before their first payroll exists.
+
 ## API and authorization
 
 - Flutter authenticates with the Node backend and sends its bearer JWT on protected requests.
