@@ -49,14 +49,17 @@ class PdfService {
       isForeignEmployee: isForeignEmployee,
     );
     // Keep the exact count on historical payroll generated under older rates.
-    final savedUnpaidDays = int.tryParse(RegExp(r'Unpaid days: (\d+)\.')
-        .firstMatch(p.remarks ?? '')?.group(1) ?? '');
+    final savedUnpaidDays = int.tryParse(
+        RegExp(r'Unpaid days: (\d+)\.').firstMatch(p.remarks ?? '')?.group(1) ??
+            '');
     final payrollUnpaidDays = p.unpaidLeave <= 0
         ? 0
         : savedUnpaidDays != null && savedUnpaidDays > 0
             ? savedUnpaidDays.clamp(0, calendarDays)
             : unpaidDailyRate > 0
-                ? (p.unpaidLeave / unpaidDailyRate).round().clamp(0, calendarDays)
+                ? (p.unpaidLeave / unpaidDailyRate)
+                    .round()
+                    .clamp(0, calendarDays)
                 : 0;
     final attendanceUnpaidDays =
         monthlyAttendance.where(_unpaid).length.clamp(0, calendarDays);
@@ -454,7 +457,8 @@ class PdfService {
     );
   }
 
-  static bool _unpaid(AttendanceRecord record) => record.isUnpaid ||
+  static bool _unpaid(AttendanceRecord record) =>
+      record.isUnpaid ||
       PayrollCalculationService.isUnpaidAttendanceStatus(record.status);
 
   static double _overtimeHours(AttendanceRecord record) {
