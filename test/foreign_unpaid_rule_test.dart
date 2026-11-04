@@ -73,10 +73,15 @@ void main() {
       bankAccount: '', address: 'FRN');
     for (final legacy in [false, true]) {
       final payroll = PayrollRecord.fromJson({
-        'id': 'P1', 'employee_id': 'TEST-FRN', 'period': '2026-10-01',
-        'basic_salary': 1700, 'unpaid_deduction': legacy ? 548.39 : 607,
+        'id': 'P1', 'employeeId': 'TEST-FRN', 'period': '2026-10-01',
+        'basicSalary': 1700, 'unpaidLeave': legacy ? 548.39 : 607,
         'remarks': legacy ? 'Unpaid days: 10. Unpaid deduction: 548.39.' : null,
       });
+      // fromJson consumes the camelCase model/cache format for these fields.
+      // Assert the fixture's salary before diagnosing any PDF text mismatch.
+      expect(payroll.employeeId, 'TEST-FRN');
+      expect(payroll.basicSalary, 1700);
+      expect(payroll.unpaidLeave, legacy ? 548.39 : 607);
       final text = pdfContents(await PdfService.buildPayslip(employee: employee, p: payroll));
       expect(text, contains('UNPAID 105.00 HRS'));
     }
