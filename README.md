@@ -354,6 +354,18 @@ configure `FIREBASE_WEB_VAPID_KEY` in the build and an HTTPS
 `FIREBASE_WEB_APP_URL` on the backend for notification click-through.
 The in-app inbox works without Firebase or notification permission.
 
+For missing delivery, use Admin → Notifications → One employee → **Check
+notification delivery** to see actual publication, inbox, queue and device
+status without sending a test message. Employees can select **Enable
+notifications on this device** in their notification inbox to retry registration
+and recent missed pushes. Android Flutter Firebase options must match the
+`com.hasani.payroll` client in `android/app/google-services.json`; a backend test
+checks that alignment. Startup also applies
+`20261104_payslip_push_registration_recovery.sql`, which preserves safe Firebase
+error codes and re-enables recent failed/no-device deliveries on registration.
+See [push troubleshooting](backend/docs/push-notifications.md) for the HED2073
+October 2026 read-only checks and deployment/configuration guidance.
+
 ## Attendance, payroll and Daily Report
 
 - **Attendance:** Confirm employee selection, branch scoping, submission, review and date/month filtering.

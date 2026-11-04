@@ -1,3 +1,4 @@
+import '../services/notification_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -236,6 +237,20 @@ class _EmployeePortalState extends State<EmployeePortal>
                       icon: const Icon(Icons.refresh),
                     ),
                   ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.notifications_active_outlined),
+                  label: const Text('Enable notifications on this device'),
+                  onPressed: () async {
+                    final result = await NotificationService.enableDeviceNotifications();
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      SnackBar(content: Text(result)),
+                    );
+                  },
                 ),
               ),
               const Divider(height: 1),

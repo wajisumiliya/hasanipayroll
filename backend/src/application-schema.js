@@ -112,6 +112,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261104_payslip_publication_notifications.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [noticeVersion]);
     }
+    const recoveryVersion = '20261104_payslip_push_registration_recovery_v1';
+    const recoveryMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [recoveryVersion]);
+    if (!recoveryMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261104_payslip_push_registration_recovery.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [recoveryVersion]);
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK'); throw error;

@@ -34,12 +34,14 @@ export async function drainPayslipNotifications(pool, {send = pushNotifications,
     const status = ['sent','partial','no_devices','not_configured','invalid_configuration',
       'authentication_failed','failed'].includes(result?.pushStatus) ? result.pushStatus : 'failed';
     const complete = ['sent','partial','no_devices'].includes(status);
+    const errors = (Array.isArray(result?.pushErrors) ? result.pushErrors : [])
+      .filter(code => typeof code === 'string' && /^[A-Z_]{1,64}$/.test(code)).slice(0,20);
     await pool.query(`UPDATE app_private.payslip_notice_delivery
-      SET completed_at=CASE WHEN $4 THEN now() ELSE NULL END,last_status=$5,
+      SET completed_at=CASE WHEN $4 THEN now() ELSE NULL END,last_status=$5,last_error_codes=$6,
         available_at=now()+make_interval(secs=>LEAST(3600,60*power(2,LEAST(attempts,6)))::int),
         claim_token=NULL,claimed_until=NULL
       WHERE employee_id=$1 AND payroll_month=$2 AND claim_token=$3`,
-    [row.employee_id,row.payroll_month,row.claim_token,complete,status]);
+    [row.employee_id,row.payroll_month,row.claim_token,complete,status,errors]);
     handled++;
   }
   return handled;

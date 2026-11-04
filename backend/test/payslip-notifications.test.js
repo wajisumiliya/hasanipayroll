@@ -60,7 +60,7 @@ test('payslip notifications follow actual publication, are scoped, durable and d
     });
     await t.test('legacy browser callback cannot duplicate the inbox or push',async()=>{
       let handler;
-      installNotificationApi({post(path,auth,fn){handler=fn;}},{pool,authenticate:()=>{}});
+      installNotificationApi({get(){},post(path,auth,fn){handler=fn;}},{pool,authenticate:()=>{}});
       const res={status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
       await handler({user:{role:'admin'},auth:{app_metadata:{}},body:{title:'New Payslip Available',
         body:'Your October 2026 payslip is ready to view.',type:'payslip',audience:'employee',employee_id:'E1'}},res);
@@ -119,6 +119,22 @@ test('payslip notifications follow actual publication, are scoped, durable and d
         await client.query('ROLLBACK');
       }finally{client.release();}
     });
+    await t.test('new device registration retries a recent no-device delivery once for its verified owner',async()=>{
+      const client=await pool.connect();
+      try {
+        await client.query('BEGIN');await client.query('SET LOCAL ROLE authenticated');
+        await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:'test-user',role:'authenticated',app_metadata:{role:'employee',employee_id:'E2',branch_id:'A'}})]);
+        await client.query("SELECT public.register_notification_device($1,'E1','B','android')",['TEST_DEVICE_TOKEN_FOR_EMPLOYEE_TWO']);
+        await client.query('COMMIT');
+      }finally{client.release();}
+      const device=(await pool.query('SELECT employee_id FROM public.notification_devices')).rows[0];
+      assert.equal(device.employee_id,'E2');
+      const sent=[];
+      await drainPayslipNotifications(pool,{send:async(_pool,input)=>{sent.push(input.employeeIds[0]);return {pushStatus:'sent'};}});
+      assert.deepEqual(sent,['E2']);assert.equal(await count(),3);
+      await pool.query("UPDATE public.notification_devices SET employee_id=employee_id");
+      assert.equal(await drainPayslipNotifications(pool,{send:async()=>assert.fail('Successful delivery must not replay')}),0);
+    });
     await t.test('migration is idempotent and does not duplicate deliveries',async()=>{
       await ensureApplicationSchema(pool);assert.equal(await count(),3);
     });
@@ -133,9 +149,10 @@ test('payslip notifications follow actual publication, are scoped, durable and d
     });
     await t.test('unexpected push exceptions keep a recoverable queue entry',async()=>{
       await pool.query("INSERT INTO payroll(id,employee_id,period,is_published,release_at) VALUES('JAN','E1','2027-01-01',true,now())");
-      assert.equal(await drainPayslipNotifications(pool,{send:async()=>{throw Error('Simulated network outage');}}),1);
+      assert.equal(await drainPayslipNotifications(pool,{send:async()=>({pushStatus:'failed',pushErrors:['SENDER_ID_MISMATCH']})}),1);
       const row=(await pool.query("SELECT * FROM app_private.payslip_notice_delivery WHERE payroll_month='2027-01-01'")).rows[0];
       assert.equal(row.completed_at,null);assert.equal(row.last_status,'failed');assert.equal(row.claimed_until,null);
+      assert.deepEqual(row.last_error_codes,['SENDER_ID_MISMATCH']);
       assert.equal(await count(),5);
     });
   }finally{await pool.end();await dropFixtureDatabase(bootstrap,'hasani_payslip_notice_test');await bootstrap.end();}

@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyA67LK_uVKssT1jDS3pOCAoHuus45w_pv8',
-    appId: '1:206112169695:android:cf4473f08c515a8278136a',
+    appId: '1:206112169695:android:7f4d21101da8f96178136a',
     messagingSenderId: '206112169695',
     projectId: 'hasani-payroll',
     storageBucket: 'hasani-payroll.firebasestorage.app',

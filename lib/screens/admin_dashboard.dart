@@ -3661,6 +3661,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     String? branchId;
     String? employeeId;
     var sending = false;
+    var checkingDelivery = false;
+    String? deliveryStatus;
     final result = await showDialog<NotificationDelivery>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -3716,8 +3718,35 @@ class _AdminDashboardState extends State<AdminDashboard>
                               ))
                           .toList(),
                       onChanged: (value) =>
-                          setDialogState(() => employeeId = value),
+                          setDialogState(() {
+                            employeeId = value;
+                            deliveryStatus = null;
+                          }),
                     ),
+                  if (audience == 'employee') ...[
+                    TextButton.icon(
+                      icon: const Icon(Icons.info_outline),
+                      label: Text(checkingDelivery ? 'Checking delivery...' : 'Check notification delivery'),
+                      onPressed: employeeId == null || checkingDelivery || sending
+                          ? null
+                          : () async {
+                              setDialogState(() => checkingDelivery = true);
+                              final checkedEmployee = employeeId!;
+                              String result;
+                              try {
+                                result = await NotificationService.deliveryStatus(checkedEmployee);
+                              } catch (_) {
+                                result = 'Unable to check delivery. Confirm that the latest backend deployment succeeded, then retry.';
+                              }
+                              if (!dialogContext.mounted) return;
+                              setDialogState(() {
+                                deliveryStatus = employeeId == checkedEmployee ? result : null;
+                                checkingDelivery = false;
+                              });
+                            },
+                    ),
+                    if (deliveryStatus != null) Text(deliveryStatus!),
+                  ],
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: type,

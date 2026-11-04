@@ -1,3 +1,4 @@
+import {firebaseConfigurationStatus} from './notification-status.js';
 import { pushNotifications } from './push-sender.js';
 export { pushNotifications } from './push-sender.js';
 import { DataApiError } from './data-api.js';
@@ -7,7 +8,40 @@ function admin(req) {
 function fail(res,error) {
   res.status(error.status || 503).json({ok:false,message:error instanceof DataApiError ? error.message : 'Unable to send notification.'});
 }
-export function installNotificationApi(app,{pool,authenticate}) {
+export function installNotificationApi(app,{pool,authenticate,env=process.env}) {
+  app.get('/api/notifications/status',authenticate,async(req,res)=>{
+    try {
+      admin(req);
+      const employeeId=String(req.query.employee_id||'').trim();
+      if (!employeeId || employeeId.length>100) throw new DataApiError('Select an employee',400);
+      const employee=await pool.query('SELECT employee_id FROM public.employees WHERE employee_id=$1',[employeeId]);
+      if (!employee.rows.length) throw new DataApiError('Employee not found',404);
+      const [devices,recent,payroll,trigger]=await Promise.all([
+        pool.query('SELECT platform,count(*)::int AS count FROM public.notification_devices WHERE employee_id=$1 GROUP BY platform',[employeeId]),
+        pool.query(`SELECT to_char(payroll_month,'YYYY-MM') AS payroll_month,attempts,last_status,last_error_codes,
+          available_at,completed_at FROM app_private.payslip_notice_delivery
+          WHERE employee_id=$1 ORDER BY payroll_month DESC LIMIT 6`,[employeeId]),
+        pool.query(`SELECT to_char(p.period,'YYYY-MM') AS payroll_month,p.is_published,p.release_at,
+          (p.is_published AND (p.release_at IS NULL OR p.release_at<=now())) AS available,
+          EXISTS(SELECT 1 FROM public.app_notifications n WHERE n.employee_id=p.employee_id
+            AND n.audience='employee' AND n.notification_type='payslip'
+            AND n.body=format('Your %s payslip is ready to view.',to_char(p.period,'FMMonth YYYY'))) AS inbox_saved,
+          EXISTS(SELECT 1 FROM app_private.payslip_notice_delivery d WHERE d.employee_id=p.employee_id
+            AND d.payroll_month=date_trunc('month',p.period::timestamp)::date) AS push_queued
+          FROM public.payroll p WHERE p.employee_id=$1 ORDER BY p.period DESC LIMIT 6`,[employeeId]),
+        pool.query(`SELECT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.payroll'::regclass
+          AND tgname='payslip_published_notice' AND tgenabled IN ('O','A') AND NOT tgisinternal) AS ready`),
+      ]);
+      const counts={total:0,android:0,web:0};
+      for (const row of devices.rows) {
+        counts.total+=Number(row.count);
+        if (row.platform==='android' || row.platform==='web') counts[row.platform]+=Number(row.count);
+      }
+      res.json({ok:true,employee_id:employeeId,firebase:firebaseConfigurationStatus(env),
+        publication_notifications_ready:trigger.rows[0]?.ready===true,
+        devices:counts,recent:recent.rows,payroll:payroll.rows});
+    } catch(error) { fail(res,error); }
+  });
   app.post('/api/notifications/send',authenticate,async(req,res)=>{
     try {
       admin(req);
