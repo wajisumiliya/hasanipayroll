@@ -157,8 +157,8 @@ class AttendancePdfService {
               netMinutes: AttendanceNetHours.displayMinutes(
                 status: day.status,
                 actualMinutes: day.netMinutes,
-                assignedMinutes: day.assignedNetMinutes ??
-                    (isForeignEmployee ? 630 : 450),
+                assignedMinutes:
+                    day.assignedNetMinutes ?? (isForeignEmployee ? 630 : 450),
               ),
               overtimeMinutes: AttendanceNetHours.isPaidAbsence(day.status)
                   ? 0
