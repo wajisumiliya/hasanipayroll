@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/services/attendance_pdf_service.dart';
-import 'attendance_pdf_summary_test.dart' show pdfContents;
+import 'attendance_pdf_summary_test.dart' show pdfContents, block;
 import 'package:hasani_payroll_portal/services/payroll_calculation_service.dart';
 import 'package:hasani_payroll_portal/services/attendance_payroll_service.dart';
 
@@ -112,8 +112,9 @@ void main() {
                 overtimeMinutes: 0,
                 lateMinutes: 0)));
     final text = pdfContents(bytes);
-    expect(text, contains('OT / BONUS HOURS'));
-    expect(text, contains('07:30'));
+    expect(text, isNot(contains('OT / BONUS HOURS')));
+    expect(block(text, 'APPROVED OT', 'Unused fifth OFF'), contains('00:00'));
+    expect(block(text, 'NET HOURS', 'APPROVED OT'), contains('202:30'));
     expect(text, contains('RM 65.40'));
     expect(text, contains('Paid through Bonus,'));
   });

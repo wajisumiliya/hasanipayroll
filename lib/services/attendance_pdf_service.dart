@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'payroll_calculation_service.dart';
+import 'attendance_net_hours.dart';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
@@ -26,6 +27,7 @@ class AttendancePrintDay {
     required this.netMinutes,
     required this.overtimeMinutes,
     required this.lateMinutes,
+    this.assignedNetMinutes,
   });
 
   final int day;
@@ -43,6 +45,7 @@ class AttendancePrintDay {
   final int netMinutes;
   final int overtimeMinutes;
   final int lateMinutes;
+  final int? assignedNetMinutes;
 }
 
 class AttendancePrintSheet {
@@ -133,9 +136,37 @@ class AttendancePdfService {
         department = sheet.department,
         section = sheet.section,
         branchId = sheet.branchId;
-    final isForeignEmployee = sheet.isForeignEmployee,
-        month = sheet.month,
-        days = sheet.days;
+    final isForeignEmployee = sheet.isForeignEmployee;
+    final month = sheet.month;
+    // Keep the source's actual worked minutes intact for payroll calculations.
+    // Only the attendance display includes paid absence credits.
+    final days = sheet.days
+        .map((day) => AttendancePrintDay(
+              day: day.day,
+              workingIn: day.workingIn,
+              workingOut: day.workingOut,
+              morningIn: day.morningIn,
+              morningOut: day.morningOut,
+              afternoonIn: day.afternoonIn,
+              afternoonOut: day.afternoonOut,
+              eveningIn: day.eveningIn,
+              eveningOut: day.eveningOut,
+              status: day.status,
+              workMinutes: day.workMinutes,
+              breakMinutes: day.breakMinutes,
+              netMinutes: AttendanceNetHours.displayMinutes(
+                status: day.status,
+                actualMinutes: day.netMinutes,
+                assignedMinutes: day.assignedNetMinutes ??
+                    (isForeignEmployee ? 630 : 450),
+              ),
+              overtimeMinutes: AttendanceNetHours.isPaidAbsence(day.status)
+                  ? 0
+                  : day.overtimeMinutes,
+              lateMinutes: day.lateMinutes,
+              assignedNetMinutes: day.assignedNetMinutes,
+            ))
+        .toList();
     final lateDeductionAmount = sheet.lateDeductionAmount,
         unpaidDeductionAmount = sheet.unpaidDeductionAmount,
         estimatedAmounts = sheet.estimatedAmounts;
@@ -167,7 +198,6 @@ class AttendancePdfService {
               'net_working_minutes': day.netMinutes,
             }
         ]);
-    final bonusMinutes = bonusDays * 450;
     final bonusAmount = PayrollCalculationService.localUnusedOffBonusAmount(
         basicSalary: sheet.basicSalary, bonusDays: bonusDays);
     final lateTotal = days.fold<int>(0, (sum, day) => sum + day.lateMinutes);
@@ -239,14 +269,13 @@ class AttendancePdfService {
                     unpaidDeductionAmount,
                   ),
                   pw.SizedBox(width: 5),
-                  _summary('NET HOURS', 'Gross work - breaks', netTotal, _blue),
+                  _summary('NET HOURS', 'Work + paid absence credits', netTotal,
+                      _blue),
                   pw.SizedBox(width: 5),
                   _summary(
-                    bonusDays > 0 ? 'OT / BONUS HOURS' : 'APPROVED OT',
-                    bonusDays > 0
-                        ? 'Includes normal-rate day'
-                        : 'Authorized overtime',
-                    otTotal + bonusMinutes,
+                    'APPROVED OT',
+                    'Authorized overtime only',
+                    otTotal,
                     PdfColors.black,
                     approvedOtAmount,
                   ),
@@ -256,7 +285,7 @@ class AttendancePdfService {
                 pw.Padding(
                     padding: const pw.EdgeInsets.only(top: 5),
                     child: pw.Text(
-                        'Unused fifth OFF: 07:30 bonus hours at normal basic salary / 26'
+                        'Unused fifth OFF bonus at normal basic salary / 26'
                         '${sheet.basicSalary > 0 ? " = RM ${bonusAmount.toStringAsFixed(2)}" : ""}. '
                         'Paid through Bonus, separately from the OT amount above. Current attendance entitlement.',
                         style: const pw.TextStyle(fontSize: 6))),

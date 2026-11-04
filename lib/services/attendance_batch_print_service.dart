@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'attendance_net_hours.dart';
 import 'attendance_pdf_service.dart';
 import 'attendance_payroll_service.dart';
 import 'payroll_calculation_service.dart';
@@ -141,7 +142,12 @@ class AttendanceBatchPrintService {
             breakMinutes: breaks,
             netMinutes: net,
             overtimeMinutes: ot,
-            lateMinutes: late);
+            lateMinutes: late,
+            assignedNetMinutes: AttendanceNetHours.assignedMinutes(
+              dailyRoster: dailyMatch.isEmpty ? null : dailyMatch.first,
+              weeklyRoster: weeklyMatch.isEmpty ? null : weeklyMatch.first,
+              fallbackMinutes: local ? 450 : 630,
+            ));
       });
       double overtime, lateAmount, unpaid;
       if (saved.isNotEmpty) {

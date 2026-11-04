@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'supabase_service.dart';
 import '../services/attendance_pdf_service.dart';
+import '../services/attendance_net_hours.dart';
 import '../services/attendance_payroll_service.dart';
 import '../services/app_service.dart';
 import '../services/payroll_calculation_service.dart';
@@ -1061,6 +1062,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
             netWorkingMinutes: net,
           ),
           lateMinutes: _calculateLateMinutes(day, c),
+          assignedNetMinutes: _assignedNetMinutes(day),
         );
       });
 
@@ -1713,33 +1715,36 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
                 color: total > 0 ? const Color(0xFF315AD9) : Colors.black54,
               ),
               _tableCell(
-                formatMinutes(netWorkingMinutes),
+                formatMinutes(_displayNetMinutes(day, c, netWorkingMinutes)),
                 widths[4],
                 bold: true,
-                color: netWorkingMinutes > 0
+                color: _displayNetMinutes(day, c, netWorkingMinutes) > 0
                     ? const Color(0xFF315AD9)
                     : Colors.black54,
               ),
-              !_isOvertimeEligible
-                  ? _tableCell('', widths[5])
-                  : _isAdminView()
-                      ? _directOtInput(
-                          c,
-                          widths[5],
-                          day: day,
-                          automaticMinutes:
-                              _isLocalStaff ? overtimeMinutes : null,
-                        )
-                      : _tableCell(
-                          overtimeMinutes <= 0
-                              ? ''
-                              : _directOtHoursText(overtimeMinutes),
-                          widths[5],
-                          bold: true,
-                          color: overtimeMinutes > 0
-                              ? Colors.orange.shade800
-                              : Colors.black38,
-                        ),
+              AttendanceNetHours.isPaidAbsence(
+                      _calculatedAttendanceStatus(day, c))
+                  ? _tableCell('00:00', widths[5])
+                  : !_isOvertimeEligible
+                      ? _tableCell('', widths[5])
+                      : _isAdminView()
+                          ? _directOtInput(
+                              c,
+                              widths[5],
+                              day: day,
+                              automaticMinutes:
+                                  _isLocalStaff ? overtimeMinutes : null,
+                            )
+                          : _tableCell(
+                              overtimeMinutes <= 0
+                                  ? ''
+                                  : _directOtHoursText(overtimeMinutes),
+                              widths[5],
+                              bold: true,
+                              color: overtimeMinutes > 0
+                                  ? Colors.orange.shade800
+                                  : Colors.black38,
+                            ),
               Expanded(
                 child: Container(
                   height: double.infinity,
@@ -1836,7 +1841,10 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
     required AttendanceDayControllers c,
     required int netWorkingMinutes,
   }) {
-    if (!_isOvertimeEligible) return 0;
+    if (!_isOvertimeEligible ||
+        AttendanceNetHours.isPaidAbsence(_calculatedAttendanceStatus(day, c))) {
+      return 0;
+    }
 
     if (_isLocalStaff) {
       if (_isAdminView() && c.approvedOtHours.text.trim().isNotEmpty) {
@@ -1864,6 +1872,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           )
         : 0;
   }
+
+  int _assignedNetMinutes(int day) => AttendanceNetHours.assignedMinutes(
+        dailyRoster: _dailyRoster[day],
+        weeklyRoster: _weeklyRoster[((day - 1) ~/ 7) + 1],
+        fallbackMinutes: (_requiredWorkHours * 60).round(),
+      );
+
+  int _displayNetMinutes(int day, AttendanceDayControllers c, int actual) =>
+      AttendanceNetHours.displayMinutes(
+        status: _calculatedAttendanceStatus(day, c),
+        actualMinutes: actual,
+        assignedMinutes: _assignedNetMinutes(day),
+      );
 
   ({int shiftMinutes, int breakMinutes}) _allocatedShift(
     int day,
@@ -3002,7 +3023,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
 
       workTotal += work;
       breakTotal += breaks;
-      netTotal += net;
+      netTotal += _displayNetMinutes(i + 1, c, net);
       overtimeTotal += ot;
     }
 
