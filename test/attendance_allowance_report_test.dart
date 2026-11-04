@@ -81,12 +81,28 @@ void main() {
     final book = xls.Excel.decodeBytes(
         AttendanceAllowanceReportExport.excel(data, data.rows));
     final sheet = book['Allowance deductions'];
-    expect((sheet.cell(xls.CellIndex.indexByString('I5')).value
-        as xls.DoubleCellValue).value, 100);
+    // Excel's reader normalizes whole-valued doubles (100.0) to integer cells.
+    // Both are numeric; text or missing cells must still fail this assertion.
+    final deduction = sheet.cell(xls.CellIndex.indexByString('I5')).value;
+    final amount = switch (deduction) {
+      xls.IntCellValue(value: final value) => value,
+      xls.DoubleCellValue(value: final value) => value,
+      _ => null,
+    };
+    expect(amount, 100);
     expect(sheet.cell(xls.CellIndex.indexByString('E5')).value.toString(),
         contains('Late, MC, UL-Unpaid'));
     expect(sheet.cell(xls.CellIndex.indexByString('J5')).value.toString(),
         contains('Saved payroll baseline'));
+  });
+  test('Excel preserves fractional deduction amounts without rounding to integers', () {
+    final data = report(snapshot: 100.25);
+    final book = xls.Excel.decodeBytes(
+        AttendanceAllowanceReportExport.excel(data, data.rows));
+    final deduction = book['Allowance deductions']
+        .cell(xls.CellIndex.indexByString('I5')).value;
+    expect(deduction, isA<xls.DoubleCellValue>());
+    expect((deduction as xls.DoubleCellValue).value, 100.25);
   });
   test('PDF shows the same reasons and source distinction as Excel', () async {
     final data = report();
