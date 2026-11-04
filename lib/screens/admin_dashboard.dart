@@ -17875,6 +17875,18 @@ class _AdminDashboardState extends State<AdminDashboard>
       }
 
       // Payment totals use the same net-salary rows as the statement.
+      if (paymentSummary.hasUnassigned) {
+        final row = totalRow + 1;
+        sheet.cell(xls.CellIndex.indexByString('Q$row')).value =
+            xls.TextCellValue('Unassigned');
+        final amountCell = sheet.cell(xls.CellIndex.indexByString('R$row'));
+        amountCell.cellStyle = (amountCell.cellStyle ?? xls.CellStyle())
+            .copyWith(numberFormat: moneyNumberFormat);
+        amountCell.value = xls.FormulaCellValue(
+          paymentSummary.formula('unassigned', 'T')!,
+          cachedValue: paymentTotals['unassigned']!.toString(),
+        );
+      }
       const paymentLabels = [
         ('payroll', 'Payroll'),
         ('instant', 'Instant'),
@@ -17895,11 +17907,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                 cachedValue: paymentTotals[key]!.toString());
       }
       final footerTotalRow = totalRow + 5;
+      final firstPaymentRow = totalRow + (paymentSummary.hasUnassigned ? 1 : 2);
       sheet.cell(xls.CellIndex.indexByString('Q$footerTotalRow')).value =
           xls.TextCellValue('TOTAL');
       sheet.cell(xls.CellIndex.indexByString('R$footerTotalRow')).value =
           xls.FormulaCellValue(
-        'SUM(R${totalRow + 2}:R${totalRow + 4})',
+        'SUM(R$firstPaymentRow:R${totalRow + 4})',
         cachedValue: columnTotals[19].toString(),
       );
 
@@ -19062,7 +19075,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           }
         }
 
-        final paymentRows = config['paymentRows'] as Map<String, int>;
+        final paymentRows = <String, int>{
+          if (paymentSummary.hasUnassigned) 'unassigned': 1,
+          ...config['paymentRows'] as Map<String, int>,
+        };
         final footerValueColumn = config['footerValueColumn'] as int;
         final netColumn = layout == 'local20' ? 19 : 20;
         final netTotal = columnTotals[netColumn];

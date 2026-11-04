@@ -66,14 +66,33 @@ void main() {
     expect(summary.formula('instant', 'U'), 'SUM(U6)');
     expect(summary.formula('cash', 'T'), 'SUM(T7,T8)');
     expect(SalaryTransferSummary().formula('cash', 'T'), isNull);
-    expect(
-        () => summary.add(
-            method: null,
-            bankAccount: '',
-            net: 500,
-            row: 9,
-            employeeId: 'UNSET'),
-        throwsStateError);
+    expect(summary.hasUnassigned, false);
+    summary.add(
+        method: null,
+        bankAccount: '',
+        net: 500,
+        row: 9,
+        employeeId: 'BLK062');
+    expect(summary.hasUnassigned, true);
+    expect(summary.totals['unassigned'], 500);
+    expect(summary.formula('unassigned', 'T'), 'SUM(T9)');
     expect(summary.totals['cash'], 1000);
+    expect(summary.totals['payroll'], 1800.25);
+    expect(summary.totals['instant'], 1000.50);
+    expect(summary.totals.values.reduce((a, b) => a + b), 4300.75);
+  });
+
+  test('unassigned salaries keep zero and negative amounts in the footer', () {
+    final summary = SalaryTransferSummary();
+    summary.add(
+        method: '', bankAccount: '', net: 0, row: 5, employeeId: 'BLANK');
+    summary.add(
+        method: 'rhb', bankAccount: '', net: -50, row: 6, employeeId: 'NO_BANK');
+    expect(summary.hasUnassigned, true);
+    expect(summary.formula('unassigned', 'U'), 'SUM(U5,U6)');
+    expect(summary.totals['unassigned'], -50);
+    expect(summary.totals['payroll'], 0);
+    expect(summary.totals['instant'], 0);
+    expect(summary.totals['cash'], 0);
   });
 }

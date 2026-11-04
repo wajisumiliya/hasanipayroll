@@ -31,6 +31,8 @@ class SalaryTransferSummary {
   final totals = <String, double>{'payroll': 0, 'instant': 0, 'cash': 0};
   final rows = <String, List<int>>{'payroll': [], 'instant': [], 'cash': []};
 
+  bool get hasUnassigned => rows['unassigned']?.isNotEmpty ?? false;
+
   void add({
     required dynamic method,
     required dynamic bankAccount,
@@ -38,18 +40,16 @@ class SalaryTransferSummary {
     required int row,
     required String employeeId,
   }) {
-    final key = SalaryTransfer.footerKey(method, bankAccount);
-    if (key.isEmpty) {
-      throw StateError(
-        'Choose Instant or Cash in employee information for $employeeId before exporting payroll.',
-      );
-    }
-    totals[key] = totals[key]! + net;
-    rows[key]!.add(row);
+    final resolvedKey = SalaryTransfer.footerKey(method, bankAccount);
+    // A missing payment choice must not prevent exporting saved payroll or
+    // silently assign the salary to a payment method the employee did not select.
+    final key = resolvedKey.isEmpty ? 'unassigned' : resolvedKey;
+    totals[key] = (totals[key] ?? 0) + net;
+    rows.putIfAbsent(key, () => <int>[]).add(row);
   }
 
   String? formula(String key, String netColumn) {
-    final contributors = rows[key]!;
+    final contributors = rows[key] ?? const <int>[];
     if (contributors.isEmpty) return null;
     return 'SUM(${contributors.map((row) => '$netColumn$row').join(',')})';
   }

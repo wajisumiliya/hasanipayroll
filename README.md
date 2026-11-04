@@ -177,8 +177,9 @@ account stay unselected until Instant or Cash is chosen. Explicit choices are
 preserved when other employee details change.
 
 Branch and all-branch payroll Excel footers sum net salaries into Payroll (RHB),
-Instant and Cash using formulas with cached totals. Exports flag employees whose
-method is still unselected. RHB bank files exclude employees assigned Instant or
+Instant and Cash using formulas with cached totals. Salaries with no selected
+method appear separately as Unassigned so exports can complete and all footer
+amounts reconcile with net payroll. RHB bank files exclude employees assigned Instant or
 Cash. Deploy the backend first: startup applies the
 `20261103_employee_salary_transfer.sql` migration before the frontend uses the new
 field. This changes payment routing, not payroll calculation rules.
