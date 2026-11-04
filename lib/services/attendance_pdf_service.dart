@@ -220,7 +220,8 @@ class AttendancePdfService {
         ? 0.0
         : unpaidSalary != null && unpaidSalary.isFinite && unpaidSalary >= 0
             ? (PayrollCalculationService.unpaidDailyRate(
-                            basicSalary: unpaidSalary, month: month,
+                            basicSalary: unpaidSalary,
+                            month: month,
                             isForeignEmployee: isForeignEmployee) *
                         unpaidDays.length *
                         100)

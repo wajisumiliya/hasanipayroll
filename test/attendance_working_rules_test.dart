@@ -20,7 +20,8 @@ void main() {
           actualMinutes: actual,
           status: status);
 
-  test('all FRN monthly targets use confirmed decimal hours regardless of OFFs', () {
+  test('all FRN monthly targets use confirmed decimal hours regardless of OFFs',
+      () {
     for (var month = 1; month <= 12; month++) {
       final days = DateTime(2026, month + 1, 0).day;
       if (days != 30 && days != 31) continue;
@@ -33,7 +34,8 @@ void main() {
     }
     // Preserve the explicitly named employee's override even without a marker.
     expect(target(' hed2016 ', DateTime(2026, 11), foreign: false), 17304);
-    expect(target('OTHER', DateTime(2026, 10), foreign: false, off: 4), 27 * 450);
+    expect(
+        target('OTHER', DateTime(2026, 10), foreign: false, off: 4), 27 * 450);
     // February targets were not changed by the 30/31-day request.
     expect(target('HED2016', DateTime(2026, 2)), 26 * 630);
     expect(target('OTHER-FRN', DateTime(2024, 2)), 27 * 630);
@@ -99,8 +101,7 @@ void main() {
     expect(text, contains('13:30')); // Actual clock evidence is retained.
   });
 
-  test('30-day target prints 288:24 while local breaks stay actual',
-      () async {
+  test('30-day target prints 288:24 while local breaks stay actual', () async {
     final text = pdfContents(await AttendancePdfService.build(
       employeeId: 'HED2016',
       employeeName: 'Test',

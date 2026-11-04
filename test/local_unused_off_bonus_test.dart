@@ -13,8 +13,7 @@ void main() {
                 'status': i < off ? 'OFF' : 'Present',
                 'net_working_minutes': i < off ? 0 : 450,
               });
-  test(
-      'payroll preview creates no unused-OFF bonus, even for a complete month',
+  test('payroll preview creates no unused-OFF bonus, even for a complete month',
       () async {
     for (final id in ['TEST001', 'HED1016']) {
       final result = await AttendancePayrollService.previewEmployeePayroll(

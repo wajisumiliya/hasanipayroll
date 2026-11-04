@@ -44,14 +44,16 @@ class PdfService {
     final requiredWorkMinutes = isForeignEmployee ? 630 : 450;
     final calendarDays = DateTime(p.period.year, p.period.month + 1, 0).day;
     final unpaidDailyRate = PayrollCalculationService.unpaidDailyRate(
-      basicSalary: p.basicSalary, month: p.period,
+      basicSalary: p.basicSalary,
+      month: p.period,
       isForeignEmployee: isForeignEmployee,
     );
     // Keep the exact count on historical payroll generated under older rates.
-    final savedUnpaidDays = int.tryParse(RegExp(r'Unpaid days: (\d+)\.')
-        .firstMatch(p.remarks ?? '')?.group(1) ?? '');
+    final savedUnpaidDays = int.tryParse(
+        RegExp(r'Unpaid days: (\d+)\.').firstMatch(p.remarks ?? '')?.group(1) ??
+            '');
     final payrollUnpaidDays = savedUnpaidDays != null &&
-        (savedUnpaidDays > 0 || p.unpaidLeave <= 0)
+            (savedUnpaidDays > 0 || p.unpaidLeave <= 0)
         ? savedUnpaidDays.clamp(0, calendarDays)
         : unpaidDailyRate > 0
             ? (p.unpaidLeave / unpaidDailyRate).round().clamp(0, calendarDays)
