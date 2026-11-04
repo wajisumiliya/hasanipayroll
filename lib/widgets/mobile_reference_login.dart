@@ -125,6 +125,10 @@ class _MobileReferenceLoginState extends State<MobileReferenceLogin> {
                   fontSize: 28, height: 1.2, color: Colors.white),
               scrollPadding: const EdgeInsets.all(60),
               decoration: const InputDecoration(
+                // Keep the dark artwork/typed-value gradient visible instead
+                // of inheriting the application's white input fill.
+                filled: false,
+                fillColor: Colors.transparent,
                 isCollapsed: true,
                 contentPadding: EdgeInsets.symmetric(vertical: 13),
                 border: InputBorder.none,
