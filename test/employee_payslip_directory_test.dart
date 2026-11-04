@@ -47,11 +47,13 @@ void main() {
     final employees = List.generate(12, (i) => person(i + 1));
     final records = {
       for (final employee in employees)
-        employee.employeeId: [PayrollRecord.fromJson({
-          'id': employee.employeeId,
-          'employeeId': employee.employeeId,
-          'period': '2026-11-01',
-        })],
+        employee.employeeId: [
+          PayrollRecord.fromJson({
+            'id': employee.employeeId,
+            'employeeId': employee.employeeId,
+            'period': '2026-11-01',
+          })
+        ],
     };
     await tester.pumpWidget(directory(employees: employees, records: records));
     await tester.pumpAndSettle();
@@ -94,16 +96,21 @@ void main() {
   testWidgets('list hides missing payroll and staff inactive in the month',
       (tester) async {
     final employees = [
-      person(1), person(2), person(3),
+      person(1),
+      person(2),
+      person(3),
       person(4).copyWith(isActive: false, resignedAt: DateTime(2026, 10, 31)),
       person(5).copyWith(isActive: false, resignedAt: DateTime(2026, 12, 1)),
     ];
     final records = {
       for (final id in ['E1', 'E3', 'E4', 'E5'])
-        id: [PayrollRecord.fromJson({
-          'id': id, 'employeeId': id,
-          'period': id == 'E3' ? '2026-10-01' : '2026-11-01',
-        })],
+        id: [
+          PayrollRecord.fromJson({
+            'id': id,
+            'employeeId': id,
+            'period': id == 'E3' ? '2026-10-01' : '2026-11-01',
+          })
+        ],
     };
     await tester.pumpWidget(directory(employees: employees, records: records));
     await tester.pumpAndSettle();
@@ -114,5 +121,4 @@ void main() {
     expect(find.text('Employee 5'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
 }

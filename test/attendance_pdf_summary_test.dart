@@ -20,22 +20,23 @@ String pdfContents(Uint8List bytes) {
       .join(' ');
 }
 
-AttendancePrintDay day({int arrival = 0, int overtime = 0}) => AttendancePrintDay(
-    day: 23,
-    workingIn: arrival == 0 ? '10:00' : '10:15',
-    workingOut: '19:00',
-    morningIn: '13:00',
-    morningOut: '14:32',
-    afternoonIn: '',
-    afternoonOut: '',
-    eveningIn: '',
-    eveningOut: '',
-    status: 'Present',
-    workMinutes: 540,
-    breakMinutes: 92,
-    netMinutes: 448,
-    overtimeMinutes: overtime,
-    lateMinutes: arrival);
+AttendancePrintDay day({int arrival = 0, int overtime = 0}) =>
+    AttendancePrintDay(
+        day: 23,
+        workingIn: arrival == 0 ? '10:00' : '10:15',
+        workingOut: '19:00',
+        morningIn: '13:00',
+        morningOut: '14:32',
+        afternoonIn: '',
+        afternoonOut: '',
+        eveningIn: '',
+        eveningOut: '',
+        status: 'Present',
+        workMinutes: 540,
+        breakMinutes: 92,
+        netMinutes: 448,
+        overtimeMinutes: overtime,
+        lateMinutes: arrival);
 Future<Uint8List> build({int arrival = 0, int? shortfall, double amount = 0}) =>
     AttendancePdfService.build(
         employeeId: 'HED1016',
@@ -85,12 +86,18 @@ void main() {
     expect(text, contains('Review saved payroll:'));
   });
 
-  test('zero approved OT prints zero money instead of stale saved OT', () async {
+  test('zero approved OT prints zero money instead of stale saved OT',
+      () async {
     final text = pdfContents(await AttendancePdfService.build(
-      employeeId: 'BPR010', employeeName: 'Test employee',
-      department: '', section: '', branchId: 'PRAI',
-      isForeignEmployee: false, month: DateTime(2026, 10),
-      days: [day()], approvedOtAmount: 288.45,
+      employeeId: 'BPR010',
+      employeeName: 'Test employee',
+      department: '',
+      section: '',
+      branchId: 'PRAI',
+      isForeignEmployee: false,
+      month: DateTime(2026, 10),
+      days: [day()],
+      approvedOtAmount: 288.45,
     ));
     final summary = block(text, 'APPROVED OT', 'Review saved payroll:');
     expect(summary, contains('00:00'));
@@ -101,10 +108,15 @@ void main() {
 
   test('positive approved OT retains its hours and payable amount', () async {
     final text = pdfContents(await AttendancePdfService.build(
-      employeeId: 'BPR010', employeeName: 'Test employee',
-      department: '', section: '', branchId: 'PRAI',
-      isForeignEmployee: false, month: DateTime(2026, 10),
-      days: [day(overtime: 60)], approvedOtAmount: 25,
+      employeeId: 'BPR010',
+      employeeName: 'Test employee',
+      department: '',
+      section: '',
+      branchId: 'PRAI',
+      isForeignEmployee: false,
+      month: DateTime(2026, 10),
+      days: [day(overtime: 60)],
+      approvedOtAmount: 25,
     ));
     final summary = block(text, 'APPROVED OT', 'DAY');
     expect(summary, contains('01:00'));

@@ -63,22 +63,33 @@ void main() {
       ],
       'attendance': [
         {
-          'employee_id': 'BPR010', 'attendance_date': '2026-10-28',
-          'check_in': '09:00', 'check_out': '20:00', 'status': 'Present',
-          'approved_ot_minutes': 0, 'ot_manual_override': true,
+          'employee_id': 'BPR010',
+          'attendance_date': '2026-10-28',
+          'check_in': '09:00',
+          'check_out': '20:00',
+          'status': 'Present',
+          'approved_ot_minutes': 0,
+          'ot_manual_override': true,
         },
       ],
       'salaries': [
-        {'employee_id': 'BPR010', 'basic_salary': 2600,
-          'epf_category': 'normal1', 'eis_applicable': true},
+        {
+          'employee_id': 'BPR010',
+          'basic_salary': 2600,
+          'epf_category': 'normal1',
+          'eis_applicable': true
+        },
       ],
       'payroll': [
         {'employee_id': 'BPR010', 'overtime': 288.45},
       ],
-      'monthly_rosters': [], 'daily_rosters': [],
+      'monthly_rosters': [],
+      'daily_rosters': [],
     };
     final text = pdfContents(await AttendanceBatchPrintService.build(
-      data: data, employeeIds: ['BPR010'], month: DateTime(2026, 10),
+      data: data,
+      employeeIds: ['BPR010'],
+      month: DateTime(2026, 10),
       branchName: 'Branch A',
     ));
     final start = text.indexOf('APPROVED OT');

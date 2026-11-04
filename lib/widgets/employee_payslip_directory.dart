@@ -99,9 +99,10 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
   @override
   Widget build(BuildContext context) {
     final summary = widget.tab == 'summary';
-    final employees = widget.employees.where((employee) =>
-        periodFor(employee).isNotEmpty &&
-        PayrollMonthScope.activeInMonth(employee.toJson(), widget.period))
+    final employees = widget.employees
+        .where((employee) =>
+            periodFor(employee).isNotEmpty &&
+            PayrollMonthScope.activeInMonth(employee.toJson(), widget.period))
         .toList();
     final pages = (employees.length / 10).ceil();
     final current = page.clamp(0, pages > 0 ? pages - 1 : 0).toInt();
@@ -446,7 +447,8 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
                                     DataCell(pill(
                                         PayrollMonthScope.activeInMonth(
                                                 e.toJson(), widget.period)
-                                            ? 'Active' : 'Inactive',
+                                            ? 'Active'
+                                            : 'Inactive',
                                         PayrollMonthScope.activeInMonth(
                                                 e.toJson(), widget.period)
                                             ? const Color(0xFF229546)

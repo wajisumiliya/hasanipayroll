@@ -6,9 +6,8 @@ class PayrollMonthScope {
 
   static DateTime? _date(dynamic value) {
     if (value == null) return null;
-    final parsed = value is DateTime
-        ? value
-        : DateTime.tryParse(value.toString().trim());
+    final parsed =
+        value is DateTime ? value : DateTime.tryParse(value.toString().trim());
     if (parsed == null) return null;
     // Employment timestamps come from PostgreSQL in UTC; payroll is Malaysian.
     final local = parsed.isUtc ? parsed.add(const Duration(hours: 8)) : parsed;
