@@ -68,11 +68,7 @@ void main() {
     expect(SalaryTransferSummary().formula('cash', 'T'), isNull);
     expect(summary.hasUnassigned, false);
     summary.add(
-        method: null,
-        bankAccount: '',
-        net: 500,
-        row: 9,
-        employeeId: 'BLK062');
+        method: null, bankAccount: '', net: 500, row: 9, employeeId: 'BLK062');
     expect(summary.hasUnassigned, true);
     expect(summary.totals['unassigned'], 500);
     expect(summary.formula('unassigned', 'T'), 'SUM(T9)');
@@ -87,7 +83,11 @@ void main() {
     summary.add(
         method: '', bankAccount: '', net: 0, row: 5, employeeId: 'BLANK');
     summary.add(
-        method: 'rhb', bankAccount: '', net: -50, row: 6, employeeId: 'NO_BANK');
+        method: 'rhb',
+        bankAccount: '',
+        net: -50,
+        row: 6,
+        employeeId: 'NO_BANK');
     expect(summary.hasUnassigned, true);
     expect(summary.formula('unassigned', 'U'), 'SUM(U5,U6)');
     expect(summary.totals['unassigned'], -50);

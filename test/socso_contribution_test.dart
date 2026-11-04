@@ -73,7 +73,8 @@ void main() {
       expect(AttendancePayrollService.fixedSocsoEmployeeFor('bgr015'), isNull);
     });
 
-    test('uses the configured Type 1 schedule before and after August', () async {
+    test('uses the configured Type 1 schedule before and after August',
+        () async {
       for (final month in [1, 10]) {
         final result = await preview(month: month);
         expect(result.calculated, true);
@@ -83,7 +84,8 @@ void main() {
       }
     });
 
-    test('still respects disabled SOCSO and the eligibility threshold', () async {
+    test('still respects disabled SOCSO and the eligibility threshold',
+        () async {
       for (final result in [
         await preview(enabled: false),
         await preview(basicSalary: 400),
