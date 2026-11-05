@@ -46,6 +46,18 @@ test('pre-save eligibility snapshot keeps an auto-updated current-month recipien
   const report=build([e],[pay('E','2026-09-01'),pay('E','2026-10-01',2050)]);
   assert.equal(report.reports[0].eligible,true);assert.equal(report.reports[0].result,'Received');
   assert.equal(report.reports[0].inc_details,'OCT-26/50');
+  assert.equal(report.reports[0].eligibility_basis,'APR-26/50');
+  assert.equal(report.reports[0].eligible_from,'2026-10-01');
+});
+
+test('September award cannot qualify for October without an earlier saved basis',()=>{
+  const e=employee('SEPT',{inc_details:'SEP-26/100'});
+  assert.equal(build([e],[],'eligible').reports.length,0);
+  const historical={...e,increment_snapshot:{inc_details_before:'MAR-26/100'}};
+  const row=build([historical],[],'eligible').reports[0];
+  assert.equal(row.inc_details,'SEP-26/100');
+  assert.equal(row.eligibility_basis,'MAR-26/100');
+  assert.equal(row.eligible_from,'2026-09-01');
 });
 
 test('eligibility PDF list exists before payroll, scopes branches and excludes inactive employees',()=>{

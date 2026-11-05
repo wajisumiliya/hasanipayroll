@@ -135,6 +135,7 @@ class AdminActivityCards extends StatelessWidget {
         'event': schedule.dueMonth,
         'last_event': schedule.lastMonth,
         'eligibility_joining_date': joining,
+        'eligibility_basis': basis ?? '',
       });
     }
     result.sort((a, b) => canonical(a['name']).compareTo(canonical(b['name'])));
@@ -801,11 +802,19 @@ class AdminActivityCards extends StatelessWidget {
                 )
               ],
               rows: inc,
-              headers: ['Last Increment', 'Basic Salary', 'Total Allowances'],
+              headers: [
+                'Eligibility Basis',
+                'Eligible From',
+                'Basic Salary',
+                'Total Allowances'
+              ],
               values: (r) => [
-                    canonical(r['inc_details']).isEmpty
+                    canonical(r['eligibility_basis']).isEmpty
                         ? 'Joined ${r['eligibility_joining_date']?.toString().split('T').first ?? '—'}'
-                        : '${r['inc_details']}',
+                        : '${r['eligibility_basis']}',
+                    DateFormat('MMM-yy')
+                        .format(r['event'] as DateTime)
+                        .toUpperCase(),
                     r['basic_salary'] == null
                         ? 'Not set'
                         : money(number(r['basic_salary'])),
@@ -814,7 +823,7 @@ class AdminActivityCards extends StatelessWidget {
                         : money(number(r['total_allowances']))
                   ],
               note:
-                  'Six through ten payroll months after the last increment. Blank inc_details uses six or more months of service for employees who joined from 1 January 2026. Active employees only. Salary and allowances come from salary defaults.',
+                  'Eligibility Basis shows the saved pre-payroll increment when available; Eligible From is six months later. Overdue awards remain eligible through month ten after the last increment. Blank inc_details uses six or more months of service for employees who joined from 1 January 2026. Active employees only. Salary and allowances come from salary defaults.',
               increments: true),
           card(context,
               title: 'Upcoming Birthdays',

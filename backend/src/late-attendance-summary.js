@@ -150,10 +150,10 @@ export async function renderIncrementSummary(data) {
   const month=new Date(Date.UTC(data.year,data.month-1,1)).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
   const widths=comparison?[26,60,130,70,90,70,75,70,70,65,140]:[28,65,165,90,100,95,110,100,95];
   const tableWidth=widths.reduce((sum,value)=>sum+value,0),canvasWidth=tableWidth+48;
-  const labels=comparison?['No.','Employee ID','Employee Name','Branch','Last increment (inc_details)','Basic salary RM','Allowances RM','Previous base','Current base','Actual inc. RM','Result']:
-    ['No.','Employee ID','Employee Name','Branch','Last increment (inc_details)','Basic salary RM','Total allowances RM','Eligible from','inc_amount'];
+  const labels=comparison?['No.','Employee ID','Employee Name','Branch','Eligibility basis','Basic salary RM','Allowances RM','Previous base','Current base','Actual inc. RM','Result']:
+    ['No.','Employee ID','Employee Name','Branch','Eligibility basis','Basic salary RM','Total allowances RM','Eligible from','inc_amount'];
   const cellsFor=(row,index)=>[index+1,row.employee_id,row.name,data.branches[String(row.branch_id).trim().toUpperCase()]??row.branch_id,
-    row.inc_details||(row.eligibility_joining_date?'Joined '+String(row.eligibility_joining_date).slice(0,10):'—'),...(comparison?[cash(row.basic_salary),cash(row.total_allowances),cash(row.previous_total),cash(row.current_total),cash(row.actual),row.result]:[cash(row.basic_salary),cash(row.total_allowances),row.eligible_from??'—',''])];
+    (row.eligibility_basis??row.inc_details)||(row.eligibility_joining_date?'Joined '+String(row.eligibility_joining_date).slice(0,10):'—'),...(comparison?[cash(row.basic_salary),cash(row.total_allowances),cash(row.previous_total),cash(row.current_total),cash(row.actual),row.result]:[cash(row.basic_salary),cash(row.total_allowances),row.eligible_from??'—',''])];
   const rows=data.reports.map(cellsFor);
   const heights=measureRows(rows,widths,8,12,26);
   const countText=Object.entries(data.counts).map(([status,count])=>`${status}: ${count}`).join(' · ')||'No matching employees';

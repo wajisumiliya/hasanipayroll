@@ -193,6 +193,11 @@ void main() {
         onPayroll: () {});
     expect(widget.increments().map((row) => row['employee_id']).toSet(),
         {'JOIN', 'OLD', 'PAID'});
+    final paid =
+        widget.increments().firstWhere((row) => row['employee_id'] == 'PAID');
+    expect(paid['inc_details'], 'OCT-26/50');
+    expect(paid['eligibility_basis'], 'APR-26/50');
+    expect(paid['event'], DateTime(2026, 10));
   });
 
   test('five-day window crosses New Year and excludes sixth day', () {
