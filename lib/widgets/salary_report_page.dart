@@ -86,9 +86,11 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
         const SizedBox(height: 16),
         Wrap(spacing: 12, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
           SizedBox(width: 230, child: DropdownButtonFormField<int>(
+            isExpanded: true,
             initialValue: year, decoration: const InputDecoration(labelText: 'Reporting period'),
             items: years.map((value) => DropdownMenuItem(value: value,
-              child: Text('Jul $value - Jun ${value + 1}'))).toList(),
+              child: Text('Jul $value - Jun ${value + 1}',
+                maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: disabled ? null : (value) async {
               if (value == null) return;
               year = value;
@@ -96,6 +98,7 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
             },
           )),
           SizedBox(width: 230, child: DropdownButtonFormField<String>(
+            isExpanded: true,
             key: ValueKey('$year:$branchId:${branches.length}'), initialValue: branchId,
             decoration: const InputDecoration(labelText: 'Branch'),
             items: [const DropdownMenuItem<String>(value: null, child: Text('All branches')),

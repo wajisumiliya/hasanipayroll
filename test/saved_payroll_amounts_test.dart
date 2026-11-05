@@ -19,8 +19,8 @@ void main() {
       expect(PayrollCalculationService.roundNetPay(expected), expected);
     }
     expect(PayrollCalculationService.roundNetPay(999.98), 1000);
-    expect(PayrollCalculationService.roundNetPay(double.nan), throwsArgumentError);
-    expect(PayrollCalculationService.roundNetPay(double.infinity), throwsArgumentError);
+    expect(() => PayrollCalculationService.roundNetPay(double.nan), throwsArgumentError);
+    expect(() => PayrollCalculationService.roundNetPay(double.infinity), throwsArgumentError);
     // The separate FRN daily-rate rule remains nearest ten sen.
     expect(PayrollCalculationService.unpaidDailyRate(
       basicSalary: 1700, month: DateTime(2026, 10), isForeignEmployee: true), 60.70);
