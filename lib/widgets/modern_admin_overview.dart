@@ -1323,7 +1323,7 @@ class _ReferencePayrollDashboard extends StatelessWidget {
   double _deductions(Map row) =>
       SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).deductions;
   double _net(Map row) =>
-      SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net;
+      SavedPayrollAmounts.finalNetPay(Map<String, dynamic>.from(row));
 
   Map<String, String> get _employeeBranches => {
         for (final employee in view.employees)

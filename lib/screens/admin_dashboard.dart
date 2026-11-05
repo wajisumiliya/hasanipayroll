@@ -2300,7 +2300,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         final totalDeductions = periodPayroll.fold<double>(
             0, (sum, row) => sum + SavedPayrollAmounts.fromRow(row).deductions);
         final totalNet = periodPayroll.fold<double>(
-            0, (sum, row) => sum + SavedPayrollAmounts.fromRow(row).net);
+            0, (sum, row) => sum + SavedPayrollAmounts.finalNetPay(row));
         final hrdfLevy = periodPayroll.fold<double>(0, (sum, row) {
           final employee = employees
               .where((e) =>
@@ -17815,7 +17815,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             money(payroll['zakat']) +
             money(payroll['advance']);
 
-        final net = SavedPayrollAmounts.fromRow(payroll).net;
+        final net = SavedPayrollAmounts.finalNetPay(payroll);
 
         final values = <dynamic>[
           index + 1,
@@ -18709,7 +18709,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 'other_deduction_amount',
                 'otherDeductionAmount',
               ]));
-          final net = SavedPayrollAmounts.fromRow(payroll).net;
+          final net = SavedPayrollAmounts.finalNetPay(payroll);
 
           String lastIncrementText() {
             final previous = previousPayrollMap[employeeId];
@@ -19567,7 +19567,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           final potongan = money(payroll['pcb']) +
               money(payroll['zakat']) +
               money(payroll['advance']);
-          final net = SavedPayrollAmounts.fromRow(payroll).net;
+          final net = SavedPayrollAmounts.finalNetPay(payroll);
 
           final values = <dynamic>[
             i + 1,
@@ -19878,7 +19878,7 @@ class _AdminDashboardState extends State<AdminDashboard>
           final other = money(payroll['pcb']) +
               money(payroll['zakat']) +
               money(payroll['advance']);
-          final net = SavedPayrollAmounts.fromRow(payroll).net;
+          final net = SavedPayrollAmounts.finalNetPay(payroll);
           final numbers = <double>[
             basic,
             attendance,
@@ -20274,7 +20274,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       summary['advance'] = (summary['advance'] as double) + advance;
       summary['deductions'] = (summary['deductions'] as double) + deductions;
       summary['net'] =
-          (summary['net'] as double) + SavedPayrollAmounts.fromRow(row).net;
+          (summary['net'] as double) + SavedPayrollAmounts.finalNetPay(row);
 
       final foreign = employee['address']
               ?.toString()
@@ -22200,7 +22200,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       // Bank amounts come only from the selected saved payroll row.
       // Never recalculate attendance, contributions or today's salary defaults.
       double netSalary(Map<String, dynamic> row) =>
-          SavedPayrollAmounts.fromRow(row).net;
+          SavedPayrollAmounts.finalNetPay(row);
 
       // ============================================================
       // EXCEL ROW WRITER

@@ -230,7 +230,7 @@ class PayrollRecord {
   }
 
   double get netPay {
-    return SavedPayrollAmounts.fromRow(toJson()).net;
+    return SavedPayrollAmounts.finalNetPay(toJson());
   }
 
   double get roundingAdjustment {

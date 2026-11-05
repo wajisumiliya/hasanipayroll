@@ -12,6 +12,11 @@ class SavedPayrollAmounts {
   final double gross, deductions, unroundedNet;
   double get net => PayrollCalculationService.roundNetPay(unroundedNet);
 
+  /// The Branch Payroll payment rule for every final-net-pay report.
+  /// Consumers must not apply another earnings/component rounding afterwards.
+  static double finalNetPay(Map<String, dynamic> row) =>
+      SavedPayrollAmounts.fromRow(row).net;
+
   static const _grossKeys = [
     'gross_salary',
     'gross_pay',

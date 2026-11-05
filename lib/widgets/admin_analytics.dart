@@ -178,7 +178,7 @@ class AdminAnalytics extends StatelessWidget {
     final net = total(
         current,
         (row) =>
-            SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net);
+            SavedPayrollAmounts.finalNetPay(Map<String, dynamic>.from(row)));
     final period = DateFormat('MMMM yyyy').format(month);
     final history =
         List.generate(8, (i) => DateTime(month.year, month.month - 7 + i));
@@ -201,7 +201,7 @@ class AdminAnalytics extends StatelessWidget {
                           name(r),
                           money(grossOf(r)),
                           money(deductionsOf(r)),
-                          money(SavedPayrollAmounts.fromRow(r).net)
+                          money(SavedPayrollAmounts.finalNetPay(r))
                         ])
                     .toList());
           },
@@ -259,7 +259,7 @@ class AdminAnalytics extends StatelessWidget {
                                       name(r),
                                       money(grossOf(r)),
                                       money(deductionsOf(r)),
-                                      money(SavedPayrollAmounts.fromRow(r).net)
+                                      money(SavedPayrollAmounts.finalNetPay(r))
                                     ])
                                 .toList()),
                         icon: const Icon(Icons.open_in_new, size: 16),

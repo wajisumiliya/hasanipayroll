@@ -1,3 +1,4 @@
+import 'package:excel_plus/excel_plus.dart' as xls;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasani_payroll_portal/models/payroll.dart';
 import 'package:hasani_payroll_portal/services/payroll_calculation_service.dart';
@@ -32,6 +33,46 @@ void main() {
             month: DateTime(2026, 10),
             isForeignEmployee: true),
         60.70);
+  });
+
+  test('Branch Payroll and RHB retain all five-sen amounts supplied for review', () {
+    const amounts = <double>[
+      2500, 7970, 3000, 5377.60, 3204.70, 2366.85, 1989.10,
+      2201.80, 1500, 2372.95, 3289.50, 2816.10, 1989.10,
+      2089.10, 2376.60, 2146.30, 1450.80, 1789.10, 789.10,
+      2174, 2506.05, 1939.10, 1789.10, 2357.60, 2135.05,
+      1639.10, 1889.10, 1868.20, 1687.15, 1639.10, 1441.80,
+      1638.25, 1589.10, 1538.25, 1489.10, 1391.80, 1645.40,
+    ];
+    final book = xls.Excel.createExcel();
+    for (var index = 0; index < amounts.length; index++) {
+      final expected = amounts[index];
+      final savedRow = <String, dynamic>{'basic_salary': expected};
+      final reportAmount = SavedPayrollAmounts.finalNetPay(savedRow);
+      final payslip = PayrollRecord.fromJson({
+        'id': 'P$index', 'employeeId': 'E$index', 'period': '2026-10-01',
+        'basicSalary': expected,
+      });
+      expect(reportAmount, expected, reason: 'Report employee E$index');
+      expect(payslip.netPay, expected, reason: 'Payslip employee E$index');
+      expect(SavedPayrollAmounts.finalNetPay({'net_pay': expected}), expected);
+      final cell = book['Payments'].cell(xls.CellIndex.indexByColumnRow(
+        columnIndex: 0, rowIndex: index));
+      cell.value = xls.DoubleCellValue(reportAmount);
+      cell.cellStyle = xls.CellStyle(
+        numberFormat: xls.NumFormat.custom(formatCode: '#,##0.00'));
+    }
+    final decoded = xls.Excel.decodeBytes(book.encode()!);
+    for (var index = 0; index < amounts.length; index++) {
+      final value = decoded['Payments'].cell(xls.CellIndex.indexByColumnRow(
+        columnIndex: 0, rowIndex: index)).value;
+      final number = switch (value) {
+        xls.DoubleCellValue(value: final amount) => amount,
+        xls.IntCellValue(value: final amount) => amount.toDouble(),
+        _ => throw StateError('Payment must remain numeric: $value'),
+      };
+      expect(number, amounts[index], reason: 'Excel employee E$index');
+    }
   });
 
   test('saved net is authoritative, including zero; totals sum rounded people',
