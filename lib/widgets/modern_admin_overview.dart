@@ -1318,9 +1318,12 @@ class _ReferencePayrollDashboard extends StatelessWidget {
   String _key(dynamic value) => '${value ?? ''}'.trim().toUpperCase();
   String _employeeId(Map row) => _key(row['employee_id'] ?? row['id']);
   DateTime? _period(Map row) => DateTime.tryParse('${row['period'] ?? ''}');
-  double _gross(Map row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).gross;
-  double _deductions(Map row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).deductions;
-  double _net(Map row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net;
+  double _gross(Map row) =>
+      SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).gross;
+  double _deductions(Map row) =>
+      SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).deductions;
+  double _net(Map row) =>
+      SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net;
 
   Map<String, String> get _employeeBranches => {
         for (final employee in view.employees)

@@ -175,7 +175,10 @@ class AdminAnalytics extends StatelessWidget {
     final current = rows(month);
     final gross = total(current, grossOf);
     final deduction = total(current, (r) => deductionsOf(r));
-    final net = total(current, (row) => SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net);
+    final net = total(
+        current,
+        (row) =>
+            SavedPayrollAmounts.fromRow(Map<String, dynamic>.from(row)).net);
     final period = DateFormat('MMMM yyyy').format(month);
     final history =
         List.generate(8, (i) => DateTime(month.year, month.month - 7 + i));

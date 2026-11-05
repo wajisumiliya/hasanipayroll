@@ -13,12 +13,23 @@ class SavedPayrollAmounts {
   double get net => PayrollCalculationService.roundNetPay(unroundedNet);
 
   static const _grossKeys = [
-    'gross_salary', 'gross_pay', 'total_gross', 'grossSalary', 'grossPay',
-    'jumlah', 'total_earnings', 'totalEarnings',
+    'gross_salary',
+    'gross_pay',
+    'total_gross',
+    'grossSalary',
+    'grossPay',
+    'jumlah',
+    'total_earnings',
+    'totalEarnings',
   ];
   static const _deductionKeys = ['total_deductions', 'totalDeductions'];
   static const _netKeys = [
-    'net_pay', 'net_salary', 'total_net', 'netPay', 'netSalary', 'net',
+    'net_pay',
+    'net_salary',
+    'total_net',
+    'netPay',
+    'netSalary',
+    'net',
   ];
 
   static double? _optional(Map<String, dynamic> row, List<String> keys) {
@@ -27,8 +38,10 @@ class SavedPayrollAmounts {
       if (raw == null || '$raw'.trim().isEmpty) continue;
       final value = raw is num
           ? raw.toDouble()
-          : double.tryParse('$raw'.trim().replaceAll(',', '').replaceFirst(
-              RegExp(r'^RM\s*', caseSensitive: false), ''));
+          : double.tryParse('$raw'
+              .trim()
+              .replaceAll(',', '')
+              .replaceFirst(RegExp(r'^RM\s*', caseSensitive: false), ''));
       if (value == null || !value.isFinite) {
         throw StateError(
             'Invalid saved payroll amount: $key. Review payroll before exporting.');
@@ -63,14 +76,24 @@ class SavedPayrollAmounts {
     final gross = (preferStoredTotals ? _optional(row, _grossKeys) : null) ??
         base +
             amount(['elaun_kedatangan', 'elaunKedatangan']) +
-            amount(['elaun_perkhidmatan', 'elaunPerkhidmatan',
-              'other_allowance', 'otherAllowance']) +
+            amount([
+              'elaun_perkhidmatan',
+              'elaunPerkhidmatan',
+              'other_allowance',
+              'otherAllowance'
+            ]) +
             amount(['elaun_kerajinan', 'elaunKerajinan']) +
-            amount(['elaun_makanan', 'elaunMakanan',
-              'food_allowance', 'foodAllowance']) +
+            amount([
+              'elaun_makanan',
+              'elaunMakanan',
+              'food_allowance',
+              'foodAllowance'
+            ]) +
             amount(['housing_allowance', 'housingAllowance']) +
             amount(['travel_allowance', 'travelAllowance']) +
-            amount(['overtime']) + amount(['bonus']) + amount(['commission']) +
+            amount(['overtime']) +
+            amount(['bonus']) +
+            amount(['commission']) +
             amount(['other_earnings', 'otherEarnings']) +
             amount(['cuti_umum', 'cutiUmum']);
     final deductions =
@@ -78,14 +101,26 @@ class SavedPayrollAmounts {
             amount(['epf_employee', 'epfEmployee']) +
                 amount(['socso_employee', 'socsoEmployee']) +
                 amount(['eis_employee', 'eisEmployee']) +
-                amount(['pcb']) + amount(['zakat']) +
+                amount(['pcb']) +
+                amount(['zakat']) +
                 amount(['advance', 'advance_deduction', 'advanceDeduction']) +
                 amount(['loan_deduction', 'loanDeduction', 'loan']) +
-                amount(['unpaid_deduction', 'unpaidDeduction', 'unpaid_leave',
-                  'unpaidLeave', 'cuti_tanpa_gaji', 'cuti_tanpa_gaji_deduction']) +
+                amount([
+                  'unpaid_deduction',
+                  'unpaidDeduction',
+                  'unpaid_leave',
+                  'unpaidLeave',
+                  'cuti_tanpa_gaji',
+                  'cuti_tanpa_gaji_deduction'
+                ]) +
                 amount(['late_deduction', 'lateDeduction']) +
-                amount(['other_deduction', 'other_deductions',
-                  'other_deduction_amount', 'otherDeductionAmount', 'otherDeduction']);
+                amount([
+                  'other_deduction',
+                  'other_deductions',
+                  'other_deduction_amount',
+                  'otherDeductionAmount',
+                  'otherDeduction'
+                ]);
     final net = (preferStoredTotals ? _optional(row, _netKeys) : null) ??
         gross - deductions;
     return SavedPayrollAmounts(

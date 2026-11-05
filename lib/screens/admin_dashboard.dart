@@ -2297,10 +2297,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           0,
           (sum, row) => sum + _payrollTotalEarnings(row),
         );
-        final totalDeductions = periodPayroll.fold<double>(0,
-            (sum, row) => sum + SavedPayrollAmounts.fromRow(row).deductions);
-        final totalNet = periodPayroll.fold<double>(0,
-            (sum, row) => sum + SavedPayrollAmounts.fromRow(row).net);
+        final totalDeductions = periodPayroll.fold<double>(
+            0, (sum, row) => sum + SavedPayrollAmounts.fromRow(row).deductions);
+        final totalNet = periodPayroll.fold<double>(
+            0, (sum, row) => sum + SavedPayrollAmounts.fromRow(row).net);
         final hrdfLevy = periodPayroll.fold<double>(0, (sum, row) {
           final employee = employees
               .where((e) =>
@@ -18685,8 +18685,11 @@ class _AdminDashboardState extends State<AdminDashboard>
           final publicHoliday = money(payroll['cuti_umum']);
           final gross = SavedPayrollAmounts.fromRow(payroll).gross;
           final unpaid = money(firstValue(payroll, const [
-                  'unpaid_deduction', 'unpaid_leave', 'cuti_tanpa_gaji',
-                ])) + money(payroll['late_deduction']);
+                'unpaid_deduction',
+                'unpaid_leave',
+                'cuti_tanpa_gaji',
+              ])) +
+              money(payroll['late_deduction']);
           final epf = money(payroll['epf_employee']);
           final socso = money(payroll['socso_employee']);
           final eis = money(payroll['eis_employee']);
@@ -20270,7 +20273,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       summary['zakat'] = (summary['zakat'] as double) + zakat;
       summary['advance'] = (summary['advance'] as double) + advance;
       summary['deductions'] = (summary['deductions'] as double) + deductions;
-      summary['net'] = (summary['net'] as double) + SavedPayrollAmounts.fromRow(row).net;
+      summary['net'] =
+          (summary['net'] as double) + SavedPayrollAmounts.fromRow(row).net;
 
       final foreign = employee['address']
               ?.toString()
@@ -22377,7 +22381,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         );
 
         if (!bankEmployeeIds.add(id)) {
-          throw StateError('Duplicate saved payroll for $id in $selectedMonth. Review payroll before exporting.');
+          throw StateError(
+              'Duplicate saved payroll for $id in $selectedMonth. Review payroll before exporting.');
         }
 
         final employee = employeeMap[id] ?? <String, dynamic>{};
