@@ -154607,6 +154607,7 @@ j.k(0,"total_allowances",c)
 j.k(0,"event",e.a)
 j.k(0,"last_event",e.c)
 j.k(0,"eligibility_joining_date",f)
+j.k(0,"eligibility_basis",g==null?"":g)
 a2.push(j)}B.i.ba(a2,new A.aqn())
 return a2},
 Hp(a,b){var s=J.H(b),r=s.h(b,"name")
@@ -154890,7 +154891,7 @@ b=B.i.cd(l,new A.aqb())?"Not set":a6.$1(f)
 a=B.i.cd(l,new A.aqc())?"Not set":a6.$1(e)
 a0=l.length===0?"\u2014":A.aw("MMM-yy",a2).W(a4.c).toUpperCase()
 d=A.a([new A.h4([B.qq,""+a5,"Employees Eligible",B.pu]),new A.h4([B.auI,b,"Total Basic Salary",B.pu]),new A.h4([B.JS,a,a3,B.ahL]),new A.h4([B.la,a0,"Report Month",B.kv])],d)
-a6=a4.b0R(o,B.pu,A.a(["Last Increment","Basic Salary",a3],c),B.JS,!0,"Six through ten payroll months after the last increment. Blank inc_details uses six or more months of service for employees who joined from 1 January 2026. Active employees only. Salary and allowances come from salary defaults.",l,"Employees eligible for this payroll month","Increment List",d,new A.aqd(a6))
+a6=a4.b0R(o,B.pu,A.a(["Eligibility Basis","Eligible From","Basic Salary",a3],c),B.JS,!0,"Eligibility Basis shows the saved pre-payroll increment when available; Eligible From is six months later. Overdue awards remain eligible through month ten after the last increment. Blank inc_details uses six or more months of service for employees who joined from 1 January 2026. Active employees only. Salary and allowances come from salary defaults.",l,"Employees eligible for this payroll month","Increment List",d,new A.aqd(a6))
 d=r.$2(k,!1)
 d=a4.aiD(o,B.kC,A.a(["Birthday","Days Left"],c),B.JE,"Shows upcoming birthdays within the next 5 days.",k,"Employees celebrating their birthday","Upcoming Birthdays",d,!0,new A.aq3())
 r=r.$2(j,!0)
@@ -154949,12 +154950,14 @@ A.aqc.prototype={
 $1(a){return J.d(a,"total_allowances")==null},
 $S:2}
 A.aqd.prototype={
-$1(a){var s,r,q="inc_details",p="basic_salary",o="total_allowances",n=J.H(a)
-if(A.yP(n.h(a,q)).length===0){s=n.h(a,"eligibility_joining_date")
+$1(a){var s,r,q,p="eligibility_basis",o="basic_salary",n="total_allowances",m=J.H(a)
+if(A.yP(m.h(a,p)).length===0){s=m.h(a,"eligibility_joining_date")
 s=s==null?null:B.i.gT(J.n(s).split("T"))
-s="Joined "+(s==null?"\u2014":s)}else s=A.f(n.h(a,q))
-r=n.h(a,p)==null?"Not set":this.a.$1(A.L_(n.h(a,p)))
-return A.a([s,r,n.h(a,o)==null?"Not set":this.a.$1(A.L_(n.h(a,o)))],t.s)},
+s="Joined "+(s==null?"\u2014":s)}else s=A.f(m.h(a,p))
+r=A.aw("MMM-yy",null).W(t.W7.a(m.h(a,"event")))
+q=m.h(a,o)==null?"Not set":this.a.$1(A.L_(m.h(a,o)))
+m=m.h(a,n)==null?"Not set":this.a.$1(A.L_(m.h(a,n)))
+return A.a([s,r.toUpperCase(),q,m],t.s)},
 $S:86}
 A.aq3.prototype={
 $1(a){var s=J.H(a),r=A.aw("d MMM yyyy",null).W(t.W7.a(s.h(a,"event")))
