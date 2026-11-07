@@ -678,6 +678,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         return SalaryReportPage(
           load: service.loadSalaryReport,
           export: service.exportSalaryReport,
+          loadAssignments: service.loadSalaryReportAssignments,
+          saveAssignment: service.saveSalaryReportAssignment,
         );
 
       default:

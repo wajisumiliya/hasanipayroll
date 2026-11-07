@@ -208,13 +208,29 @@ the frontend. The migration leaves historical payroll amounts unchanged.
 
 ### Salary Report
 
-Confirmed historical branch correction: BAS025 belongs to **GURUN** for every
-month from July 2025 through June 2026 in this report. The correction takes
-priority over saved or current branch fields in the preview, Excel and PDF,
-including branch-filtered exports. It does not update employee master data,
-payroll amounts, attendance or bank exports, and does not apply to other
-reporting periods. The actual GURUN branch ID is resolved from the branch
-directory; missing or ambiguous matches stop the report for review.
+Use **Branch Assignments** on the Salary Report page to choose an employee,
+payroll branch, and one month or a month range within the selected reporting
+year. Save, then select **Done** to refresh the preview before exporting Excel
+or PDF. Employees with saved payroll in the reporting year are available,
+including historical employees who have since left. Branch assignments apply
+only to this report; they never change employee master data, payroll amounts,
+attendance or bank exports.
+
+Each employee can have one assignment per month. An overlapping range is
+rejected atomically, even for simultaneous requests. To correct an assignment,
+select its employee and range, choose **Remove selected range** and confirm,
+then save the replacement branch. Unassigned months use the saved payroll
+branch, otherwise the employee's current payroll branch or attendance branch.
+The previous BAS025 → GURUN correction for July 2025–June 2026 is seeded into
+the editable assignments at migration time when GURUN resolves uniquely.
+
+The backend startup migration `20261107_salary_report_branch_assignments.sql`
+creates a private monthly assignment table with a unique employee/month key.
+`GET /api/reports/salary/branch-assignments?start_year=2025` returns choices and
+saved assignments; `POST` and `DELETE` on that path accept `employee_id`,
+`from_month` and `through_month` (`YYYY-MM`), plus `branch_id` when saving.
+Payroll-admin and local/FRN scope restrictions apply to every read and write.
+Deploy the backend (including its migration) before updating the web frontend.
 
 Open **Salary Report** in the admin sidebar. The default period is July 2025
 through June 2026; choose another July–June reporting year if needed. Separate
@@ -235,9 +251,9 @@ EIS or SOCSO deductions are saved. The report never regenerates payroll or
 changes any saved amount.
 
 An employee must have saved payroll and be employed in the individual month;
-resigning later does not remove earlier eligible months. After confirmed
-historical corrections, branch grouping uses a saved payroll branch when present, otherwise the employee's current payroll
-branch or attendance branch. A move can create separate branch rows with values
+resigning later does not remove earlier eligible months. After saved report
+assignments, branch grouping uses a saved payroll branch when present, otherwise
+the employee's current payroll branch or attendance branch. A move can create separate branch rows with values
 only in the corresponding saved-branch months. Historical branch attribution
 cannot be reconstructed when no branch snapshot exists. Duplicate employee/month
 records and invalid monetary components stop the report for review.

@@ -520,6 +520,33 @@ class AppService extends ChangeNotifier {
     return Map<String, dynamic>.from(data['report'] as Map);
   }
 
+  void _requireSalaryReportAdmin() {
+    final user = currentUser;
+    if (user == null || !user.isAdmin || user.isReviewer ||
+        user.isAttendanceAdmin || user.isRequestAdmin) {
+      throw StateError('Payroll administrator access required.');
+    }
+  }
+
+  Future<Map<String, dynamic>> loadSalaryReportAssignments(int year) async {
+    _requireSalaryReportAdmin();
+    final session = NeonApi.sessionVersion;
+    final data = await _getAuth(Uri(path: '/api/reports/salary/branch-assignments',
+      queryParameters: {'start_year': '$year'}).toString());
+    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true) throw StateError('Unable to load report branch assignments.');
+    return data;
+  }
+
+  Future<void> saveSalaryReportAssignment(Map<String, dynamic> assignment, bool remove) async {
+    _requireSalaryReportAdmin();
+    final session = NeonApi.sessionVersion;
+    final data = await NeonApi.jsonRequest('/api/reports/salary/branch-assignments',
+      method: remove ? 'DELETE' : 'POST', body: assignment);
+    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true) throw StateError(data['message']?.toString() ?? 'Unable to save report branch assignments.');
+  }
+
   Future<Uint8List> exportSalaryReport(
       int startYear, String format, String? branchId) async {
     final user = currentUser;

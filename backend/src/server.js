@@ -1,3 +1,4 @@
+import {installSalaryReportAssignmentsApi} from './salary-report-assignments.js';
 import {installSalaryReportApi} from './salary-report.js';
 import { installAttendanceRosterApi } from './attendance-roster-api.js';
 import { installEmployeeAttendanceMonthApi } from './employee-attendance-month.js';
@@ -4324,6 +4325,7 @@ app.get("/api/neon/preview/employees", authenticate, async (req, res) => {
 installDataApi(app, { pool, authenticate });
 installNotificationApi(app, { pool, authenticate });
 installSalaryReportApi(app, { pool, authenticate });
+installSalaryReportAssignmentsApi(app, { pool, authenticate });
 installPenguinPetApi(app, { pool, authenticate });
 installMysteryEggApi(app, { pool });
 

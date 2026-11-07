@@ -1,8 +1,8 @@
 import {renderLateReport} from './late-report-export.js';
-import {salaryReportBranchCorrection} from './salary-report-branch-corrections.js';
+import {salaryReportAdmin,salaryReportScope} from './salary-report-assignments.js';
 
 export const salaryReportNote='All saved earnings minus PCB, Zakat, advance, loan, unpaid, late and other deductions. EPF, EIS and SOCSO employee deductions are excluded. Blank cells mean no eligible saved payroll; 0.00 is a saved zero.';
-export const salaryReportBranchNote='Uses confirmed historical report corrections first, then the saved payroll branch when present; otherwise the employee current payroll branch, then attendance branch.';
+export const salaryReportBranchNote='Uses saved report branch assignments first, then the saved payroll branch when present; otherwise the employee current payroll branch, then attendance branch.';
 const key=v=>String(v??'').trim().toUpperCase();
 const round=v=>Math.round((v+Number.EPSILON)*100)/100;
 function number(row,...fields){
@@ -48,12 +48,21 @@ function activeInMonth(employee,month){
   if(resigned)return resigned>=start;
   return employee.is_active===true||String(employee.is_active??employee.isActive).toLowerCase()==='true';
 }
-export function buildSalaryReport({startYear,employees,payroll,branches,branchId=''}){
+export function buildSalaryReport({startYear,employees,payroll,branches,branchId='',assignments=[]}){
   const months=Array.from({length:12},(_,i)=>{
     const d=new Date(Date.UTC(startYear,6+i,1));
     return {key:d.toISOString().slice(0,7),label:`${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()]} ${d.getUTCFullYear()}`};
   });
   const employeeMap=new Map(employees.map(e=>[key(e.employee_id??e.employeeId),e]));
+  const assigned=new Map();
+  const branchIds=new Set(branches.map(b=>key(b.id)));
+  for(const assignment of assignments){
+    const month=String(assignment.month??assignment.period??'').slice(0,7);
+    if(!months.some(m=>m.key===month))continue;
+    const id=key(assignment.employee_id),branch=key(assignment.branch_id),unique=id+'|'+month;
+    if(assigned.has(unique)||!branchIds.has(branch))throw new Error(`Invalid report branch assignment for ${id}, ${month}.`);
+    assigned.set(unique,branch);
+  }
   const groups=new Map(),seen=new Set();
   for(const row of payroll){
     const date=String(row.period??'').slice(0,7),index=months.findIndex(m=>m.key===date);
@@ -61,7 +70,7 @@ export function buildSalaryReport({startYear,employees,payroll,branches,branchId
     const id=key(row.employee_id??row.employeeId),employee=employeeMap.get(id);
     if(!employee)throw new Error(`Missing employee details for ${id}.`);
     if(!activeInMonth(employee,date))continue;
-    const branch=salaryReportBranchCorrection(id,date,branches)||key(row.payroll_branch_id)||key(row.branch_id)||key(employee.payroll_branch_id)||key(employee.branch_id)||'UNASSIGNED';
+    const branch=assigned.get(id+'|'+date)||key(row.payroll_branch_id)||key(row.branch_id)||key(employee.payroll_branch_id)||key(employee.branch_id)||'UNASSIGNED';
     const unique=id+'|'+date;
     if(seen.has(unique))throw new Error(`Duplicate payroll for ${id}, ${date}. Resolve it before exporting.`);
     seen.add(unique);
@@ -83,17 +92,15 @@ export function buildSalaryReport({startYear,employees,payroll,branches,branchId
 
 export function installSalaryReportApi(app,{pool,authenticate,renderExport=renderLateReport}){
   app.get('/api/reports/salary',authenticate,async(req,res)=>{
-    const metadata=req.auth?.app_metadata??{},role=String(req.user?.role??'').toLowerCase();
-    if(role!=='admin'||metadata.is_reviewer||['attendance','requests'].includes(metadata.staff_scope))
-      return res.status(403).json({ok:false,message:'Payroll administrator access required.'});
+    if(!salaryReportAdmin(req))return res.status(403).json({ok:false,message:'Payroll administrator access required.'});
     const year=Number(req.query.start_year??2025),format=String(req.query.format??'json'),branchId=String(req.query.branch_id??'').trim();
     if(!Number.isInteger(year)||year<2000||year>2099||!['json','pdf','xlsx'].includes(format)||branchId.length>100)
       return res.status(400).json({ok:false,message:'Invalid Salary Report period or format.'});
     try{
-      const scope=['local','foreign'].includes(metadata.staff_scope)?metadata.staff_scope:null;
+      const scope=salaryReportScope(req);
       const predicate=`p.period>=make_date($1,7,1) AND p.period<(make_date($1,7,1)+interval '1 year')
         AND ($2::text IS NULL OR ((COALESCE(e.address,'')||' '||COALESCE(s.address,''))~*'FRN|FOREIGN')=($2='foreign'))`;
-      const [payroll,employees,branches]=await Promise.all([
+      const [payroll,employees,branches,assignments]=await Promise.all([
         pool.query(`SELECT to_jsonb(p)-ARRAY['remarks','new_ic_no','bank_account','bank_code','bank_name','published_by','payment_reference']::text[] AS data
           FROM public.payroll p JOIN public.employees e ON e.employee_id=p.employee_id
           LEFT JOIN public.employee_salary_defaults s ON s.employee_id=e.employee_id
@@ -103,8 +110,14 @@ export function installSalaryReportApi(app,{pool,authenticate,renderExport=rende
           FROM public.employees e JOIN public.payroll p ON p.employee_id=e.employee_id
           LEFT JOIN public.employee_salary_defaults s ON s.employee_id=e.employee_id WHERE ${predicate}`,[year,scope]),
         pool.query('SELECT id,name FROM public.branches ORDER BY name'),
+        pool.query(`SELECT a.employee_id,a.branch_id,to_char(a.period,'YYYY-MM') AS month
+          FROM app_private.salary_report_branch_assignments a
+          JOIN public.employees e ON e.employee_id=a.employee_id
+          LEFT JOIN public.employee_salary_defaults s ON s.employee_id=e.employee_id
+          WHERE a.period>=make_date($1,7,1) AND a.period<make_date($1,7,1)+INTERVAL '1 year'
+          AND ($2::text IS NULL OR ((COALESCE(e.address,'')||' '||COALESCE(s.address,''))~*'FRN|FOREIGN')=($2='foreign'))`,[year,scope]),
       ]);
-      const report=buildSalaryReport({startYear:year,payroll:payroll.rows.map(r=>r.data),employees:employees.rows,branches:branches.rows,branchId});
+      const report=buildSalaryReport({startYear:year,payroll:payroll.rows.map(r=>r.data),employees:employees.rows,branches:branches.rows,branchId,assignments:assignments.rows});
       res.set?.('Cache-Control','no-store');
       if(format==='json')return res.json({ok:true,report});
       if(!report.branches.length)return res.status(400).json({ok:false,message:'No eligible saved payroll for this selection.'});

@@ -42,7 +42,7 @@ function correctedReport(extra={}){
  const months=Array.from({length:12},(_,i)=>new Date(Date.UTC(2025,6+i,1)).toISOString().slice(0,10));
  const rows=months.map((period,i)=>pay('BAS025',period,2000+i,{branch_id:'BR-AMJ',payroll_branch_id:'BR-AMJ'}));
  rows.push(pay('OTHER','2025-07-01',3000));
- return build(rows,correctedEmployees,correctedBranches,extra);
+ return build(rows,correctedEmployees,correctedBranches,{...extra,assignments:rows.filter(r=>r.employee_id==='BAS025').map(r=>({employee_id:r.employee_id,month:r.period.slice(0,7),branch_id:'BR-GRN'}))});
 }
 test('BAS025 historical correction places all twelve months in GURUN exactly once',()=>{
  const before=JSON.stringify(correctedEmployees);
@@ -59,12 +59,20 @@ test('BAS025 historical correction places all twelve months in GURUN exactly onc
  const later=build([pay('BAS025','2026-07-01')],correctedEmployees,correctedBranches,{startYear:2026});
  assert.equal(later.branches[0].id,'BR-AMJ');
 });
-test('BAS025 correction fails clearly for missing or ambiguous GURUN rather than misclassifying payroll',()=>{
- const rows=[pay('BAS025','2025-07-01')];
- assert.throws(()=>build(rows,correctedEmployees,[correctedBranches[0]]),/requires one GURUN branch/);
- assert.throws(()=>build(rows,correctedEmployees,[...correctedBranches,{id:'DUP',name:'gurun'}]),/requires one GURUN branch/);
- // No matching saved payroll means the correction does not affect other staff.
- assert.equal(build([pay('OTHER','2025-07-01')],correctedEmployees,[correctedBranches[0]]).employee_count,1);
+test('unknown branches and overlapping assignment data fail closed',()=>{
+ const row=pay('BAS025','2025-07-01');
+ assert.throws(()=>build([row],correctedEmployees,correctedBranches,{assignments:[{employee_id:'BAS025',month:'2025-07',branch_id:'UNKNOWN'}]}),/Invalid report branch assignment/);
+ const assignment={employee_id:'BAS025',month:'2025-07',branch_id:'BR-GRN'};
+ assert.throws(()=>build([row],correctedEmployees,correctedBranches,{assignments:[assignment,assignment]}),/Invalid report branch assignment/);
+});
+test('an employee can move between branches by month without duplicate salary or changed totals',()=>{
+ const rows=['2025-07-01','2025-08-01','2025-09-01'].map(p=>pay('E1',p,2200));
+ const report=build(rows,[employee('E1')],[{id:'A',name:'A'},{id:'B',name:'B'}],{
+   assignments:[{employee_id:'E1',month:'2025-08',branch_id:'B'}]});
+ assert.equal(report.employee_count,1);
+ assert.deepEqual(report.branches[0].rows[0].values.slice(0,3),[2200,null,2200]);
+ assert.deepEqual(report.branches[1].rows[0].values.slice(0,3),[null,2200,null]);
+ assert.equal(report.branches.flatMap(b=>b.totals).reduce((a,b)=>a+b,0),6600);
 });
 test('corrected branch is used by real Excel sheets and PDF pages',async()=>{
  const report=correctedReport();
@@ -117,6 +125,8 @@ test('actual SQL reads a full year and enforces local/foreign scopes',{skip:!pro
  assert.ok(['localhost','127.0.0.1'].includes(url.hostname));assert.equal(url.pathname,'/hasani_bootstrap_test');
  const bootstrap=new pg.Pool({connectionString:url.toString()});await bootstrap.query('CREATE DATABASE hasani_salary_report_test');url.pathname='/hasani_salary_report_test';const pool=new pg.Pool({connectionString:url.toString()});
  try{await pool.query(await readFile(new URL('./fixtures/neon-schema.sql',import.meta.url),'utf8'));
+ await pool.query('CREATE SCHEMA IF NOT EXISTS app_private');
+ await pool.query(await readFile(new URL('../migrations/20261107_salary_report_branch_assignments.sql',import.meta.url),'utf8'));
  await pool.query(`INSERT INTO branches(id,name) VALUES('A','Branch A'),('B','Branch B');
  INSERT INTO employees(employee_id,name,branch_id,joining_date,address) VALUES('E1','Local','A','2024-01-01',''),('E2','Foreign','B','2024-01-01','FRN');
  INSERT INTO payroll(id,employee_id,period,basic_salary,elaun_perkhidmatan,late_deduction,epf_employee) VALUES('P1','E1','2025-07-01',2000,250,50,220),('P2','E1','2026-06-01',2100,0,0,230),('P3','E2','2025-07-01',1700,0,0,34),('OUT','E1','2026-07-01',9999,0,0,0);`);

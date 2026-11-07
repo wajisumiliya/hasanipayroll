@@ -1,3 +1,4 @@
+import 'salary_report_branch_assignments.dart';
 import 'dart:typed_data';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
@@ -8,10 +9,14 @@ class SalaryReportPage extends StatefulWidget {
       {super.key,
       required this.load,
       required this.export,
+      this.loadAssignments,
+      this.saveAssignment,
       this.initialStartYear = 2025});
   final Future<Map<String, dynamic>> Function(int startYear) load;
   final Future<Uint8List> Function(
       int startYear, String format, String? branchId) export;
+  final Future<Map<String, dynamic>> Function(int year)? loadAssignments;
+  final Future<void> Function(Map<String, dynamic> assignment, bool remove)? saveAssignment;
   final int initialStartYear;
   @override
   State<SalaryReportPage> createState() => _SalaryReportPageState();
@@ -166,6 +171,18 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                             ? null
                             : (value) => setState(() => branchId = value),
                       )),
+                  if (widget.loadAssignments != null && widget.saveAssignment != null)
+                    OutlinedButton.icon(
+                      onPressed: disabled ? null : () async {
+                        await showDialog<void>(context: context, barrierDismissible: false,
+                          builder: (_) => SalaryReportBranchAssignments(startYear: year,
+                            load: widget.loadAssignments!, save: widget.saveAssignment!));
+                        if (!mounted) return;
+                        branchId = null;
+                        await reload();
+                      },
+                      icon: const Icon(Icons.account_tree_outlined),
+                      label: const Text('Branch Assignments')),
                   OutlinedButton.icon(
                       onPressed: disabled ? null : reload,
                       icon: const Icon(Icons.refresh),
