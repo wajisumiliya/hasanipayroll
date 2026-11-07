@@ -522,8 +522,11 @@ class AppService extends ChangeNotifier {
 
   void _requireSalaryReportAdmin() {
     final user = currentUser;
-    if (user == null || !user.isAdmin || user.isReviewer ||
-        user.isAttendanceAdmin || user.isRequestAdmin) {
+    if (user == null ||
+        !user.isAdmin ||
+        user.isReviewer ||
+        user.isAttendanceAdmin ||
+        user.isRequestAdmin) {
       throw StateError('Payroll administrator access required.');
     }
   }
@@ -531,20 +534,29 @@ class AppService extends ChangeNotifier {
   Future<Map<String, dynamic>> loadSalaryReportAssignments(int year) async {
     _requireSalaryReportAdmin();
     final session = NeonApi.sessionVersion;
-    final data = await _getAuth(Uri(path: '/api/reports/salary/branch-assignments',
-      queryParameters: {'start_year': '$year'}).toString());
-    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
-    if (data['ok'] != true) throw StateError('Unable to load report branch assignments.');
+    final data = await _getAuth(Uri(
+        path: '/api/reports/salary/branch-assignments',
+        queryParameters: {'start_year': '$year'}).toString());
+    if (session != NeonApi.sessionVersion)
+      throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true)
+      throw StateError('Unable to load report branch assignments.');
     return data;
   }
 
-  Future<void> saveSalaryReportAssignment(Map<String, dynamic> assignment, bool remove) async {
+  Future<void> saveSalaryReportAssignment(
+      Map<String, dynamic> assignment, bool remove) async {
     _requireSalaryReportAdmin();
     final session = NeonApi.sessionVersion;
-    final data = await NeonApi.jsonRequest('/api/reports/salary/branch-assignments',
-      method: remove ? 'DELETE' : 'POST', body: assignment);
-    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
-    if (data['ok'] != true) throw StateError(data['message']?.toString() ?? 'Unable to save report branch assignments.');
+    final data = await NeonApi.jsonRequest(
+        '/api/reports/salary/branch-assignments',
+        method: remove ? 'DELETE' : 'POST',
+        body: assignment);
+    if (session != NeonApi.sessionVersion)
+      throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true)
+      throw StateError(data['message']?.toString() ??
+          'Unable to save report branch assignments.');
   }
 
   Future<Uint8List> exportSalaryReport(
