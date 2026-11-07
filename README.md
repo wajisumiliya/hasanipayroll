@@ -208,6 +208,14 @@ the frontend. The migration leaves historical payroll amounts unchanged.
 
 ### Salary Report
 
+Confirmed historical branch correction: BAS025 belongs to **GURUN** for every
+month from July 2025 through June 2026 in this report. The correction takes
+priority over saved or current branch fields in the preview, Excel and PDF,
+including branch-filtered exports. It does not update employee master data,
+payroll amounts, attendance or bank exports, and does not apply to other
+reporting periods. The actual GURUN branch ID is resolved from the branch
+directory; missing or ambiguous matches stop the report for review.
+
 Open **Salary Report** in the admin sidebar. The default period is July 2025
 through June 2026; choose another July–June reporting year if needed. Separate
 **Export Excel** and **Print / Save PDF** actions export all branches or the
@@ -227,8 +235,8 @@ EIS or SOCSO deductions are saved. The report never regenerates payroll or
 changes any saved amount.
 
 An employee must have saved payroll and be employed in the individual month;
-resigning later does not remove earlier eligible months. Branch grouping uses a
-saved payroll branch when present, otherwise the employee's current payroll
+resigning later does not remove earlier eligible months. After confirmed
+historical corrections, branch grouping uses a saved payroll branch when present, otherwise the employee's current payroll
 branch or attendance branch. A move can create separate branch rows with values
 only in the corresponding saved-branch months. Historical branch attribution
 cannot be reconstructed when no branch snapshot exists. Duplicate employee/month

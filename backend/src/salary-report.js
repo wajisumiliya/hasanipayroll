@@ -1,7 +1,8 @@
 import {renderLateReport} from './late-report-export.js';
+import {salaryReportBranchCorrection} from './salary-report-branch-corrections.js';
 
 export const salaryReportNote='All saved earnings minus PCB, Zakat, advance, loan, unpaid, late and other deductions. EPF, EIS and SOCSO employee deductions are excluded. Blank cells mean no eligible saved payroll; 0.00 is a saved zero.';
-export const salaryReportBranchNote='Uses the saved payroll branch when present; otherwise the employee current payroll branch, then attendance branch.';
+export const salaryReportBranchNote='Uses confirmed historical report corrections first, then the saved payroll branch when present; otherwise the employee current payroll branch, then attendance branch.';
 const key=v=>String(v??'').trim().toUpperCase();
 const round=v=>Math.round((v+Number.EPSILON)*100)/100;
 function number(row,...fields){
@@ -60,7 +61,7 @@ export function buildSalaryReport({startYear,employees,payroll,branches,branchId
     const id=key(row.employee_id??row.employeeId),employee=employeeMap.get(id);
     if(!employee)throw new Error(`Missing employee details for ${id}.`);
     if(!activeInMonth(employee,date))continue;
-    const branch=key(row.payroll_branch_id)||key(row.branch_id)||key(employee.payroll_branch_id)||key(employee.branch_id)||'UNASSIGNED';
+    const branch=salaryReportBranchCorrection(id,date,branches)||key(row.payroll_branch_id)||key(row.branch_id)||key(employee.payroll_branch_id)||key(employee.branch_id)||'UNASSIGNED';
     const unique=id+'|'+date;
     if(seen.has(unique))throw new Error(`Duplicate payroll for ${id}, ${date}. Resolve it before exporting.`);
     seen.add(unique);
@@ -110,7 +111,7 @@ export function installSalaryReportApi(app,{pool,authenticate,renderExport=rende
       const bytes=await renderExport({view:'salary-report',format,report});
       return res.json({ok:true,file_base64:bytes.toString('base64')});
     }catch(error){
-      const review=/^(Duplicate payroll|Invalid |Missing employee details)/.test(error.message);
+      const review=/^(Duplicate payroll|Invalid |Missing employee details|Salary Report branch correction)/.test(error.message);
       return res.status(review?409:503).json({ok:false,message:review?error.message:'Salary Report is temporarily unavailable. Please retry.'});
     }
   });

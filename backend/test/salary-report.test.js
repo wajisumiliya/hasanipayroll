@@ -36,6 +36,48 @@ test('historical employment eligibility and saved/current payroll branches are r
  assert.equal(moved.employee_count,1);assert.equal(moved.branches.length,2);assert.equal(moved.branches[0].rows[0].values[6],null);
  assert.equal(build([pay('E1','2025-07-01')],undefined,undefined,{branchId:'OTHER'}).branches.length,0);
 });
+const correctedBranches=[{id:'BR-AMJ',name:'AMANJAYA'},{id:'BR-GRN',name:'GURUN'}];
+const correctedEmployees=[employee('BAS025',{branch_id:'BR-AMJ',payroll_branch_id:'BR-AMJ'}),employee('OTHER',{branch_id:'BR-AMJ'})];
+function correctedReport(extra={}){
+ const months=Array.from({length:12},(_,i)=>new Date(Date.UTC(2025,6+i,1)).toISOString().slice(0,10));
+ const rows=months.map((period,i)=>pay('BAS025',period,2000+i,{branch_id:'BR-AMJ',payroll_branch_id:'BR-AMJ'}));
+ rows.push(pay('OTHER','2025-07-01',3000));
+ return build(rows,correctedEmployees,correctedBranches,extra);
+}
+test('BAS025 historical correction places all twelve months in GURUN exactly once',()=>{
+ const before=JSON.stringify(correctedEmployees);
+ const r=correctedReport();
+ const gurun=r.branches.find(b=>b.id==='BR-GRN'),amanjaya=r.branches.find(b=>b.id==='BR-AMJ');
+ assert.deepEqual(gurun.rows.map(r=>r.employee_id),['BAS025']);
+ assert.deepEqual(gurun.rows[0].values,Array.from({length:12},(_,i)=>2000+i));
+ assert.deepEqual(gurun.totals,gurun.rows[0].values);
+ assert.deepEqual(amanjaya.rows.map(r=>r.employee_id),['OTHER']);
+ assert.equal(r.employee_count,2);
+ assert.equal(JSON.stringify(correctedEmployees),before);
+ assert.deepEqual(correctedReport({branchId:'BR-GRN'}).branches[0].rows[0].values,gurun.rows[0].values);
+ assert.deepEqual(correctedReport({branchId:'BR-AMJ'}).branches[0].rows.map(r=>r.employee_id),['OTHER']);
+ const later=build([pay('BAS025','2026-07-01')],correctedEmployees,correctedBranches,{startYear:2026});
+ assert.equal(later.branches[0].id,'BR-AMJ');
+});
+test('BAS025 correction fails clearly for missing or ambiguous GURUN rather than misclassifying payroll',()=>{
+ const rows=[pay('BAS025','2025-07-01')];
+ assert.throws(()=>build(rows,correctedEmployees,[correctedBranches[0]]),/requires one GURUN branch/);
+ assert.throws(()=>build(rows,correctedEmployees,[...correctedBranches,{id:'DUP',name:'gurun'}]),/requires one GURUN branch/);
+ // No matching saved payroll means the correction does not affect other staff.
+ assert.equal(build([pay('OTHER','2025-07-01')],correctedEmployees,[correctedBranches[0]]).employee_count,1);
+});
+test('corrected branch is used by real Excel sheets and PDF pages',async()=>{
+ const report=correctedReport();
+ const bytes=await renderLateReport({view:'salary-report',format:'xlsx',report});
+ const book=new ExcelJS.Workbook();await book.xlsx.load(bytes);
+ const gurun=book.worksheets.find(s=>s.name==='GURUN');
+ assert.ok(gurun);assert.equal(gurun.getCell('B6').value,'BAS025');
+ assert.equal(gurun.getCell('D6').value,2000);assert.equal(gurun.getCell('O6').value,2011);
+ assert.equal(book.worksheets.find(s=>s.name==='AMANJAYA').getCell('B6').value,'OTHER');
+ const pdf=await renderLateReport({view:'salary-report',format:'pdf',report});
+ assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
+ assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)??[]).length,2);
+});
 test('duplicates fail closed and totals retain cents',()=>{
  assert.throws(()=>build([pay('E1','2025-07-01'),pay('E1','2025-07-15')]),/Duplicate payroll/);
  assert.throws(()=>build([pay('E1','2025-07-01',1,{branch_id:'A'}),pay('E1','2025-07-15',2,{branch_id:'B'})],undefined,undefined,{branchId:'A'}),/Duplicate payroll/);
