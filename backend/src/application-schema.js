@@ -112,6 +112,12 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261104_payslip_publication_notifications.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [noticeVersion]);
     }
+    const temporarySalaryVersion = '20261108_salary_report_temporary_payroll_v1';
+    const temporarySalaryMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [temporarySalaryVersion]);
+    if (!temporarySalaryMigration.rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261108_salary_report_temporary_payroll.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [temporarySalaryVersion]);
+    }
     const assignmentVersion = '20261107_salary_report_branch_assignments_v1';
     const assignmentMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [assignmentVersion]);
     if (!assignmentMigration.rowCount) {

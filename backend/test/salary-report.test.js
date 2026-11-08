@@ -127,6 +127,7 @@ test('actual SQL reads a full year and enforces local/foreign scopes',{skip:!pro
  try{await pool.query(await readFile(new URL('./fixtures/neon-schema.sql',import.meta.url),'utf8'));
  await pool.query('CREATE SCHEMA IF NOT EXISTS app_private');
  await pool.query(await readFile(new URL('../migrations/20261107_salary_report_branch_assignments.sql',import.meta.url),'utf8'));
+ await pool.query(await readFile(new URL('../migrations/20261108_salary_report_temporary_payroll.sql',import.meta.url),'utf8'));
  await pool.query(`INSERT INTO branches(id,name) VALUES('A','Branch A'),('B','Branch B');
  INSERT INTO employees(employee_id,name,branch_id,joining_date,address) VALUES('E1','Local','A','2024-01-01',''),('E2','Foreign','B','2024-01-01','FRN');
  INSERT INTO payroll(id,employee_id,period,basic_salary,elaun_perkhidmatan,late_deduction,epf_employee) VALUES('P1','E1','2025-07-01',2000,250,50,220),('P2','E1','2026-06-01',2100,0,0,230),('P3','E2','2025-07-01',1700,0,0,34),('OUT','E1','2026-07-01',9999,0,0,0);`);

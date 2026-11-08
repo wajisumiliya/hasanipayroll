@@ -1,3 +1,4 @@
+import 'salary_report_temporary_payroll.dart';
 import 'salary_report_branch_assignments.dart';
 import 'dart:typed_data';
 import 'package:file_saver/file_saver.dart';
@@ -11,6 +12,8 @@ class SalaryReportPage extends StatefulWidget {
       required this.export,
       this.loadAssignments,
       this.saveAssignment,
+      this.loadTemporaryPayroll,
+      this.saveTemporaryPayroll,
       this.initialStartYear = 2025});
   final Future<Map<String, dynamic>> Function(int startYear) load;
   final Future<Uint8List> Function(
@@ -18,6 +21,9 @@ class SalaryReportPage extends StatefulWidget {
   final Future<Map<String, dynamic>> Function(int year)? loadAssignments;
   final Future<void> Function(Map<String, dynamic> assignment, bool remove)?
       saveAssignment;
+  final Future<Map<String, dynamic>> Function(int year)? loadTemporaryPayroll;
+  final Future<void> Function(Map<String, dynamic> entry, String method)?
+      saveTemporaryPayroll;
   final int initialStartYear;
   @override
   State<SalaryReportPage> createState() => _SalaryReportPageState();
@@ -192,6 +198,25 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                               },
                         icon: const Icon(Icons.account_tree_outlined),
                         label: const Text('Branch Assignments')),
+                  if (widget.loadTemporaryPayroll != null &&
+                      widget.saveTemporaryPayroll != null)
+                    OutlinedButton.icon(
+                        onPressed: disabled
+                            ? null
+                            : () async {
+                                await showDialog<void>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => SalaryReportTemporaryPayroll(
+                                        startYear: year,
+                                        load: widget.loadTemporaryPayroll!,
+                                        save: widget.saveTemporaryPayroll!));
+                                if (!mounted) return;
+                                branchId = null;
+                                await reload();
+                              },
+                        icon: const Icon(Icons.playlist_add),
+                        label: const Text('Add Temporary Payroll')),
                   OutlinedButton.icon(
                       onPressed: disabled ? null : reload,
                       icon: const Icon(Icons.refresh),
@@ -277,12 +302,8 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                                                           width: 180,
                                                           child: Text(
                                                               '${branch['rows'][i]['name']}'))),
-                                                      for (final value
-                                                          in branch['rows'][i]
-                                                                  ['values']
-                                                              as List)
-                                                        DataCell(
-                                                            Text(money(value)))
+                                                      for (var month = 0; month < (branch['rows'][i]['values'] as List).length; month++)
+                                                        DataCell(Text('${money(branch['rows'][i]['values'][month])}${(branch['rows'][i]['temporary_months'] as List? ?? []).contains(months[month]['key']) ? ' *' : ''}'))
                                                     ]),
                                                   DataRow(cells: [
                                                     const DataCell(Text('TOTAL',

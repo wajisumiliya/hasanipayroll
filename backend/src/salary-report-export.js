@@ -22,6 +22,11 @@ async function excel(report){
     sheet.addRow([report.note]);sheet.addRow([report.branch_note]);
     sheet.addRow(salaryReportHeaders(report));
     sheet.addRows(salaryReportRows(branch));
+    branch.rows.forEach((row,index)=>{
+      report.months.forEach((month,m)=>{
+        if(row.temporary_months?.includes(month.key))sheet.getCell(index+6,m+4).note='Temporary historical reconciliation entry. Report only; not a payslip or bank payment.';
+      });
+    });
     sheet.addRow(['TOTAL','','',...branch.totals]);
     sheet.mergeCells(`A${sheet.rowCount}:C${sheet.rowCount}`);
     sheet.mergeCells('A1:O1');sheet.mergeCells('A3:O3');sheet.mergeCells('A4:O4');
@@ -29,7 +34,7 @@ async function excel(report){
     sheet.columns.forEach((c,i)=>{c.width=i===0?6:i===1?18:i===2?34:15;});
     sheet.eachRow((row,index)=>{
       row.alignment={vertical:'middle',wrapText:true};
-      row.height=index===3?32:index===4?30:index>=6&&index<sheet.rowCount?30:24;
+      row.height=index===3?(report.temporary_count?50:32):index===4?30:index>=6&&index<sheet.rowCount?30:24;
       if(index===1||index===5||index===sheet.rowCount)row.font={bold:true};
       if(index===5){row.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF11345F'}};row.font={bold:true,color:{argb:'FFFFFFFF'}};}
       if(index>=6)for(let c=4;c<=15;c++){row.getCell(c).numFmt='#,##0.00';row.getCell(c).alignment={horizontal:'right',vertical:'middle'};}
@@ -47,7 +52,7 @@ async function pdf(report){
     doc.addPage();
     const width=doc.page.width-40,height=doc.page.height-40;
     const widths=[24,65,130,...Array(12).fill((width-219)/12)];
-    const rows=[salaryReportHeaders(report),...salaryReportRows(branch).map(row=>row.map((v,i)=>i>=3&&v!=null?Number(v).toFixed(2):v??'')),['TOTAL','','',...branch.totals.map(v=>v.toFixed(2))]];
+    const rows=[salaryReportHeaders(report),...salaryReportRows(branch).map((row,r)=>row.map((v,i)=>i>=3&&v!=null?Number(v).toFixed(2)+(branch.rows[r].temporary_months?.includes(report.months[i-3].key)?'*':''):v??'')),['TOTAL','','',...branch.totals.map(v=>v.toFixed(2))]];
     const measure=(text,w,bold=false)=>{doc.font(bold?'Bold':'Body').fontSize(7);return doc.heightOfString(String(text),{width:w-6,lineGap:0});};
     const heights=rows.map((row,index)=>Math.max(18,...row.map((value,i)=>measure(value,index===rows.length-1&&i===0?219:widths[i],index===0||index===rows.length-1)+8)));
     const noteHeight=measure(report.note,width)+measure(report.branch_note,width)+16;

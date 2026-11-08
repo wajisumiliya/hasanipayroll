@@ -680,6 +680,8 @@ class _AdminDashboardState extends State<AdminDashboard>
           export: service.exportSalaryReport,
           loadAssignments: service.loadSalaryReportAssignments,
           saveAssignment: service.saveSalaryReportAssignment,
+          loadTemporaryPayroll: service.loadTemporarySalaryPayroll,
+          saveTemporaryPayroll: service.saveTemporarySalaryPayroll,
         );
 
       default:

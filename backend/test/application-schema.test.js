@@ -24,6 +24,8 @@ test('application startup applies the penguin migration once and records it', as
 
   assert.ok(applied.has('20261104_payslip_publication_notifications_v1'));
   assert.ok(applied.has('20261107_salary_report_branch_assignments_v1'));
+  assert.ok(applied.has('20261108_salary_report_temporary_payroll_v1'));
+  assert.ok(executed.some(sql => sql.includes('CREATE TABLE IF NOT EXISTS app_private.salary_report_temporary_payroll')));
   assert.ok(executed.some(sql => sql.includes('CREATE TABLE IF NOT EXISTS app_private.salary_report_branch_assignments')));
   assert.ok(executed.some(sql => sql.includes('CREATE TRIGGER payslip_published_notice')));
   assert.ok(applied.has('20261026_late_report_reviews_v1'));
@@ -54,4 +56,5 @@ test('application startup applies the penguin migration once and records it', as
   assert.ok(!executed.some(sql => sql.includes('annual_leave_balance numeric(6,2)')));
   assert.ok(!executed.some(sql => sql.includes('CREATE TRIGGER payslip_published_notice')));
   assert.ok(!executed.some(sql => sql.includes('CREATE TABLE IF NOT EXISTS app_private.salary_report_branch_assignments')));
+  assert.ok(!executed.some(sql => sql.includes('CREATE TABLE IF NOT EXISTS app_private.salary_report_temporary_payroll')));
 });

@@ -1,3 +1,4 @@
+import {installSalaryReportTemporaryApi} from './salary-report-temporary.js';
 import {installSalaryReportAssignmentsApi} from './salary-report-assignments.js';
 import {installSalaryReportApi} from './salary-report.js';
 import { installAttendanceRosterApi } from './attendance-roster-api.js';
@@ -4326,6 +4327,7 @@ installDataApi(app, { pool, authenticate });
 installNotificationApi(app, { pool, authenticate });
 installSalaryReportApi(app, { pool, authenticate });
 installSalaryReportAssignmentsApi(app, { pool, authenticate });
+installSalaryReportTemporaryApi(app, { pool, authenticate });
 installPenguinPetApi(app, { pool, authenticate });
 installMysteryEggApi(app, { pool });
 

@@ -208,6 +208,38 @@ the frontend. The migration leaves historical payroll amounts unchanged.
 
 ### Salary Report
 
+Use **Add Temporary Payroll** for historical reconciliation when no saved payroll
+exists. Select an existing employee (including inactive employees), or enable
+**Employee is missing from the current employee list** and enter the historical
+ID, name and local/FRN classification. Choose a branch and month/range, then
+enter basic salary, total allowances, other earnings (including OT/bonus),
+and deductions **excluding employee EPF, EIS and SOCSO**. The same amounts are
+used for each selected month; add or edit months separately for different pay.
+A note/evidence field records the reconciliation source. Entries can be edited
+one month at a time or removed with confirmation.
+
+These records live only in `app_private.salary_report_temporary_payroll` and
+are included in the Salary Report preview, Excel and PDF. They never create
+employee accounts, payslips, actual payroll, bank exports, statutory submissions
+or notifications. Temporary amounts have `*` markers in the preview/PDF;
+Excel amounts remain numeric and carry cell notes. Real saved payroll always
+wins for the same employee/month, including payroll saved after reconciliation.
+The entry list marks such superseded temporary entries and permits removal.
+Creating duplicate or overlapping temporary ranges, or filling a month with
+existing real payroll, is rejected atomically. Existing report branch assignments
+take priority over the temporary entry's branch.
+
+The startup migration `20261108_salary_report_temporary_payroll.sql` adds the
+private reconciliation table with employee/month uniqueness and audit fields.
+`GET /api/reports/salary/temporary-payroll?start_year=2025` returns choices and
+entries; `POST` creates a month/range (up to 12 months), `PUT` edits a single
+month, and `DELETE` removes entries. Writes accept `employee_id`, `employee_name`,
+`branch_id`, `staff_scope` (`local` or `foreign`), `from_month`, `through_month`,
+`basic_salary`, `allowances`, `other_earnings`, `deductions`, and `notes`.
+Amounts must be non-negative components with no more than two decimals.
+All operations enforce payroll-admin and local/FRN access restrictions.
+Deploy the backend migration before rebuilding the frontend.
+
 Use **Branch Assignments** on the Salary Report page to choose an employee,
 payroll branch, and one month or a month range within the selected reporting
 year. Save, then select **Done** to refresh the preview before exporting Excel

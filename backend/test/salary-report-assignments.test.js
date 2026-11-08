@@ -45,6 +45,7 @@ test('real assignments persist atomically, enforce scopes, preserve BAS025 and d
     ('P1','E1','2025-07-01',2000),('P2','E1','2025-08-01',2100),('P3','E2','2025-07-01',1700),('P4','BAS025','2025-07-01',2200);`);
   const migration=await readFile(new URL('../migrations/20261107_salary_report_branch_assignments.sql',import.meta.url),'utf8');
   await pool.query(migration);await pool.query(migration);
+  await pool.query(await readFile(new URL('../migrations/20261108_salary_report_temporary_payroll.sql',import.meta.url),'utf8'));
   assert.equal((await pool.query("SELECT count(*)::int n FROM app_private.salary_report_branch_assignments WHERE employee_id='BAS025'")).rows[0].n,12);
   const run=routes(pool),body={employee_id:'E1',branch_id:'B',from_month:'2025-07',through_month:'2025-07'};
   assert.equal((await run('POST',body,'local')).body.months,1);

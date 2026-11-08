@@ -559,6 +559,25 @@ class AppService extends ChangeNotifier {
           'Unable to save report branch assignments.');
   }
 
+  Future<Map<String, dynamic>> loadTemporarySalaryPayroll(int year) async {
+    _requireSalaryReportAdmin();
+    final session = NeonApi.sessionVersion;
+    final data = await _getAuth(Uri(path: '/api/reports/salary/temporary-payroll',
+      queryParameters: {'start_year': '$year'}).toString());
+    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true) throw StateError('Unable to load temporary reconciliation payroll.');
+    return data;
+  }
+
+  Future<void> saveTemporarySalaryPayroll(Map<String, dynamic> entry, String method) async {
+    _requireSalaryReportAdmin();
+    if (!const ['POST', 'PUT', 'DELETE'].contains(method)) throw ArgumentError('Invalid temporary payroll action.');
+    final session = NeonApi.sessionVersion;
+    final data = await NeonApi.jsonRequest('/api/reports/salary/temporary-payroll', method: method, body: entry);
+    if (session != NeonApi.sessionVersion) throw StateError('Session changed. Reload the report.');
+    if (data['ok'] != true) throw StateError(data['message']?.toString() ?? 'Unable to save temporary reconciliation payroll.');
+  }
+
   Future<Uint8List> exportSalaryReport(
       int startYear, String format, String? branchId) async {
     final user = currentUser;
