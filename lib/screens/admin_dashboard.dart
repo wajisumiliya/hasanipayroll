@@ -1,4 +1,5 @@
 import '../services/saved_payroll_amounts.dart';
+import '../services/statutory_payment_reconciliation.dart';
 import '../widgets/salary_report_page.dart';
 import '../widgets/bonus_report_dialog.dart';
 import '../widgets/attendance_allowance_report_dialog.dart';
@@ -20246,7 +20247,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             return value.isNotEmpty &&
                 !{'-', 'N/A', 'NA', 'NULL', '0'}.contains(value.toUpperCase());
           });
-      if (!hasNumber(const ['epf_no', 'epfNo', 'kwsp_no', 'kwspNo'])) {
+      if (excludeMissingEpfFromPayment(employee)) {
         summary['excludedEpf'] =
             _number(summary['excludedEpf']) + epfEmployee + epfEmployer;
       }
@@ -21927,7 +21928,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 cellStyle: const pw.TextStyle(fontSize: 7),
                 cellPadding: const pw.EdgeInsets.all(4)),
             pw.Text(
-                'EPF excludes missing EPF numbers. SOCSO/EIS exclude missing SOCSO numbers. Saved payroll net pay is unchanged.',
+                'EPF excludes foreign staff with missing EPF numbers only; local staff remain payable. SOCSO/EIS exclude missing SOCSO numbers. Saved payroll net pay is unchanged.',
                 style: const pw.TextStyle(fontSize: 6)),
           ],
           if (report == 'Payroll Summary' || report == 'HRDF') ...[
