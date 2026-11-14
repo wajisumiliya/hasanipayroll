@@ -7,6 +7,21 @@ import 'package:pdf/widgets.dart' as pw;
 import '../lib/services/payroll_summary_pdf_layout.dart';
 
 void main() {
+  test('Amounts scale to narrow cells without wrapping decimals', () async {
+    final document = pw.Document();
+    final amount = payrollSummarySingleLine('26,828.00');
+    document.addPage(pw.Page(
+      build: (_) => pw.Align(
+        alignment: pw.Alignment.topLeft,
+        child: pw.SizedBox(width: 20, child: amount),
+      ),
+    ));
+    await document.save();
+    expect(amount.box!.width, lessThanOrEqualTo(20));
+    final text = ((amount as pw.FittedBox).child as pw.Text);
+    expect(text.box!.height, lessThan(10));
+    expect(text.box!.width, greaterThan(20));
+  });
   for (final branchCount in [1, 20, 60]) {
     test('Payroll Summary fits A4 with $branchCount branches', () async {
       final document = pw.Document();
@@ -27,8 +42,7 @@ void main() {
             cellStyle: const pw.TextStyle(fontSize: 7.2),
           ),
           pw.Text('Statutory payment reconciliation'),
-          pw.Text('EPF 58,230.00 - 1,520.00 = 56,710.00'),
-          pw.Text('Prepared by Admin'),
+          payrollSummarySingleLine('58230.00 / 170 emp'),
         ],
       );
       final fitted = fitPayrollSummaryToA4(content);

@@ -20212,6 +20212,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 'excludedEpf': 0.0,
                 'excludedSocso': 0.0,
                 'excludedEis': 0.0,
+                for (final key in statutoryEmployeeCountKeys) key: 0,
                 'unpaid': 0.0,
                 'pcb': 0.0,
                 'zakat': 0.0,
@@ -20243,11 +20244,19 @@ class _AdminDashboardState extends State<AdminDashboard>
       final socsoEmployer = _number(row['socso_employer']);
       final eisEmployee = _number(row['eis_employee']);
       final eisEmployer = _number(row['eis_employer']);
-      if (excludeMissingEpfFromPayment(employee)) {
+      final excludeEpf = excludeMissingEpfFromPayment(employee);
+      final excludeSocso = excludeMissingSocsoFromPayment(employee);
+      countStatutoryEmployee(
+          summary, 'epf', epfEmployee + epfEmployer, excludeEpf);
+      countStatutoryEmployee(
+          summary, 'socso', socsoEmployee + socsoEmployer, excludeSocso);
+      countStatutoryEmployee(
+          summary, 'eis', eisEmployee + eisEmployer, excludeSocso);
+      if (excludeEpf) {
         summary['excludedEpf'] =
             _number(summary['excludedEpf']) + epfEmployee + epfEmployer;
       }
-      if (excludeMissingSocsoFromPayment(employee)) {
+      if (excludeSocso) {
         summary['excludedSocso'] =
             _number(summary['excludedSocso']) + socsoEmployee + socsoEmployer;
         summary['excludedEis'] =
@@ -20323,6 +20332,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         'excludedEpf': 0.0,
         'excludedSocso': 0.0,
         'excludedEis': 0.0,
+        for (final key in statutoryEmployeeCountKeys) key: 0,
         'unpaid': 0.0,
         'pcb': 0.0,
         'zakat': 0.0,
@@ -20333,7 +20343,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         'hrdfDeduction': 0.0,
         'hrdfBase': 0.0,
       };
-      const integerKeys = ['employees', 'malaysianEmployees'];
+      const integerKeys = [
+        'employees',
+        'malaysianEmployees',
+        ...statutoryEmployeeCountKeys,
+      ];
       const moneyKeys = [
         'basic',
         'overtime',
@@ -21845,18 +21859,21 @@ class _AdminDashboardState extends State<AdminDashboard>
                           alignment: entry.key == 0
                               ? pw.Alignment.centerLeft
                               : pw.Alignment.center,
-                          child: pw.Text(
-                            entry.value,
-                            textAlign: entry.key == 0
-                                ? pw.TextAlign.left
-                                : pw.TextAlign.center,
-                            style: pw.TextStyle(
-                              fontSize: 7.2,
-                              fontWeight: bold
-                                  ? pw.FontWeight.bold
-                                  : pw.FontWeight.normal,
-                            ),
-                          ),
+                          child: entry.key != 0
+                              ? payrollSummarySingleLine(entry.value,
+                                  bold: bold)
+                              : pw.Text(
+                                  entry.value,
+                                  textAlign: entry.key == 0
+                                      ? pw.TextAlign.left
+                                      : pw.TextAlign.center,
+                                  style: pw.TextStyle(
+                                    fontSize: 7.2,
+                                    fontWeight: bold
+                                        ? pw.FontWeight.bold
+                                        : pw.FontWeight.normal,
+                                  ),
+                                ),
                         );
                       }).toList(),
                     );
@@ -21907,11 +21924,24 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 _number(row[item.$3]));
                         final excluded = branches.fold<double>(
                             0, (sum, row) => sum + _number(row[item.$4]));
+                        final employeeCount = branches.fold<int>(
+                            0,
+                            (sum, row) =>
+                                sum +
+                                _number(row[
+                                        '${item.$1.toLowerCase()}Employees'])
+                                    .toInt());
+                        final excludedCount = branches.fold<int>(
+                            0,
+                            (sum, row) =>
+                                sum +
+                                _number(row['${item.$4}Employees']).toInt());
                         return [
                           item.$1,
-                          total.toStringAsFixed(2),
-                          excluded.toStringAsFixed(2),
-                          (total - excluded).toStringAsFixed(2)
+                          statutoryAmountWithEmployees(total, employeeCount),
+                          statutoryAmountWithEmployees(excluded, excludedCount),
+                          statutoryAmountWithEmployees(
+                              total - excluded, employeeCount - excludedCount)
                         ];
                       })()
                   ],
@@ -21919,15 +21949,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                       pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
                   cellStyle: const pw.TextStyle(fontSize: 7),
                   cellPadding: const pw.EdgeInsets.all(4)),
-              pw.Text(
-                  'Only foreign staff are excluded for missing numbers: EPF uses the EPF number; SOCSO/EIS use the SOCSO number. Local staff remain payable. Saved payroll net pay is unchanged.',
-                  style: const pw.TextStyle(fontSize: 6)),
             ],
-            if (report == 'Payroll Summary' || report == 'HRDF') ...[
-              if (report == 'Payroll Summary')
-                pw.SizedBox(height: 10)
-              else
-                pw.Spacer(),
+            if (report == 'HRDF') ...[
+              pw.Spacer(),
               pw.Align(
                 alignment: pw.Alignment.bottomRight,
                 child: pw.Column(

@@ -97,5 +97,30 @@ void main() {
   expectEqual(eisTotal, 4000, 'EIS original total');
   expectEqual(eisExcluded, 600, 'EIS foreign-only exclusion');
   expectEqual(eisTotal - eisExcluded, 3400, 'EIS net payable');
+  final counts = <String, dynamic>{
+    for (final key in statutoryEmployeeCountKeys) key: 0,
+  };
+  for (var i = 0; i < 170; i++) {
+    countStatutoryEmployee(counts, 'epf', 240, i < 9);
+  }
+  expectEqual(counts['epfEmployees'], 170, 'Original contributing employees');
+  expectEqual(
+      counts['excludedEpfEmployees'], 9, 'Excluded contributing employees');
+  expectEqual(statutoryAmountWithEmployees(58230, counts['epfEmployees']),
+      '58230.00 / 170 emp', 'Amount and employee count, without average');
+  expectEqual(
+      statutoryAmountWithEmployees(
+          56710, counts['epfEmployees'] - counts['excludedEpfEmployees']),
+      '56710.00 / 161 emp',
+      'Net payable contributing employees');
+  countStatutoryEmployee(counts, 'socso', 20, false);
+  countStatutoryEmployee(counts, 'socso', 10, true);
+  countStatutoryEmployee(counts, 'socso', 0, true);
+  expectEqual(
+      counts['socsoEmployees'], 2, 'SOCSO includes employer-only amounts');
+  expectEqual(counts['excludedSocsoEmployees'], 1, 'Zero SOCSO is not counted');
+  countStatutoryEmployee(counts, 'eis', 0, true);
+  expectEqual(
+      counts['eisEmployees'], 0, 'No EIS contribution means no employee');
   print('Statutory EPF/SOCSO/EIS reconciliation regression checks passed.');
 }
