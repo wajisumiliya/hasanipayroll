@@ -1,5 +1,6 @@
 import '../services/saved_payroll_amounts.dart';
 import '../services/statutory_payment_reconciliation.dart';
+import '../services/payroll_summary_pdf_layout.dart';
 import '../widgets/salary_report_page.dart';
 import '../widgets/bonus_report_dialog.dart';
 import '../widgets/attendance_allowance_report_dialog.dart';
@@ -21717,239 +21718,248 @@ class _AdminDashboardState extends State<AdminDashboard>
                 : entry.value.toString())
             .toList())
         .toList();
+    pw.Widget buildContent() => pw.Column(
+          mainAxisSize: report == 'Payroll Summary'
+              ? pw.MainAxisSize.min
+              : pw.MainAxisSize.max,
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            if (report == 'Payroll Summary' || report == 'HRDF')
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Expanded(
+                    child: pw.Align(
+                      alignment: pw.Alignment.centerLeft,
+                      child: hasaniBooksLogo == null
+                          ? pw.Text(
+                              'hasani BOOKS',
+                              style: pw.TextStyle(
+                                fontSize: 10,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            )
+                          : pw.Image(
+                              hasaniBooksLogo,
+                              width: 72,
+                              height: 28,
+                              fit: pw.BoxFit.contain,
+                            ),
+                    ),
+                  ),
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text(
+                      '$report - ${DateFormat('MMMM yyyy').format(month)}',
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(
+                        fontSize: 15,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  pw.Expanded(
+                    child: pw.Text(
+                      'Print Date: ${DateFormat('dd/MM/yyyy').format(printedAt)}',
+                      textAlign: pw.TextAlign.right,
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ),
+                ],
+              )
+            else
+              pw.Text('$report - ${DateFormat('MMMM yyyy').format(month)}',
+                  textAlign: pw.TextAlign.center,
+                  style: pw.TextStyle(
+                      fontSize: 15, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 10),
+            if (report == 'Payroll Summary')
+              pw.Table(
+                border: pw.TableBorder.all(
+                  color: PdfColors.grey500,
+                  width: .35,
+                ),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(1.8),
+                  1: const pw.FlexColumnWidth(.55),
+                  2: const pw.FlexColumnWidth(1),
+                  3: const pw.FlexColumnWidth(.9),
+                  4: const pw.FlexColumnWidth(1.15),
+                  5: const pw.FlexColumnWidth(1.15),
+                  6: const pw.FlexColumnWidth(.85),
+                  7: const pw.FlexColumnWidth(.85),
+                  8: const pw.FlexColumnWidth(.95),
+                  9: const pw.FlexColumnWidth(.85),
+                  10: const pw.FlexColumnWidth(.85),
+                  11: const pw.FlexColumnWidth(.95),
+                  12: const pw.FlexColumnWidth(.8),
+                  13: const pw.FlexColumnWidth(.8),
+                  14: const pw.FlexColumnWidth(.9),
+                  15: const pw.FlexColumnWidth(1),
+                  16: const pw.FlexColumnWidth(.75),
+                  17: const pw.FlexColumnWidth(.8),
+                  18: const pw.FlexColumnWidth(.8),
+                  19: const pw.FlexColumnWidth(.8),
+                  20: const pw.FlexColumnWidth(1.15),
+                  21: const pw.FlexColumnWidth(1.1),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration:
+                        const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: headers
+                        .map((header) => pw.Container(
+                              padding: const pw.EdgeInsets.symmetric(
+                                horizontal: .5,
+                                vertical: 6,
+                              ),
+                              alignment: pw.Alignment.center,
+                              child: pw.Text(
+                                header,
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  fontSize: 6.5,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                  ...data.asMap().entries.map((rowEntry) {
+                    final isGrandTotal =
+                        rows[rowEntry.key]['branch'] == 'GRAND TOTAL';
+                    const totalColumns = {8, 11, 14};
+                    return pw.TableRow(
+                      decoration: isGrandTotal
+                          ? const pw.BoxDecoration(color: PdfColors.grey200)
+                          : null,
+                      children: rowEntry.value.asMap().entries.map((entry) {
+                        final bold = isGrandTotal ||
+                            entry.key == 0 ||
+                            totalColumns.contains(entry.key);
+                        return pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: .5,
+                            vertical: 5,
+                          ),
+                          alignment: entry.key == 0
+                              ? pw.Alignment.centerLeft
+                              : pw.Alignment.center,
+                          child: pw.Text(
+                            entry.value,
+                            textAlign: entry.key == 0
+                                ? pw.TextAlign.left
+                                : pw.TextAlign.center,
+                            style: pw.TextStyle(
+                              fontSize: 7.2,
+                              fontWeight: bold
+                                  ? pw.FontWeight.bold
+                                  : pw.FontWeight.normal,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  }),
+                ],
+              )
+            else
+              pw.TableHelper.fromTextArray(
+                headers: headers,
+                data: data,
+                headerStyle:
+                    pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+                cellStyle: const pw.TextStyle(fontSize: 5.5),
+                cellPadding: const pw.EdgeInsets.all(3),
+              ),
+            if (report == 'Payroll Summary') ...[
+              pw.SizedBox(height: 10),
+              pw.Text('Statutory payment reconciliation (employee + employer)',
+                  style: pw.TextStyle(
+                      fontSize: 9, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 4),
+              pw.TableHelper.fromTextArray(
+                  headers: const [
+                    'CONTRIBUTION',
+                    'ORIGINAL TOTAL RM',
+                    'LESS: MISSING NUMBER RM',
+                    'NET PAYABLE RM'
+                  ],
+                  data: [
+                    for (final item in const [
+                      ('EPF', 'epfEmployee', 'epfEmployer', 'excludedEpf'),
+                      (
+                        'SOCSO',
+                        'socsoEmployee',
+                        'socsoEmployer',
+                        'excludedSocso'
+                      ),
+                      ('EIS', 'eisEmployee', 'eisEmployer', 'excludedEis')
+                    ])
+                      (() {
+                        final branches =
+                            rows.where((row) => row['branch'] != 'GRAND TOTAL');
+                        final total = branches.fold<double>(
+                            0,
+                            (sum, row) =>
+                                sum +
+                                _number(row[item.$2]) +
+                                _number(row[item.$3]));
+                        final excluded = branches.fold<double>(
+                            0, (sum, row) => sum + _number(row[item.$4]));
+                        return [
+                          item.$1,
+                          total.toStringAsFixed(2),
+                          excluded.toStringAsFixed(2),
+                          (total - excluded).toStringAsFixed(2)
+                        ];
+                      })()
+                  ],
+                  headerStyle:
+                      pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+                  cellStyle: const pw.TextStyle(fontSize: 7),
+                  cellPadding: const pw.EdgeInsets.all(4)),
+              pw.Text(
+                  'Only foreign staff are excluded for missing numbers: EPF uses the EPF number; SOCSO/EIS use the SOCSO number. Local staff remain payable. Saved payroll net pay is unchanged.',
+                  style: const pw.TextStyle(fontSize: 6)),
+            ],
+            if (report == 'Payroll Summary' || report == 'HRDF') ...[
+              if (report == 'Payroll Summary')
+                pw.SizedBox(height: 10)
+              else
+                pw.Spacer(),
+              pw.Align(
+                alignment: pw.Alignment.bottomRight,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'Prepared by Admin',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      DateFormat('dd/MM/yyyy hh:mm a').format(printedAt),
+                      style: const pw.TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
     final document = pw.Document();
     document.addPage(pw.Page(
       pageFormat: PdfPageFormat.a4.landscape,
       margin: report == 'Payroll Summary'
-          ? const pw.EdgeInsets.all(6)
+          ? const pw.EdgeInsets.all(payrollSummaryPdfMargin)
           : const pw.EdgeInsets.all(18),
-      build: (_) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-        children: [
-          if (report == 'Payroll Summary' || report == 'HRDF')
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Expanded(
-                  child: pw.Align(
-                    alignment: pw.Alignment.centerLeft,
-                    child: hasaniBooksLogo == null
-                        ? pw.Text(
-                            'hasani BOOKS',
-                            style: pw.TextStyle(
-                              fontSize: 10,
-                              fontWeight: pw.FontWeight.bold,
-                            ),
-                          )
-                        : pw.Image(
-                            hasaniBooksLogo,
-                            width: 72,
-                            height: 28,
-                            fit: pw.BoxFit.contain,
-                          ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    '$report - ${DateFormat('MMMM yyyy').format(month)}',
-                    textAlign: pw.TextAlign.center,
-                    style: pw.TextStyle(
-                      fontSize: 15,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  child: pw.Text(
-                    'Print Date: ${DateFormat('dd/MM/yyyy').format(printedAt)}',
-                    textAlign: pw.TextAlign.right,
-                    style: const pw.TextStyle(fontSize: 8),
-                  ),
-                ),
-              ],
-            )
-          else
-            pw.Text('$report - ${DateFormat('MMMM yyyy').format(month)}',
-                textAlign: pw.TextAlign.center,
-                style:
-                    pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 10),
-          if (report == 'Payroll Summary')
-            pw.Table(
-              border: pw.TableBorder.all(
-                color: PdfColors.grey500,
-                width: .35,
-              ),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(1.8),
-                1: const pw.FlexColumnWidth(.55),
-                2: const pw.FlexColumnWidth(1),
-                3: const pw.FlexColumnWidth(.9),
-                4: const pw.FlexColumnWidth(1.15),
-                5: const pw.FlexColumnWidth(1.15),
-                6: const pw.FlexColumnWidth(.85),
-                7: const pw.FlexColumnWidth(.85),
-                8: const pw.FlexColumnWidth(.95),
-                9: const pw.FlexColumnWidth(.85),
-                10: const pw.FlexColumnWidth(.85),
-                11: const pw.FlexColumnWidth(.95),
-                12: const pw.FlexColumnWidth(.8),
-                13: const pw.FlexColumnWidth(.8),
-                14: const pw.FlexColumnWidth(.9),
-                15: const pw.FlexColumnWidth(1),
-                16: const pw.FlexColumnWidth(.75),
-                17: const pw.FlexColumnWidth(.8),
-                18: const pw.FlexColumnWidth(.8),
-                19: const pw.FlexColumnWidth(.8),
-                20: const pw.FlexColumnWidth(1.15),
-                21: const pw.FlexColumnWidth(1.1),
-              },
-              children: [
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                  children: headers
-                      .map((header) => pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(
-                              horizontal: .5,
-                              vertical: 13,
-                            ),
-                            alignment: pw.Alignment.center,
-                            child: pw.Text(
-                              header,
-                              textAlign: pw.TextAlign.center,
-                              style: pw.TextStyle(
-                                fontSize: 6.5,
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                          ))
-                      .toList(),
-                ),
-                ...data.asMap().entries.map((rowEntry) {
-                  final isGrandTotal =
-                      rows[rowEntry.key]['branch'] == 'GRAND TOTAL';
-                  const totalColumns = {8, 11, 14};
-                  return pw.TableRow(
-                    decoration: isGrandTotal
-                        ? const pw.BoxDecoration(color: PdfColors.grey200)
-                        : null,
-                    children: rowEntry.value.asMap().entries.map((entry) {
-                      final bold = isGrandTotal ||
-                          entry.key == 0 ||
-                          totalColumns.contains(entry.key);
-                      return pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: .5,
-                          vertical: 14,
-                        ),
-                        alignment: entry.key == 0
-                            ? pw.Alignment.centerLeft
-                            : pw.Alignment.center,
-                        child: pw.Text(
-                          entry.value,
-                          maxLines: 1,
-                          textAlign: entry.key == 0
-                              ? pw.TextAlign.left
-                              : pw.TextAlign.center,
-                          style: pw.TextStyle(
-                            fontSize: 7.2,
-                            fontWeight: bold
-                                ? pw.FontWeight.bold
-                                : pw.FontWeight.normal,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                }),
-              ],
-            )
-          else
-            pw.TableHelper.fromTextArray(
-              headers: headers,
-              data: data,
-              headerStyle:
-                  pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
-              cellStyle: const pw.TextStyle(fontSize: 5.5),
-              cellPadding: const pw.EdgeInsets.all(3),
-            ),
-          if (report == 'Payroll Summary') ...[
-            pw.SizedBox(height: 10),
-            pw.Text('Statutory payment reconciliation (employee + employer)',
-                style:
-                    pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 4),
-            pw.TableHelper.fromTextArray(
-                headers: const [
-                  'CONTRIBUTION',
-                  'ORIGINAL TOTAL RM',
-                  'LESS: MISSING NUMBER RM',
-                  'NET PAYABLE RM'
-                ],
-                data: [
-                  for (final item in const [
-                    ('EPF', 'epfEmployee', 'epfEmployer', 'excludedEpf'),
-                    (
-                      'SOCSO',
-                      'socsoEmployee',
-                      'socsoEmployer',
-                      'excludedSocso'
-                    ),
-                    ('EIS', 'eisEmployee', 'eisEmployer', 'excludedEis')
-                  ])
-                    (() {
-                      final branches =
-                          rows.where((row) => row['branch'] != 'GRAND TOTAL');
-                      final total = branches.fold<double>(
-                          0,
-                          (sum, row) =>
-                              sum +
-                              _number(row[item.$2]) +
-                              _number(row[item.$3]));
-                      final excluded = branches.fold<double>(
-                          0, (sum, row) => sum + _number(row[item.$4]));
-                      return [
-                        item.$1,
-                        total.toStringAsFixed(2),
-                        excluded.toStringAsFixed(2),
-                        (total - excluded).toStringAsFixed(2)
-                      ];
-                    })()
-                ],
-                headerStyle:
-                    pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-                cellStyle: const pw.TextStyle(fontSize: 7),
-                cellPadding: const pw.EdgeInsets.all(4)),
-            pw.Text(
-                'Only foreign staff are excluded for missing numbers: EPF uses the EPF number; SOCSO/EIS use the SOCSO number. Local staff remain payable. Saved payroll net pay is unchanged.',
-                style: const pw.TextStyle(fontSize: 6)),
-          ],
-          if (report == 'Payroll Summary' || report == 'HRDF') ...[
-            pw.Spacer(),
-            pw.Align(
-              alignment: pw.Alignment.bottomRight,
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text(
-                    'Prepared by Admin',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.SizedBox(height: 2),
-                  pw.Text(
-                    DateFormat('dd/MM/yyyy hh:mm a').format(printedAt),
-                    style: const pw.TextStyle(fontSize: 8),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
+      build: (_) => report == 'Payroll Summary'
+          ? fitPayrollSummaryToA4(buildContent())
+          : buildContent(),
     ));
     await Printing.layoutPdf(
       name:
