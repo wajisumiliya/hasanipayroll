@@ -94,6 +94,11 @@ export async function ensureApplicationSchema(pool) {
       await client.query(await readFile(new URL('../migrations/20261101_payroll_increment_sync.sql', import.meta.url), 'utf8'));
       await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [incrementSyncVersion]);
     }
+    const adjustmentVersion = '20261114_payroll_employer_epf_adjustments_v1';
+    if (!(await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [adjustmentVersion])).rowCount) {
+      await client.query(await readFile(new URL('../migrations/20261114_payroll_employer_epf_adjustments.sql', import.meta.url), 'utf8'));
+      await client.query('INSERT INTO app_private.schema_migrations(version) VALUES ($1)', [adjustmentVersion]);
+    }
     const transferVersion = '20261103_employee_salary_transfer_v1';
     const transferMigration = await client.query('SELECT 1 FROM app_private.schema_migrations WHERE version=$1', [transferVersion]);
     if (!transferMigration.rowCount) {

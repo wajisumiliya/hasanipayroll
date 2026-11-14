@@ -4,6 +4,29 @@ import '../lib/services/payroll_edit_update.dart';
 import '../lib/services/saved_payroll_amounts.dart';
 
 void main() {
+  test('All published, paid and finalized markers identify locked payroll', () {
+    for (final key in ['is_published', 'is_paid', 'isPaid', 'is_finalized']) {
+      expect(payrollIsLocked({key: true}), isTrue);
+      expect(payrollIsLocked({key: 'true'}), isTrue);
+    }
+    for (final key in ['paid_at', 'paidAt', 'finalized_at']) {
+      expect(payrollIsLocked({key: '2026-11-01'}), isTrue);
+    }
+    for (final status in ['paid', 'finalized', 'finalised', 'locked', 'PAID']) {
+      expect(payrollIsLocked({'status': status}), isTrue);
+    }
+    expect(payrollIsLocked({'is_published': false}), isFalse);
+  });
+  test('Locked adjustment preserves unset component values displayed as zero',
+      () {
+    expect(
+        payrollEditUpdatePayload(
+          {'epf_employer': 0, 'fw_salary': null, 'is_published': true},
+          {'epf_employer': 100, 'fw_salary': 0, 'is_published': true},
+          preserveUnsetZero: true,
+        ),
+        {'epf_employer': 100});
+  });
   test(
       'Employer EPF edit updates only changed values, preserving the saved row',
       () {

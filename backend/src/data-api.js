@@ -9,6 +9,7 @@ const TABLES = new Set([
   'app_notifications', 'notification_reads', 'daily_reports', 'staff_transfer_history',
 ]);
 const RPCS = new Set([
+  'adjust_payroll_employer_epf',
   'admin_branch_activity_logs', 'approve_employee_request', 'change_daily_report_pin',
   'get_employee_garden', 'record_employee_garden_visit', 'register_notification_device',
   'schedule_monthly_payslip_release', 'set_employee_active_status', 'tend_employee_garden',
@@ -177,8 +178,12 @@ export function claimsForRequest(req) {
   } };
 }
 function sendError(res, error) {
-  const status = error.status || (error.code === '42501' ? 403 : ['23503', '23505', '23514'].includes(error.code) ? 409 : 503);
-  const message = error instanceof DataApiError ? error.message : status === 403 ? 'Access denied.' : status === 409 ? 'This change conflicts with existing records or database rules.' : 'Unable to complete the database request.';
+  const lockedPayroll = error.code === 'P0001' && [
+    'Locked payroll cannot be reopened by an ordinary update',
+    'Finalized, published or paid payroll requires an authorized adjustment; regeneration is blocked',
+  ].includes(error.message);
+  const status = error.status || (error.code === '42501' ? 403 : lockedPayroll || ['23503', '23505', '23514', '40001'].includes(error.code) ? 409 : 503);
+  const message = error instanceof DataApiError ? error.message : lockedPayroll ? 'This payroll is locked. Use an authorized employer EPF adjustment.' : error.code === '40001' ? 'Payroll changed since it was loaded. Reload before adjusting.' : status === 403 ? 'Access denied.' : status === 409 ? 'This change conflicts with existing records or database rules.' : 'Unable to complete the database request.';
   res.status(status).json({ code: error.code || 'DATABASE_UNAVAILABLE', message, details: null, hint: null });
 }
 export function installDataApi(app, { pool, authenticate }) {

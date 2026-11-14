@@ -13277,34 +13277,117 @@ class _AdminDashboardState extends State<AdminDashboard>
                   (row) => row['employee_id']?.toString() == employeeId,
                 );
                 final now = DateTime.now().toIso8601String();
+                final locked = payrollIsLocked(storedRecord!);
                 final record = <String, dynamic>{
                   if (storedRecord != null) ...storedRecord!,
                   for (final field in fields) field.$1: number(field.$1),
-                  'new_ic_no':
-                      storedRecord?['new_ic_no'] ?? employee['new_ic_no'],
-                  'bank_code':
-                      storedRecord?['bank_code'] ?? employee['bank_code'],
-                  'bank_account':
-                      storedRecord?['bank_account'] ?? employee['bank_account'],
+                  if (!locked) ...{
+                    'new_ic_no':
+                        storedRecord?['new_ic_no'] ?? employee['new_ic_no'],
+                    'bank_code':
+                        storedRecord?['bank_code'] ?? employee['bank_code'],
+                    'bank_account': storedRecord?['bank_account'] ??
+                        employee['bank_account'],
+                  },
                   'remarks': remarksController.text.trim().isEmpty
                       ? null
                       : remarksController.text.trim(),
                   'updated_at': now,
-                  'is_published': false,
-                  'published_at': null,
-                  'published_by': null,
+                  if (!locked) ...{
+                    'is_published': false,
+                    'published_at': null,
+                    'published_by': null,
+                  },
                 };
                 record.remove('branch_id');
                 record.remove('branch_name');
-                SavedPayrollAmounts.refreshExistingTotals(record);
+                if (!locked) SavedPayrollAmounts.refreshExistingTotals(record);
 
-                final saved = await SupabaseService.database
-                    .from('payroll')
-                    .update(payrollEditUpdatePayload(storedRecord!, record))
-                    .eq('id', payrollId)
-                    .eq('employee_id', employeeId!)
-                    .select()
-                    .single();
+                final changes = payrollEditUpdatePayload(storedRecord!, record,
+                    preserveUnsetZero: locked);
+                final Map<String, dynamic> saved;
+                if (locked) {
+                  if (changes.keys.any(
+                      (key) => !{'epf_employer', 'updated_at'}.contains(key))) {
+                    throw StateError(
+                        'This payroll is locked. Only an authorized employer EPF adjustment is supported. Remove other changes before saving.');
+                  }
+                  if (!changes.containsKey('epf_employer')) {
+                    saved = Map<String, dynamic>.from(storedRecord!);
+                  } else {
+                    final reasonForm = GlobalKey<FormState>();
+                    var adjustmentReason =
+                        employeeId!.trim().toUpperCase() == 'BLK011'
+                            ? 'BLK011 monthly employer EPF addition'
+                            : '';
+                    final reason = await showDialog<String>(
+                      context: dialogContext,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Authorize employer EPF adjustment'),
+                        content: Form(
+                            key: reasonForm,
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                      'Employer EPF: ${_money(_number(storedRecord!['epf_employer']))} → ${_money(number('epf_employer'))}. Payroll stays locked and this adjustment is recorded.'),
+                                  const SizedBox(height: 12),
+                                  TextFormField(
+                                      initialValue: adjustmentReason,
+                                      maxLength: 1000,
+                                      onChanged: (value) =>
+                                          adjustmentReason = value,
+                                      validator: (value) => (value
+                                                      ?.trim()
+                                                      .length ??
+                                                  0) <
+                                              5
+                                          ? 'Enter a reason with at least 5 characters.'
+                                          : null,
+                                      decoration: const InputDecoration(
+                                          labelText:
+                                              'Adjustment reason (at least 5 characters)')),
+                                ])),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel')),
+                          FilledButton(
+                              onPressed: () {
+                                if (reasonForm.currentState!.validate()) {
+                                  Navigator.pop(
+                                      context, adjustmentReason.trim());
+                                }
+                              },
+                              child: const Text('Authorize adjustment')),
+                        ],
+                      ),
+                    );
+                    if (reason == null) {
+                      if (dialogContext.mounted) {
+                        setDialogState(() => saving = false);
+                      }
+                      return;
+                    }
+                    final result = await SupabaseService.database
+                        .rpc('adjust_payroll_employer_epf', params: {
+                      'p_payroll_id': payrollId.toString(),
+                      'p_amount': number('epf_employer'),
+                      'p_expected_amount':
+                          _number(storedRecord!['epf_employer']),
+                      'p_reason': reason,
+                    });
+                    saved = Map<String, dynamic>.from(result as Map);
+                  }
+                } else {
+                  saved = await SupabaseService.database
+                      .from('payroll')
+                      .update(changes)
+                      .eq('id', payrollId)
+                      .eq('employee_id', employeeId!)
+                      .select()
+                      .single();
+                }
                 _invalidatePayrollReportCaches();
                 unawaited(service
                     .loadPayrollMonthFromSupabase(month)
