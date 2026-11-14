@@ -20242,17 +20242,11 @@ class _AdminDashboardState extends State<AdminDashboard>
       final socsoEmployer = _number(row['socso_employer']);
       final eisEmployee = _number(row['eis_employee']);
       final eisEmployer = _number(row['eis_employer']);
-      bool hasNumber(List<String> keys) => keys.any((key) {
-            final value = employee[key]?.toString().trim() ?? '';
-            return value.isNotEmpty &&
-                !{'-', 'N/A', 'NA', 'NULL', '0'}.contains(value.toUpperCase());
-          });
       if (excludeMissingEpfFromPayment(employee)) {
         summary['excludedEpf'] =
             _number(summary['excludedEpf']) + epfEmployee + epfEmployer;
       }
-      if (!hasNumber(
-          const ['socso_no', 'socsoNo', 'socso_number', 'SOCSO_NO'])) {
+      if (excludeMissingSocsoFromPayment(employee)) {
         summary['excludedSocso'] =
             _number(summary['excludedSocso']) + socsoEmployee + socsoEmployer;
         summary['excludedEis'] =
@@ -21928,7 +21922,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 cellStyle: const pw.TextStyle(fontSize: 7),
                 cellPadding: const pw.EdgeInsets.all(4)),
             pw.Text(
-                'EPF excludes foreign staff with missing EPF numbers only; local staff remain payable. SOCSO/EIS exclude missing SOCSO numbers. Saved payroll net pay is unchanged.',
+                'Only foreign staff are excluded for missing numbers: EPF uses the EPF number; SOCSO/EIS use the SOCSO number. Local staff remain payable. Saved payroll net pay is unchanged.',
                 style: const pw.TextStyle(fontSize: 6)),
           ],
           if (report == 'Payroll Summary' || report == 'HRDF') ...[
