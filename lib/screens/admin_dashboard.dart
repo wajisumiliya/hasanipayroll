@@ -13301,36 +13301,43 @@ class _AdminDashboardState extends State<AdminDashboard>
                 };
                 record.remove('branch_id');
                 record.remove('branch_name');
-                if (!locked) SavedPayrollAmounts.refreshExistingTotals(record);
+                final componentChanges = payrollEditUpdatePayload(
+                    storedRecord!, record,
+                    preserveUnsetZero: locked);
+                final affectsNet = fields.any((field) =>
+                    field.$3 != 'Employer Contributions' &&
+                    componentChanges.containsKey(field.$1));
+                if (!locked || affectsNet) {
+                  SavedPayrollAmounts.refreshExistingTotals(record);
+                }
 
                 final changes = payrollEditUpdatePayload(storedRecord!, record,
                     preserveUnsetZero: locked);
                 final Map<String, dynamic> saved;
                 if (locked) {
-                  if (changes.keys.any(
-                      (key) => !{'epf_employer', 'updated_at'}.contains(key))) {
-                    throw StateError(
-                        'This payroll is locked. Only an authorized employer EPF adjustment is supported. Remove other changes before saving.');
-                  }
-                  if (!changes.containsKey('epf_employer')) {
+                  final adjustmentChanges = Map<String, dynamic>.from(changes)
+                    ..remove('updated_at');
+                  if (adjustmentChanges.isEmpty) {
                     saved = Map<String, dynamic>.from(storedRecord!);
                   } else {
                     final reasonForm = GlobalKey<FormState>();
                     var adjustmentReason =
-                        employeeId!.trim().toUpperCase() == 'BLK011'
+                        employeeId!.trim().toUpperCase() == 'BLK011' &&
+                                adjustmentChanges.length == 1 &&
+                                adjustmentChanges.containsKey('epf_employer')
                             ? 'BLK011 monthly employer EPF addition'
                             : '';
                     final reason = await showDialog<String>(
                       context: dialogContext,
                       builder: (context) => AlertDialog(
-                        title: const Text('Authorize employer EPF adjustment'),
+                        title: const Text('Authorize payroll adjustment'),
                         content: Form(
                             key: reasonForm,
                             child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                      'Employer EPF: ${_money(_number(storedRecord!['epf_employer']))} → ${_money(number('epf_employer'))}. Payroll stays locked and this adjustment is recorded.'),
+                                      'Save ${adjustmentChanges.length} changed payroll field(s). Publication and payment status stay unchanged; the changes and reason are recorded.'),
                                   const SizedBox(height: 12),
                                   TextFormField(
                                       initialValue: adjustmentReason,
@@ -13370,11 +13377,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                       return;
                     }
                     final result = await SupabaseService.database
-                        .rpc('adjust_payroll_employer_epf', params: {
+                        .rpc('adjust_payroll', params: {
                       'p_payroll_id': payrollId.toString(),
-                      'p_amount': number('epf_employer'),
-                      'p_expected_amount':
-                          _number(storedRecord!['epf_employer']),
+                      'p_changes': adjustmentChanges,
+                      'p_expected': Map<String, dynamic>.from(storedRecord!),
                       'p_reason': reason,
                     });
                     saved = Map<String, dynamic>.from(result as Map);

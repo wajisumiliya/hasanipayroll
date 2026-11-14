@@ -1,6 +1,7 @@
 import 'attendance_working_rules.dart';
 import '../screens/supabase_service.dart';
 import 'payroll_calculation_service.dart';
+import 'payroll_edit_update.dart';
 import 'app_service.dart';
 
 /// ============================================================================
@@ -453,6 +454,21 @@ class AttendancePayrollService {
     // ------------------------------------------------------------------------
     // 1. SALARY DEFAULT
     // ------------------------------------------------------------------------
+
+    final existingPayroll = previewOnly
+        ? null
+        : usePreloadedData
+            ? preloadedExistingPayroll
+            : await _getPayrollForPeriod(employeeId, _periodText(month));
+    if (existingPayroll != null && payrollIsLocked(existingPayroll)) {
+      return PayrollGenerationItem(
+        employeeId: employeeId,
+        employeeName: employeeName,
+        generated: false,
+        message:
+            'Locked payroll preserved. Use Edit Payroll for an authorized adjustment.',
+      );
+    }
 
     final salaryDefault = usePreloadedData
         ? preloadedSalaryDefault
@@ -943,12 +959,7 @@ class AttendancePayrollService {
     // ------------------------------------------------------------------------
 
     if (!previewOnly) {
-      final existing = usePreloadedData
-          ? preloadedExistingPayroll
-          : await _getPayrollForPeriod(
-              employeeId,
-              period,
-            );
+      final existing = existingPayroll;
 
       if (existing != null) {
         if (!overwriteExisting) {
@@ -1226,7 +1237,7 @@ class AttendancePayrollService {
   ) async {
     final response = await SupabaseService.database
         .from('payroll')
-        .select('id,employee_id,period')
+        .select()
         .inFilter('employee_id', employeeIds)
         .eq('period', period);
 
@@ -1264,7 +1275,7 @@ class AttendancePayrollService {
   ) async {
     final response = await SupabaseService.database
         .from('payroll')
-        .select('id,employee_id,period')
+        .select()
         .eq('employee_id', employeeId)
         .eq('period', period)
         .maybeSingle();

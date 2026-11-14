@@ -10,6 +10,7 @@ const TABLES = new Set([
 ]);
 const RPCS = new Set([
   'adjust_payroll_employer_epf',
+  'adjust_payroll',
   'admin_branch_activity_logs', 'approve_employee_request', 'change_daily_report_pin',
   'get_employee_garden', 'record_employee_garden_visit', 'register_notification_device',
   'schedule_monthly_payslip_release', 'set_employee_active_status', 'tend_employee_garden',
@@ -183,7 +184,7 @@ function sendError(res, error) {
     'Finalized, published or paid payroll requires an authorized adjustment; regeneration is blocked',
   ].includes(error.message);
   const status = error.status || (error.code === '42501' ? 403 : lockedPayroll || ['23503', '23505', '23514', '40001'].includes(error.code) ? 409 : 503);
-  const message = error instanceof DataApiError ? error.message : lockedPayroll ? 'This payroll is locked. Use an authorized employer EPF adjustment.' : error.code === '40001' ? 'Payroll changed since it was loaded. Reload before adjusting.' : status === 403 ? 'Access denied.' : status === 409 ? 'This change conflicts with existing records or database rules.' : 'Unable to complete the database request.';
+  const message = error instanceof DataApiError ? error.message : lockedPayroll ? 'This payroll is locked. Save it through an authorized payroll adjustment.' : error.code === '40001' ? 'Payroll changed since it was loaded. Reload before adjusting.' : status === 403 ? 'Access denied.' : status === 409 ? 'This change conflicts with existing records or database rules.' : 'Unable to complete the database request.';
   res.status(status).json({ code: error.code || 'DATABASE_UNAVAILABLE', message, details: null, hint: null });
 }
 export function installDataApi(app, { pool, authenticate }) {

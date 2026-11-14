@@ -4,6 +4,37 @@ import '../lib/services/payroll_edit_update.dart';
 import '../lib/services/saved_payroll_amounts.dart';
 
 void main() {
+  test(
+      'Locked payroll correction includes financial changes and preserves status',
+      () {
+    final saved = <String, dynamic>{
+      'id': 'LOCKED',
+      'employee_id': 'BLK011',
+      'period': '2026-10-01',
+      'basic_salary': 2500,
+      'epf_employee': 0,
+      'epf_employer': 100,
+      'net_salary': 2500,
+      'is_published': true,
+      'is_paid': true,
+      'remarks': 'Original',
+    };
+    final edited = <String, dynamic>{
+      ...saved,
+      'basic_salary': 3000,
+      'epf_employee': 50,
+      'remarks': 'Reviewed correction',
+    };
+    SavedPayrollAmounts.refreshExistingTotals(edited);
+    expect(payrollEditUpdatePayload(saved, edited, preserveUnsetZero: true), {
+      'basic_salary': 3000,
+      'epf_employee': 50,
+      'net_salary': 2950,
+      'remarks': 'Reviewed correction',
+    });
+    expect(edited['is_published'], true);
+    expect(edited['is_paid'], true);
+  });
   test('All published, paid and finalized markers identify locked payroll', () {
     for (final key in ['is_published', 'is_paid', 'isPaid', 'is_finalized']) {
       expect(payrollIsLocked({key: true}), isTrue);
