@@ -207,10 +207,12 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                                 await showDialog<void>(
                                     context: context,
                                     barrierDismissible: false,
-                                    builder: (_) => SalaryReportTemporaryPayroll(
-                                        startYear: year,
-                                        load: widget.loadTemporaryPayroll!,
-                                        save: widget.saveTemporaryPayroll!));
+                                    builder: (_) =>
+                                        SalaryReportTemporaryPayroll(
+                                            startYear: year,
+                                            load: widget.loadTemporaryPayroll!,
+                                            save:
+                                                widget.saveTemporaryPayroll!));
                                 if (!mounted) return;
                                 branchId = null;
                                 await reload();
@@ -302,8 +304,16 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                                                           width: 180,
                                                           child: Text(
                                                               '${branch['rows'][i]['name']}'))),
-                                                      for (var month = 0; month < (branch['rows'][i]['values'] as List).length; month++)
-                                                        DataCell(Text('${money(branch['rows'][i]['values'][month])}${(branch['rows'][i]['temporary_months'] as List? ?? []).contains(months[month]['key']) ? ' *' : ''}'))
+                                                      for (var month = 0;
+                                                          month <
+                                                              (branch['rows'][i]
+                                                                          [
+                                                                          'values']
+                                                                      as List)
+                                                                  .length;
+                                                          month++)
+                                                        DataCell(Text(
+                                                            '${money(branch['rows'][i]['values'][month])}${(branch['rows'][i]['temporary_months'] as List? ?? []).contains(months[month]['key']) ? ' *' : ''}'))
                                                     ]),
                                                   DataRow(cells: [
                                                     const DataCell(Text('TOTAL',
