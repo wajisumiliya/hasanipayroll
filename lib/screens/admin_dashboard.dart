@@ -13403,12 +13403,20 @@ class _AdminDashboardState extends State<AdminDashboard>
                 setDialogState(() {
                   calculatingStatutory = false;
                   statutoryInfo = result['contributions_applicable'] == 0
-                      ? 'EPF, SOCSO and EIS are RM0 because basic salary minus '
-                          'late and unpaid deductions is below RM500.'
+                      ? 'Standard EPF, SOCSO and EIS are RM0 because basic salary minus '
+                              'late and unpaid deductions is below RM500.' +
+                          (result['epf_employer_top_up']! > 0
+                              ? ' The monthly employer EPF addition of '
+                                  '${_money(result['epf_employer_top_up']!)} still applies.'
+                              : '')
                       : 'EPF updated from wage '
-                          '${_money(result['epf_wage']!)}; SOCSO updated from '
-                          'wage ${_money(result['socso_wage']!)}; EIS updated '
-                          'from wage ${_money(result['statutory_wage']!)}.';
+                              '${_money(result['epf_wage']!)}; SOCSO updated from '
+                              'wage ${_money(result['socso_wage']!)}; EIS updated '
+                              'from wage ${_money(result['statutory_wage']!)}.' +
+                          (result['epf_employer_top_up']! > 0
+                              ? ' Employer EPF includes the monthly addition of '
+                                  '${_money(result['epf_employer_top_up']!)}.'
+                              : '');
                 });
               } catch (e) {
                 if (revision == statutoryRevision && dialogContext.mounted) {

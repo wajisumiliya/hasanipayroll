@@ -19,6 +19,8 @@ import 'app_service.dart';
 ///      EPF employee = statutory wage x 2%
 ///      EPF employer = statutory wage x 2%
 ///    Other EPF categories use the supplied EPF schedule.
+///    BLK011 receives an additional RM100 employer EPF each payroll month,
+///    including months with zero standard EPF. Employee EPF is unchanged.
 /// 6. SOCSO always uses FIRST CATEGORY and the supplied SOCSO schedule exactly.
 /// 7. If employee_salary_defaults.eis_applicable = false:
 ///      EIS employee = 0
@@ -129,6 +131,10 @@ class AttendancePayrollService {
       );
     }
 
+    final epfEmployer = PayrollCalculationService.employerEpfWithMonthlyTopUp(
+      employeeId: employeeId,
+      calculatedEmployer: epf.employer,
+    );
     final calculatedSocso = contributionsApplicable && socsoEnabled
         ? _findContribution(
             schedule: socsoCategory == 'type2'
@@ -159,7 +165,9 @@ class AttendancePayrollService {
       'contribution_eligibility_wage': contributionEligibilityWage,
       'contributions_applicable': contributionsApplicable ? 1.0 : 0.0,
       'epf_employee': epf.employee,
-      'epf_employer': epf.employer,
+      'epf_employer': epfEmployer,
+      'epf_employer_top_up':
+          PayrollCalculationService.monthlyEmployerEpfTopUp(employeeId),
       'socso_employee': socso.employee,
       'socso_employer': socso.employer,
       'eis_employee': eis.employee,
@@ -789,6 +797,11 @@ class AttendancePayrollService {
       );
     }
 
+    final epfEmployer = PayrollCalculationService.employerEpfWithMonthlyTopUp(
+      employeeId: employeeId,
+      calculatedEmployer: epf.employer,
+    );
+
     // ------------------------------------------------------------------------
     // 5. SOCSO - FIRST CATEGORY
     // ------------------------------------------------------------------------
@@ -863,7 +876,7 @@ class AttendancePayrollService {
 
       // Statutory contributions
       'epf_employee': epf.employee,
-      'epf_employer': epf.employer,
+      'epf_employer': epfEmployer,
 
       'socso_employee': socso.employee,
       'socso_employer': socso.employer,
@@ -897,7 +910,8 @@ class AttendancePayrollService {
                   'EPF wage: ${epfWage.toStringAsFixed(2)}. '
                   'SOCSO wage: ${socsoWage.toStringAsFixed(2)}. '
                   'EPF employee: ${epf.employee.toStringAsFixed(2)}. '
-                  'EPF employer: ${epf.employer.toStringAsFixed(2)}. '
+                  'EPF employer: ${epfEmployer.toStringAsFixed(2)}. '
+                  'Monthly employer EPF addition: ${PayrollCalculationService.monthlyEmployerEpfTopUp(employeeId).toStringAsFixed(2)}. '
                   'SOCSO employee: ${socso.employee.toStringAsFixed(2)}. '
                   'SOCSO employer: ${socso.employer.toStringAsFixed(2)}. '
                   'EIS employee: ${eis.employee.toStringAsFixed(2)}. '
@@ -959,7 +973,7 @@ class AttendancePayrollService {
             //publicHolidayWorkedDays: publicHolidayWorkedDays,
             shortageMinutes: totalShortageMinutes,
             epfEmployee: epf.employee,
-            epfEmployer: epf.employer,
+            epfEmployer: epfEmployer,
             socsoEmployee: socso.employee,
             socsoEmployer: socso.employer,
             eisEmployee: eis.employee,
@@ -1018,7 +1032,7 @@ class AttendancePayrollService {
       //publicHolidayWorkedDays: publicHolidayWorkedDays,
       shortageMinutes: totalShortageMinutes,
       epfEmployee: epf.employee,
-      epfEmployer: epf.employer,
+      epfEmployer: epfEmployer,
       socsoEmployee: socso.employee,
       socsoEmployer: socso.employer,
       eisEmployee: eis.employee,

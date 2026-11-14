@@ -4,6 +4,16 @@
 /// basic_salary and fw_salary. [salaryBase] deliberately chooses one salary
 /// source so those records are never double counted.
 class PayrollCalculationService {
+  /// Monthly employer-only addition, applied to a fresh statutory calculation.
+  static double monthlyEmployerEpfTopUp(String employeeId) =>
+      employeeId.trim().toUpperCase() == 'BLK011' ? 100.0 : 0.0;
+
+  static double employerEpfWithMonthlyTopUp({
+    required String employeeId,
+    required double calculatedEmployer,
+  }) =>
+      _roundMoney(calculatedEmployer + monthlyEmployerEpfTopUp(employeeId));
+
   static double payableAttendanceAllowance({
     required double configuredAmount,
     required bool disqualified,
