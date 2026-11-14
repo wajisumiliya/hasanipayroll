@@ -49,3 +49,38 @@ void countStatutoryEmployee(Map<String, dynamic> summary, String contribution,
 
 String statutoryAmountWithEmployees(double amount, int employees) =>
     '${amount.toStringAsFixed(2)} / $employees emp';
+
+/// Use saved payroll contributions, independently of missing-number exclusions.
+Map<String, dynamic>? zeroStatutoryContributor({
+  required String employeeId,
+  required String name,
+  required String branch,
+  required double employeeAmount,
+  required double employerAmount,
+}) {
+  if (employeeAmount != 0 || employerAmount != 0) return null;
+  return {
+    'employeeId': employeeId,
+    'name': name.trim().isEmpty ? employeeId : name.trim(),
+    'branch': branch,
+  };
+}
+
+List<Map<String, dynamic>> statutoryZeroContributorList(
+    Iterable<Map<String, dynamic>> branches, String key) {
+  final employees = <String, Map<String, dynamic>>{};
+  for (final branch in branches) {
+    if (branch['branch'] == 'GRAND TOTAL') continue;
+    for (final employee in (branch[key] as List? ?? const [])) {
+      final row = Map<String, dynamic>.from(employee as Map);
+      employees[row['employeeId'].toString()] = row;
+    }
+  }
+  return employees.values.toList()
+    ..sort((a, b) {
+      final branch = a['branch'].toString().compareTo(b['branch'].toString());
+      return branch != 0
+          ? branch
+          : a['employeeId'].toString().compareTo(b['employeeId'].toString());
+    });
+}

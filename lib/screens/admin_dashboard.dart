@@ -20213,6 +20213,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                 'excludedSocso': 0.0,
                 'excludedEis': 0.0,
                 for (final key in statutoryEmployeeCountKeys) key: 0,
+                'zeroEpfEmployees': <Map<String, dynamic>>[],
+                'zeroSocsoEmployees': <Map<String, dynamic>>[],
                 'unpaid': 0.0,
                 'pcb': 0.0,
                 'zakat': 0.0,
@@ -20244,6 +20246,22 @@ class _AdminDashboardState extends State<AdminDashboard>
       final socsoEmployer = _number(row['socso_employer']);
       final eisEmployee = _number(row['eis_employee']);
       final eisEmployer = _number(row['eis_employer']);
+      for (final contribution in [
+        ('zeroEpfEmployees', epfEmployee, epfEmployer),
+        ('zeroSocsoEmployees', socsoEmployee, socsoEmployer),
+      ]) {
+        final zeroContributor = zeroStatutoryContributor(
+          employeeId: employeeId,
+          name: (employee['name'] ?? row['employee_name'] ?? row['name'] ?? '')
+              .toString(),
+          branch: branch,
+          employeeAmount: contribution.$2,
+          employerAmount: contribution.$3,
+        );
+        if (zeroContributor != null) {
+          (summary[contribution.$1] as List).add(zeroContributor);
+        }
+      }
       final excludeEpf = excludeMissingEpfFromPayment(employee);
       final excludeSocso = excludeMissingSocsoFromPayment(employee);
       countStatutoryEmployee(
@@ -21949,6 +21967,11 @@ class _AdminDashboardState extends State<AdminDashboard>
                       pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
                   cellStyle: const pw.TextStyle(fontSize: 7),
                   cellPadding: const pw.EdgeInsets.all(4)),
+              pw.SizedBox(height: 8),
+              payrollSummaryZeroContributorLists(
+                statutoryZeroContributorList(rows, 'zeroEpfEmployees'),
+                statutoryZeroContributorList(rows, 'zeroSocsoEmployees'),
+              ),
             ],
             if (report == 'HRDF') ...[
               pw.Spacer(),

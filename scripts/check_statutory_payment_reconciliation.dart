@@ -122,5 +122,41 @@ void main() {
   countStatutoryEmployee(counts, 'eis', 0, true);
   expectEqual(
       counts['eisEmployees'], 0, 'No EIS contribution means no employee');
+  Map<String, dynamic>? zero(String id, double ee, double er) =>
+      zeroStatutoryContributor(
+        employeeId: id,
+        name: id == 'LOCAL' ? 'Local employee' : '',
+        branch: 'Branch A',
+        employeeAmount: ee,
+        employerAmount: er,
+      );
+  expectEqual(zero('LOCAL', 0, 0)!['name'], 'Local employee',
+      'Local zero contributions listed');
+  expectEqual(zero('FOREIGN', 0, 0)!['name'], 'FOREIGN',
+      'Foreign zero contributions listed with fallback name');
+  expectEqual(zero('EMPLOYER-ONLY', 0, 20) == null, true,
+      'Employer-only contribution is not a zero contribution');
+  expectEqual(zero('EMPLOYEE-ONLY', 10, 0) == null, true,
+      'Employee-only contribution is not a zero contribution');
+  expectEqual(zero('FOREIGN-MISSING-NUMBER', 10, 10) == null, true,
+      'Missing number exclusion does not put nonzero payroll in the zero list');
+  final zeroList = statutoryZeroContributorList([
+    {
+      'branch': 'Branch A',
+      'zeroEpfEmployees': [zero('LOCAL', 0, 0)]
+    },
+    {
+      'branch': 'Branch A',
+      'zeroEpfEmployees': [zero('LOCAL', 0, 0)]
+    },
+    {
+      'branch': 'GRAND TOTAL',
+      'zeroEpfEmployees': [zero('TOTAL', 0, 0)]
+    },
+  ], 'zeroEpfEmployees');
+  expectEqual(
+      zeroList.length, 1, 'List deduplicates staff and ignores grand total');
+  expectEqual(statutoryZeroContributorList([], 'zeroSocsoEmployees').length, 0,
+      'Empty SOCSO list');
   print('Statutory EPF/SOCSO/EIS reconciliation regression checks passed.');
 }

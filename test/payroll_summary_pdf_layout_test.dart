@@ -43,6 +43,22 @@ void main() {
           ),
           pw.Text('Statutory payment reconciliation'),
           payrollSummarySingleLine('58230.00 / 170 emp'),
+          payrollSummaryZeroContributorLists(
+            List.generate(
+                branchCount,
+                (i) => {
+                      'employeeId': 'EPF$i',
+                      'name': 'EPF zero contribution employee $i',
+                      'branch': 'Branch $i',
+                    }),
+            List.generate(
+                branchCount + 5,
+                (i) => {
+                      'employeeId': 'SOCSO$i',
+                      'name': 'SOCSO zero contribution employee $i',
+                      'branch': 'Branch $i',
+                    }),
+          ),
         ],
       );
       final fitted = fitPayrollSummaryToA4(content);
