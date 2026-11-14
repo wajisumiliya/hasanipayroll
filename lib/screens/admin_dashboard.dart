@@ -1,6 +1,7 @@
 import '../services/saved_payroll_amounts.dart';
 import '../services/statutory_payment_reconciliation.dart';
 import '../services/payroll_summary_pdf_layout.dart';
+import '../services/payroll_edit_update.dart';
 import '../widgets/salary_report_page.dart';
 import '../widgets/bonus_report_dialog.dart';
 import '../widgets/attendance_allowance_report_dialog.dart';
@@ -13267,18 +13268,17 @@ class _AdminDashboardState extends State<AdminDashboard>
               });
 
               try {
+                final payrollId = storedRecord!['id'];
+                if (payrollId == null || payrollId.toString().trim().isEmpty) {
+                  throw StateError(
+                      'Saved payroll ID is missing. Reload the payroll before saving.');
+                }
                 final employee = employees.firstWhere(
                   (row) => row['employee_id']?.toString() == employeeId,
                 );
                 final now = DateTime.now().toIso8601String();
-                final period =
-                    '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}-01';
                 final record = <String, dynamic>{
                   if (storedRecord != null) ...storedRecord!,
-                  'id': storedRecord?['id'] ??
-                      'PAY-$employeeId-${month.year}-${month.month.toString().padLeft(2, '0')}',
-                  'employee_id': employeeId,
-                  'period': period,
                   for (final field in fields) field.$1: number(field.$1),
                   'new_ic_no':
                       storedRecord?['new_ic_no'] ?? employee['new_ic_no'],
@@ -13289,7 +13289,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                   'remarks': remarksController.text.trim().isEmpty
                       ? null
                       : remarksController.text.trim(),
-                  'created_at': storedRecord?['created_at'] ?? now,
                   'updated_at': now,
                   'is_published': false,
                   'published_at': null,
@@ -13299,10 +13298,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                 record.remove('branch_name');
                 SavedPayrollAmounts.refreshExistingTotals(record);
 
-                await SupabaseService.database.from('payroll').upsert(
-                      record,
-                      onConflict: 'employee_id,period',
-                    );
+                final saved = await SupabaseService.database
+                    .from('payroll')
+                    .update(payrollEditUpdatePayload(storedRecord!, record))
+                    .eq('id', payrollId)
+                    .eq('employee_id', employeeId!)
+                    .select()
+                    .single();
                 _invalidatePayrollReportCaches();
                 unawaited(service
                     .loadPayrollMonthFromSupabase(month)
@@ -13310,7 +13312,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                 selectedPayrollMonth = month;
                 if (!dialogContext.mounted) return;
                 setDialogState(() {
-                  storedRecord = Map<String, dynamic>.from(record);
+                  storedRecord = Map<String, dynamic>.from(saved);
+                  fillControllers(storedRecord);
                   saving = false;
                   hasUnsavedChanges = false;
                   lastSavedAt = DateTime.now();

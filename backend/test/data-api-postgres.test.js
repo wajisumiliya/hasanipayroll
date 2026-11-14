@@ -199,6 +199,46 @@ test('Neon migration and authenticated HTTP adapter enforce imported schema poli
       assert.equal(Number(row.elaun_kedatangan), 0);
       await assert.rejects(pool.query("UPDATE payroll SET attendance_allowance_default=-1 WHERE id='FIX_P1'"), {code:'23514'});
     });
+    await t.test('editing employer EPF updates the saved row without running insert-only payroll guards', async () => {
+      await pool.query(`CREATE FUNCTION public.payroll_edit_insert_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN IF NEW.id='FIX_P1' THEN RAISE EXCEPTION 'Existing payroll must be edited with UPDATE'; END IF; RETURN NEW; END $$;
+        CREATE TRIGGER payroll_edit_insert_guard BEFORE INSERT ON public.payroll
+          FOR EACH ROW EXECUTE FUNCTION public.payroll_edit_insert_guard();`);
+      try {
+        const upsert = await request('/payroll?on_conflict=employee_id,period', 'admin', {
+          method: 'POST', headers: {Prefer: 'resolution=merge-duplicates'},
+          body: JSON.stringify({id:'FIX_P1',employee_id:'FIX_E1',period:'2026-01-01',epf_employer:100}),
+        });
+        assert.equal(upsert.status,503);
+        assert.equal((await upsert.json()).code,'P0001');
+        const edited = await request('/payroll?id=eq.FIX_P1&employee_id=eq.FIX_E1', 'admin', {
+          method: 'PATCH', headers: {Prefer:'return=representation',Accept:'application/vnd.pgrst.object+json'},
+          body: JSON.stringify({epf_employer:100,is_published:false,published_at:null,published_by:null}),
+        });
+        assert.equal(edited.status,200);
+        const row = await edited.json();
+        assert.equal(row.id,'FIX_P1');
+        assert.equal(row.employee_id,'FIX_E1');
+        assert.equal(row.period,'2026-01-01');
+        assert.equal(Number(row.epf_employer),100);
+        assert.equal(Number(row.epf_employee),0);
+        assert.equal(Number(row.basic_salary),1234.5);
+        assert.equal(row.is_published,false);
+        assert.equal((await pool.query('SELECT count(*)::int AS n FROM payroll')).rows[0].n,3);
+        assert.equal(Number((await pool.query("SELECT epf_employer FROM payroll WHERE id='FIX_P2'")).rows[0].epf_employer),0);
+        const missing = await request('/payroll?id=eq.MISSING&employee_id=eq.FIX_E1', 'admin', {
+          method:'PATCH', headers:{Prefer:'return=representation',Accept:'application/vnd.pgrst.object+json'},
+          body:JSON.stringify({epf_employer:100}),
+        });
+        assert.equal(missing.status,406);
+        assert.equal((await missing.json()).code,'PGRST116');
+        assert.equal((await pool.query('SELECT count(*)::int AS n FROM payroll')).rows[0].n,3);
+      } finally {
+        await pool.query(`DROP TRIGGER payroll_edit_insert_guard ON public.payroll;
+          DROP FUNCTION public.payroll_edit_insert_guard();
+          UPDATE payroll SET epf_employer=0,is_published=true WHERE id='FIX_P1';`);
+      }
+    });
     await t.test('admin employee information saves salary routing through authenticated database policies', async () => {
       const changed = await request('/employees?employee_id=eq.FIX_E1', 'admin', {
         method: 'PATCH', headers: {Prefer: 'return=representation'},
