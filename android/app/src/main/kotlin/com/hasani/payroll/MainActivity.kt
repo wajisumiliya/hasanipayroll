@@ -1,5 +1,8 @@
 package com.hasani.payroll
 
+import android.content.ContentValues
+import android.os.Environment
+import android.provider.MediaStore
 import android.os.Bundle
 import android.os.Build
 import android.content.Intent
@@ -55,6 +58,49 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 else -> result.notImplemented()
+            }
+        }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.hasani.payroll/downloads",
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "savePdf") {
+                result.notImplemented()
+            } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                result.success(false) // Dart opens the system save picker.
+            } else {
+                val bytes = call.argument<ByteArray>("bytes")
+                val filename = call.argument<String>("filename")
+                if (bytes == null || bytes.isEmpty() || filename.isNullOrBlank() ||
+                    filename.contains('/') || filename.contains('\\')) {
+                    result.error("INVALID_PDF", "Invalid payslip file", null)
+                } else {
+                    var uri: Uri? = null
+                    try {
+                        val values = ContentValues().apply {
+                            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                            put(MediaStore.MediaColumns.IS_PENDING, 1)
+                        }
+                        val destination = contentResolver.insert(
+                            MediaStore.Downloads.EXTERNAL_CONTENT_URI, values,
+                        ) ?: error("Unable to create download")
+                        uri = destination
+                        val stream = contentResolver.openOutputStream(destination)
+                            ?: error("Unable to open download")
+                        stream.use { it.write(bytes) }
+                        values.clear()
+                        values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                        check(contentResolver.update(destination, values, null, null) == 1)
+                        result.success(true)
+                    } catch (error: Exception) {
+                        uri?.let {
+                            try { contentResolver.delete(it, null, null) } catch (_: Exception) {}
+                        }
+                        result.error("DOWNLOAD_FAILED", "Unable to save payslip to Downloads", null)
+                    }
+                }
             }
         }
         MethodChannel(

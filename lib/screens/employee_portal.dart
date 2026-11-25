@@ -4,13 +4,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/payroll.dart';
 import '../services/app_service.dart';
 import '../screens/attendance_dialog.dart';
 import '../services/pdf_service.dart';
+import '../services/payslip_download_service.dart';
 import 'employee_ot_request_page.dart';
 import 'employee_leave_request_page.dart';
 import 'login_screen.dart';
@@ -3065,13 +3065,16 @@ class _EmployeePortalState extends State<EmployeePortal>
       final period = DateFormat('yyyy-MM').format(payroll.period);
       final filename = 'payslip_${payroll.employeeId}_$period.pdf';
 
-      // Share PDF supports opening/saving on Android and downloading on web;
-      // layoutPdf opens the print dialog rather than a download destination.
-      await Printing.sharePdf(bytes: bytes, filename: filename);
+      final saved = await PayslipDownloadService.save(bytes, filename);
+      if (saved && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payslip downloaded successfully.')),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Unable to open payslip: $e')));
+          .showSnackBar(SnackBar(content: Text('Unable to download payslip: $e')));
     }
   }
 }
