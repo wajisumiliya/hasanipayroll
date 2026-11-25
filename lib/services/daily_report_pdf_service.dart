@@ -230,9 +230,23 @@ class DailyReportPdfService {
                             decorationThickness: .8)),
                   ),
                   pw.SizedBox(height: 6),
-                  pw.Text(text(value),
-                      style: pw.TextStyle(
-                          fontSize: narrativeFontSize(value), lineSpacing: 6)),
+                  pw.Expanded(
+                    child: pw.LayoutBuilder(
+                      builder: (context, constraints) => pw.FittedBox(
+                        fit: pw.BoxFit.scaleDown,
+                        alignment: pw.Alignment.topLeft,
+                        // Measure all lines before fitting the fixed A4 section.
+                        // Height-constrained Text can drop overflowing text.
+                        child: pw.SizedBox(
+                          width: constraints!.maxWidth,
+                          child: pw.Text(text(value),
+                              style: pw.TextStyle(
+                                  fontSize: narrativeFontSize(value),
+                                  lineSpacing: 2)),
+                        ),
+                      ),
+                    ),
+                  ),
                 ]),
           ),
         );
