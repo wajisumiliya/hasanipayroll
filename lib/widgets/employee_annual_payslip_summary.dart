@@ -1,3 +1,4 @@
+import 'annual_payslip_form.dart';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -185,30 +186,6 @@ class _EmployeeAnnualPayslipSummaryState
         error = 'Unable to show annual summary: $e';
       }
     }
-    Widget table(List<String> headers, List<List<String>> rows) =>
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-              headingRowHeight: 54,
-              dataRowMinHeight: 48,
-              dataRowMaxHeight: 120,
-              columnSpacing: 24,
-              border: TableBorder.all(color: const Color(0xFFCBD5E1)),
-              headingTextStyle: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.black),
-              columns: [
-                for (final h in headers) DataColumn(label: Text(h))
-              ],
-              rows: [
-                for (final r in rows)
-                  DataRow(cells: [
-                    for (final value in r)
-                      DataCell(ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 420),
-                          child: Text(value)))
-                  ])
-              ]),
-        );
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Wrap(
           spacing: 12,
@@ -295,19 +272,7 @@ class _EmployeeAnnualPayslipSummaryState
             child: Text(
                 'Choose an employee and year to view the annual payslip summary.'))
       else ...[
-        Text('ANNUAL SALARY YEAR $year',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Text('NAME: ${employee!.name}   |   ID: ${employee.employeeId}'),
-        const SizedBox(height: 12),
-        table(AnnualPayslipSummary.salaryHeaders,
-            AnnualPayslipExport.salaryRows(summary)),
-        const SizedBox(height: 24),
-        Text('WELFARE/GIFT/BONUS YEAR $year',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        table(AnnualPayslipSummary.bonusHeaders,
-            AnnualPayslipExport.bonusRows(summary)),
+        AnnualPayslipForm(summary: summary, name: employee!.name),
         const SizedBox(height: 12),
         const Text(AnnualPayslipSummary.explanation,
             style: TextStyle(fontSize: 12, color: Colors.black54)),
