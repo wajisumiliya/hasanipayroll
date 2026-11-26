@@ -14428,6 +14428,8 @@ class _AdminDashboardState extends State<AdminDashboard>
               tab: _payslipDirectoryTab,
               history: history,
               annualSummary: EmployeeAnnualPayslipSummary(
+                loadWelfare: service.loadEmployeeWelfare,
+                importWelfare: service.importEmployeeWelfare,
                 employees: service.allEmployees,
                 records: service.payroll,
                 onRefresh: () async {

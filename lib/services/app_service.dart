@@ -499,6 +499,39 @@ class AppService extends ChangeNotifier {
     );
   }
 
+  Future<List<Map<String, dynamic>>> loadEmployeeWelfare() async {
+    _requireSalaryReportAdmin();
+    final session = NeonApi.sessionVersion;
+    final data = await _getAuth('/api/reports/employee-welfare');
+    if (session != NeonApi.sessionVersion) {
+      throw StateError('Session changed. Reload the summary.');
+    }
+    if (data['ok'] != true) {
+      throw StateError('Unable to load employee welfare.');
+    }
+    return (data['entries'] as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> importEmployeeWelfare(
+      Uint8List bytes, bool commit) async {
+    _requireSalaryReportAdmin();
+    final session = NeonApi.sessionVersion;
+    final data = await NeonApi.jsonRequest(
+        '/api/reports/employee-welfare/import',
+        method: 'POST',
+        body: {'file_base64': base64Encode(bytes), 'commit': commit});
+    if (session != NeonApi.sessionVersion) {
+      throw StateError('Session changed. Reload the summary.');
+    }
+    if (data['ok'] != true) {
+      throw StateError(
+          data['message']?.toString() ?? 'Unable to import welfare.');
+    }
+    return data;
+  }
+
   Future<Map<String, dynamic>> loadSalaryReport(int startYear) async {
     final user = currentUser;
     if (user == null ||

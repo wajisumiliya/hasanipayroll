@@ -88,4 +88,47 @@ void main() {
       await File(output).writeAsBytes(bytes);
     }
   });
+  test(
+      'welfare keeps full dates, employee and year; PDF and Excel include gifts with bonuses',
+      () async {
+    final summary =
+        AnnualPayslipSummary(employeeId: 'E1', year: 2026, records: [
+      saved('E1', '2026-03-01', 2000, bonus: 50)
+    ], welfare: [
+      {
+        'employee_id': 'E1',
+        'payment_date': '2026-03-15',
+        'particulars': 'Wedding gift',
+        'amount': 1234.55
+      },
+      {
+        'employee_id': 'E1',
+        'payment_date': '2025-03-15',
+        'particulars': 'Prior-year welfare',
+        'amount': 999
+      },
+      {
+        'employee_id': 'E2',
+        'payment_date': '2026-03-15',
+        'particulars': 'Other employee',
+        'amount': 888
+      },
+    ]);
+    final rows = AnnualPayslipExport.bonusRows(summary);
+    expect(summary.benefits, hasLength(2));
+    expect(rows[1], ['2', '15/03/2026', 'Wedding gift', '1,234.55']);
+    final bytes = await AnnualPayslipExport.pdf(summary, 'Sample Employee');
+    final contents = pdfContents(bytes);
+    expect(contents, contains('15/03/2026'));
+    expect(contents, contains('Wedding gift'));
+    expect(contents, isNot(contains('Prior-year welfare')));
+    expect(contents, isNot(contains('Other employee')));
+    final book = xls.Excel.decodeBytes(
+        AnnualPayslipExport.excel(summary, 'Sample Employee'));
+    final sheet = book['Annual Summary'];
+    expect(sheet.cell(xls.CellIndex.indexByString('B24')).value,
+        xls.TextCellValue('15/03/2026'));
+    expect(sheet.cell(xls.CellIndex.indexByString('F24')).value,
+        xls.DoubleCellValue(1234.55));
+  });
 }

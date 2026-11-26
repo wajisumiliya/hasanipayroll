@@ -1,3 +1,4 @@
+import {installEmployeeWelfareApi} from './employee-welfare.js';
 import {installSalaryReportTemporaryApi} from './salary-report-temporary.js';
 import {installSalaryReportAssignmentsApi} from './salary-report-assignments.js';
 import {installSalaryReportApi} from './salary-report.js';
@@ -4326,6 +4327,7 @@ app.get("/api/neon/preview/employees", authenticate, async (req, res) => {
 installDataApi(app, { pool, authenticate });
 installNotificationApi(app, { pool, authenticate });
 installSalaryReportApi(app, { pool, authenticate });
+installEmployeeWelfareApi(app, { pool, authenticate });
 installSalaryReportAssignmentsApi(app, { pool, authenticate });
 installSalaryReportTemporaryApi(app, { pool, authenticate });
 installPenguinPetApi(app, { pool, authenticate });

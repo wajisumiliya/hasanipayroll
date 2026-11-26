@@ -21,14 +21,14 @@ class AnnualPayslipExport {
       ];
   static List<List<String>> bonusRows(AnnualPayslipSummary summary) => [
         for (var i = 0;
-            i < (summary.bonuses.length < 5 ? 5 : summary.bonuses.length);
+            i < (summary.benefits.length < 5 ? 5 : summary.benefits.length);
             i++)
-          i < summary.bonuses.length
+          i < summary.benefits.length
               ? [
                   '${i + 1}',
-                  DateFormat('MM/yyyy').format(summary.bonuses[i].period),
-                  'Payroll bonus',
-                  money(summary.bonuses[i].bonus)
+                  summary.benefits[i].dateLabel,
+                  summary.benefits[i].particulars,
+                  money(summary.benefits[i].amount)
                 ]
               : ['${i + 1}', '', '', ''],
       ];
@@ -168,7 +168,7 @@ class AnnualPayslipExport {
         bonuses[i][2],
         '',
         '',
-        i < summary.bonuses.length ? summary.bonuses[i].bonus : ''
+        i < summary.benefits.length ? summary.benefits[i].amount : ''
       ]);
     }
     for (var r = 21; r < 22 + bonuses.length; r++) {
