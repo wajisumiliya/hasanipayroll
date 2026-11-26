@@ -56,6 +56,16 @@ void main() {
     expect(find.text('Salary Report'), findsOneWidget);
     expect(find.text('Jul 2025 - Jun 2026'), findsOneWidget);
     expect(find.text('Employee A'), findsOneWidget);
+    expect(find.text('Annual Total'), findsNWidgets(2));
+    expect(find.text('GRAND TOTAL'), findsNWidgets(2));
+    expect(
+        find.textContaining(
+            "HASANI BOOKS STAFF SALARY REPORT JUL'25 TO JUN'26"),
+        findsNWidgets(2));
+    expect(find.text('2,200.00'), findsWidgets);
+    final table = tester.widget<DataTable>(find.byType(DataTable).first);
+    expect(table.columns, hasLength(16));
+    expect(table.headingTextStyle?.color, Colors.white);
     expect(find.text('Export Excel'), findsOneWidget);
     expect(find.text('Print / Save PDF'), findsOneWidget);
     expect(tester.takeException(), isNull);

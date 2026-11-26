@@ -49,8 +49,8 @@ test('report merges historical-only employees, respects branch assignments and n
  const xlsx=await renderLateReport({view:'salary-report',format:'xlsx',report:r});
  const book=new ExcelJS.Workbook();await book.xlsx.load(xlsx);
  const sheet=book.worksheets.find(s=>s.name==='B');
- assert.equal(sheet.getCell('D7').value,0);assert.equal(sheet.getCell('E7').value,2300);
- assert.match(sheet.getCell('E7').note,/Temporary historical reconciliation/);
+ assert.equal(sheet.getCell('D5').value,0);assert.equal(sheet.getCell('E5').value,2300);
+ assert.match(sheet.getCell('E5').note,/Temporary historical reconciliation/);
  const pdf=await renderLateReport({view:'salary-report',format:'pdf',report:r});
  assert.equal(pdf.subarray(0,5).toString(),'%PDF-');assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)??[]).length,2);
  assert.throws(()=>build({temporaryPayroll:[{employee_id:'OLD1',month:'2025-07',branch_id:'B',amount:10},{employee_id:'OLD1',month:'2025-07',branch_id:'B',amount:20}]}),/duplicate OLD1/);

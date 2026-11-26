@@ -3,6 +3,7 @@ import 'salary_report_branch_assignments.dart';
 import 'dart:typed_data';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 
 class SalaryReportPage extends StatefulWidget {
@@ -107,10 +108,16 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
   Widget build(BuildContext context) {
     final months = (report?['months'] as List? ?? []).cast<Map>();
     final headers = [
-      'Sno',
+      'S.No',
       'Employee ID',
       'Employee Name',
-      ...months.map((month) => '${month['label']}')
+      ...months.map((month) {
+        final key = '${month['key'] ?? ''}';
+        return RegExp(r'^\d{4}-\d{2}$').hasMatch(key)
+            ? '${key.substring(5)}/${key.substring(0, 4)}'
+            : '${month['label']}';
+      }),
+      'Annual Total',
     ];
     final disabled = loading || exporting;
     final empty = visibleBranches.isEmpty;
@@ -119,8 +126,13 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
       ...List.generate(DateTime.now().year - 1999, (index) => 2000 + index)
     }.toList()
       ..sort();
+    final numberFormat = NumberFormat('#,##0.00');
     String money(dynamic amount) =>
-        amount == null ? '' : (amount as num).toStringAsFixed(2);
+        amount == null ? '' : numberFormat.format(amount);
+    double annual(List values) =>
+        values.fold<int>(
+            0, (sum, value) => sum + (((value as num?) ?? 0) * 100).round()) /
+        100;
     return Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -267,7 +279,8 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text('${branch['name']}',
+                                          Text(
+                                              "HASANI BOOKS STAFF SALARY REPORT JUL'${year.toString().substring(2)} TO JUN'${(year + 1).toString().substring(2)} - ${branch['name']}",
                                               style: const TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.bold)),
@@ -275,17 +288,38 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                                           SingleChildScrollView(
                                               scrollDirection: Axis.horizontal,
                                               child: DataTable(
+                                                border: TableBorder.all(
+                                                    color: const Color(
+                                                        0xFFCBD5E1)),
+                                                columnSpacing: 12,
+                                                horizontalMargin: 12,
+                                                dataTextStyle: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF334155)),
+                                                dataRowMinHeight: 38,
+                                                dataRowMaxHeight: 62,
+                                                headingRowHeight: 44,
+                                                headingTextStyle:
+                                                    const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold),
                                                 headingRowColor:
-                                                    WidgetStatePropertyAll(
-                                                        Theme.of(context)
-                                                            .colorScheme
-                                                            .primaryContainer),
+                                                    const WidgetStatePropertyAll(
+                                                        Color(0xFF15324D)),
                                                 columns: [
                                                   for (var i = 0;
                                                       i < headers.length;
                                                       i++)
                                                     DataColumn(
-                                                        label: Text(headers[i]),
+                                                        label: Text(headers[i],
+                                                            style: const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
                                                         numeric: i >= 3)
                                                 ],
                                                 rows: [
@@ -313,10 +347,20 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                                                                   .length;
                                                           month++)
                                                         DataCell(Text(
-                                                            '${money(branch['rows'][i]['values'][month])}${(branch['rows'][i]['temporary_months'] as List? ?? []).contains(months[month]['key']) ? ' *' : ''}'))
+                                                            '${money(branch['rows'][i]['values'][month])}${(branch['rows'][i]['temporary_months'] as List? ?? []).contains(months[month]['key']) ? ' *' : ''}')),
+                                                      DataCell(Text(
+                                                          money(annual(
+                                                              branch['rows'][i]
+                                                                      ['values']
+                                                                  as List)),
+                                                          style: const TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold))),
                                                     ]),
                                                   DataRow(cells: [
-                                                    const DataCell(Text('TOTAL',
+                                                    const DataCell(Text(
+                                                        'GRAND TOTAL',
                                                         style: TextStyle(
                                                             fontWeight:
                                                                 FontWeight
@@ -331,7 +375,15 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
                                                           style: const TextStyle(
                                                               fontWeight:
                                                                   FontWeight
-                                                                      .bold)))
+                                                                      .bold))),
+                                                    DataCell(Text(
+                                                        money(annual(
+                                                            branch['totals']
+                                                                as List)),
+                                                        style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold))),
                                                   ])
                                                 ],
                                               )),

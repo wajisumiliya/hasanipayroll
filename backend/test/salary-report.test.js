@@ -79,9 +79,9 @@ test('corrected branch is used by real Excel sheets and PDF pages',async()=>{
  const bytes=await renderLateReport({view:'salary-report',format:'xlsx',report});
  const book=new ExcelJS.Workbook();await book.xlsx.load(bytes);
  const gurun=book.worksheets.find(s=>s.name==='GURUN');
- assert.ok(gurun);assert.equal(gurun.getCell('B6').value,'BAS025');
- assert.equal(gurun.getCell('D6').value,2000);assert.equal(gurun.getCell('O6').value,2011);
- assert.equal(book.worksheets.find(s=>s.name==='AMANJAYA').getCell('B6').value,'OTHER');
+ assert.ok(gurun);assert.equal(gurun.getCell('B4').value,'BAS025');
+ assert.equal(gurun.getCell('D4').value,2000);assert.equal(gurun.getCell('O4').value,2011);
+ assert.equal(book.worksheets.find(s=>s.name==='AMANJAYA').getCell('B4').value,'OTHER');
  const pdf=await renderLateReport({view:'salary-report',format:'pdf',report});
  assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
  assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)??[]).length,2);
@@ -97,10 +97,18 @@ test('real Excel has separate branch sheets, twelve numeric months, blank cells 
  [employee('E1',{name:'=1+1'}),employee('E2',{branch_id:'B'})],[{id:'A',name:'A/Branch'},{id:'B',name:'A?Branch'}]);
  const bytes=await renderLateReport({view:'salary-report',format:'xlsx',report:r});const b=new ExcelJS.Workbook();await b.xlsx.load(bytes);
  assert.equal(b.worksheets.length,2);assert.notEqual(b.worksheets[0].name,b.worksheets[1].name);
- const s=b.worksheets.find(s=>s.getCell('B6').value==='E1');
- assert.equal(s.getCell('C6').value,'=1+1');assert.equal(s.getCell('D5').value,'Jul 2025');assert.equal(s.getCell('O5').value,'Jun 2026');
- assert.equal(s.getCell('D6').value,2200);assert.equal(s.getCell('E6').value,null);assert.equal(s.getCell('F6').value,0);
- assert.equal(s.getCell('D7').value,2200);assert.equal(s.getCell('C7').master.address,'A7');assert.equal(s.columnCount,15);assert.equal(s.getCell('D6').numFmt,'#,##0.00');assert.equal(s.pageSetup.orientation,'landscape');
+ const s=b.worksheets.find(s=>s.getCell('B4').value==='E1');
+ assert.equal(s.getCell('C4').value,'=1+1');assert.equal(s.getCell('D3').value,'07/2025');assert.equal(s.getCell('O3').value,'06/2026');
+ assert.equal(s.getCell('D4').value,2200);assert.equal(s.getCell('E4').value,null);assert.equal(s.getCell('F4').value,0);
+ assert.equal(s.getCell('D5').value.result,2200);assert.equal(s.getCell('C5').master.address,'A5');assert.equal(s.columnCount,16);assert.equal(s.getCell('D4').numFmt,'#,##0.00');assert.equal(s.pageSetup.orientation,'landscape');
+ assert.equal(s.getCell('P3').value,'Annual Total');
+ assert.deepEqual(s.getCell('P4').value,{formula:'SUM(D4:O4)',result:2200});
+ assert.equal(s.getCell('A5').value,'GRAND TOTAL');
+ assert.deepEqual(s.getCell('P5').value,{formula:'SUM(P4:P4)',result:2200});
+ assert.equal(s.getCell('A1').master.address,'A1');
+ assert.equal(s.getCell('P2').master.address,'A1');
+ assert.equal(s.getCell('A3').font.color.argb,'FFFFFFFF');
+ assert.equal(s.getCell('A1').font.size,20);
 });
 test('worksheet names are valid, limited and unique ignoring case',()=>{
  const used=new Set();const names=['A/B','A?B','a b',"''",'x'.repeat(50),'x'.repeat(50)].map(n=>salarySheetName(n,used));
@@ -138,4 +146,18 @@ test('actual SQL reads a full year and enforces local/foreign scopes',{skip:!pro
  const excel=await run(undefined,{format:'xlsx'});assert.equal(excel.code,200);assert.ok(Buffer.from(excel.body.file_base64,'base64').length>500);
  assert.equal((await run(undefined,{start_year:2020,format:'pdf'})).code,400);
  }finally{await pool.end();await dropFixtureDatabase(bootstrap,'hasani_salary_report_test');await bootstrap.end();}
+});
+
+test('audit layout annual and grand totals retain cents across twelve months',async()=>{
+ const r=build([pay('E1','2025-07-01',100.25),pay('E1','2025-08-01',200.10),pay('E2','2025-07-01',50.05)],
+   [employee('E1'),employee('E2')]);
+ assert.deepEqual(salaryReportRows(r.branches[0]).map(row=>row.at(-1)),[300.35,50.05]);
+ const bytes=await renderLateReport({view:'salary-report',format:'xlsx',report:r});
+ const book=new ExcelJS.Workbook();await book.xlsx.load(bytes);const sheet=book.worksheets[0];
+ assert.equal(sheet.getCell('P4').value.result,300.35);
+ assert.equal(sheet.getCell('P5').value.result,50.05);
+ assert.equal(sheet.getCell('P6').value.result,350.4);
+ assert.equal(sheet.getCell('D6').value.result,150.3);
+ assert.match(sheet.getCell('A1').value,/HASANI BOOKS STAFF SALARY REPORT JUL'25 TO JUN'26/);
+ assert.equal(sheet.pageSetup.fitToWidth,1);assert.equal(sheet.pageSetup.fitToHeight,1);
 });
