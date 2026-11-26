@@ -1,3 +1,4 @@
+import '../widgets/employee_annual_payslip_summary.dart';
 import '../widgets/payroll_overview_table.dart';
 import '../widgets/admin_reports_menu.dart';
 import '../services/saved_payroll_amounts.dart';
@@ -14426,6 +14427,21 @@ class _AdminDashboardState extends State<AdminDashboard>
               searchController: _payslipEmployeeSearchController,
               tab: _payslipDirectoryTab,
               history: history,
+              annualSummary: EmployeeAnnualPayslipSummary(
+                employees: service.allEmployees,
+                records: service.payroll,
+                onRefresh: () async {
+                  try {
+                    await service.loadEmployeesFromSupabase();
+                    await service.loadPayrollFromSupabase();
+                    if (mounted) setState(() {});
+                  } catch (error) {
+                    if (mounted) {
+                      _message('Unable to refresh annual summary: $error');
+                    }
+                  }
+                },
+              ),
               exporting: _payslipDirectoryExporting,
               onPeriod: (value) => setState(() {
                 _payslipDirectoryPeriod = value;

@@ -29,6 +29,7 @@ class EmployeePayslipDirectory extends StatefulWidget {
       required this.onRefresh,
       required this.onExport,
       this.history,
+      this.annualSummary,
       this.exporting = false});
   final List<Employee> employees;
   final Map<String, List<PayrollRecord>> records;
@@ -46,7 +47,7 @@ class EmployeePayslipDirectory extends StatefulWidget {
   final ValueChanged<Employee> onView, onPayslips;
   final VoidCallback onRefresh;
   final ValueChanged<String> onExport;
-  final Widget? history;
+  final Widget? history, annualSummary;
   final bool exporting;
   @override
   State<EmployeePayslipDirectory> createState() =>
@@ -99,6 +100,27 @@ class _EmployeePayslipDirectoryState extends State<EmployeePayslipDirectory> {
   @override
   Widget build(BuildContext context) {
     final summary = widget.tab == 'summary';
+    if (summary && widget.annualSummary != null) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Employee Payslips',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final tab in [
+            ('list', 'Employee List'),
+            ('history', 'Payslip History'),
+            ('summary', 'Payslip Summary')
+          ])
+            ChoiceChip(
+                label: Text(tab.$2),
+                selected: widget.tab == tab.$1,
+                onSelected: (_) => widget.onTab(tab.$1)),
+        ]),
+        const SizedBox(height: 20),
+        widget.annualSummary!,
+      ]);
+    }
+
     final employees = widget.employees
         .where((employee) =>
             periodFor(employee).isNotEmpty &&

@@ -16,7 +16,8 @@ Employee person(int n) => Employee(
 Widget directory(
         {required List<Employee> employees,
         Map<String, List<PayrollRecord>> records = const {},
-        String tab = 'list'}) =>
+        String tab = 'list',
+        Widget? annualSummary}) =>
     MaterialApp(
         home: Scaffold(
             body: SingleChildScrollView(
@@ -32,6 +33,7 @@ Widget directory(
       active: true,
       searchController: TextEditingController(),
       tab: tab,
+      annualSummary: annualSummary,
       onPeriod: (_) {},
       onBranch: (_) {},
       onActive: (_) {},
@@ -120,5 +122,18 @@ void main() {
     expect(find.text('Employee 4'), findsNothing);
     expect(find.text('Employee 5'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'annual summary is available even with no payroll in the current month',
+      (tester) async {
+    await tester.pumpWidget(directory(
+        employees: [],
+        tab: 'summary',
+        annualSummary: const Text('Annual employee and year selection')));
+    await tester.pumpAndSettle();
+    expect(find.text('Annual employee and year selection'), findsOneWidget);
+    expect(find.text('No employees or payslips match these filters.'),
+        findsNothing);
+    expect(find.text('Payslip History'), findsOneWidget);
   });
 }
