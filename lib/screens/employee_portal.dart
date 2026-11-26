@@ -3073,8 +3073,8 @@ class _EmployeePortalState extends State<EmployeePortal>
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Unable to download payslip: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to download payslip: $e')));
     }
   }
 }

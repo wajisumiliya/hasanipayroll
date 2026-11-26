@@ -21,8 +21,8 @@ class AdminReportsMenu extends StatelessWidget {
         final columns = constraints.maxWidth >= 960
             ? 4
             : constraints.maxWidth >= 520
-            ? 2
-            : 1;
+                ? 2
+                : 1;
         final width = (constraints.maxWidth - 12 * (columns - 1)) / columns;
         return Wrap(
           spacing: 12,
