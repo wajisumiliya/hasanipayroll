@@ -1,3 +1,4 @@
+import '../widgets/admin_reports_menu.dart';
 import '../services/saved_payroll_amounts.dart';
 import '../services/statutory_payment_reconciliation.dart';
 import '../services/payroll_summary_pdf_layout.dart';
@@ -903,8 +904,25 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  Widget _portalPage(Widget child) =>
-      ColoredBox(color: adminCanvas, child: child);
+  Widget _portalPage(Widget child) => ColoredBox(
+        color: adminCanvas,
+        child: AdminReportsMenu.pages.contains(selectedPage)
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: TextButton.icon(
+                      onPressed: () => changePage(6),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Back to Reports'),
+                    ),
+                  ),
+                  Expanded(child: child),
+                ],
+              )
+            : child,
+      );
 
   // ===========================================================================
   // MOBILE LAYOUT
@@ -979,7 +997,8 @@ class _AdminDashboardState extends State<AdminDashboard>
         PremiumPortalSidebarItem(
           label: label,
           icon: icon,
-          selected: selectedPage == page,
+          selected: selectedPage == page ||
+              (page == 6 && AdminReportsMenu.pages.contains(selectedPage)),
           onTap: () {
             if (MediaQuery.sizeOf(context).width < 850) {
               Navigator.of(context).pop();
@@ -1003,7 +1022,6 @@ class _AdminDashboardState extends State<AdminDashboard>
               item('Overview', Icons.grid_view_rounded, 0),
               item('Employees', Icons.groups_rounded, 1),
               item('Attendance', Icons.event_available_rounded, 3),
-              item('Late Report', Icons.schedule_outlined, 18),
               item('Payroll', Icons.account_balance_wallet_rounded, 2),
               if (service.currentUser?.isReviewer != true)
                 item('Salary Report', Icons.table_chart_outlined, 20),
@@ -1016,11 +1034,6 @@ class _AdminDashboardState extends State<AdminDashboard>
                 onTap: _showEditPayrollDialog,
               ),
               item('RHB Layout', Icons.account_balance_rounded, 8),
-              item('Branch Logs', Icons.store_rounded, 9),
-              item('Employee Requests', Icons.approval_rounded, 10),
-              item('OT Requests', Icons.more_time_rounded, 11),
-              item('Leave Requests', Icons.flight_rounded, 13),
-              item('Daily Reports', Icons.article_rounded, 14),
               item('Reports', Icons.bar_chart_rounded, 6),
               item('Settings', Icons.settings_rounded, 7),
               item('Branch Passwords', Icons.password_rounded, 17),
@@ -17061,12 +17074,14 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
           const SizedBox(height: 8),
           const Text(
-            'Summary of employees, attendance and payroll data.',
+            'Manage employee requests and branch reports.',
             style: TextStyle(
               color: Colors.black54,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
+          AdminReportsMenu(onNavigate: changePage),
+          const SizedBox(height: 24),
           _monthYearSelector(
             value: selectedReportMonth,
             onChanged: (value) => setState(() => selectedReportMonth = value),
