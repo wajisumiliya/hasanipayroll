@@ -51,19 +51,12 @@ class AnnualPayslipSummary {
       if (p.period.year == year) {
         final increase = previous == null
             ? null
-            : annualMoney(p.salaryBase +
+            : qualifyingIncrement(p.salaryBase +
                 allowance -
                 previous.salaryBase -
                 allowances(previous));
         selected[p.period.month] = AnnualSalaryMonth(
-            p.period.month,
-            p.salaryBase,
-            allowance,
-            increase == null
-                ? null
-                : increase > 0
-                    ? increase
-                    : 0);
+            p.period.month, p.salaryBase, allowance, increase);
         if (p.bonus != 0) bonuses.add(p);
       }
       previous = p;
@@ -94,6 +87,18 @@ class AnnualPayslipSummary {
   late final List<AnnualSalaryMonth> months;
   final List<PayrollRecord> bonuses = [];
   final List<AnnualBenefit> benefits = [];
+
+  /// Display only RM50 steps through RM1,000. Tolerate binary arithmetic
+  /// noise, but do not round an irregular currency increase into eligibility.
+  static double? qualifyingIncrement(double increase) {
+    if (!increase.isFinite) return null;
+    final steps = (increase / 50).round();
+    if (steps < 1 || steps > 20 || (increase - steps * 50).abs() > 1e-7) {
+      return null;
+    }
+    return steps * 50.0;
+  }
+
   static double allowances(PayrollRecord p) =>
       annualMoney(p.totalAllowance + p.housingAllowance + p.travelAllowance);
   static const monthNames = [
@@ -126,7 +131,7 @@ class AnnualPayslipSummary {
   ];
   static const explanation =
       'Salary is saved basic/FW pay; allowance includes saved allowances. '
-      'Increment compares salary plus allowances with the previous saved payroll and is already included in the total. '
+      'Increment compares salary plus allowances with the previous saved payroll. Only exact RM50 steps from RM50 to RM1,000 are shown; they are already included in the total. '
       'Total is salary plus allowances, before deductions. Welfare, gifts and bonuses are listed separately. '
       'Other earnings and deductions are not part of these columns. Blank months have no saved payroll.';
 }

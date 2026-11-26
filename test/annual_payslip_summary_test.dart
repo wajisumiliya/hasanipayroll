@@ -131,4 +131,52 @@ void main() {
     expect(sheet.cell(xls.CellIndex.indexByString('F24')).value,
         xls.DoubleCellValue(1234.55));
   });
+  test('increment displays only exact RM50 steps between RM50 and RM1000', () {
+    for (var amount = 50; amount <= 1000; amount += 50) {
+      expect(
+          AnnualPayslipSummary.qualifyingIncrement(amount.toDouble()), amount);
+    }
+    for (final amount in [
+      -100.0,
+      0.0,
+      40.0,
+      49.99,
+      50.01,
+      75.0,
+      99.99,
+      100.01,
+      999.99,
+      1000.01,
+      1050.0,
+      2700.0,
+      double.nan,
+      double.infinity
+    ]) {
+      expect(AnnualPayslipSummary.qualifyingIncrement(amount), isNull,
+          reason: '$amount must remain blank');
+    }
+    expect(AnnualPayslipSummary.qualifyingIncrement(100.00000000001), 100);
+  });
+  test(
+      'irregular increment is blank in preview PDF rows and Excel without changing totals',
+      () {
+    final summary =
+        AnnualPayslipSummary(employeeId: 'E1', year: 2026, records: [
+      saved('E1', '2025-12-01', 1900, allowance: 800),
+      saved('E1', '2026-01-01', 1900, allowance: 840),
+      saved('E1', '2026-02-01', 1900, allowance: 940),
+      saved('E1', '2026-03-01', 1900, allowance: 940),
+    ]);
+    expect(summary.months[0].increment, isNull);
+    expect(summary.months[1].increment, 100);
+    expect(summary.months[2].increment, isNull);
+    expect(summary.months[0].total, 2740);
+    expect(AnnualPayslipExport.salaryRows(summary)[0][4], '');
+    final sheet = xls.Excel.decodeBytes(
+        AnnualPayslipExport.excel(summary, 'Sample'))['Annual Summary'];
+    expect(sheet.cell(xls.CellIndex.indexByString('E6')).value,
+        anyOf(isNull, xls.TextCellValue('')));
+    expect(sheet.cell(xls.CellIndex.indexByString('E7')).value,
+        anyOf(xls.IntCellValue(100), xls.DoubleCellValue(100)));
+  });
 }
