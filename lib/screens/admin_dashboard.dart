@@ -1,3 +1,4 @@
+import '../widgets/payroll_overview_table.dart';
 import '../widgets/admin_reports_menu.dart';
 import '../services/saved_payroll_amounts.dart';
 import '../services/statutory_payment_reconciliation.dart';
@@ -15745,6 +15746,112 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  Widget _payrollActionMenu(String label, IconData icon, List<Widget> actions) {
+    return MenuAnchor(
+      menuChildren: actions,
+      builder: (context, controller, child) => OutlinedButton.icon(
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
+        icon: Icon(icon),
+        label: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(label),
+          const SizedBox(width: 6),
+          const Icon(Icons.expand_more, size: 18),
+        ]),
+      ),
+    );
+  }
+
+  Widget _payrollOverviewTable(List<Map<String, dynamic>> records,
+      Map<String, Map<String, dynamic>> employees) {
+    String status(Map<String, dynamic> row) {
+      bool flag(String key) =>
+          row[key] == true || row[key]?.toString().toLowerCase() == 'true';
+      final savedStatus = '${row['status']}'.toLowerCase();
+      if (flag('is_paid') ||
+          flag('isPaid') ||
+          row['paid_at'] != null ||
+          row['paidAt'] != null ||
+          savedStatus == 'paid') {
+        return 'Paid';
+      }
+      if (flag('is_published') || savedStatus == 'published') {
+        return 'Published';
+      }
+      if (flag('is_finalized') ||
+          row['finalized_at'] != null ||
+          const {'finalized', 'finalised'}.contains(savedStatus)) {
+        return 'Finalized';
+      }
+      if (savedStatus == 'locked') return 'Locked';
+      return 'Draft';
+    }
+
+    void details(Map<String, dynamic> row) {
+      showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+                title: Text('Payroll details · ${row['employee_id']}'),
+                content: SizedBox(
+                    width: 640,
+                    child: SingleChildScrollView(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final entry in row.entries.where((entry) =>
+                                !const {
+                                  'id',
+                                  'created_at',
+                                  'updated_at',
+                                  'bank_account',
+                                  'new_ic_no'
+                                }.contains(entry.key)))
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 6),
+                                  child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                            child: Text(
+                                                entry.key.replaceAll('_', ' '),
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w600))),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                            child: SelectableText(
+                                                entry.value?.toString() ??
+                                                    '-')),
+                                      ])),
+                          ]),
+                    )),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'))
+                ],
+              ));
+    }
+
+    return PayrollOverviewTable(
+        entries: records.map((row) {
+      final amounts = SavedPayrollAmounts.fromRow(row);
+      final id = _normalizeBranchValue(row['employee_id']);
+      return PayrollOverviewEntry(
+        employeeId: id,
+        name: employees[id]?['name']?.toString() ?? id,
+        basicSalary: _money(_payrollNumber(row['basic_salary'])),
+        gross: _money(amounts.gross),
+        deductions: _money(amounts.deductions),
+        net: _money(amounts.net),
+        status: status(row),
+        onDetails: () => details(row),
+      );
+    }).toList());
+  }
+
   Widget _payrollPage() {
     return FutureBuilder<List<dynamic>>(
       future: _payrollPageData(),
@@ -16030,72 +16137,15 @@ class _AdminDashboardState extends State<AdminDashboard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Payroll',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF172033),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Select a branch, select employees, then generate payroll for the selected month.',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black54,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                Row(
                   children: [
-                    FilledButton.icon(
-                      onPressed: _showGenerateAttendancePayrollDialog,
-                      icon: const Icon(Icons.calculate_outlined),
-                      label: const Text('Generate Payroll'),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: _showEditPayrollDialog,
-                      icon: const Icon(Icons.edit_note_outlined),
-                      label: const Text('Edit Payroll'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => AttendanceAllowanceReportDialog(
-                          initialMonth: selectedPayrollMonth,
-                          load: (month) =>
-                              service.loadAttendanceAllowanceReport(
-                            month,
-                            branchId: selectedPayrollBranchId,
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.receipt_long_outlined),
-                      label: const Text('Attendance Allowance Deductions'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => BonusReportDialog(
-                          initialMonth: selectedPayrollMonth,
-                          load: (month) => service.loadBonusReport(month,
-                              branchId: selectedPayrollBranchId),
-                        ),
-                      ),
-                      icon: const Icon(Icons.card_giftcard_outlined),
-                      label: const Text('Bonus Recipients'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          selectedPage = 5;
-                        });
-                      },
-                      icon: const Icon(Icons.upload_file_outlined),
-                      label: const Text('Import Payroll CSV'),
+                    const Expanded(
+                      child: Text('Payroll',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF172033),
+                          )),
                     ),
                     OutlinedButton.icon(
                       onPressed: () async {
@@ -16120,6 +16170,31 @@ class _AdminDashboardState extends State<AdminDashboard>
                         DateFormat('MMMM yyyy').format(selectedPayrollMonth),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Select a branch, select employees, then generate payroll for the selected month.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: _showGenerateAttendancePayrollDialog,
+                      icon: const Icon(Icons.calculate_outlined),
+                      label: const Text('Generate Payroll'),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: _showEditPayrollDialog,
+                      icon: const Icon(Icons.edit_note_outlined),
+                      label: const Text('Edit Payroll'),
+                    ),
                     FilledButton.icon(
                       onPressed: incrementPayrollRecords.isEmpty
                           ? null
@@ -16131,48 +16206,93 @@ class _AdminDashboardState extends State<AdminDashboard>
                       icon: const Icon(Icons.publish_outlined),
                       label: const Text('Publish Payslips'),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: () => _showPayrollIncrementListDialog(
-                        month: selectedPayrollMonth,
-                        increments: monthlyIncrements,
+                    _payrollActionMenu(
+                        'Allowances & Bonus', Icons.card_giftcard_outlined, [
+                      MenuItemButton(
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => AttendanceAllowanceReportDialog(
+                            initialMonth: selectedPayrollMonth,
+                            load: (month) =>
+                                service.loadAttendanceAllowanceReport(
+                              month,
+                              branchId: selectedPayrollBranchId,
+                            ),
+                          ),
+                        ),
+                        leadingIcon: const Icon(Icons.receipt_long_outlined),
+                        child: const Text('Attendance Allowance Deductions'),
                       ),
-                      icon: const Icon(Icons.trending_up_outlined),
-                      label: Text(
-                        'Increment List (${monthlyIncrements.length})',
+                      MenuItemButton(
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => BonusReportDialog(
+                            initialMonth: selectedPayrollMonth,
+                            load: (month) => service.loadBonusReport(month,
+                                branchId: selectedPayrollBranchId),
+                          ),
+                        ),
+                        leadingIcon: const Icon(Icons.card_giftcard_outlined),
+                        child: const Text('Bonus Recipients'),
                       ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: monthlyIncrements.isEmpty
-                          ? null
-                          : () => _showPayrollIncrementComparisonDialog(
-                                month: selectedPayrollMonth,
-                                increments: monthlyIncrements,
-                              ),
-                      icon: const Icon(Icons.compare_arrows_outlined),
-                      label: const Text('Compare Increments'),
-                    ),
-                    if (visiblePayrollRecords.isNotEmpty) ...[
-                      OutlinedButton.icon(
-                        onPressed: selectedPayrollBranchId == null
+                    ]),
+                    _payrollActionMenu(
+                        'Increments', Icons.trending_up_outlined, [
+                      MenuItemButton(
+                        onPressed: () => _showPayrollIncrementListDialog(
+                          month: selectedPayrollMonth,
+                          increments: monthlyIncrements,
+                        ),
+                        leadingIcon: const Icon(Icons.trending_up_outlined),
+                        child: Text(
+                          'Increment List (${monthlyIncrements.length})',
+                        ),
+                      ),
+                      MenuItemButton(
+                        onPressed: monthlyIncrements.isEmpty
+                            ? null
+                            : () => _showPayrollIncrementComparisonDialog(
+                                  month: selectedPayrollMonth,
+                                  increments: monthlyIncrements,
+                                ),
+                        leadingIcon: const Icon(Icons.compare_arrows_outlined),
+                        child: const Text('Compare Increments'),
+                      ),
+                    ]),
+                    _payrollActionMenu(
+                        'Import & Export', Icons.import_export_outlined, [
+                      MenuItemButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedPage = 5;
+                          });
+                        },
+                        leadingIcon: const Icon(Icons.upload_file_outlined),
+                        child: const Text('Import Payroll CSV'),
+                      ),
+                      MenuItemButton(
+                        onPressed: selectedPayrollBranchId == null &&
+                                visiblePayrollRecords.isNotEmpty
                             ? () => _exportPayrollBranchesPdf(
                                   visiblePayrollRecords,
                                   branchNames,
                                 )
                             : null,
-                        icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: const Text('Save All Branches PDF'),
+                        leadingIcon: const Icon(Icons.picture_as_pdf_outlined),
+                        child: const Text('Save All Branches PDF'),
                       ),
-                      OutlinedButton.icon(
-                        onPressed: selectedPayrollBranchId == null
+                      MenuItemButton(
+                        onPressed: selectedPayrollBranchId == null &&
+                                visiblePayrollRecords.isNotEmpty
                             ? () => _exportPayrollAllBranchesExcel(
                                   visiblePayrollRecords,
                                   branchNames,
                                 )
                             : null,
-                        icon: const Icon(Icons.table_view_outlined),
-                        label: const Text('Export All Branches Excel'),
+                        leadingIcon: const Icon(Icons.table_view_outlined),
+                        child: const Text('Export All Branches Excel'),
                       ),
-                    ],
+                    ]),
                   ],
                 ),
                 const SizedBox(height: 26),
@@ -16187,57 +16307,61 @@ class _AdminDashboardState extends State<AdminDashboard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Branches',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Click a branch to choose the employees for payroll generation.',
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                      const SizedBox(height: 18),
-                      if (branchIds.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(30),
-                          child: Center(
-                            child: Text('No branches found.'),
-                          ),
-                        )
-                      else
-                        _responsiveBranchButtonRow(
-                          spacing: 8,
-                          buttons: [
-                            _employeeBranchFilterButton(
-                              label: 'All Branches',
-                              selected: selectedPayrollBranchId == null,
-                              onTap: () => setState(
-                                  () => selectedPayrollBranchId = null),
+                      const Text('Branch',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 360),
+                            child: DropdownButtonFormField<String>(
+                              key: ValueKey(selectedPayrollBranchId),
+                              initialValue:
+                                  branchIds.contains(selectedPayrollBranchId)
+                                      ? selectedPayrollBranchId
+                                      : '',
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Filter payroll by branch',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                const DropdownMenuItem(
+                                    value: '', child: Text('All branches')),
+                                ...branchIds.map((id) => DropdownMenuItem(
+                                    value: id,
+                                    child: Text(branchNames[id] ?? id))),
+                              ],
+                              onChanged: (value) => setState(() =>
+                                  selectedPayrollBranchId =
+                                      value == '' ? null : value),
                             ),
-                            ...branchIds.map((branchId) {
-                              final branchEmployees =
-                                  branchGroups[branchId] ?? [];
-                              return _employeeBranchFilterButton(
-                                label: branchNames[branchId] ?? branchId,
-                                selected: selectedPayrollBranchId == branchId,
-                                onTap: () async {
-                                  setState(
-                                      () => selectedPayrollBranchId = branchId);
-                                  await _showPayrollEmployeeSelection(
-                                    branchName:
-                                        branchNames[branchId] ?? branchId,
-                                    employees: branchEmployees,
-                                    month: selectedPayrollMonth,
-                                  );
-                                  if (mounted) setState(() {});
-                                },
-                              );
-                            }),
-                          ],
-                        ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: selectedPayrollBranchId == null
+                                ? null
+                                : () async {
+                                    final id = selectedPayrollBranchId!;
+                                    await _showPayrollEmployeeSelection(
+                                      branchName: branchNames[id] ?? id,
+                                      employees: branchGroups[id] ?? [],
+                                      month: selectedPayrollMonth,
+                                    );
+                                    if (mounted) setState(() {});
+                                  },
+                            icon: const Icon(Icons.group_add_outlined),
+                            label: const Text('Select Employees'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                          'Choose a branch to filter payroll or select employees for generation.',
+                          style: TextStyle(color: Colors.black54)),
                     ],
                   ),
                 ),
@@ -16258,7 +16382,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                         SizedBox(
                           width: cardWidth,
                           child: _payrollSummaryCard(
-                            'Total Payroll',
+                            'Gross Payroll · Selected Month',
                             'RM ${totalPayroll.toStringAsFixed(2)}',
                             Icons.account_balance_wallet_outlined,
                             const Color(0xFF2D55D8),
@@ -16267,8 +16391,17 @@ class _AdminDashboardState extends State<AdminDashboard>
                         SizedBox(
                           width: cardWidth,
                           child: _payrollSummaryCard(
-                            'Employees',
-                            employees.length.toString(),
+                            'Eligible Employees · Selected Branch',
+                            employees
+                                .where((employee) =>
+                                    PayrollMonthScope.activeInMonth(
+                                        employee, selectedPayrollMonth) &&
+                                    (selectedPayrollBranchId == null ||
+                                        _payrollBranchIdFromEmployee(
+                                                employee) ==
+                                            selectedPayrollBranchId))
+                                .length
+                                .toString(),
                             Icons.people_outline,
                             const Color(0xFF16A34A),
                           ),
@@ -16276,8 +16409,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                         SizedBox(
                           width: cardWidth,
                           child: _payrollSummaryCard(
-                            'Payroll Records',
-                            visiblePayrollRecords.length.toString(),
+                            'Employees with Payroll · Selected Month',
+                            visiblePayrollRecords
+                                .map((row) =>
+                                    _normalizeBranchValue(row['employee_id']))
+                                .toSet()
+                                .length
+                                .toString(),
                             Icons.pending_actions_outlined,
                             const Color(0xFFF59E0B),
                           ),
@@ -16355,7 +16493,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                           ),
                         )
                       else
-                        _supabasePayrollTable(visiblePayrollRecords),
+                        _payrollOverviewTable(
+                            visiblePayrollRecords, employeeById),
                     ],
                   ),
                 ),
